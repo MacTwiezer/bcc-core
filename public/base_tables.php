@@ -4,8 +4,6 @@ require __DIR__ . '/../src/bootstrap.php';
 
 require_login();
 
-$pdo = bcc_get_pdo();
-
 $baseId = isset($_GET['base_id']) ? (int) $_GET['base_id'] : (isset($_POST['base_id']) ? (int) $_POST['base_id'] : 0);
 $base = find_base_or_404($baseId);
 
@@ -32,20 +30,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '') {
             $error = 'Tablo adı boş olamaz.';
         } else {
-            $posStmt = $pdo->prepare('SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM tables_meta WHERE base_id = :base_id');
-            $posStmt->execute(array(':base_id' => $base['id']));
-            $nextPos = (int) $posStmt->fetch()['next_pos'];
-
-            $stmt = $pdo->prepare(
-                'INSERT INTO tables_meta (base_id, name, description, position) VALUES (:base_id, :name, :description, :position)'
+            $nextPos = (int) bcc_fetch_column(
+                'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM tables_meta WHERE base_id = :base_id',
+                array('base_id' => $base['id'])
             );
-            $stmt->execute(array(
-                ':base_id' => $base['id'],
-                ':name' => $name,
-                ':description' => $description !== '' ? $description : null,
-                ':position' => $nextPos,
-            ));
-            $newId = $pdo->lastInsertId();
+
+            bcc_execute(
+                'INSERT INTO tables_meta (base_id, name, description, position) VALUES (:base_id, :name, :description, :position)',
+                array(
+                    'base_id' => $base['id'],
+                    'name' => $name,
+                    'description' => $description !== '' ? $description : null,
+                    'position' => $nextPos,
+                )
+            );
+            $newId = bcc_last_insert_id();
             log_audit('table.create', 'table', $newId, array('name' => $name, 'base_id' => $base['id']), $base['team_id']);
             $success = 'Tablo oluşturuldu: ' . $name;
         }
@@ -65,26 +64,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($name === '') {
                 $error = 'Tablo adı boş olamaz.';
             } else {
-                $stmt = $pdo->prepare('UPDATE tables_meta SET name = :name, description = :description WHERE id = :id');
-                $stmt->execute(array(
-                    ':name' => $name,
-                    ':description' => $description !== '' ? $description : null,
-                    ':id' => $table['id'],
-                ));
+                bcc_execute(
+                    'UPDATE tables_meta SET name = :name, description = :description WHERE id = :id',
+                    array(
+                        'name' => $name,
+                        'description' => $description !== '' ? $description : null,
+                        'id' => $table['id'],
+                    )
+                );
                 log_audit('table.update', 'table', $table['id'], array('name' => $name), $base['team_id']);
                 $success = 'Tablo güncellendi: ' . $name;
             }
         } elseif ($action === 'delete_table') {
-            $stmt = $pdo->prepare('DELETE FROM tables_meta WHERE id = :id');
-            $stmt->execute(array(':id' => $table['id']));
+            bcc_execute('DELETE FROM tables_meta WHERE id = :id', array('id' => $table['id']));
             log_audit('table.delete', 'table', $table['id'], array('name' => $table['name']), $base['team_id']);
             $success = 'Tablo silindi: ' . $table['name'];
         } elseif ($action === 'move_table') {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $siblingStmt = $pdo->prepare('SELECT id, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id');
-            $siblingStmt->execute(array(':base_id' => $base['id']));
-            $siblings = $siblingStmt->fetchAll();
+            $siblings = bcc_fetch_all(
+                'SELECT id, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
+                array('base_id' => $base['id'])
+            );
 
             $index = null;
             foreach ($siblings as $i => $row) {
@@ -100,11 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $a = $siblings[$index];
                 $b = $siblings[$swapWith];
 
-                $upd = $pdo->prepare('UPDATE tables_meta SET position = :pos WHERE id = :id');
-                $pdo->beginTransaction();
-                $upd->execute(array(':pos' => $b['position'], ':id' => $a['id']));
-                $upd->execute(array(':pos' => $a['position'], ':id' => $b['id']));
-                $pdo->commit();
+                bcc_begin_transaction();
+                bcc_execute('UPDATE tables_meta SET position = :pos WHERE id = :id', array('pos' => $b['position'], 'id' => $a['id']));
+                bcc_execute('UPDATE tables_meta SET position = :pos WHERE id = :id', array('pos' => $a['position'], 'id' => $b['id']));
+                bcc_commit();
 
                 log_audit('table.reorder', 'table', $table['id'], array('direction' => $direction), $base['team_id']);
             }
@@ -112,9 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->prepare('SELECT id, name, description, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id');
-$stmt->execute(array(':base_id' => $base['id']));
-$tables = $stmt->fetchAll();
+$tables = bcc_fetch_all(
+    'SELECT id, name, description, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
+    array('base_id' => $base['id'])
+);
 $pageTitle = $base['name'];
 require __DIR__ . '/../src/partials/header.php';
 require __DIR__ . '/../src/partials/top_nav.php';

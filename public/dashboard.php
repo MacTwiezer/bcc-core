@@ -1,0 +1,238 @@
+<?php
+
+require __DIR__ . '/../src/bootstrap.php';
+
+require_login();
+
+$user = current_user();
+$pdo = bcc_get_pdo();
+
+// KVKK izolasyonu: kullanıcının üye olduğu ekipler -> yalnızca o ekiplerin base'leri.
+// Sorgu deseni bases.php / eski dashboard.php ile aynıdır, sadece görünüm için
+// tek düz bir listeye indirgenir.
+$stmt = $pdo->prepare(
+    'SELECT t.id, t.name
+     FROM team_members m
+     INNER JOIN teams t ON t.id = m.team_id
+     WHERE m.user_id = :uid
+     ORDER BY t.name'
+);
+$stmt->execute(array(':uid' => $user['id']));
+$teams = $stmt->fetchAll();
+
+$bases = array();
+if (!empty($teams)) {
+    $teamIds = array();
+    foreach ($teams as $t) {
+        $teamIds[] = (int) $t['id'];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
+    $stmt = $pdo->prepare(
+        "SELECT id, team_id, name, description, created_at FROM bases WHERE team_id IN ($placeholders) ORDER BY name"
+    );
+    $stmt->execute($teamIds);
+    $bases = $stmt->fetchAll();
+}
+
+$bccHomeIconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
+
+function bcc_home_relative_date($datetimeStr)
+{
+    $ts = strtotime((string) $datetimeStr);
+    if ($ts === false) {
+        return '';
+    }
+
+    $days = intdiv(time() - $ts, 86400);
+
+    if ($days <= 0) {
+        return 'Bugün';
+    }
+    if ($days === 1) {
+        return 'Dün';
+    }
+    if ($days < 30) {
+        return $days . ' gün önce';
+    }
+
+    $months = intdiv($days, 30);
+    if ($months < 12) {
+        return $months . ' ay önce';
+    }
+
+    return intdiv($months, 12) . ' yıl önce';
+}
+
+$userInitial = mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8'), 'UTF-8');
+?>
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>BCC-Core — Home</title>
+<link rel="stylesheet" href="/assets/home.css">
+</head>
+<body class="home-page">
+
+<header class="home-topbar">
+    <div class="home-topbar-left">
+        <button type="button" class="home-icon-btn" id="home-sidebar-toggle" aria-label="Menüyü aç/kapat">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 5h16M2 10h16M2 15h16" stroke="#5f6368" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <a href="/dashboard.php" class="home-logo"><img src="/assets/bcc-logo.svg" alt="BCC-Core"></a>
+    </div>
+
+    <div class="home-topbar-center">
+        <div class="home-search">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="#8a8a8e" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <input type="text" placeholder="Ara..." aria-label="Ara">
+            <span class="home-search-kbd">Ctrl K</span>
+        </div>
+    </div>
+
+    <div class="home-topbar-right">
+        <a href="#" class="home-help-link">Yardım</a>
+        <button type="button" class="home-icon-btn" aria-label="Bildirimler">
+            <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M10 2.5c-2.4 0-4.2 1.9-4.2 4.3v2.6c0 .5-.2 1.3-.5 1.7L4.4 12.5c-.6.8-.2 1.9.8 2.2 3.3 1 6.9 1 10.2 0 .9-.3 1.3-1.4.7-2.2l-.9-1.4c-.3-.4-.5-1.2-.5-1.7V6.8c0-2.4-1.9-4.3-4.2-4.3z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.2 16.5a1.8 1.8 0 003.6 0" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </button>
+
+        <div class="home-account">
+            <button type="button" class="home-avatar" id="home-account-toggle"><?php echo htmlspecialchars($userInitial, ENT_QUOTES, 'UTF-8'); ?></button>
+            <div class="home-account-menu" id="home-account-menu">
+                <div class="home-account-info">
+                    <div class="home-account-name"><?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="home-account-email"><?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?></div>
+                </div>
+                <form method="post" action="/logout.php" class="home-account-logout">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit">Çıkış</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="home-body">
+    <aside class="home-sidebar" id="home-sidebar">
+        <nav class="home-sidenav">
+            <a href="/dashboard.php" class="home-sidenav-item is-active">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8.5V17h10V8.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span>Home</span>
+            </a>
+            <a href="#" class="home-sidenav-item">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                <span>Starred</span>
+            </a>
+            <a href="#" class="home-sidenav-item">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M6 8.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4zM14 8.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4zM6 17.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4z" stroke="currentColor" stroke-width="1.4"/><path d="M7.8 7.3l4.4-1.6M7.8 15l4.4-4.8" stroke="currentColor" stroke-width="1.3"/></svg>
+                <span>Shared</span>
+            </a>
+            <a href="#" class="home-sidenav-item">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>Workspaces</span>
+            </a>
+        </nav>
+
+        <div class="home-sidenav-divider"></div>
+
+        <nav class="home-sidenav home-sidenav-secondary">
+            <a href="#" class="home-sidenav-item">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+                <span>Templates and apps</span>
+            </a>
+            <a href="#" class="home-sidenav-item">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 6l7-3.5L17 6v8l-7 3.5L3 14V6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                <span>Marketplace</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="home-main">
+        <div class="home-main-header">
+            <h1>Home</h1>
+        </div>
+
+        <div class="home-toolbar">
+            <div class="home-filter" id="home-filter">
+                <button type="button" class="home-filter-btn" id="home-filter-toggle">
+                    <span id="home-filter-label">Opened anytime</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3 3.5-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <ul class="home-filter-menu" id="home-filter-menu">
+                    <li data-label="Today">Today</li>
+                    <li data-label="Son 7 gün">Son 7 gün</li>
+                    <li data-label="Son 30 gün">Son 30 gün</li>
+                    <li data-label="Her zaman">Her zaman</li>
+                </ul>
+            </div>
+
+            <div class="home-view-toggle">
+                <button type="button" class="home-icon-btn" aria-label="Liste görünümü">
+                    <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M4 5.5h12M4 10h12M4 14.5h12" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
+                </button>
+                <button type="button" class="home-icon-btn" aria-label="Izgara görünümü">
+                    <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <?php if (empty($bases)): ?>
+            <div class="home-empty">
+                <p>Henüz erişebileceğiniz bir base yok.</p>
+            </div>
+        <?php else: ?>
+            <div class="home-base-grid">
+                <?php foreach ($bases as $i => $b): ?>
+                    <a class="home-base-card" href="/base_tables.php?base_id=<?php echo (int) $b['id']; ?>">
+                        <div class="home-base-icon" style="background: <?php echo htmlspecialchars($bccHomeIconColors[$i % count($bccHomeIconColors)], ENT_QUOTES, 'UTF-8'); ?>;">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>
+                        </div>
+                        <div class="home-base-info">
+                            <div class="home-base-name"><?php echo htmlspecialchars($b['name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="home-base-meta">Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($b['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </main>
+</div>
+
+<script>
+(function () {
+    var sidebar = document.getElementById('home-sidebar');
+    var sidebarToggle = document.getElementById('home-sidebar-toggle');
+    sidebarToggle.addEventListener('click', function () {
+        sidebar.classList.toggle('is-collapsed');
+    });
+
+    var accountToggle = document.getElementById('home-account-toggle');
+    var accountMenu = document.getElementById('home-account-menu');
+    accountToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        accountMenu.classList.toggle('is-open');
+    });
+
+    var filterToggle = document.getElementById('home-filter-toggle');
+    var filterMenu = document.getElementById('home-filter-menu');
+    var filterLabel = document.getElementById('home-filter-label');
+    filterToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        filterMenu.classList.toggle('is-open');
+    });
+    Array.prototype.forEach.call(filterMenu.querySelectorAll('li'), function (item) {
+        item.addEventListener('click', function () {
+            filterLabel.textContent = item.getAttribute('data-label');
+            filterMenu.classList.remove('is-open');
+        });
+    });
+
+    document.addEventListener('click', function () {
+        accountMenu.classList.remove('is-open');
+        filterMenu.classList.remove('is-open');
+    });
+})();
+</script>
+</body>
+</html>

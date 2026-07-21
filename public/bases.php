@@ -1,0 +1,127 @@
+<?php
+
+require __DIR__ . '/../src/bootstrap.php';
+
+require_login();
+
+$user = current_user();
+$pdo = bcc_get_pdo();
+
+$error = null;
+$success = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_require_valid();
+
+    $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
+    $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $description = isset($_POST['description']) ? trim($_POST['description']) : '';
+
+    // require_role hem üyeliği (KVKK izolasyonu) hem de editor+ rolünü doğrular.
+    require_role($teamId, 'editor');
+
+    if ($name === '') {
+        $error = 'Base adı boş olamaz.';
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)'
+        );
+        $stmt->execute(array(
+            ':team_id' => $teamId,
+            ':name' => $name,
+            ':description' => $description !== '' ? $description : null,
+            ':created_by' => $user['id'],
+        ));
+        $newId = $pdo->lastInsertId();
+        log_audit('base.create', 'base', $newId, array('name' => $name), $teamId);
+        $success = 'Base oluşturuldu: ' . $name;
+    }
+}
+
+$stmt = $pdo->prepare(
+    'SELECT t.id, t.name, m.role
+     FROM team_members m
+     INNER JOIN teams t ON t.id = m.team_id
+     WHERE m.user_id = :uid
+     ORDER BY t.name'
+);
+$stmt->execute(array(':uid' => $user['id']));
+$teams = $stmt->fetchAll();
+
+$basesByTeam = array();
+if (!empty($teams)) {
+    $teamIds = array();
+    foreach ($teams as $t) {
+        $teamIds[] = (int) $t['id'];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
+    $stmt = $pdo->prepare("SELECT id, team_id, name, description FROM bases WHERE team_id IN ($placeholders) ORDER BY name");
+    $stmt->execute($teamIds);
+
+    foreach ($stmt->fetchAll() as $b) {
+        $basesByTeam[$b['team_id']][] = $b;
+    }
+}
+$pageTitle = "Base'ler";
+require __DIR__ . '/../src/partials/header.php';
+require __DIR__ . '/../src/partials/top_nav.php';
+?>
+<div class="page">
+    <h1>Base'ler</h1>
+
+    <?php if ($error !== null): ?>
+        <p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
+    <?php endif; ?>
+    <?php if ($success !== null): ?>
+        <p class="ok"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></p>
+    <?php endif; ?>
+
+    <?php if (empty($teams)): ?>
+        <div class="card">
+            <p>Henüz hiçbir ekibe üye değilsiniz. Erişim için bir platform admini ile iletişime geçin.</p>
+        </div>
+    <?php endif; ?>
+
+    <?php foreach ($teams as $t):
+        $canEdit = in_array($t['role'], array('editor', 'owner'), true);
+    ?>
+        <div class="card">
+            <h2>
+                <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
+                <span class="pill"><?php echo htmlspecialchars($t['role'], ENT_QUOTES, 'UTF-8'); ?></span>
+            </h2>
+
+            <?php if (!empty($basesByTeam[$t['id']])): ?>
+                <table>
+                    <tr><th>Base</th><th>Açıklama</th></tr>
+                    <?php foreach ($basesByTeam[$t['id']] as $b): ?>
+                        <tr>
+                            <td><a href="/base_tables.php?base_id=<?php echo (int) $b['id']; ?>"><?php echo htmlspecialchars($b['name'], ENT_QUOTES, 'UTF-8'); ?></a></td>
+                            <td><?php echo htmlspecialchars((string) $b['description'], ENT_QUOTES, 'UTF-8'); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+            <?php else: ?>
+                <p>Bu ekipte henüz base yok.</p>
+            <?php endif; ?>
+
+            <?php if ($canEdit): ?>
+                <form class="stacked" method="post" action="/bases.php">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="team_id" value="<?php echo (int) $t['id']; ?>">
+                    <label>Yeni base adı
+                        <input type="text" name="name" required>
+                    </label>
+                    <label>Açıklama (opsiyonel)
+                        <input type="text" name="description">
+                    </label>
+                    <button type="submit">Base Oluştur</button>
+                </form>
+            <?php else: ?>
+                <p class="hint">Bu ekipte base oluşturmak için editor veya owner rolü gerekir.</p>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+</div>
+<?php require __DIR__ . '/../src/partials/footer.php'; ?>

@@ -1,0 +1,471 @@
+body {
+    font-family: Segoe UI, Arial, sans-serif;
+    margin: 0;
+    background: #f5f5f7;
+    color: #1d1d1f;
+}
+
+.topnav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #1d1d1f;
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+}
+
+.topnav a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.topnav .navuser {
+    margin-left: auto;
+    opacity: 0.8;
+}
+
+.navlogout {
+    display: inline;
+}
+
+.navlogout button {
+    background: none;
+    border: 1px solid #666;
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.page {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.15rem; }
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    text-align: left;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+
+.ok { color: #1a7f37; font-weight: 600; }
+.error { color: #c62828; font-weight: 600; }
+
+form.stacked label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+form.stacked input,
+form.stacked select,
+form.stacked textarea {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    padding: 0.4rem 0.5rem;
+    margin-top: 0.25rem;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+form.stacked button {
+    background: #1d1d1f;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.hint {
+    color: #6e6e73;
+    font-size: 0.9rem;
+}
+
+.row-actions {
+    white-space: nowrap;
+}
+
+.row-actions form {
+    display: inline-block;
+    margin-right: 0.25rem;
+}
+
+.btn-sm {
+    background: #eee;
+    color: #1d1d1f;
+    border: 1px solid #d8d8dc;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-sm:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.btn-danger {
+    background: #fdecea;
+    border-color: #f3c1bc;
+    color: #c62828;
+}
+
+.login-box {
+    max-width: 360px;
+    margin: 4rem auto;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.pill {
+    display: inline-block;
+    background: #eee;
+    border-radius: 999px;
+    padding: 0.1rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* ---- Grid (Faz 3) ---------------------------------------------------- */
+
+.page-wide {
+    max-width: none;
+    margin: 2rem 1.5rem;
+    padding: 0;
+}
+
+.grid-wrap {
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    overflow: auto;
+    max-width: 100%;
+    margin-bottom: 1rem;
+}
+
+table.grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: auto;
+    min-width: 100%;
+    font-size: 0.9rem;
+}
+
+table.grid thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f5f5f7;
+    border-bottom: 2px solid #d8d8dc;
+    border-right: 1px solid #eee;
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+}
+
+.field-badge {
+    display: inline-block;
+    color: #6e6e73;
+    font-weight: 600;
+    margin-right: 0.3rem;
+}
+
+.req-mark {
+    color: #c62828;
+    margin-left: 0.15rem;
+}
+
+table.grid td {
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 0;
+    vertical-align: middle;
+    height: 2rem;
+}
+
+table.grid .grid-rownum {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #f5f5f7;
+    color: #86868b;
+    text-align: right;
+    padding: 0.4rem 0.6rem;
+    border-right: 1px solid #d8d8dc;
+    min-width: 2.5rem;
+}
+
+table.grid thead .grid-rownum {
+    z-index: 3;
+}
+
+table.grid tbody tr:hover td {
+    background: #fafafa;
+}
+
+table.grid tbody tr:hover .grid-rownum {
+    background: #f0f0f2;
+}
+
+.grid-actions-col {
+    text-align: center;
+    white-space: nowrap;
+    padding: 0.3rem 0.5rem !important;
+}
+
+.grid-empty {
+    color: #86868b;
+    padding: 1rem !important;
+    text-align: center;
+}
+
+.cell-view {
+    padding: 0.4rem 0.75rem;
+    min-height: 1.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+    cursor: default;
+}
+
+td.editable {
+    cursor: text;
+}
+
+td.editable .cell-view:hover {
+    background: #f0f7ff;
+}
+
+td.editable.editing {
+    padding: 0;
+    box-shadow: inset 0 0 0 2px #1a73e8;
+}
+
+.cell-input {
+    width: 100%;
+    min-width: 140px;
+    box-sizing: border-box;
+    border: none;
+    padding: 0.35rem 0.7rem;
+    font: inherit;
+    background: #fff;
+}
+
+.cell-input:focus {
+    outline: none;
+}
+
+textarea.cell-input {
+    min-height: 4.5rem;
+    resize: vertical;
+}
+
+.cell-checkbox {
+    margin: 0 0.75rem;
+    width: 1rem;
+    height: 1rem;
+}
+
+@keyframes cellFlashOk {
+    0% { background: #d3f3dd; }
+    100% { background: transparent; }
+}
+
+@keyframes cellFlashError {
+    0% { background: #fbdada; }
+    100% { background: transparent; }
+}
+
+td.cell-flash-ok {
+    animation: cellFlashOk 0.7s ease-out;
+}
+
+td.cell-flash-error {
+    animation: cellFlashError 0.7s ease-out;
+}
+
+.grid-add-record {
+    display: inline-block;
+}
+
+.grid-add-record button {
+    background: #1d1d1f;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ---- Grid araç çubuğu: arama + sıralama (Faz 4) ----------------------- */
+
+.grid-toolbar {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.grid-search {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 6px;
+    min-width: 220px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.sort-panel,
+.filter-panel {
+    position: relative;
+}
+
+.sort-panel summary,
+.filter-panel summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.sort-panel summary::-webkit-details-marker,
+.filter-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.sort-panel[open] summary,
+.filter-panel[open] summary {
+    background: #e6e6e8;
+}
+
+.sort-form {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.85rem;
+    min-width: 320px;
+}
+
+.sort-row {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.sort-row select {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    font: inherit;
+}
+
+.sort-row select:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.sort-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.4rem;
+}
+
+.grid-row-count {
+    align-self: center;
+    color: #6e6e73;
+    font-size: 0.85rem;
+    margin-left: auto;
+}
+
+.filter-panel .filter-form {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.85rem;
+    min-width: 420px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.filter-row select,
+.filter-row input {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.filter-row .filter-field-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-row .filter-cond-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-row .filter-value-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-logic-row {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #444;
+    margin: 0.5rem 0 0.25rem;
+}
+
+.filter-logic-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}

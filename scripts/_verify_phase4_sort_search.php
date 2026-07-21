@@ -4,7 +4,7 @@
 // oturum çerezi ile istek atılır. Kendi test kullanıcısını/verisini kurar,
 // doğrular, sonunda temizler (test_isolation.php ile aynı desen).
 //
-// Ön koşul: dev server ayakta olmalı -> C:\php73\php.exe -S localhost:8000 -t public
+// Ön koşul: Apache ayakta olmalı (DocumentRoot = public, localhost:80).
 // Çalıştırma: C:\php73\php.exe scripts\_verify_phase4_sort_search.php
 
 if (PHP_SAPI !== 'cli') {
@@ -14,7 +14,7 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-define('BASE_URL', 'http://localhost:8000');
+define('BASE_URL', 'http://localhost');
 define('TEST_EMAIL', 'faz4.test.editor@bcc-test.local');
 define('TEST_PASS', 'Faz4Test!2026');
 
@@ -159,7 +159,7 @@ try {
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1={$fieldId}&sort_dir_1=asc", $cookie);
     $order = extract_field_values_in_order($resp['body'], $fieldId);
     check('Artan siralama dogru (10,20,30)', $order === array('10', '20', '30'), 'bulunan: ' . implode(',', $order));
-    check('Aktif siralama sayaci "Sirala (1)" gosteriyor', strpos($resp['body'], 'Sırala (1)') !== false);
+    check('Aktif siralama sayaci "Sort (1)" gosteriyor', strpos($resp['body'], 'Sort (1)') !== false);
 
     // --- Azalan sıralama ----------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1={$fieldId}&sort_dir_1=desc", $cookie);

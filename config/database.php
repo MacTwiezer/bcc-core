@@ -72,11 +72,13 @@ function bcc_prepare_positional($sql, array $params)
         function ($m) use ($params, &$bound) {
             $name = $m[1];
 
-            if (!array_key_exists($name, $params)) {
+            if (array_key_exists($name, $params)) {
+                $bound[] = $params[$name];
+            } elseif (array_key_exists(':' . $name, $params)) {
+                $bound[] = $params[':' . $name];
+            } else {
                 throw new InvalidArgumentException("bcc_query: eksik parametre :{$name}");
             }
-
-            $bound[] = $params[$name];
 
             return '?';
         },

@@ -4,8 +4,6 @@ require __DIR__ . '/../src/bootstrap.php';
 
 require_login();
 
-$pdo = bcc_get_pdo();
-
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : (isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0);
 $table = find_table_or_404($tableId);
 
@@ -26,37 +24,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'create_record') {
-        $posStmt = $pdo->prepare('SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM records WHERE table_id = :table_id');
-        $posStmt->execute(array(':table_id' => $table['id']));
-        $nextPos = (int) $posStmt->fetch()['next_pos'];
+        $nextPos = (int) bcc_fetch_column('SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM records WHERE table_id = :table_id', array(':table_id' => $table['id']));
 
         $user = current_user();
-        $stmt = $pdo->prepare('INSERT INTO records (table_id, position, created_by) VALUES (:table_id, :position, :created_by)');
-        $stmt->execute(array(':table_id' => $table['id'], ':position' => $nextPos, ':created_by' => $user['id']));
-        $newId = $pdo->lastInsertId();
+        bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:table_id, :position, :created_by)', array(':table_id' => $table['id'], ':position' => $nextPos, ':created_by' => $user['id']));
+        $newId = bcc_last_insert_id();
         log_audit('record.create', 'record', $newId, array('table_id' => $table['id']), $table['team_id']);
         $success = 'Kayıt eklendi.';
     } elseif ($action === 'delete_record') {
         $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;
 
-        $checkStmt = $pdo->prepare('SELECT id FROM records WHERE id = :id AND table_id = :table_id LIMIT 1');
-        $checkStmt->execute(array(':id' => $recordId, ':table_id' => $table['id']));
+        $existingRecord = bcc_fetch_one('SELECT id FROM records WHERE id = :id AND table_id = :table_id LIMIT 1', array(':id' => $recordId, ':table_id' => $table['id']));
 
-        if (!$checkStmt->fetch()) {
+        if (!$existingRecord) {
             http_response_code(403);
             die('Bu kayıt bu tabloya ait değil.');
         }
 
-        $stmt = $pdo->prepare('DELETE FROM records WHERE id = :id');
-        $stmt->execute(array(':id' => $recordId));
+        bcc_execute('DELETE FROM records WHERE id = :id', array(':id' => $recordId));
         log_audit('record.delete', 'record', $recordId, array('table_id' => $table['id']), $table['team_id']);
         $success = 'Kayıt silindi.';
     }
 }
 
-$stmt = $pdo->prepare('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id');
-$stmt->execute(array(':table_id' => $table['id']));
-$fields = $stmt->fetchAll();
+$fields = bcc_fetch_all('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id', array(':table_id' => $table['id']));
 
 $fieldsById = array();
 foreach ($fields as $f) {
@@ -113,9 +104,7 @@ if (!empty($filterConds)) {
 }
 $recordsSql .= ' ORDER BY ' . implode(', ', $orderParts);
 
-$stmt = $pdo->prepare($recordsSql);
-$stmt->execute($recordsParams);
-$records = $stmt->fetchAll();
+$records = bcc_fetch_all($recordsSql, $recordsParams);
 
 // Kayıt ekleme/silme formlarının ve "temizle" linklerinin geçerli sort/filter
 // durumunu koruması için ortak query string parçaları.
@@ -144,10 +133,9 @@ $cellsByRecord = array();
 if (!empty($records) && !empty($fields)) {
     $recordIds = array_column($records, 'id');
     $placeholders = implode(',', array_fill(0, count($recordIds), '?'));
-    $stmt = $pdo->prepare("SELECT record_id, field_id, value_text, value_number, value_date, value_json FROM cell_values WHERE record_id IN ($placeholders)");
-    $stmt->execute($recordIds);
+    $cellRows = bcc_fetch_all("SELECT record_id, field_id, value_text, value_number, value_date, value_json FROM cell_values WHERE record_id IN ($placeholders)", $recordIds);
 
-    foreach ($stmt->fetchAll() as $cell) {
+    foreach ($cellRows as $cell) {
         $cellsByRecord[$cell['record_id']][$cell['field_id']] = $cell;
     }
 }
@@ -158,9 +146,7 @@ $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 // Tablo sekme şeridi için: aynı base'in diğer tabloları (görünüm amaçlı, salt-okunur).
 // base_id zaten yukarıda require_team_access($table['team_id']) ile doğrulandı,
 // bu yüzden aynı base_id'ye ait kardeş tablolar da güvenle listelenebilir.
-$siblingTablesStmt = $pdo->prepare('SELECT id, name FROM tables_meta WHERE base_id = :base_id ORDER BY position, id');
-$siblingTablesStmt->execute(array(':base_id' => $table['base_id']));
-$siblingTables = $siblingTablesStmt->fetchAll();
+$siblingTables = bcc_fetch_all('SELECT id, name FROM tables_meta WHERE base_id = :base_id ORDER BY position, id', array(':base_id' => $table['base_id']));
 
 $gridUser = current_user();
 $gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1, 'UTF-8'), 'UTF-8');

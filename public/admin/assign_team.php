@@ -4,9 +4,8 @@ require __DIR__ . '/../../src/bootstrap.php';
 
 require_admin();
 
-$pdo = bcc_get_pdo();
-$users = $pdo->query('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY email')->fetchAll();
-$teams = $pdo->query('SELECT id, name FROM teams ORDER BY name')->fetchAll();
+$users = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY email');
+$teams = bcc_fetch_all('SELECT id, name FROM teams ORDER BY name');
 
 $error = null;
 $success = null;
@@ -22,11 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($userId <= 0 || $teamId <= 0 || !in_array($role, $roles, true)) {
         $error = 'Geçersiz seçim.';
     } else {
-        $stmt = $pdo->prepare(
+        bcc_execute(
             'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
-             ON DUPLICATE KEY UPDATE role = VALUES(role)'
+             ON DUPLICATE KEY UPDATE role = VALUES(role)',
+            array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role)
         );
-        $stmt->execute(array(':team_id' => $teamId, ':user_id' => $userId, ':role' => $role));
         log_audit('team_member.assign', 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role));
         $success = 'Atama kaydedildi.';
     }

@@ -23,19 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($password) < 8) {
         $error = 'Şifre en az 8 karakter olmalı.';
     } else {
-        $pdo = bcc_get_pdo();
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
-        $stmt->execute(array(':email' => $email));
+        $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email LIMIT 1', array('email' => $email));
 
-        if ($stmt->fetch()) {
+        if ($existing) {
             $error = 'Bu e-posta zaten kayıtlı.';
         } else {
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare(
-                'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 0, 0)'
+            bcc_execute(
+                'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 0, 0)',
+                array('email' => $email, 'hash' => $hash, 'full_name' => $fullName)
             );
-            $stmt->execute(array(':email' => $email, ':hash' => $hash, ':full_name' => $fullName));
-            $newId = $pdo->lastInsertId();
+            $newId = bcc_last_insert_id();
             log_audit('user.register', 'user', $newId, array('email' => $email));
 
             header('Location: /login.php?registered=1');

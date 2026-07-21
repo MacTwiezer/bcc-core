@@ -4,12 +4,10 @@ require __DIR__ . '/../../src/bootstrap.php';
 
 require_admin();
 
-$pdo = bcc_get_pdo();
+$users = bcc_fetch_all('SELECT id, email, full_name, is_admin, is_active, created_at FROM users ORDER BY created_at DESC');
+$teams = bcc_fetch_all('SELECT id, name, created_at FROM teams ORDER BY name');
 
-$users = $pdo->query('SELECT id, email, full_name, is_admin, is_active, created_at FROM users ORDER BY created_at DESC')->fetchAll();
-$teams = $pdo->query('SELECT id, name, created_at FROM teams ORDER BY name')->fetchAll();
-
-$memStmt = $pdo->query(
+$memberRows = bcc_fetch_all(
     'SELECT tm.team_id, tm.role, u.id AS user_id, u.email, u.full_name
      FROM team_members tm
      INNER JOIN users u ON u.id = tm.user_id
@@ -17,7 +15,7 @@ $memStmt = $pdo->query(
 );
 
 $membersByTeam = array();
-foreach ($memStmt->fetchAll() as $row) {
+foreach ($memberRows as $row) {
     $membersByTeam[$row['team_id']][] = $row;
 }
 $pageTitle = 'Admin';

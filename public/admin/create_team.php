@@ -15,16 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name === '') {
         $error = 'Ekip adı boş olamaz.';
     } else {
-        $pdo = bcc_get_pdo();
-        $stmt = $pdo->prepare('SELECT id FROM teams WHERE name = :name');
-        $stmt->execute(array(':name' => $name));
+        $existing = bcc_fetch_one('SELECT id FROM teams WHERE name = :name', array('name' => $name));
 
-        if ($stmt->fetch()) {
+        if ($existing) {
             $error = 'Bu isimde bir ekip zaten var.';
         } else {
-            $stmt = $pdo->prepare('INSERT INTO teams (name) VALUES (:name)');
-            $stmt->execute(array(':name' => $name));
-            $newId = $pdo->lastInsertId();
+            bcc_execute('INSERT INTO teams (name) VALUES (:name)', array('name' => $name));
+            $newId = bcc_last_insert_id();
             log_audit('team.create', 'team', $newId, array('name' => $name));
             $success = 'Ekip oluşturuldu: ' . $name;
         }

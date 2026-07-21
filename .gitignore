@@ -1,0 +1,11 @@
+# Araç artıkları
+.gstack/
+*.log
+/tmp/
+
+# Yerel gizli yapılandırma
+config/database.local.php
+
+# Windows
+Thumbs.db
+desktop.ini

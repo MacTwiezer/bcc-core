@@ -1,0 +1,487 @@
+/* Airtable Data ekranı benzeri kabuk/çerçeve — sadece grid.php tarafından kullanılır.
+   Grid işlevselliği (hücre düzenleme, arama, sıralama, filtre) style.css + grid*.js
+   içinde kalır; bu dosya yalnızca görünüm ekler. */
+
+* { box-sizing: border-box; }
+
+body.gs-body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #fff;
+    color: #1d1d1f;
+    display: flex;
+    min-height: 100vh;
+}
+
+body.gs-body a { text-decoration: none; color: inherit; }
+
+/* ---------- Sol dikey şerit ---------- */
+
+.gs-rail {
+    width: 52px;
+    flex-shrink: 0;
+    background: #1d1d1f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 0;
+}
+
+.gs-rail-logo {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.gs-rail-logo-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    display: block;
+}
+
+.gs-rail-back-icon {
+    display: none;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    background: #2d7ff9;
+    border-radius: 8px;
+    padding: 7px;
+    width: 32px;
+    height: 32px;
+}
+
+.gs-rail-logo:hover .gs-rail-logo-img { visibility: hidden; }
+.gs-rail-logo:hover .gs-rail-back-icon { display: block; }
+
+.gs-rail-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.gs-rail-icon-btn {
+    background: none;
+    border: none;
+    padding: 0.35rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.gs-rail-icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+.gs-icon-btn-dark { background: none; }
+.gs-icon-btn-dark:hover { background: #f2f2f4; }
+
+.gs-account { position: relative; }
+
+.gs-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gs-account-menu {
+    display: none;
+    position: absolute;
+    left: calc(100% + 10px);
+    bottom: 0;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    min-width: 220px;
+    overflow: hidden;
+    z-index: 40;
+}
+
+.gs-account-menu.is-open { display: block; }
+
+.gs-account-info {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.gs-account-name { font-weight: 600; font-size: 0.9rem; }
+.gs-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+
+.gs-account-logout { padding: 0.4rem; }
+
+.gs-account-logout button {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0.55rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: #c62828;
+    font-family: inherit;
+}
+
+.gs-account-logout button:hover { background: #fdecea; }
+
+/* ---------- Ana kolon ---------- */
+
+.gs-main-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- Üst bar ---------- */
+
+.gs-topbar {
+    display: flex;
+    align-items: center;
+    height: 52px;
+    padding: 0 1rem;
+    background: #fff;
+    border-bottom: 1px solid #e6e6e9;
+}
+
+.gs-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 220px;
+    flex-shrink: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.3rem 0.4rem;
+    margin-left: -0.4rem;
+    border-radius: 6px;
+}
+
+.gs-topbar-left:hover { background: #f2f2f4; }
+
+.gs-base-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #2d7ff9;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+
+.gs-base-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gs-topbar-tabs {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.gs-topbar-tab {
+    background: none;
+    border: none;
+    font: inherit;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: #5f6368;
+    cursor: pointer;
+}
+
+.gs-topbar-tab:hover { background: #f2f2f4; }
+
+.gs-topbar-tab.is-active {
+    color: #1d1d1f;
+    font-weight: 600;
+    background: #edf0f3;
+}
+
+.gs-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 220px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.gs-btn-ghost,
+.gs-btn-primary {
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.gs-btn-ghost {
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    color: #1d1d1f;
+}
+
+.gs-btn-ghost:hover { background: #f5f5f7; }
+
+.gs-btn-primary {
+    background: #2d7ff9;
+    color: #fff;
+}
+
+.gs-btn-primary:hover { background: #1f6fe0; }
+
+/* ---------- Tablo sekme şeridi ---------- */
+
+.gs-table-tabs {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-bottom: 1px solid #e6e6e9;
+    padding: 0 0.5rem;
+}
+
+.gs-table-tabs-scroll {
+    display: flex;
+    overflow-x: auto;
+    flex: 1;
+}
+
+.gs-table-tab {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.86rem;
+    color: #5f6368;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+}
+
+.gs-table-tab:hover { color: #1d1d1f; background: #f7f8fa; }
+
+.gs-table-tab.is-active {
+    color: #1d1d1f;
+    font-weight: 600;
+    border-bottom-color: #2d7ff9;
+    background: #f2f7ff;
+}
+
+.gs-table-tab-add {
+    padding: 0.4rem 0.7rem;
+    font-size: 1rem;
+    color: #5f6368;
+    border-radius: 6px;
+    margin-left: 0.25rem;
+    flex-shrink: 0;
+}
+
+.gs-table-tab-add:hover { background: #f2f2f4; }
+
+/* ---------- Görünüm/araç şeridi ---------- */
+
+.gs-view-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.85rem;
+    border-bottom: 1px solid #e6e6e9;
+    background: #fff;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    position: relative;
+}
+
+.gs-view-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.gs-icon-btn {
+    background: none;
+    border: none;
+    padding: 0.35rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.gs-icon-btn:hover { background: #f2f2f4; }
+
+.gs-view-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.gs-view-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    flex-wrap: wrap;
+}
+
+.gs-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.82rem;
+    color: #5f6368;
+    padding: 0.4rem 0.55rem;
+    border-radius: 6px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.gs-tool-btn::-webkit-details-marker { display: none; }
+
+.gs-tool-btn:hover { background: #f2f2f4; }
+
+.gs-tool-details { position: relative; }
+
+.gs-search {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    margin-left: 0.3rem;
+}
+
+.gs-search:focus-within { background: #f2f2f4; }
+
+.gs-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    font-family: inherit;
+    width: 110px;
+}
+
+/* ---------- Görünüm listesi paneli (hamburger) ---------- */
+
+.gs-view-drawer {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0.5rem;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+    min-width: 260px;
+    padding: 0.6rem;
+}
+
+.gs-view-drawer.is-open { display: block; }
+
+.gs-view-drawer-create {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    color: #1a73e8;
+    font-weight: 600;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.gs-view-drawer-create:hover { background: #f2f2f4; }
+
+.gs-view-drawer-search {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f2f2f4;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    margin: 0.35rem 0 0.5rem;
+}
+
+.gs-view-drawer-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.83rem;
+    font-family: inherit;
+    width: 100%;
+}
+
+.gs-view-drawer-view {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.gs-view-drawer-view.is-selected {
+    background: #e8f0fe;
+    color: #1a56db;
+    font-weight: 600;
+}
+
+/* ---------- Ana alan ---------- */
+
+.gs-main {
+    flex: 1;
+    padding: 1rem 1.25rem 1.5rem;
+    min-width: 0;
+    overflow: auto;
+}
+
+.gs-fields-link {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+}
+
+.gs-fields-link a { color: #2d7ff9; font-weight: 600; }
+
+.gs-grid-footer {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.1rem 0;
+    border-top: 1px solid #eee;
+    margin-top: 0.5rem;
+}
+
+.gs-grid-footer .grid-row-count {
+    font-size: 0.82rem;
+    color: #6e6e73;
+}

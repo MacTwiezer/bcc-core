@@ -4,8 +4,6 @@ require __DIR__ . '/../src/bootstrap.php';
 
 require_login();
 
-$pdo = bcc_get_pdo();
-
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : (isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0);
 $table = find_table_or_404($tableId);
 
@@ -51,46 +49,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($error === null) {
                 if ($action === 'create_field') {
-                    $posStmt = $pdo->prepare('SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM fields WHERE table_id = :table_id');
-                    $posStmt->execute(array(':table_id' => $table['id']));
-                    $nextPos = (int) $posStmt->fetch()['next_pos'];
-
-                    $stmt = $pdo->prepare(
-                        'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
-                         VALUES (:table_id, :name, :field_type, :options, :position, :is_required)'
+                    $nextPos = (int) bcc_fetch_column(
+                        'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM fields WHERE table_id = :table_id',
+                        array('table_id' => $table['id'])
                     );
-                    $stmt->execute(array(
-                        ':table_id' => $table['id'],
-                        ':name' => $name,
-                        ':field_type' => $fieldType,
-                        ':options' => $options,
-                        ':position' => $nextPos,
-                        ':is_required' => $isRequired,
-                    ));
-                    $newId = $pdo->lastInsertId();
+
+                    bcc_execute(
+                        'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
+                         VALUES (:table_id, :name, :field_type, :options, :position, :is_required)',
+                        array(
+                            'table_id' => $table['id'],
+                            'name' => $name,
+                            'field_type' => $fieldType,
+                            'options' => $options,
+                            'position' => $nextPos,
+                            'is_required' => $isRequired,
+                        )
+                    );
+                    $newId = bcc_last_insert_id();
                     log_audit('field.create', 'field', $newId, array('name' => $name, 'field_type' => $fieldType, 'table_id' => $table['id']), $table['team_id']);
                     $success = 'Alan oluşturuldu: ' . $name;
                 } else {
                     $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
 
-                    $checkStmt = $pdo->prepare('SELECT id FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1');
-                    $checkStmt->execute(array(':id' => $fieldId, ':table_id' => $table['id']));
+                    $existing = bcc_fetch_one(
+                        'SELECT id FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1',
+                        array('id' => $fieldId, 'table_id' => $table['id'])
+                    );
 
-                    if (!$checkStmt->fetch()) {
+                    if (!$existing) {
                         http_response_code(403);
                         die('Bu alan bu tabloya ait değil.');
                     }
 
-                    $stmt = $pdo->prepare(
-                        'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id'
+                    bcc_execute(
+                        'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
+                        array(
+                            'name' => $name,
+                            'field_type' => $fieldType,
+                            'options' => $options,
+                            'is_required' => $isRequired,
+                            'id' => $fieldId,
+                        )
                     );
-                    $stmt->execute(array(
-                        ':name' => $name,
-                        ':field_type' => $fieldType,
-                        ':options' => $options,
-                        ':is_required' => $isRequired,
-                        ':id' => $fieldId,
-                    ));
                     log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
                     $success = 'Alan güncellendi: ' . $name;
                 }
@@ -99,9 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete_field' || $action === 'move_field') {
         $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
 
-        $checkStmt = $pdo->prepare('SELECT id, name, position FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1');
-        $checkStmt->execute(array(':id' => $fieldId, ':table_id' => $table['id']));
-        $field = $checkStmt->fetch();
+        $field = bcc_fetch_one(
+            'SELECT id, name, position FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1',
+            array('id' => $fieldId, 'table_id' => $table['id'])
+        );
 
         if (!$field) {
             http_response_code(403);
@@ -109,16 +111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'delete_field') {
-            $stmt = $pdo->prepare('DELETE FROM fields WHERE id = :id');
-            $stmt->execute(array(':id' => $field['id']));
+            bcc_execute('DELETE FROM fields WHERE id = :id', array('id' => $field['id']));
             log_audit('field.delete', 'field', $field['id'], array('name' => $field['name']), $table['team_id']);
             $success = 'Alan silindi: ' . $field['name'];
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $siblingStmt = $pdo->prepare('SELECT id, position FROM fields WHERE table_id = :table_id ORDER BY position, id');
-            $siblingStmt->execute(array(':table_id' => $table['id']));
-            $siblings = $siblingStmt->fetchAll();
+            $siblings = bcc_fetch_all(
+                'SELECT id, position FROM fields WHERE table_id = :table_id ORDER BY position, id',
+                array('table_id' => $table['id'])
+            );
 
             $index = null;
             foreach ($siblings as $i => $row) {
@@ -134,11 +136,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $a = $siblings[$index];
                 $b = $siblings[$swapWith];
 
-                $upd = $pdo->prepare('UPDATE fields SET position = :pos WHERE id = :id');
-                $pdo->beginTransaction();
-                $upd->execute(array(':pos' => $b['position'], ':id' => $a['id']));
-                $upd->execute(array(':pos' => $a['position'], ':id' => $b['id']));
-                $pdo->commit();
+                bcc_begin_transaction();
+                bcc_execute('UPDATE fields SET position = :pos WHERE id = :id', array('pos' => $b['position'], 'id' => $a['id']));
+                bcc_execute('UPDATE fields SET position = :pos WHERE id = :id', array('pos' => $a['position'], 'id' => $b['id']));
+                bcc_commit();
 
                 log_audit('field.reorder', 'field', $field['id'], array('direction' => $direction), $table['team_id']);
             }
@@ -146,9 +147,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->prepare('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id');
-$stmt->execute(array(':table_id' => $table['id']));
-$fields = $stmt->fetchAll();
+$fields = bcc_fetch_all(
+    'SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id',
+    array('table_id' => $table['id'])
+);
 
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $editField = null;

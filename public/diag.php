@@ -8,35 +8,36 @@ $connectionCharset = null;
 $dbNameResult = null;
 $tables = array();
 $turkceTestSonucu = null;
+$phpVersion = phpversion();
+$mysqliCharset = null;
 
 try {
-    $pdo = bcc_get_pdo();
+    $mysqli = bcc_get_mysqli();
 
-    $serverVersion = $pdo->getAttribute(PDO::ATTR_SERVER_VERSION);
+    $serverVersion = $mysqli->server_info;
+    $mysqliCharset = $mysqli->character_set_name();
 
-    $row = $pdo->query("SELECT DATABASE() AS db_name")->fetch();
-    $dbNameResult = $row['db_name'];
+    $dbNameResult = bcc_fetch_column("SELECT DATABASE() AS db_name");
 
-    $row = $pdo->query("SHOW VARIABLES LIKE 'character_set_connection'")->fetch();
+    $row = bcc_fetch_one("SHOW VARIABLES LIKE 'character_set_connection'");
     $connectionCharset = $row ? $row['Value'] : null;
 
-    $stmt = $pdo->query("SHOW TABLES");
-    while ($tableRow = $stmt->fetch(PDO::FETCH_NUM)) {
-        $tables[] = $tableRow[0];
+    $tableRows = bcc_fetch_all("SHOW TABLES");
+    foreach ($tableRows as $tableRow) {
+        $tables[] = reset($tableRow);
     }
 
     // Türkçe karakter round-trip testi: geçici tabloya yaz, oku, sil.
-    $pdo->exec("CREATE TEMPORARY TABLE bcc_turkce_test (
+    bcc_execute("CREATE TEMPORARY TABLE bcc_turkce_test (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         deger VARCHAR(255) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $ornekMetin = 'ş ç ğ ı İ ö ü - Şişli, Çanakkale, Iğdır, Öğretmen, Üzüm';
 
-    $insertStmt = $pdo->prepare("INSERT INTO bcc_turkce_test (deger) VALUES (:deger)");
-    $insertStmt->execute(array(':deger' => $ornekMetin));
+    bcc_execute("INSERT INTO bcc_turkce_test (deger) VALUES (:deger)", array('deger' => $ornekMetin));
 
-    $okunanRow = $pdo->query("SELECT deger FROM bcc_turkce_test ORDER BY id DESC LIMIT 1")->fetch();
+    $okunanRow = bcc_fetch_one("SELECT deger FROM bcc_turkce_test ORDER BY id DESC LIMIT 1");
     $turkceTestSonucu = $okunanRow ? $okunanRow['deger'] : null;
 } catch (Exception $e) {
     $dbError = $e->getMessage();
@@ -72,7 +73,9 @@ header('Content-Type: text/html; charset=utf-8');
         <table>
             <tr><th>Sunucu sürümü</th><td><?php echo htmlspecialchars((string) $serverVersion, ENT_QUOTES, 'UTF-8'); ?></td></tr>
             <tr><th>Aktif veritabanı</th><td><code><?php echo htmlspecialchars((string) $dbNameResult, ENT_QUOTES, 'UTF-8'); ?></code></td></tr>
-            <tr><th>Bağlantı karakter seti</th><td><code><?php echo htmlspecialchars((string) $connectionCharset, ENT_QUOTES, 'UTF-8'); ?></code></td></tr>
+            <tr><th>Bağlantı karakter seti (SHOW VARIABLES)</th><td><code><?php echo htmlspecialchars((string) $connectionCharset, ENT_QUOTES, 'UTF-8'); ?></code></td></tr>
+            <tr><th>PHP sürümü</th><td><code><?php echo htmlspecialchars((string) $phpVersion, ENT_QUOTES, 'UTF-8'); ?></code></td></tr>
+            <tr><th>mysqli karakter seti (character_set_name)</th><td><code><?php echo htmlspecialchars((string) $mysqliCharset, ENT_QUOTES, 'UTF-8'); ?></code></td></tr>
         </table>
     <?php endif; ?>
 </div>

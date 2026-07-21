@@ -3,7 +3,7 @@
 // sarmalayıcısıyla gerçek oturum çerezi alınıp gerçek grid.php'ye istek atılır.
 // Kendi test verisini kurar, doğrular, sonunda temizler.
 //
-// Ön koşul: dev server ayakta olmalı -> C:\php73\php.exe -S localhost:8000 -t public
+// Ön koşul: Apache ayakta olmalı (DocumentRoot = public, localhost:80).
 // Çalıştırma: C:\php73\php.exe scripts\_verify_phase4_filter.php
 
 if (PHP_SAPI !== 'cli') {
@@ -13,7 +13,7 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-define('BASE_URL', 'http://localhost:8000');
+define('BASE_URL', 'http://localhost');
 define('TEST_EMAIL', 'faz4filter.test.editor@bcc-test.local');
 define('TEST_PASS', 'Faz4Test!2026');
 
@@ -279,7 +279,7 @@ try {
 
     // --- Filtre panel özeti ve sayfa saglamligi -----------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Kirmizi'), $cookie);
-    check('Filtre paneli ozet sayaci "Filtrele (1)" gosteriyor', strpos($resp['body'], 'Filtrele (1)') !== false);
+    check('Filtre paneli ozet sayaci "Filter (1)" gosteriyor', strpos($resp['body'], 'Filter (1)') !== false);
 } finally {
     $cleanup();
     echo "\nTemizlik tamam (test kullanicisi/base'i silindi).\n";

@@ -5,20 +5,18 @@ require __DIR__ . '/../src/bootstrap.php';
 require_login();
 
 $user = current_user();
-$pdo = bcc_get_pdo();
 
 // KVKK izolasyonu: kullanıcının üye olduğu ekipler -> yalnızca o ekiplerin base'leri.
 // Sorgu deseni bases.php / eski dashboard.php ile aynıdır, sadece görünüm için
 // tek düz bir listeye indirgenir.
-$stmt = $pdo->prepare(
+$teams = bcc_fetch_all(
     'SELECT t.id, t.name
      FROM team_members m
      INNER JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = :uid
-     ORDER BY t.name'
+     ORDER BY t.name',
+    array('uid' => $user['id'])
 );
-$stmt->execute(array(':uid' => $user['id']));
-$teams = $stmt->fetchAll();
 
 $bases = array();
 if (!empty($teams)) {
@@ -28,11 +26,10 @@ if (!empty($teams)) {
     }
 
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $stmt = $pdo->prepare(
-        "SELECT id, team_id, name, description, created_at FROM bases WHERE team_id IN ($placeholders) ORDER BY name"
+    $bases = bcc_fetch_all(
+        "SELECT id, team_id, name, description, created_at FROM bases WHERE team_id IN ($placeholders) ORDER BY name",
+        $teamIds
     );
-    $stmt->execute($teamIds);
-    $bases = $stmt->fetchAll();
 }
 
 $bccHomeIconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');

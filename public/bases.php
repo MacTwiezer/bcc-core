@@ -5,7 +5,6 @@ require __DIR__ . '/../src/bootstrap.php';
 require_login();
 
 $user = current_user();
-$pdo = bcc_get_pdo();
 
 $error = null;
 $success = null;
@@ -23,30 +22,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name === '') {
         $error = 'Base adı boş olamaz.';
     } else {
-        $stmt = $pdo->prepare(
-            'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)'
+        bcc_execute(
+            'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)',
+            array(
+                'team_id' => $teamId,
+                'name' => $name,
+                'description' => $description !== '' ? $description : null,
+                'created_by' => $user['id'],
+            )
         );
-        $stmt->execute(array(
-            ':team_id' => $teamId,
-            ':name' => $name,
-            ':description' => $description !== '' ? $description : null,
-            ':created_by' => $user['id'],
-        ));
-        $newId = $pdo->lastInsertId();
+        $newId = bcc_last_insert_id();
         log_audit('base.create', 'base', $newId, array('name' => $name), $teamId);
         $success = 'Base oluşturuldu: ' . $name;
     }
 }
 
-$stmt = $pdo->prepare(
+$teams = bcc_fetch_all(
     'SELECT t.id, t.name, m.role
      FROM team_members m
      INNER JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = :uid
-     ORDER BY t.name'
+     ORDER BY t.name',
+    array('uid' => $user['id'])
 );
-$stmt->execute(array(':uid' => $user['id']));
-$teams = $stmt->fetchAll();
 
 $basesByTeam = array();
 if (!empty($teams)) {
@@ -56,10 +54,12 @@ if (!empty($teams)) {
     }
 
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $stmt = $pdo->prepare("SELECT id, team_id, name, description FROM bases WHERE team_id IN ($placeholders) ORDER BY name");
-    $stmt->execute($teamIds);
+    $baseRows = bcc_fetch_all(
+        "SELECT id, team_id, name, description FROM bases WHERE team_id IN ($placeholders) ORDER BY name",
+        $teamIds
+    );
 
-    foreach ($stmt->fetchAll() as $b) {
+    foreach ($baseRows as $b) {
         $basesByTeam[$b['team_id']][] = $b;
     }
 }

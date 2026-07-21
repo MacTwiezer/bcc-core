@@ -28,10 +28,10 @@ function current_user($forceReload = false)
         return null;
     }
 
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare('SELECT id, email, full_name, is_admin, is_active FROM users WHERE id = :id LIMIT 1');
-    $stmt->execute(array(':id' => $_SESSION['user_id']));
-    $row = $stmt->fetch();
+    $row = bcc_fetch_one(
+        'SELECT id, email, full_name, is_admin, is_active FROM users WHERE id = :id LIMIT 1',
+        array('id' => $_SESSION['user_id'])
+    );
 
     if ($row && (int) $row['is_active'] === 1) {
         $user = $row;
@@ -83,12 +83,10 @@ function current_user_team_ids()
         return $cache;
     }
 
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare('SELECT team_id FROM team_members WHERE user_id = :uid');
-    $stmt->execute(array(':uid' => $user['id']));
+    $rows = bcc_fetch_all('SELECT team_id FROM team_members WHERE user_id = :uid', array('uid' => $user['id']));
 
     $ids = array();
-    while ($row = $stmt->fetch()) {
+    foreach ($rows as $row) {
         $ids[] = (int) $row['team_id'];
     }
 
@@ -104,10 +102,10 @@ function current_user_role_in_team($teamId)
         return null;
     }
 
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare('SELECT role FROM team_members WHERE user_id = :uid AND team_id = :tid LIMIT 1');
-    $stmt->execute(array(':uid' => $user['id'], ':tid' => $teamId));
-    $row = $stmt->fetch();
+    $row = bcc_fetch_one(
+        'SELECT role FROM team_members WHERE user_id = :uid AND team_id = :tid LIMIT 1',
+        array('uid' => $user['id'], 'tid' => $teamId)
+    );
 
     return $row ? $row['role'] : null;
 }
@@ -141,10 +139,10 @@ function require_role($teamId, $minRole)
 // olup olmadığı veya onay durumu, doğru şifre bilinmeden sızdırılmaz.
 function attempt_login($email, $password)
 {
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare('SELECT id, password_hash, is_active FROM users WHERE email = :email LIMIT 1');
-    $stmt->execute(array(':email' => $email));
-    $row = $stmt->fetch();
+    $row = bcc_fetch_one(
+        'SELECT id, password_hash, is_active FROM users WHERE email = :email LIMIT 1',
+        array('email' => $email)
+    );
 
     if (!$row || !password_verify($password, $row['password_hash'])) {
         return 'invalid';

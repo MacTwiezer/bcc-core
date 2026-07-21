@@ -77,10 +77,10 @@ $GLOBALS['BCC_FILTER_NO_VALUE_OPS'] = array('empty', 'not_empty', 'checked', 'un
 // team_id, bases üzerinden gelir; bir base'in verisine erişen her sayfa bunu kullanmalı.
 function find_base_or_404($baseId)
 {
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare('SELECT id, team_id, name, description FROM bases WHERE id = :id LIMIT 1');
-    $stmt->execute(array(':id' => $baseId));
-    $base = $stmt->fetch();
+    $base = bcc_fetch_one(
+        'SELECT id, team_id, name, description FROM bases WHERE id = :id LIMIT 1',
+        array('id' => $baseId)
+    );
 
     if (!$base) {
         http_response_code(404);
@@ -93,15 +93,13 @@ function find_base_or_404($baseId)
 // team_id, tables_meta -> bases üzerinden gelir; bir tablonun verisine erişen her sayfa bunu kullanmalı.
 function find_table_or_404($tableId)
 {
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare(
+    $table = bcc_fetch_one(
         'SELECT tm.id, tm.base_id, tm.name, tm.description, tm.position, b.team_id, b.name AS base_name
          FROM tables_meta tm
          INNER JOIN bases b ON b.id = tm.base_id
-         WHERE tm.id = :id LIMIT 1'
+         WHERE tm.id = :id LIMIT 1',
+        array('id' => $tableId)
     );
-    $stmt->execute(array(':id' => $tableId));
-    $table = $stmt->fetch();
 
     if (!$table) {
         http_response_code(404);
@@ -151,16 +149,14 @@ function select_choices_from_options($optionsJson)
 // erişen her sayfa/uçnokta bunu kullanmalı.
 function find_field_or_404($fieldId)
 {
-    $pdo = bcc_get_pdo();
-    $stmt = $pdo->prepare(
+    $field = bcc_fetch_one(
         'SELECT f.id, f.table_id, f.name, f.field_type, f.options, f.is_required, tm.base_id, b.team_id
          FROM fields f
          INNER JOIN tables_meta tm ON tm.id = f.table_id
          INNER JOIN bases b ON b.id = tm.base_id
-         WHERE f.id = :id LIMIT 1'
+         WHERE f.id = :id LIMIT 1',
+        array('id' => $fieldId)
     );
-    $stmt->execute(array(':id' => $fieldId));
-    $field = $stmt->fetch();
 
     if (!$field) {
         http_response_code(404);

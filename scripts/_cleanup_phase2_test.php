@@ -10,23 +10,19 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-$pdo = bcc_get_pdo();
-
 // created_by, silinen test kullanıcılarına işaret eden base'leri bul ve sil
 // (tables_meta/fields/records ON DELETE CASCADE ile birlikte gider).
-$stmt = $pdo->prepare(
+$baseIds = array_column(bcc_fetch_all(
     "SELECT b.id FROM bases b
      INNER JOIN users u ON u.id = b.created_by
-     WHERE u.email IN (:e1, :e2)"
-);
-$stmt->execute(array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local'));
-$baseIds = array_column($stmt->fetchAll(), 'id');
+     WHERE u.email IN (:e1, :e2)",
+    array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local')
+), 'id');
 
 foreach ($baseIds as $id) {
-    $pdo->prepare('DELETE FROM bases WHERE id = :id')->execute(array(':id' => $id));
+    bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $id));
 }
 
-$pdo->prepare('DELETE FROM users WHERE email IN (:e1, :e2)')
-    ->execute(array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local'));
+bcc_execute('DELETE FROM users WHERE email IN (:e1, :e2)', array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local'));
 
 echo 'Temizlendi: ' . count($baseIds) . " base + test kullanicilari silindi.\n";

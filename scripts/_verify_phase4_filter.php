@@ -17,7 +17,6 @@ define('BASE_URL', 'http://localhost');
 define('TEST_EMAIL', 'faz4filter.test.editor@bcc-test.local');
 define('TEST_PASS', 'Faz4Test!2026');
 
-$pdo = bcc_get_pdo();
 $results = array();
 
 function check($label, $passed, $detail = null)
@@ -91,19 +90,21 @@ function same_set($a, $b)
     return $a === $b;
 }
 
-$pdo->prepare('DELETE FROM users WHERE email = :e')->execute(array(':e' => TEST_EMAIL));
+bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => TEST_EMAIL));
 
-$cleanup = function () use ($pdo) {
-    $stmt = $pdo->prepare("SELECT b.id FROM bases b INNER JOIN users u ON u.id = b.created_by WHERE u.email = :e");
-    $stmt->execute(array(':e' => TEST_EMAIL));
-    foreach (array_column($stmt->fetchAll(), 'id') as $baseId) {
-        $pdo->prepare('DELETE FROM bases WHERE id = :id')->execute(array(':id' => $baseId));
+$cleanup = function () {
+    $baseIds = array_column(bcc_fetch_all(
+        'SELECT b.id FROM bases b INNER JOIN users u ON u.id = b.created_by WHERE u.email = :e',
+        array(':e' => TEST_EMAIL)
+    ), 'id');
+    foreach ($baseIds as $baseId) {
+        bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $baseId));
     }
-    $pdo->prepare('DELETE FROM users WHERE email = :e')->execute(array(':e' => TEST_EMAIL));
+    bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => TEST_EMAIL));
 };
 
 try {
-    $team = $pdo->query("SELECT id FROM teams WHERE name = 'TY' LIMIT 1")->fetch();
+    $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
     if (!$team) {
         echo "HATA: TY ekibi bulunamadi.\n";
         exit(1);
@@ -111,22 +112,18 @@ try {
     $teamId = (int) $team['id'];
 
     $hash = password_hash(TEST_PASS, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :name, 0, 1)');
-    $stmt->execute(array(':email' => TEST_EMAIL, ':hash' => $hash, ':name' => 'Faz4 Filter Test'));
-    $userId = (int) $pdo->lastInsertId();
+    bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :name, 0, 1)', array(':email' => TEST_EMAIL, ':hash' => $hash, ':name' => 'Faz4 Filter Test'));
+    $userId = (int) bcc_last_insert_id();
 
-    $pdo->prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (:tid, :uid, :role)')
-        ->execute(array(':tid' => $teamId, ':uid' => $userId, ':role' => 'editor'));
+    bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:tid, :uid, :role)', array(':tid' => $teamId, ':uid' => $userId, ':role' => 'editor'));
 
-    $stmt = $pdo->prepare('INSERT INTO bases (team_id, name, created_by) VALUES (:tid, :name, :uid)');
-    $stmt->execute(array(':tid' => $teamId, ':name' => 'Faz4 Filter Test', ':uid' => $userId));
-    $baseId = (int) $pdo->lastInsertId();
+    bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:tid, :name, :uid)', array(':tid' => $teamId, ':name' => 'Faz4 Filter Test', ':uid' => $userId));
+    $baseId = (int) bcc_last_insert_id();
 
-    $stmt = $pdo->prepare('INSERT INTO tables_meta (base_id, name, position) VALUES (:bid, :name, 0)');
-    $stmt->execute(array(':bid' => $baseId, ':name' => 'Filter Test'));
-    $tableId = (int) $pdo->lastInsertId();
+    bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:bid, :name, 0)', array(':bid' => $baseId, ':name' => 'Filter Test'));
+    $tableId = (int) bcc_last_insert_id();
 
-    $insertField = $pdo->prepare('INSERT INTO fields (table_id, name, field_type, options, position) VALUES (:tid, :name, :type, :options, :pos)');
+    $insertFieldSql = 'INSERT INTO fields (table_id, name, field_type, options, position) VALUES (:tid, :name, :type, :options, :pos)';
     $selectOptions = json_encode(array('choices' => array('Kirmizi', 'Yesil', 'Mavi')), JSON_UNESCAPED_UNICODE);
     $tagOptions = json_encode(array('choices' => array('A', 'B', 'C')), JSON_UNESCAPED_UNICODE);
 
@@ -140,15 +137,15 @@ try {
     );
     $fieldIds = array();
     foreach ($defs as $i => $d) {
-        $insertField->execute(array(':tid' => $tableId, ':name' => $d[0], ':type' => $d[1], ':options' => $d[2], ':pos' => $i));
-        $fieldIds[$d[0]] = (int) $pdo->lastInsertId();
+        bcc_execute($insertFieldSql, array(':tid' => $tableId, ':name' => $d[0], ':type' => $d[1], ':options' => $d[2], ':pos' => $i));
+        $fieldIds[$d[0]] = (int) bcc_last_insert_id();
     }
 
-    $insertRecord = $pdo->prepare('INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)');
-    $insertText = $pdo->prepare('INSERT INTO cell_values (record_id, field_id, value_text) VALUES (:rid, :fid, :val)');
-    $insertNumber = $pdo->prepare('INSERT INTO cell_values (record_id, field_id, value_number) VALUES (:rid, :fid, :val)');
-    $insertDate = $pdo->prepare('INSERT INTO cell_values (record_id, field_id, value_date) VALUES (:rid, :fid, :val)');
-    $insertJson = $pdo->prepare('INSERT INTO cell_values (record_id, field_id, value_json) VALUES (:rid, :fid, :val)');
+    $insertRecordSql = 'INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)';
+    $insertTextSql = 'INSERT INTO cell_values (record_id, field_id, value_text) VALUES (:rid, :fid, :val)';
+    $insertNumberSql = 'INSERT INTO cell_values (record_id, field_id, value_number) VALUES (:rid, :fid, :val)';
+    $insertDateSql = 'INSERT INTO cell_values (record_id, field_id, value_date) VALUES (:rid, :fid, :val)';
+    $insertJsonSql = 'INSERT INTO cell_values (record_id, field_id, value_json) VALUES (:rid, :fid, :val)';
 
     // rec1=Elma, rec2=Armut, rec3=Kiraz, rec4=Muz, rec5=(bos kayit)
     $rows = array(
@@ -161,21 +158,21 @@ try {
 
     $recordIds = array();
     foreach ($rows as $i => $r) {
-        $insertRecord->execute(array(':tid' => $tableId, ':pos' => $i, ':uid' => $userId));
-        $rid = (int) $pdo->lastInsertId();
+        bcc_execute($insertRecordSql, array(':tid' => $tableId, ':pos' => $i, ':uid' => $userId));
+        $rid = (int) bcc_last_insert_id();
         $recordIds[] = $rid;
 
         if ($r === null) {
             continue;
         }
 
-        $insertText->execute(array(':rid' => $rid, ':fid' => $fieldIds['Ad'], ':val' => $r['name']));
-        $insertNumber->execute(array(':rid' => $rid, ':fid' => $fieldIds['Miktar'], ':val' => $r['miktar']));
-        $insertNumber->execute(array(':rid' => $rid, ':fid' => $fieldIds['Aktif'], ':val' => $r['aktif']));
-        $insertDate->execute(array(':rid' => $rid, ':fid' => $fieldIds['Tarih'], ':val' => $r['tarih'] . ' 00:00:00'));
-        $insertText->execute(array(':rid' => $rid, ':fid' => $fieldIds['Renk'], ':val' => $r['renk']));
+        bcc_execute($insertTextSql, array(':rid' => $rid, ':fid' => $fieldIds['Ad'], ':val' => $r['name']));
+        bcc_execute($insertNumberSql, array(':rid' => $rid, ':fid' => $fieldIds['Miktar'], ':val' => $r['miktar']));
+        bcc_execute($insertNumberSql, array(':rid' => $rid, ':fid' => $fieldIds['Aktif'], ':val' => $r['aktif']));
+        bcc_execute($insertDateSql, array(':rid' => $rid, ':fid' => $fieldIds['Tarih'], ':val' => $r['tarih'] . ' 00:00:00'));
+        bcc_execute($insertTextSql, array(':rid' => $rid, ':fid' => $fieldIds['Renk'], ':val' => $r['renk']));
         if (!empty($r['tags'])) {
-            $insertJson->execute(array(':rid' => $rid, ':fid' => $fieldIds['Etiketler'], ':val' => json_encode($r['tags'], JSON_UNESCAPED_UNICODE)));
+            bcc_execute($insertJsonSql, array(':rid' => $rid, ':fid' => $fieldIds['Etiketler'], ':val' => json_encode($r['tags'], JSON_UNESCAPED_UNICODE)));
         }
     }
 

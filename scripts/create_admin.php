@@ -17,9 +17,7 @@ function prompt($label)
     return trim((string) fgets(STDIN));
 }
 
-$pdo = bcc_get_pdo();
-
-$existing = $pdo->query('SELECT COUNT(*) AS c FROM users WHERE is_admin = 1')->fetch();
+$existing = bcc_fetch_one('SELECT COUNT(*) AS c FROM users WHERE is_admin = 1');
 if ((int) $existing['c'] > 0) {
     fwrite(STDERR, "HATA: Zaten bir admin kullanıcı mevcut. Bu betik yalnızca ilk admin için kullanılabilir.\n");
     exit(1);
@@ -50,22 +48,21 @@ if ($password !== $passwordConfirm) {
     exit(1);
 }
 
-$stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email');
-$stmt->execute(array(':email' => $email));
-if ($stmt->fetch()) {
+$existingEmail = bcc_fetch_one('SELECT id FROM users WHERE email = :email', array(':email' => $email));
+if ($existingEmail) {
     fwrite(STDERR, "HATA: Bu e-posta zaten kayıtlı.\n");
     exit(1);
 }
 
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
-$stmt = $pdo->prepare(
-    'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 1, 1)'
+bcc_execute(
+    'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 1, 1)',
+    array(
+        ':email' => $email,
+        ':hash' => $hash,
+        ':full_name' => $fullName,
+    )
 );
-$stmt->execute(array(
-    ':email' => $email,
-    ':hash' => $hash,
-    ':full_name' => $fullName,
-));
 
-echo "Admin kullanıcı oluşturuldu: {$email} (id=" . $pdo->lastInsertId() . ")\n";
+echo "Admin kullanıcı oluşturuldu: {$email} (id=" . bcc_last_insert_id() . ")\n";

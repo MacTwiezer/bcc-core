@@ -10,35 +10,29 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-$pdo = bcc_get_pdo();
-
-$stmt = $pdo->query("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
-$team = $stmt->fetch();
+$team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
 if (!$team) {
     fwrite(STDERR, "HATA: TY ekibi bulunamadi.\n");
     exit(1);
 }
 $teamId = (int) $team['id'];
 
-$pdo->prepare('DELETE FROM users WHERE email IN (:e1, :e2)')
-    ->execute(array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local'));
+bcc_execute('DELETE FROM users WHERE email IN (:e1, :e2)', array(':e1' => 'faz2.test.editor@bcc-test.local', ':e2' => 'faz2.test.viewer@bcc-test.local'));
 
 $password = 'Faz2Test!2026';
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
-$insertUser = $pdo->prepare(
-    'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 0, 1)'
-);
+$insertUserSql = 'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 0, 1)';
 
-$insertUser->execute(array(':email' => 'faz2.test.editor@bcc-test.local', ':hash' => $hash, ':full_name' => 'Faz2 Test Editor'));
-$editorId = (int) $pdo->lastInsertId();
+bcc_execute($insertUserSql, array(':email' => 'faz2.test.editor@bcc-test.local', ':hash' => $hash, ':full_name' => 'Faz2 Test Editor'));
+$editorId = (int) bcc_last_insert_id();
 
-$insertUser->execute(array(':email' => 'faz2.test.viewer@bcc-test.local', ':hash' => $hash, ':full_name' => 'Faz2 Test Viewer'));
-$viewerId = (int) $pdo->lastInsertId();
+bcc_execute($insertUserSql, array(':email' => 'faz2.test.viewer@bcc-test.local', ':hash' => $hash, ':full_name' => 'Faz2 Test Viewer'));
+$viewerId = (int) bcc_last_insert_id();
 
-$insertMember = $pdo->prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)');
-$insertMember->execute(array(':team_id' => $teamId, ':user_id' => $editorId, ':role' => 'editor'));
-$insertMember->execute(array(':team_id' => $teamId, ':user_id' => $viewerId, ':role' => 'viewer'));
+$insertMemberSql = 'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)';
+bcc_execute($insertMemberSql, array(':team_id' => $teamId, ':user_id' => $editorId, ':role' => 'editor'));
+bcc_execute($insertMemberSql, array(':team_id' => $teamId, ':user_id' => $viewerId, ':role' => 'viewer'));
 
 echo "Kuruldu (TY ekibi, id={$teamId}):\n";
 echo "  editor: faz2.test.editor@bcc-test.local / {$password} (id={$editorId})\n";

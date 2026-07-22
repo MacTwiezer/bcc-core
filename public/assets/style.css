@@ -469,3 +469,121 @@ td.cell-flash-error {
     gap: 0.75rem;
     margin-top: 0.5rem;
 }
+
+.hide-fields-panel {
+    position: relative;
+}
+
+.hide-fields-panel summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.hide-fields-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.hide-fields-panel[open] summary {
+    background: #e6e6e8;
+}
+
+.hide-fields-panel summary.hide-fields-btn-active,
+.hide-fields-panel summary.hide-fields-btn-active:hover {
+    background: #e8f0fe;
+    color: #1a56db;
+}
+
+.hide-fields-form {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.85rem;
+    min-width: 240px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.hide-fields-search {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 6px;
+    font: inherit;
+    margin-bottom: 0.5rem;
+}
+
+.hide-field-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.3rem 0;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.hide-field-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.hide-field-toggle {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+    background: #d0d0d5;
+    border-radius: 999px;
+    transition: background 0.15s ease;
+}
+
+.hide-field-toggle::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+}
+
+.hide-field-toggle-input:checked + .hide-field-toggle {
+    background: #2D7FF9;
+}
+
+.hide-field-toggle-input:checked + .hide-field-toggle::before {
+    transform: translateX(14px);
+}
+
+.hide-field-toggle-input:focus-visible + .hide-field-toggle {
+    outline: 2px solid #2D7FF9;
+    outline-offset: 2px;
+}
+
+.hide-field-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hide-fields-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+}

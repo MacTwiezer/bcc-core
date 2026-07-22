@@ -54,6 +54,24 @@ foreach ($fields as $f) {
     $fieldsById[(int) $f['id']] = $f;
 }
 
+// Alan gizleme (Grid araçları Adım 1): hidden_fields=ID,ID,... (ya da panelin kendi
+// formundan gelen visible_fields[]) GET parametresi, yalnızca bu tabloya ait alan
+// id'leri kabul edilir (whitelist). Birincil alan ($fields zaten position,id sırayla
+// çekildiği için ilk eleman) Airtable'daki gibi hiçbir zaman gizlenemez — bu kural
+// parse_grid_hidden_fields() içinde uygulanır, URL'e elle yazılsa bile bozulmaz.
+// Gizli alan hâlâ filtrelenebilir/sıralanabilir — SQL sorgusu ve $fieldsById her
+// zaman $fields'in tamamını kullanır; $visibleFields yalnızca render (thead/tbody)
+// için daraltılmış listedir, veri katmanını etkilemez.
+$primaryFieldId = !empty($fields) ? (int) $fields[0]['id'] : null;
+$hiddenFieldIds = parse_grid_hidden_fields($_GET, $fieldsById, $primaryFieldId);
+
+$visibleFields = array();
+foreach ($fields as $f) {
+    if (!in_array((int) $f['id'], $hiddenFieldIds, true)) {
+        $visibleFields[] = $f;
+    }
+}
+
 // Sıralama (Faz 4): sort_field_1..3 / sort_dir_1..3 GET parametreleri, yalnızca bu
 // tabloya ait alanlar kabul edilir. Kalıcılık henüz yok — durum URL'de taşınıyor.
 $sortRules = parse_grid_sort_rules($_GET, $fieldsById);
@@ -124,10 +142,27 @@ if (!empty($filterRules)) {
     $filterState['filter_logic'] = strtolower($filterLogic);
 }
 
+$hiddenFieldsState = array();
+if (!empty($hiddenFieldIds)) {
+    $hiddenFieldsState['hidden_fields'] = implode(',', $hiddenFieldIds);
+}
+
 $baseState = array('table_id' => $table['id']);
-$stateQueryString = http_build_query($baseState + $sortState + $filterState);
-$clearSortQueryString = http_build_query($baseState + $filterState);
-$clearFilterQueryString = http_build_query($baseState + $sortState);
+$stateQueryString = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState);
+$clearSortQueryString = http_build_query($baseState + $filterState + $hiddenFieldsState);
+$clearFilterQueryString = http_build_query($baseState + $sortState + $hiddenFieldsState);
+
+// Hide fields panelinin "Tümünü göster/gizle" kısayolları için hazır sorgu dizeleri
+// (mevcut sort/filter durumu korunur — grid.php'nin diğer state linkleriyle aynı desen).
+// Birincil alan "Tümünü gizle"den her zaman muaf tutulur.
+$showAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState);
+$nonPrimaryFieldIds = array();
+foreach ($fields as $f) {
+    if ((int) $f['id'] !== $primaryFieldId) {
+        $nonPrimaryFieldIds[] = (int) $f['id'];
+    }
+}
+$hideAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState + array('hidden_fields' => implode(',', $nonPrimaryFieldIds)));
 
 $cellsByRecord = array();
 if (!empty($records) && !empty($fields)) {
@@ -222,10 +257,57 @@ $gridUser = current_user();
             </span>
         </div>
         <div class="gs-view-toolbar-right">
-            <button type="button" class="gs-tool-btn">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2.5 6h15M2.5 10h10M2.5 14h6" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
-                Hide fields
-            </button>
+            <?php if (!empty($fields)): ?>
+            <details class="hide-fields-panel gs-tool-details">
+                <summary class="gs-tool-btn <?php echo !empty($hiddenFieldIds) ? 'hide-fields-btn-active' : ''; ?>">
+                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2.5 6h15M2.5 10h10M2.5 14h6" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <?php if (empty($hiddenFieldIds)): ?>
+                        Hide fields
+                    <?php elseif (count($hiddenFieldIds) === 1): ?>
+                        1 hidden field
+                    <?php else: ?>
+                        <?php echo count($hiddenFieldIds); ?> hidden fields
+                    <?php endif; ?>
+                </summary>
+                <form method="get" action="/grid.php" class="hide-fields-form" id="hide-fields-form">
+                    <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                    <input type="hidden" name="visible_fields_submitted" value="1">
+                    <?php foreach ($sortState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
+                    <?php foreach ($filterState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
+                    <input type="text" class="hide-fields-search" placeholder="Find a field" data-hide-fields-search>
+                    <?php foreach ($fields as $f):
+                        if ((int) $f['id'] === $primaryFieldId) {
+                            continue; // birincil alan Airtable'daki gibi panelde listelenmez, hep görünür
+                        }
+                    ?>
+                        <label class="hide-field-row">
+                            <input
+                                type="checkbox"
+                                class="hide-field-toggle-input"
+                                name="visible_fields[]"
+                                value="<?php echo (int) $f['id']; ?>"
+                                <?php echo !in_array((int) $f['id'], $hiddenFieldIds, true) ? 'checked' : ''; ?>
+                            >
+                            <span class="hide-field-toggle" aria-hidden="true"></span>
+                            <span class="hide-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                    <div class="hide-fields-actions">
+                        <button type="submit" class="btn-sm" data-hide-fields-apply>Uygula</button>
+                        <?php if (!empty($hiddenFieldIds)): ?>
+                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($showAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü göster</a>
+                        <?php endif; ?>
+                        <?php if (count($hiddenFieldIds) < count($nonPrimaryFieldIds)): ?>
+                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($hideAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü gizle</a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </details>
+            <?php endif; ?>
 
             <?php if (!empty($fields)): ?>
             <details class="filter-panel gs-tool-details">
@@ -235,6 +317,9 @@ $gridUser = current_user();
                 </summary>
                 <form method="get" action="/grid.php" class="filter-form">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                    <?php if (!empty($hiddenFieldIds)): ?>
+                        <input type="hidden" name="hidden_fields" value="<?php echo htmlspecialchars(implode(',', $hiddenFieldIds), ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endif; ?>
                     <?php for ($slot = 1; $slot <= 5; $slot++):
                         $currentRule = null;
                         foreach ($filterRules as $rule) {
@@ -313,6 +398,9 @@ $gridUser = current_user();
                 </summary>
                 <form method="get" action="/grid.php" class="sort-form">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                    <?php if (!empty($hiddenFieldIds)): ?>
+                        <input type="hidden" name="hidden_fields" value="<?php echo htmlspecialchars(implode(',', $hiddenFieldIds), ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endif; ?>
                     <?php for ($slot = 1; $slot <= 3; $slot++):
                         $currentFieldId = 0;
                         $currentDir = 'asc';
@@ -402,7 +490,7 @@ $gridUser = current_user();
                     <thead>
                         <tr>
                             <th class="grid-rownum">#</th>
-                            <?php foreach ($fields as $f): ?>
+                            <?php foreach ($visibleFields as $f): ?>
                                 <th>
                                     <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
@@ -415,13 +503,13 @@ $gridUser = current_user();
                     <tbody>
                         <?php if (empty($records)): ?>
                             <tr>
-                                <td class="grid-empty" colspan="<?php echo count($fields) + 1 + ($canEdit ? 1 : 0); ?>">Bu tabloda henüz kayıt yok.</td>
+                                <td class="grid-empty" colspan="<?php echo count($visibleFields) + 1 + ($canEdit ? 1 : 0); ?>">Bu tabloda henüz kayıt yok.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($records as $i => $record): ?>
                                 <tr data-record-id="<?php echo (int) $record['id']; ?>">
                                     <td class="grid-rownum"><?php echo (int) $i + 1; ?></td>
-                                    <?php foreach ($fields as $f):
+                                    <?php foreach ($visibleFields as $f):
                                         $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
                                         $rawValue = cell_raw_value($f['field_type'], $cellRow);
                                         $displayText = cell_display_text($f['field_type'], $cellRow);
@@ -491,6 +579,7 @@ $gridUser = current_user();
 </script>
 <script src="/assets/grid-toolbar.js" defer></script>
 <script src="/assets/grid-filter.js" defer></script>
+<script src="/assets/grid-hide-fields.js" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="/assets/grid.js" defer></script>

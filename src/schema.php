@@ -439,6 +439,63 @@ function parse_grid_filter_rules($params, $fieldsById)
     return $rules;
 }
 
+// Grid'in "Hide fields" panelinden gelen görünürlük tercihini doğrular ve gizlenecek
+// alan id'lerini döndürür. Birincil alan ($primaryFieldId — position/id'ye göre bu
+// tablonun ilk alanı) HİÇBİR ZAMAN gizlenemez, URL'e elle yazılsa bile (Airtable'daki
+// gibi) — bu fonksiyon onu iki yolda da sonuçtan düşürür.
+// İki girdi şekli kabul edilir:
+//  - visible_fields[]=ID&visible_fields[]=ID...: panelin kendi formu (toggle'lar
+//    "işaretli = görünür") tarayıcı tarafından böyle gönderilir; işaretli olmayan
+//    alanlar gizli sayılır. visible_fields_submitted=1 imleyicisi, "form gönderildi
+//    ama hiçbir kutu işaretli değil" durumunu "bu istek panel formundan hiç gelmedi"
+//    durumundan ayırt etmek için gerekli (aksi halde ikisi de "parametre yok" gibi görünür).
+//  - hidden_fields=ID,ID,...: diğer bağlantılar/formlar (Tümünü gizle kısayolu,
+//    Filter/Sort formlarındaki durum input'u) doğrudan bu biçimi üretir.
+// Yalnızca $fieldsById'e ait (bu tabloya ait) alan id'leri kabul edilir, sahte/yabancı
+// id'ler sessizce yok sayılır — parse_grid_sort_rules / parse_grid_filter_rules ile
+// aynı yaklaşım. Gizli alan veriden çıkmaz; yalnızca grid.php'nin render ettiği sütun
+// listesinden düşer (filtre/sıralama etkilenmez).
+// Dönüş: gizlenecek alan id'lerinin (int) dizisi.
+function parse_grid_hidden_fields($params, $fieldsById, $primaryFieldId)
+{
+    $primaryFieldId = (int) $primaryFieldId;
+
+    if (isset($params['visible_fields_submitted'])) {
+        $visible = array();
+
+        if (isset($params['visible_fields']) && is_array($params['visible_fields'])) {
+            foreach ($params['visible_fields'] as $rawId) {
+                $visible[(int) $rawId] = true;
+            }
+        }
+
+        $hidden = array();
+        foreach ($fieldsById as $fieldId => $field) {
+            if ($fieldId !== $primaryFieldId && !isset($visible[$fieldId])) {
+                $hidden[] = $fieldId;
+            }
+        }
+
+        return $hidden;
+    }
+
+    if (empty($params['hidden_fields'])) {
+        return array();
+    }
+
+    $hidden = array();
+
+    foreach (explode(',', (string) $params['hidden_fields']) as $rawId) {
+        $fieldId = (int) trim($rawId);
+
+        if ($fieldId > 0 && $fieldId !== $primaryFieldId && isset($fieldsById[$fieldId]) && !in_array($fieldId, $hidden, true)) {
+            $hidden[] = $fieldId;
+        }
+    }
+
+    return $hidden;
+}
+
 // Doğrulanmış tek bir filtre kuralını SQL WHERE parçasına çevirir.
 // $alias: bu kural için LEFT JOIN edilmiş cell_values takma adı (ör. "fv0").
 // $paramName: SQL'de kullanılacak bind parametre adı (ör. ":fval0"), kolonu içerir.

@@ -117,30 +117,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $siblings = bcc_fetch_all(
-                'SELECT id, position FROM fields WHERE table_id = :table_id ORDER BY position, id',
-                array('table_id' => $table['id'])
-            );
+            $moved = bcc_reorder_sibling('fields', 'table_id', $table['id'], $field['id'], $direction);
 
-            $index = null;
-            foreach ($siblings as $i => $row) {
-                if ((int) $row['id'] === $field['id']) {
-                    $index = $i;
-                    break;
-                }
-            }
-
-            $swapWith = $direction === 'up' ? $index - 1 : $index + 1;
-
-            if ($index !== null && $swapWith >= 0 && $swapWith < count($siblings)) {
-                $a = $siblings[$index];
-                $b = $siblings[$swapWith];
-
-                bcc_begin_transaction();
-                bcc_execute('UPDATE fields SET position = :pos WHERE id = :id', array('pos' => $b['position'], 'id' => $a['id']));
-                bcc_execute('UPDATE fields SET position = :pos WHERE id = :id', array('pos' => $a['position'], 'id' => $b['id']));
-                bcc_commit();
-
+            if ($moved) {
                 log_audit('field.reorder', 'field', $field['id'], array('direction' => $direction), $table['team_id']);
             }
         }

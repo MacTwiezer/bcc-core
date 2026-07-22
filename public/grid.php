@@ -399,12 +399,7 @@ $gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1
             <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">Alanları yönet</a>
         </p>
 
-        <?php if ($error !== null): ?>
-            <p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
-        <?php endif; ?>
-        <?php if ($success !== null): ?>
-            <p class="ok"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></p>
-        <?php endif; ?>
+        <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
         <?php if (empty($fields)): ?>
             <div class="card">

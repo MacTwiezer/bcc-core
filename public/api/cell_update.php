@@ -32,14 +32,7 @@ $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;
 $rawValue = isset($_POST['value']) ? $_POST['value'] : '';
 
 try {
-    $field = bcc_fetch_one(
-        'SELECT f.id, f.table_id, f.name, f.field_type, f.options, b.team_id
-         FROM fields f
-         INNER JOIN tables_meta tm ON tm.id = f.table_id
-         INNER JOIN bases b ON b.id = tm.base_id
-         WHERE f.id = :id LIMIT 1',
-        array(':id' => $fieldId)
-    );
+    $field = bcc_find_field($fieldId);
 
     if (!$field) {
         json_fail(404, 'Alan bulunamadı.');

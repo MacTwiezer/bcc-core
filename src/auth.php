@@ -45,6 +45,12 @@ function is_logged_in()
     return current_user() !== null;
 }
 
+// Hesap menüsü avatarında gösterilen tek harfli baş harf (UTF-8 güvenli — ör. "İ", "Ö").
+function bcc_user_initial($user)
+{
+    return mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8'), 'UTF-8');
+}
+
 function is_platform_admin()
 {
     $user = current_user();

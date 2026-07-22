@@ -149,7 +149,6 @@ $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 $siblingTables = bcc_fetch_all('SELECT id, name FROM tables_meta WHERE base_id = :base_id ORDER BY position, id', array(':base_id' => $table['base_id']));
 
 $gridUser = current_user();
-$gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1, 'UTF-8'), 'UTF-8');
 ?>
 <!doctype html>
 <html lang="tr">
@@ -171,19 +170,11 @@ $gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1
         <button type="button" class="gs-rail-icon-btn" aria-label="Bildirimler">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2.5c-2.4 0-4.2 1.9-4.2 4.3v2.6c0 .5-.2 1.3-.5 1.7L4.4 12.5c-.6.8-.2 1.9.8 2.2 3.3 1 6.9 1 10.2 0 .9-.3 1.3-1.4.7-2.2l-.9-1.4c-.3-.4-.5-1.2-.5-1.7V6.8c0-2.4-1.9-4.3-4.2-4.3z" stroke="#ccc" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.2 16.5a1.8 1.8 0 003.6 0" stroke="#ccc" stroke-width="1.3" stroke-linecap="round"/></svg>
         </button>
-        <div class="gs-account">
-            <button type="button" class="gs-avatar" id="gs-account-toggle"><?php echo htmlspecialchars($gridUserInitial, ENT_QUOTES, 'UTF-8'); ?></button>
-            <div class="gs-account-menu" id="gs-account-menu">
-                <div class="gs-account-info">
-                    <div class="gs-account-name"><?php echo htmlspecialchars($gridUser['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
-                    <div class="gs-account-email"><?php echo htmlspecialchars($gridUser['email'], ENT_QUOTES, 'UTF-8'); ?></div>
-                </div>
-                <form method="post" action="/logout.php" class="gs-account-logout">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit">Çıkış</button>
-                </form>
-            </div>
-        </div>
+        <?php
+        $accountMenuPrefix = 'gs';
+        $accountMenuUser = $gridUser;
+        require __DIR__ . '/../src/partials/account_menu.php';
+        ?>
     </div>
 </aside>
 
@@ -504,17 +495,9 @@ $gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="/assets/grid.js" defer></script>
 <?php endif; ?>
+<script src="/assets/account-menu.js" defer></script>
 <script>
 (function () {
-    var accountToggle = document.getElementById('gs-account-toggle');
-    var accountMenu = document.getElementById('gs-account-menu');
-    if (accountToggle && accountMenu) {
-        accountToggle.addEventListener('click', function (e) {
-            e.stopPropagation();
-            accountMenu.classList.toggle('is-open');
-        });
-    }
-
     var drawerToggle = document.getElementById('gs-view-panel-toggle');
     var drawer = document.getElementById('gs-view-drawer');
     if (drawerToggle && drawer) {
@@ -525,9 +508,6 @@ $gridUserInitial = mb_strtoupper(mb_substr((string) $gridUser['full_name'], 0, 1
     }
 
     document.addEventListener('click', function (e) {
-        if (accountMenu && !accountMenu.contains(e.target)) {
-            accountMenu.classList.remove('is-open');
-        }
         if (drawer && !drawer.contains(e.target) && e.target !== drawerToggle) {
             drawer.classList.remove('is-open');
         }

@@ -1,29 +1,29 @@
 # BCC-Core
 
-Airtable benzeri iç araç — PHP 7.3 + MariaDB (XAMPP MySQL) + PDO.
+Airtable benzeri iç araç — PHP 7.3 + MariaDB (XAMPP MySQL) + mysqli.
 
 Gereksinimler ve veri modeli için: `docs/GEREKSINIMLER.md`.
 
 ## Ortam
 
+- Proje klasörü: `C:\xampp\htdocs\bcc-core` (Apache DocumentRoot = `public/`)
 - PHP: `C:\php73\php.exe` → PHP 7.3.33 (thread-safe, VC15)
 - Veritabanı: MariaDB 10.4 (XAMPP MySQL), `127.0.0.1:3306`, user `root`, şifre yok
 - Veritabanı adı: `bcc_core` (utf8mb4_unicode_ci, önceden oluşturulmuş olmalı)
-- Apache kullanılmıyor (PHP 7.3 / VC15, XAMPP Apache'sinin PHP 8.2 / VC2019 modül
-  yapısıyla uyumsuz). Geliştirme sunucusu olarak `php -S` kullanılır.
+- Apache: XAMPP'in kendi PHP 8.2 modülü yerine PHP 7.3 (VC15) kullanılıyor. Bu,
+  `C:\xampp\apache\conf\extra\httpd-xampp.conf` içine eklenen iki satırla sağlandı:
+  ```
+  LoadModule php7_module "C:/php73/php7apache2_4.dll"
+  PHPIniDir "C:/php73"
+  ```
+  Ayrıca `httpd.conf`'ta `DocumentRoot "C:/xampp/htdocs/bcc-core/public"` olarak ayarlı.
 
 ## Kurulum — şemayı içe aktar
 
 XAMPP MySQL çalışırken, proje klasöründe:
 
 ```
-C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root bcc_core < schema.sql
-```
-
-Alternatif (mysql istemcisi yoksa, PHP ile):
-
-```
-C:\php73\php.exe -r "$pdo = new PDO('mysql:host=127.0.0.1;port=3306;dbname=bcc_core;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $pdo->exec(file_get_contents('schema.sql')); echo 'OK\n';"
+C:\xampp\mysql\bin\mysql.exe -u root bcc_core < schema.sql
 ```
 
 Bu, şu tabloları oluşturur: `teams`, `users`, `team_members`, `bases`, `tables_meta`,
@@ -32,13 +32,9 @@ Bu, şu tabloları oluşturur: `teams`, `users`, `team_members`, `bases`, `table
 
 ## Çalıştırma
 
-Proje kök klasöründe:
+XAMPP Control Panel'den **Apache** ve **MySQL**'i başlatın (Start).
 
-```
-C:\php73\php.exe -S localhost:8000 -t public
-```
-
-Tarayıcıda: http://localhost:8000/
+Tarayıcıda: http://localhost/
 
 ## Test — Faz 0 tanı sayfası
 
@@ -56,7 +52,7 @@ Sayfa yeşil "OK" mesajları gösteriyorsa Faz 0 tamamlanmış demektir.
 ```
 bcc-core/
   config/
-    database.php    # PDO bağlantısı (bcc_get_pdo())
+    database.php    # mysqli bağlantısı (bcc_get_mysqli(), bcc_query ve yardımcılar)
   public/
     index.php        # Faz 0 tanı sayfası
   docs/

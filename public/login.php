@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-legal">
             <p>
                 Giriş yaparak
-                <a href="/teams.php">Kullanım Koşulları</a>
+                <a href="/terms.php">Kullanım Koşulları</a>
                 ve
                 <a href="/privacy.php">Gizlilik Politikası</a>'nı kabul etmiş olursunuz.
             </p>

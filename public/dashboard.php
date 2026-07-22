@@ -61,7 +61,6 @@ function bcc_home_relative_date($datetimeStr)
     return intdiv($months, 12) . ' yıl önce';
 }
 
-$userInitial = mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8'), 'UTF-8');
 ?>
 <!doctype html>
 <html lang="tr">
@@ -94,19 +93,11 @@ $userInitial = mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8
             <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M10 2.5c-2.4 0-4.2 1.9-4.2 4.3v2.6c0 .5-.2 1.3-.5 1.7L4.4 12.5c-.6.8-.2 1.9.8 2.2 3.3 1 6.9 1 10.2 0 .9-.3 1.3-1.4.7-2.2l-.9-1.4c-.3-.4-.5-1.2-.5-1.7V6.8c0-2.4-1.9-4.3-4.2-4.3z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.2 16.5a1.8 1.8 0 003.6 0" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
         </button>
 
-        <div class="home-account">
-            <button type="button" class="home-avatar" id="home-account-toggle"><?php echo htmlspecialchars($userInitial, ENT_QUOTES, 'UTF-8'); ?></button>
-            <div class="home-account-menu" id="home-account-menu">
-                <div class="home-account-info">
-                    <div class="home-account-name"><?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
-                    <div class="home-account-email"><?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?></div>
-                </div>
-                <form method="post" action="/logout.php" class="home-account-logout">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit">Çıkış</button>
-                </form>
-            </div>
-        </div>
+        <?php
+        $accountMenuPrefix = 'home';
+        $accountMenuUser = $user;
+        require __DIR__ . '/../src/partials/account_menu.php';
+        ?>
     </div>
 </header>
 
@@ -196,19 +187,13 @@ $userInitial = mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8
     </main>
 </div>
 
+<script src="/assets/account-menu.js" defer></script>
 <script>
 (function () {
     var sidebar = document.getElementById('home-sidebar');
     var sidebarToggle = document.getElementById('home-sidebar-toggle');
     sidebarToggle.addEventListener('click', function () {
         sidebar.classList.toggle('is-collapsed');
-    });
-
-    var accountToggle = document.getElementById('home-account-toggle');
-    var accountMenu = document.getElementById('home-account-menu');
-    accountToggle.addEventListener('click', function (e) {
-        e.stopPropagation();
-        accountMenu.classList.toggle('is-open');
     });
 
     var filterToggle = document.getElementById('home-filter-toggle');
@@ -226,7 +211,6 @@ $userInitial = mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8
     });
 
     document.addEventListener('click', function () {
-        accountMenu.classList.remove('is-open');
         filterMenu.classList.remove('is-open');
     });
 })();

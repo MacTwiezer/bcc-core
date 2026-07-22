@@ -15,7 +15,7 @@ kendi sunucumuzda çalışan bir kopyasını (klon) yazmak. Airtable'ın ücretl
 sınırlarına (özellikle 5 editör limiti) takılmadan, kendi kontrolümüzde, MySQL
 veritabanı üzerinde çalışan bir iç araç.
 
-Teknoloji: **PHP 7.3 + MariaDB (XAMPP MySQL) + PDO**, geliştirme sunucusu `php -S`.
+Teknoloji: **PHP 7.3 + MariaDB (XAMPP MySQL) + mysqli**, Apache (XAMPP) üzerinden.
 
 ---
 
@@ -96,13 +96,14 @@ ayrımının genişletilmiş hali.)
 
 ## 4. Teknik Mimari (özet)
 
-- **Dil:** PHP 7.3.33 (CLI + `php -S` geliştirme sunucusu).
+- **Dil:** PHP 7.3.33 (Apache modülü + CLI).
 - **Veritabanı:** MariaDB 10.4 (XAMPP'in MySQL'i), 127.0.0.1:3306, DB `bcc_core`.
-- **Erişim katmanı:** PDO + prepared statements (SQL injection koruması).
+- **Erişim katmanı:** mysqli + prepared statements (bcc_query yardımcı katmanı,
+  named parametre desteği).
 - **Karakter:** utf8mb4 (DB, tablo, bağlantı ve sayfa seviyesinde).
-- **Neden Apache değil:** Mevcut XAMPP Apache'si VC2019/PHP 8.2 ile derli; PHP 7.3
-  (VC15) modül olarak yüklenemez. Bu yüzden geliştirmede `php -S` kullanılır,
-  yalnızca MySQL XAMPP'ten alınır.
+- **Apache:** XAMPP Apache'nin kendi PHP 8.2 (VC2019) modülü yerine PHP 7.3 (VC15)
+  `httpd-xampp.conf`'a eklenen `LoadModule php7_module` + `PHPIniDir` satırlarıyla
+  bağlandı; DocumentRoot proje kökündeki `public/` klasörü. Detay: `README.md`.
 
 ---
 

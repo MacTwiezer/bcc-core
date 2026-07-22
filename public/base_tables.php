@@ -82,30 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'move_table') {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $siblings = bcc_fetch_all(
-                'SELECT id, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
-                array('base_id' => $base['id'])
-            );
+            $moved = bcc_reorder_sibling('tables_meta', 'base_id', $base['id'], $table['id'], $direction);
 
-            $index = null;
-            foreach ($siblings as $i => $row) {
-                if ((int) $row['id'] === $table['id']) {
-                    $index = $i;
-                    break;
-                }
-            }
-
-            $swapWith = $direction === 'up' ? $index - 1 : $index + 1;
-
-            if ($index !== null && $swapWith >= 0 && $swapWith < count($siblings)) {
-                $a = $siblings[$index];
-                $b = $siblings[$swapWith];
-
-                bcc_begin_transaction();
-                bcc_execute('UPDATE tables_meta SET position = :pos WHERE id = :id', array('pos' => $b['position'], 'id' => $a['id']));
-                bcc_execute('UPDATE tables_meta SET position = :pos WHERE id = :id', array('pos' => $a['position'], 'id' => $b['id']));
-                bcc_commit();
-
+            if ($moved) {
                 log_audit('table.reorder', 'table', $table['id'], array('direction' => $direction), $base['team_id']);
             }
         }

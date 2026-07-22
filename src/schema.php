@@ -222,6 +222,54 @@ function cell_display_text($fieldType, $cellRow)
     }
 }
 
+// Kardeş kayıtlar arasında sıra değiştirme (yukarı/aşağı taşı) — base_tables.php
+// (move_table) ve table_fields.php (move_field) tarafından paylaşılır.
+// GÜVENLİK: $tableName ve $parentColumn prepared statement ile bağlanamaz, doğrudan
+// SQL'e gömülür — bu yüzden KESİNLİKLE aşağıdaki sabit whitelist'ten gelmeli, asla
+// kullanıcı girdisinden (ör. $_POST) türememeli. Uyuşmayan bir çift verilirse (kod
+// hatası anlamına gelir) istisna fırlatılır.
+// Dönüş: takas yapıldıysa true; ilk/son eleman, geçersiz yön ya da öge bulunamadıysa false.
+function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $direction)
+{
+    $allowedParents = array(
+        'tables_meta' => 'base_id',
+        'fields' => 'table_id',
+    );
+
+    if (!isset($allowedParents[$tableName]) || $allowedParents[$tableName] !== $parentColumn) {
+        throw new InvalidArgumentException('bcc_reorder_sibling: izin verilmeyen tablo/kolon.');
+    }
+
+    $siblings = bcc_fetch_all(
+        "SELECT id, position FROM {$tableName} WHERE {$parentColumn} = :parent_id ORDER BY position, id",
+        array('parent_id' => $parentId)
+    );
+
+    $index = null;
+    foreach ($siblings as $i => $row) {
+        if ((int) $row['id'] === (int) $itemId) {
+            $index = $i;
+            break;
+        }
+    }
+
+    $swapWith = $direction === 'up' ? $index - 1 : $index + 1;
+
+    if ($index === null || $swapWith < 0 || $swapWith >= count($siblings)) {
+        return false;
+    }
+
+    $a = $siblings[$index];
+    $b = $siblings[$swapWith];
+
+    bcc_begin_transaction();
+    bcc_execute("UPDATE {$tableName} SET position = :pos WHERE id = :id", array('pos' => $b['position'], 'id' => $a['id']));
+    bcc_execute("UPDATE {$tableName} SET position = :pos WHERE id = :id", array('pos' => $a['position'], 'id' => $b['id']));
+    bcc_commit();
+
+    return true;
+}
+
 // Kullanıcıdan gelen ham değeri (POST'tan) fields.field_type'a göre doğrular ve
 // cell_values'a yazılacak kolon + normalize edilmiş değeri döndürür.
 // Dönüş: array('ok' => bool, 'error' => string|null, 'column' => string|null, 'value' => mixed)

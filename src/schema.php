@@ -146,10 +146,11 @@ function select_choices_from_options($optionsJson)
 }
 
 // team_id, fields -> tables_meta -> bases üzerinden gelir; bir alanın hücre verisine
-// erişen her sayfa/uçnokta bunu kullanmalı.
-function find_field_or_404($fieldId)
+// erişen her sayfa/uçnokta bunu kullanmalı. Bulunamazsa null döner (404/die yapmaz) —
+// çağıran taraf kendi hata davranışını (die ile HTML ya da JSON) seçer.
+function bcc_find_field($fieldId)
 {
-    $field = bcc_fetch_one(
+    return bcc_fetch_one(
         'SELECT f.id, f.table_id, f.name, f.field_type, f.options, f.is_required, tm.base_id, b.team_id
          FROM fields f
          INNER JOIN tables_meta tm ON tm.id = f.table_id
@@ -157,6 +158,11 @@ function find_field_or_404($fieldId)
          WHERE f.id = :id LIMIT 1',
         array('id' => $fieldId)
     );
+}
+
+function find_field_or_404($fieldId)
+{
+    $field = bcc_find_field($fieldId);
 
     if (!$field) {
         http_response_code(404);

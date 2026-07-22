@@ -176,12 +176,7 @@ require __DIR__ . '/../src/partials/top_nav.php';
         <p><?php echo htmlspecialchars($table['description'], ENT_QUOTES, 'UTF-8'); ?></p>
     <?php endif; ?>
 
-    <?php if ($error !== null): ?>
-        <p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
-    <?php endif; ?>
-    <?php if ($success !== null): ?>
-        <p class="ok"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></p>
-    <?php endif; ?>
+    <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
     <div class="card">
         <h2>Alanlar (<?php echo count($fields); ?>)</h2>

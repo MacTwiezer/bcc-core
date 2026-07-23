@@ -31,7 +31,8 @@ BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
 | PHP | **7.3.33** — `C:\php73\php.exe` (typed properties / 7.4+ özellik YOK) |
 | DB | MariaDB 10.4 (XAMPP MySQL), `127.0.0.1:3306`, root, şifresiz, `bcc_core`, utf8mb4 |
 | Erişim katmanı | **mysqli** (PDO tamamen kaldırıldı) |
-| Git | GitHub private/public repo, her faz ayrı commit |
+| Git repo | `github.com/MacTwiezer/bcc-core` — her özellik ayrı commit |
+| Claude Code | `cd C:\xampp\htdocs\bcc-core` → `claude` |
 
 **Apache'ye PHP 7.3 nasıl bağlandı** (bir daha yaşanmasın diye):
 - `httpd-xampp.conf`: PHP 8.2 satırları `#` ile kapatıldı, altına eklendi:
@@ -192,6 +193,29 @@ git commit -m "kisa aciklama"
 git push
 ```
 Geri alma: `git checkout .` (son commit'e döner)
+
+### Yeni sohbet akışı (token tasarrufu)
+
+Uzun sohbetlerde her mesaj tüm geçmişi taşır. Bu yüzden **her özellik için yeni sohbet**:
+
+1. Yeni sohbet aç, `docs/PROJE-DURUM.md` ve `docs/YAPILACAKLAR.md` dosyalarını **ekle** (ataç ikonu)
+2. "Şimdi şu maddeyi yapacağız, Claude Code için brifing hazırla" de
+3. Özellik bitince Claude Code'a dokümanları güncellettir:
+   ```
+   [Özellik] tamamlandı ve test edildi. İki dokümanı güncelle:
+   1) docs/YAPILACAKLAR.md — ilgili bölümü tamamen sil, kalan maddeleri yeniden numaralandır.
+   2) docs/PROJE-DURUM.md — "Biten İşler"e bir satır ekle, "Kalan İşler" tablosundan sil.
+   Başka hiçbir şeye dokunma.
+   ```
+4. Commit'le, sohbeti kapat
+
+**Sohbet içinde tasarruf:**
+- Lint / grep / "sunucu ayakta mı" gibi rutin onaylarda doğrudan `1` de, sorma
+- Sadece **silme içeren**, **şüphelendiğin** veya **anlamadığın** edit'leri danış
+- Onay ekranlarındaki uzun SVG kodlarını kırpabilirsin
+
+**Airtable görselleri:** Saklamaya gerek yok. Bir ekranı Airtable'a benzetirken
+o an ekran görüntüsü alıp sohbete at — hesaba zaten erişim var.
 
 ---
 

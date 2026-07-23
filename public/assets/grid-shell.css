@@ -111,7 +111,9 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     min-width: 220px;
-    overflow: hidden;
+    max-height: min(80vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
     z-index: 40;
 }
 
@@ -124,6 +126,43 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 .gs-account-name { font-weight: 600; font-size: 0.9rem; }
 .gs-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+
+.gs-account-section { padding: 0.3rem; }
+
+.gs-account-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1d1d1f;
+}
+
+.gs-account-item:hover { background: #f2f2f4; }
+
+.gs-account-item-arrow, .gs-account-item-icon { flex-shrink: 0; }
+.gs-account-item-arrow { margin-left: auto; }
+
+.gs-account-badge {
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.gs-account-badge-blue { background: #e8f0fe; color: #1a56db; }
+.gs-account-badge-orange { background: #fff1e0; color: #b5610a; }
+
+.gs-account-divider { height: 1px; background: #eee; margin: 0.3rem 0; }
 
 .gs-account-logout { padding: 0.4rem; }
 
@@ -174,8 +213,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     margin-left: -0.4rem;
     border-radius: 6px;
 }
-
-.gs-topbar-left:hover { background: #f2f2f4; }
 
 .gs-base-icon {
     width: 26px;
@@ -278,6 +315,10 @@ body.gs-body a { text-decoration: none; color: inherit; }
     color: #5f6368;
     white-space: nowrap;
     border-bottom: 2px solid transparent;
+    max-width: 180px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .gs-table-tab:hover { color: #1d1d1f; background: #f7f8fa; }
@@ -289,6 +330,77 @@ body.gs-body a { text-decoration: none; color: inherit; }
     background: #f2f7ff;
 }
 
+.gs-table-tab-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.gs-table-tab-caret {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: -0.3rem;
+    border-radius: 4px;
+    cursor: pointer;
+    list-style: none;
+    opacity: 0;
+}
+
+.gs-table-tab-caret::-webkit-details-marker { display: none; }
+
+.gs-table-tab-wrap:hover .gs-table-tab-caret,
+.gs-table-tab-wrap.is-active .gs-table-tab-caret,
+.gs-table-tab-menu[open] .gs-table-tab-caret {
+    opacity: 1;
+}
+
+.gs-table-tab-caret:hover { background: #e6e6e9; }
+
+.gs-table-tab-menu-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    margin-top: 0.3rem;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+    min-width: 170px;
+    padding: 0.35rem;
+}
+
+.gs-table-tab-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1d1d1f;
+}
+
+.gs-table-tab-menu-item svg { flex-shrink: 0; }
+
+.gs-table-tab-menu-item:hover { background: #f2f2f4; }
+
+.gs-table-tab-menu-item-danger { color: #c62828; }
+
+.gs-table-tab-menu-divider {
+    height: 1px;
+    background: #eee;
+    margin: 0.3rem 0.2rem;
+}
+
 .gs-table-tab-add {
     padding: 0.4rem 0.7rem;
     font-size: 1rem;
@@ -296,6 +408,173 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-radius: 6px;
     margin-left: 0.25rem;
     flex-shrink: 0;
+}
+
+.gs-all-tables-menu {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: 0.25rem;
+}
+
+.gs-all-tables-caret { opacity: 1; }
+
+.gs-kbd-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 0.4rem);
+    right: 0;
+    z-index: 25;
+    align-items: center;
+    gap: 0.5rem;
+    background: #1d1d1f;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.gs-all-tables-caret:hover .gs-kbd-tooltip,
+.gs-all-tables-caret:focus-visible .gs-kbd-tooltip,
+[data-tooltip-host]:hover .gs-kbd-tooltip,
+[data-tooltip-host]:focus-visible .gs-kbd-tooltip {
+    display: flex;
+}
+
+.gs-table-tab-menu[open] .gs-kbd-tooltip { display: none !important; }
+
+.gs-kbd-tooltip-light {
+    background: #fff;
+    color: #1d1d1f;
+    border: 1px solid #e6e6e9;
+}
+
+.gs-kbd-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.gs-kbd-mac { display: none; }
+
+html.is-mac .gs-kbd-mac { display: inline; }
+html.is-mac .gs-kbd-other { display: none; }
+
+/* Kayıt ekleme (a)/(b) tetikleyicileri — grid.js aynı fonksiyonu ikisine de bağlar. */
+
+.grid-add-record-fab {
+    position: fixed;
+    bottom: 24px;
+    left: 68px;
+    z-index: 15;
+}
+
+.grid-add-record-fab-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.grid-add-record-fab-btn:hover { background: #1a6fe0; }
+
+.grid-add-record-fab-btn .gs-kbd-tooltip {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+.grid-add-row-plus {
+    color: #8a8a8e;
+    font-weight: 600;
+}
+
+.grid-add-row-hint { position: relative; }
+
+.grid-add-row-hint .gs-kbd-tooltip { left: 0; right: auto; }
+
+.grid-add-row:hover { background: #f7f8fa; cursor: pointer; }
+
+.gs-all-tables-panel {
+    left: auto;
+    right: 0;
+    min-width: 240px;
+    padding: 0.5rem;
+}
+
+.gs-all-tables-search {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f2f2f4;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.4rem;
+}
+
+.gs-all-tables-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    font-family: inherit;
+    width: 100%;
+}
+
+.gs-all-tables-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.gs-all-tables-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #1d1d1f;
+}
+
+.gs-all-tables-row:hover { background: #f2f2f4; }
+
+.gs-all-tables-row.is-active {
+    background: #e8f0fe;
+    color: #1a56db;
+    font-weight: 600;
+}
+
+.gs-all-tables-row-check {
+    width: 14px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.gs-all-tables-row-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gs-all-tables-empty {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85rem;
+    color: #8a8a8e;
 }
 
 .gs-table-tab-add:hover { background: #f2f2f4; }
@@ -333,6 +612,51 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 .gs-icon-btn:hover { background: #f2f2f4; }
 
+.gs-view-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.gs-view-options-menu {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: -0.15rem;
+}
+
+.gs-view-options-caret { opacity: 1; }
+
+.gs-view-options-panel {
+    min-width: 260px;
+    padding: 0.4rem;
+}
+
+.gs-view-options-collab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+}
+
+.gs-view-options-collab-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.gs-view-options-collab-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.gs-view-options-collab-desc {
+    font-size: 0.75rem;
+    color: #8a8a8e;
+    white-space: normal;
+}
+
 .gs-view-label {
     display: flex;
     align-items: center;
@@ -340,6 +664,65 @@ body.gs-body a { text-decoration: none; color: inherit; }
     font-size: 0.86rem;
     font-weight: 600;
 }
+
+.gs-view-name-input {
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    border: 1px solid #2d7ff9;
+    border-radius: 4px;
+    padding: 0.1rem 0.3rem;
+    outline: none;
+    min-width: 120px;
+}
+
+/* Görünüm bilgi popover'ı: saf CSS hover (JS yok — tık, gelecekteki seçenek
+   dropdown'ı (iş 4) için ayrı bir <details> menüsüne saklanıyor, çift tık ise
+   yeniden adlandırma (iş 5) için; ikisi de bu popover'ı tetiklemez). Gecikme
+   yalnızca AÇILIŞTA uygulanır (opacity/visibility transition-delay'i .gs-view-trigger:hover
+   kuralında override edilir) — fare üzerinden hızlıca geçerken zıplamaz, kapanış hızlıdır. */
+.gs-view-info-popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 25;
+    margin-top: 0.5rem;
+    min-width: 220px;
+    background: #1d1d1f;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 0.7rem 0.8rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+}
+
+.gs-view-trigger:hover .gs-view-info-popover {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 300ms;
+}
+
+.gs-view-info-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.45rem;
+}
+
+.gs-view-info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-size: 0.78rem;
+}
+
+.gs-view-info-label {
+    color: #aeaeb2;
+    font-weight: 600;
+}
+
+.gs-view-info-value { color: #f2f2f4; }
 
 .gs-view-toolbar-right {
     display: flex;
@@ -484,4 +867,9 @@ body.gs-body a { text-decoration: none; color: inherit; }
 .gs-grid-footer .grid-row-count {
     font-size: 0.82rem;
     color: #6e6e73;
+}
+
+.gs-grid-footer .grid-add-toast {
+    margin: 0 0 0 0.75rem;
+    font-size: 0.82rem;
 }

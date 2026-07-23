@@ -37,18 +37,45 @@
             });
         }
 
-        // Grup başlığına tıkla -> o gruptaki satırları aç/kapa.
+        // Bir yolun (path) verilen üst grubun içinde olup olmadığını kontrol eder:
+        // ya üst grubun ta kendisi (yaprak seviyenin kendi satırları için) ya da
+        // "üst-" önekiyle başlayan bir alt yol (iç içe alt gruplar/satırlar için).
+        function isWithinGroup(path, parentPath) {
+            return path === parentPath || path.indexOf(parentPath + '-') === 0;
+        }
+
+        // Grup başlığına tıkla -> o grubun altındaki TÜM iç başlıkları ve satırları
+        // (kaç seviye iç içe olursa olsun) aç/kapa. Kapatılan bir dış grubun içindeki
+        // alt grup başlıkları da "genişletilmiş" durumuna sıfırlanır (aç/kapa
+        // hafızası seviye başına ayrı tutulmuyor — tek dış toggle basitçe kapsar).
         function setGroupCollapsed(headerRow, collapsed) {
             var toggle = headerRow.querySelector('[data-group-toggle]');
-            var groupIndex = headerRow.getAttribute('data-group-index');
+            var groupPath = headerRow.getAttribute('data-group-path');
 
             headerRow.setAttribute('data-group-collapsed', collapsed ? 'true' : 'false');
             if (toggle) {
                 toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             }
 
-            document.querySelectorAll('tr[data-group-index="' + groupIndex + '"][data-record-id]').forEach(function (row) {
-                row.style.display = collapsed ? 'none' : '';
+            document.querySelectorAll('[data-group-path]').forEach(function (el) {
+                if (el === headerRow) {
+                    return;
+                }
+
+                var elPath = el.getAttribute('data-group-path');
+                if (!isWithinGroup(elPath, groupPath)) {
+                    return;
+                }
+
+                el.style.display = collapsed ? 'none' : '';
+
+                if (el.hasAttribute('data-group-header')) {
+                    el.setAttribute('data-group-collapsed', 'false');
+                    var innerToggle = el.querySelector('[data-group-toggle]');
+                    if (innerToggle) {
+                        innerToggle.setAttribute('aria-expanded', 'true');
+                    }
+                }
             });
         }
 

@@ -130,6 +130,90 @@ function find_table_or_404($tableId)
     return $table;
 }
 
+// Bir tabloya ait TEK varsayılan görünüm satırını (id + name) döndürür; yoksa
+// oluşturur. grid.php şu ana kadar "Grid view" adını sabit basıyordu — görünüm
+// adını satır içi yeniden adlandırma özelliği kalıcı bir view_id gerektirdiği
+// için bu fonksiyon her table_id'nin en az bir views satırına sahip olmasını
+// garanti eder. Şemaya DOKUNMAZ (views tablosu zaten schema.sql'de var), yalnızca
+// satır okur/yazar.
+// Yarış koşulu: iki istek aynı anda ilk kez buraya gelirse ikisi de INSERT
+// deneyebilir (views.table_id üzerinde UNIQUE kısıt yok, DDL uygulanmıyor).
+// Bunu tamamen engellemek yerine ZARARSIZ hale getiriyoruz: INSERT'ten SONRA
+// satır her zaman TEKRAR "id ASC LIMIT 1" ile okunur — olası bir kısa süreli
+// çift satır oluşsa bile tüm çağıranlar hep AYNI (en eski) satırda buluşur,
+// hiçbir çağıran "az önce ben oluşturdum" varsayımıyla ikinci bir satır üretmez.
+function bcc_get_or_create_default_view($tableId)
+{
+    $view = bcc_fetch_one(
+        'SELECT id, name, config FROM views WHERE table_id = :table_id ORDER BY id ASC LIMIT 1',
+        array('table_id' => $tableId)
+    );
+
+    if ($view) {
+        return $view;
+    }
+
+    bcc_execute(
+        'INSERT INTO views (table_id, name, view_type)
+         SELECT :table_id, :name, :view_type
+         FROM DUAL
+         WHERE NOT EXISTS (SELECT 1 FROM views WHERE table_id = :table_id)',
+        array('table_id' => $tableId, 'name' => 'Grid view', 'view_type' => 'grid')
+    );
+
+    return bcc_fetch_one(
+        'SELECT id, name, config FROM views WHERE table_id = :table_id ORDER BY id ASC LIMIT 1',
+        array('table_id' => $tableId)
+    );
+}
+
+// Dondurulabilecek en fazla sütun sayısı (satır no dahil) — görünür alan sayısının
+// yaklaşık yarısı, en az 1. grid.php (ilk render) ve view_config_update.php
+// (sürükleme sonrası doğrulama) AYNI formülü paylaşır, ikisi ayrı ayrı hesaplamaz.
+function bcc_max_frozen_columns($visibleFieldCount)
+{
+    $total = $visibleFieldCount + 1; // +1: satır no kolonu her zaman sayılır
+
+    return max(1, (int) ceil($total / 2));
+}
+
+// views.config JSON'ından dondurulmuş sütun sayısını SAVUNMACI biçimde okur:
+// NULL, bozuk JSON, eksik anahtar veya beklenmedik tip (ör. string/float) gelirse
+// sessizce varsayılana (1 — yalnızca satır no) düşer, hata fırlatmaz. $maxAllowed
+// verilirse üst sınıra da kırpılır (config'teki eski bir değer, sonradan alan
+// gizlenip görünür sütun sayısı azalınca render'ı bozmasın diye).
+function bcc_get_frozen_column_count($configJson, $maxAllowed = null)
+{
+    $count = 1;
+
+    if ($configJson !== null && $configJson !== '') {
+        $decoded = json_decode($configJson, true);
+        if (is_array($decoded) && isset($decoded['frozen_column_count']) && is_int($decoded['frozen_column_count'])) {
+            $count = $decoded['frozen_column_count'];
+        }
+    }
+
+    if ($count < 1) {
+        $count = 1;
+    }
+    if ($maxAllowed !== null && $count > $maxAllowed) {
+        $count = $maxAllowed;
+    }
+
+    return $count;
+}
+
+// Bir base'e ait tüm tabloları (id + name) position,id sırasına göre döndürür.
+// Sekme şeridi (grid.php) ve base.php köprü sayfası (ilk tabloyu bulmak için) aynı
+// sorguyu paylaşır — iki yerde ayrı ayrı yazılmaz.
+function bcc_list_base_tables($baseId)
+{
+    return bcc_fetch_all(
+        'SELECT id, name FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
+        array('base_id' => $baseId)
+    );
+}
+
 function is_select_field_type($fieldType)
 {
     return in_array($fieldType, $GLOBALS['BCC_SELECT_FIELD_TYPES'], true);
@@ -241,6 +325,52 @@ function cell_display_text($fieldType, $cellRow)
         default:
             return '';
     }
+}
+
+// Bir kayıt satırını (hücreler + varsa "Sil" formu) basar. Gruplu ve düz (grupsuz)
+// tbody render'ı arasında paylaşılır; $groupPath verilirse satıra
+// data-group-path eklenir (grid-group.js aç/kapa bunu prefix eşleşmesiyle kullanır).
+// grid.php'nin ilk sayfa render'ı VE public/api/record_add.php (AJAX ile eklenen
+// tek bir satırın HTML'ini üretmek için) aynı fonksiyonu paylaşır — iki yerde
+// ayrı ayrı yazılmaz.
+function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null)
+{
+    ?>
+    <tr data-record-id="<?php echo (int) $record['id']; ?>" <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
+        <td class="grid-rownum"><?php echo (int) $rowNum; ?></td>
+        <?php foreach ($visibleFields as $f):
+            $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
+            $rawValue = cell_raw_value($f['field_type'], $cellRow);
+            $displayText = cell_display_text($f['field_type'], $cellRow);
+            $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
+        ?>
+            <td
+                class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
+                data-field-id="<?php echo (int) $f['id']; ?>"
+                data-field-type="<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"
+                data-value="<?php echo htmlspecialchars($rawValue, ENT_QUOTES, 'UTF-8'); ?>"
+                <?php if ($choices): ?>data-options="<?php echo htmlspecialchars(json_encode($choices, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+            >
+                <?php if ($f['field_type'] === 'checkbox'): ?>
+                    <input type="checkbox" class="cell-checkbox" <?php echo $rawValue === '1' ? 'checked' : ''; ?> <?php echo $canEdit ? '' : 'disabled'; ?>>
+                <?php else: ?>
+                    <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php endif; ?>
+            </td>
+        <?php endforeach; ?>
+        <?php if ($canEdit): ?>
+            <td class="grid-actions-col">
+                <form method="post" action="/grid.php?<?php echo htmlspecialchars($stateQueryString, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?');">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="delete_record">
+                    <input type="hidden" name="table_id" value="<?php echo (int) $tableId; ?>">
+                    <input type="hidden" name="record_id" value="<?php echo (int) $record['id']; ?>">
+                    <button type="submit" class="btn-sm btn-danger">Sil</button>
+                </form>
+            </td>
+        <?php endif; ?>
+    </tr>
+    <?php
 }
 
 // Grid gruplama (Grid araçları Adım 2a): bir grup başlığının ham hücre değerini
@@ -426,34 +556,84 @@ function parse_grid_sort_rules($params, $fieldsById)
     return $rules;
 }
 
-// Grid'in Group panelinden gelen group_field / group_dir GET parametrelerini
-// doğrular (Adım 2a — tek seviye, en fazla 1 kural). Yalnızca $fieldsById'e ait (bu
-// tabloya ait) bir alan id'si kabul edilir — gizli (Hide fields ile kapatılmış) bir
-// alan da gruplama için geçerlidir, whitelist kaynağı her zaman $fieldsById'in
-// tamamıdır. Yön parse_grid_sort_rules ile aynı şekilde ele alınır: yalnızca tam
-// olarak "desc" DESC'e karşılık gelir, başka her şey (eksik dahil) ASC sayılır.
-// Alan id'si eksik/geçersizse gruplama kapalı sayılır ve null döner.
-function parse_grid_group_rule($params, $fieldsById)
+// Grid'in Group panelinden gelen group_field_1..3 / group_dir_1..3 GET
+// parametrelerini doğrular (çok seviyeli gruplama, en fazla 3 kural). Yalnızca
+// $fieldsById'e ait (bu tabloya ait) bir alan id'si kabul edilir — gizli (Hide
+// fields ile kapatılmış) bir alan da gruplama için geçerlidir, whitelist kaynağı
+// her zaman $fieldsById'in tamamıdır. Yön parse_grid_sort_rules ile aynı şekilde
+// ele alınır ve aynı biçimde döner: yalnızca tam olarak "desc" DESC'e karşılık
+// gelir, başka her şey (eksik dahil) ASC sayılır; dönüş değerindeki 'dir' de
+// parse_grid_sort_rules ile birebir aynı biçimde büyük harf 'ASC'/'DESC' olur
+// (ORDER BY'a doğrudan gömülür, ayrıca panel <select>'lerindeki karşılaştırmalar
+// da bu biçimi bekler — grid.php URL state'ine yazarken strtolower() ile küçük
+// harfe çevirir, tıpkı sort kurallarında olduğu gibi).
+//
+// Geriye dönük uyum: yeni group_field_1..3 parametrelerinden hiçbiri istekte
+// YOKSA (isset ile kontrol edilir — boş gönderilmiş olması "yeni format
+// kullanılıyor" sayılır), eski tekil group_field / group_dir parametreleri
+// varsa 1. seviye olarak okunur. Eski parametre adları hiçbir zaman üretilmez,
+// yalnızca okunur (bkz. grid.php'deki $groupState).
+//
+// Geçersiz/silinmiş/whitelist dışı alan id'leri o slotu sessizce eler; sonuç
+// dizisi yalnızca geçerli kuralları, orijinal slot sırasına göre, BOŞLUK
+// BIRAKMADAN içerir — yani 2. seviye silinip 3. seviye kalırsa, 3. seviyenin
+// kuralı dizide 2. sıraya (index 1) düşer. Bu sıkıştırma ayrı bir adım değil,
+// doğrudan 1..3 taramasının bir sonucudur.
+//
+// Aynı alan iki seviyede birden seçilemez (Airtable davranışı): FAZ 4'teki
+// panel zaten kullanılmış alanları dropdown'dan düşürecek, ama URL elle
+// değiştirilebildiği için burada da bir güvenlik ağı var — bir field_id daha
+// önceki (daha düşük) bir seviyede zaten kullanıldıysa, sonraki tekrarı
+// sessizce elenir (o slot dizide yer almaz, altındaki seviyeler yine kayar).
+function parse_grid_group_rules($params, $fieldsById)
 {
-    if (empty($params['group_field'])) {
-        return null;
+    $maxLevels = 3;
+    $hasNewParams = false;
+
+    for ($i = 1; $i <= $maxLevels; $i++) {
+        if (isset($params['group_field_' . $i])) {
+            $hasNewParams = true;
+            break;
+        }
     }
 
-    $fieldId = (int) $params['group_field'];
-
-    if (!isset($fieldsById[$fieldId])) {
-        return null;
+    $sources = array();
+    if ($hasNewParams) {
+        for ($i = 1; $i <= $maxLevels; $i++) {
+            $sources[] = array('field_key' => 'group_field_' . $i, 'dir_key' => 'group_dir_' . $i);
+        }
+    } else {
+        $sources[] = array('field_key' => 'group_field', 'dir_key' => 'group_dir');
     }
 
-    $dir = (isset($params['group_dir']) && $params['group_dir'] === 'desc') ? 'DESC' : 'ASC';
-    $fieldType = $fieldsById[$fieldId]['field_type'];
+    $rules = array();
+    $usedFieldIds = array();
 
-    return array(
-        'field_id' => $fieldId,
-        'field_type' => $fieldType,
-        'dir' => $dir,
-        'column' => $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType],
-    );
+    foreach ($sources as $source) {
+        if (empty($params[$source['field_key']])) {
+            continue;
+        }
+
+        $fieldId = (int) $params[$source['field_key']];
+
+        if (!isset($fieldsById[$fieldId]) || isset($usedFieldIds[$fieldId])) {
+            continue;
+        }
+
+        $dir = (isset($params[$source['dir_key']]) && $params[$source['dir_key']] === 'desc') ? 'DESC' : 'ASC';
+        $fieldType = $fieldsById[$fieldId]['field_type'];
+
+        $rules[] = array(
+            'slot' => count($rules) + 1,
+            'field_id' => $fieldId,
+            'field_type' => $fieldType,
+            'dir' => $dir,
+            'column' => $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType],
+        );
+        $usedFieldIds[$fieldId] = true;
+    }
+
+    return $rules;
 }
 
 // Grid'in filtre panelinden gelen filter_field_N / filter_cond_N / filter_value_N

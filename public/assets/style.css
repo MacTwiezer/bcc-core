@@ -470,30 +470,44 @@ td.cell-flash-error {
     margin-top: 0.5rem;
 }
 
-.hide-fields-panel {
+.hide-fields-panel,
+.group-panel,
+.row-height-panel {
     position: relative;
 }
 
-.hide-fields-panel summary {
+.hide-fields-panel summary,
+.group-panel summary,
+.row-height-panel summary {
     list-style: none;
     cursor: pointer;
 }
 
-.hide-fields-panel summary::-webkit-details-marker {
+.hide-fields-panel summary::-webkit-details-marker,
+.group-panel summary::-webkit-details-marker,
+.row-height-panel summary::-webkit-details-marker {
     display: none;
 }
 
-.hide-fields-panel[open] summary {
+.hide-fields-panel[open] summary,
+.group-panel[open] summary,
+.row-height-panel[open] summary {
     background: #e6e6e8;
 }
 
 .hide-fields-panel summary.hide-fields-btn-active,
-.hide-fields-panel summary.hide-fields-btn-active:hover {
+.hide-fields-panel summary.hide-fields-btn-active:hover,
+.group-panel summary.hide-fields-btn-active,
+.group-panel summary.hide-fields-btn-active:hover,
+.row-height-panel summary.hide-fields-btn-active,
+.row-height-panel summary.hide-fields-btn-active:hover {
     background: #e8f0fe;
     color: #1a56db;
 }
 
-.hide-fields-form {
+.hide-fields-form,
+.group-form,
+.row-height-form {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
@@ -586,4 +600,201 @@ td.cell-flash-error {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
     border-top: 1px solid #eee;
+}
+
+.group-field-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-field-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.3rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.group-field-option:hover {
+    background: #f2f2f4;
+}
+
+.group-panel-header {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.group-active-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.group-active-row select {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    font: inherit;
+}
+
+.group-active-row select:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.group-remove-btn:hover {
+    background: #fdecea;
+}
+
+/* Row height paneli (Grid araçları Adım 3). */
+
+.row-height-form {
+    min-width: 200px;
+    padding: 0.4rem;
+}
+
+.row-height-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.row-height-option:hover {
+    background: #f2f2f4;
+}
+
+.row-height-check {
+    flex-shrink: 0;
+}
+
+.row-height-divider {
+    height: 1px;
+    background: #eee;
+    margin: 0.35rem 0.2rem;
+}
+
+/* Grid satır yükseklikleri (Grid araçları Adım 3): grup başlığı satırları
+   (.group-header-row) her zaman sabit yükseklikte kalır, bu yüzden aşağıdaki
+   yükseklik/sarma kuralları yalnızca normal veri satırlarını hedefler. */
+
+table.grid.row-h-medium tbody tr:not(.group-header-row) td {
+    height: 4.2rem;
+}
+
+table.grid.row-h-tall tbody tr:not(.group-header-row) td {
+    height: 6.6rem;
+}
+
+table.grid.row-h-extra tbody tr:not(.group-header-row) td {
+    height: 9.4rem;
+}
+
+table.grid.row-h-medium .cell-view,
+table.grid.row-h-tall .cell-view,
+table.grid.row-h-extra .cell-view {
+    display: -webkit-box;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+}
+
+table.grid.row-h-medium .cell-view {
+    -webkit-line-clamp: 2;
+}
+
+table.grid.row-h-tall .cell-view {
+    -webkit-line-clamp: 4;
+}
+
+table.grid.row-h-extra .cell-view {
+    -webkit-line-clamp: 6;
+}
+
+table.grid.wrap-headers thead th {
+    white-space: normal;
+}
+
+/* Grid içindeki grup başlığı satırı (Grid araçları Adım 2a). */
+
+.group-header-row {
+    background: #f5f5f7;
+}
+
+.group-header-row td {
+    padding: 0;
+    border-bottom: 1px solid #e6e6e9;
+}
+
+.group-header-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.55rem 0.9rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+.group-header-chevron {
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+
+.group-header-toggle[aria-expanded="false"] .group-header-chevron {
+    transform: rotate(-90deg);
+}
+
+.group-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+
+.group-header-field-name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #8a8a8e;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.group-header-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+.group-header-count {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #8a8a8e;
 }

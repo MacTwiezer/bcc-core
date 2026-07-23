@@ -83,9 +83,32 @@ $sortRules = parse_grid_sort_rules($_GET, $fieldsById);
 $filterRules = parse_grid_filter_rules($_GET, $fieldsById);
 $filterLogic = (isset($_GET['filter_logic']) && $_GET['filter_logic'] === 'or') ? 'OR' : 'AND';
 
-$recordsSql = 'SELECT r.id, r.position, r.created_at FROM records r';
+// Gruplama (Grid araçları Adım 2a — tek seviye): group_field / group_dir GET
+// parametreleri, yalnızca bu tabloya ait bir alan kabul edilir (whitelist).
+// $fieldsById'in tamamı kullanıldığı için gizli (Hide fields ile kapatılmış) bir
+// alana göre de gruplama yapılabilir.
+$groupRule = parse_grid_group_rule($_GET, $fieldsById);
+$groupFieldName = $groupRule !== null ? $fieldsById[$groupRule['field_id']]['name'] : null;
+
+// Satır yüksekliği / başlık sarma (Grid araçları Adım 3): row_height / wrap_headers
+// GET parametreleri, whitelist'e karşı doğrulanır (parse_grid_row_height/wrap_headers).
+$rowHeight = parse_grid_row_height($_GET);
+$wrapHeaders = parse_grid_wrap_headers($_GET);
+
+$groupSelectExtra = $groupRule !== null ? ", gv.{$groupRule['column']} AS group_raw_value" : '';
+$recordsSql = "SELECT r.id, r.position, r.created_at{$groupSelectExtra} FROM records r";
 $recordsParams = array(':table_id' => $table['id']);
 $orderParts = array();
+
+if ($groupRule !== null) {
+    // Grup değeri null/boş olan kayıtlar Airtable'daki gibi "(Empty)" grubunda ve en
+    // üstte toplanır — bu yüzden IS NULL DESC, seçilen yönden ÖNCE ve ondan bağımsız
+    // olarak uygulanır. Grup sırası, kullanıcının Sort kurallarından ÖNCE gelir.
+    $recordsSql .= ' LEFT JOIN cell_values gv ON gv.record_id = r.id AND gv.field_id = :gfid';
+    $recordsParams[':gfid'] = $groupRule['field_id'];
+    $orderParts[] = "(gv.{$groupRule['column']} IS NULL) DESC";
+    $orderParts[] = "gv.{$groupRule['column']} {$groupRule['dir']}";
+}
 
 foreach ($sortRules as $idx => $rule) {
     $alias = 'sv' . $idx;
@@ -124,6 +147,47 @@ $recordsSql .= ' ORDER BY ' . implode(', ', $orderParts);
 
 $records = bcc_fetch_all($recordsSql, $recordsParams);
 
+// Gruplama render hazırlığı: SQL'de grup zaten birincil ORDER BY anahtarı olduğu
+// için aynı grup değerine sahip kayıtlar $records içinde her zaman ardışıktır — tek
+// geçişte segmentlere bölünebilir. checkbox için ayrı İngilizce etiket kullanılır
+// (cell_display_text() checkbox'ı desteklemez, hücre normalde bir input olarak
+// render edilir); diğer tipler cell_display_text() ile (tarih formatı, seçim
+// etiketleri vb. doğru çıksın diye) biçimlendirilir.
+$groupedRecords = null;
+if ($groupRule !== null) {
+    $groupedRecords = array();
+    $currentKey = null;
+    $currentSegment = null;
+
+    foreach ($records as $record) {
+        $rawGroupValue = $record['group_raw_value'];
+
+        if ($currentSegment === null || $rawGroupValue !== $currentKey) {
+            if ($currentSegment !== null) {
+                $groupedRecords[] = $currentSegment;
+            }
+
+            $currentKey = $rawGroupValue;
+
+            if ($rawGroupValue === null) {
+                $display = '(Empty)';
+            } elseif ($groupRule['field_type'] === 'checkbox') {
+                $display = ((int) $rawGroupValue === 1) ? 'Checked' : 'Unchecked';
+            } else {
+                $display = cell_display_text($groupRule['field_type'], bcc_group_cell_row($groupRule['column'], $rawGroupValue));
+            }
+
+            $currentSegment = array('display' => $display, 'records' => array());
+        }
+
+        $currentSegment['records'][] = $record;
+    }
+
+    if ($currentSegment !== null) {
+        $groupedRecords[] = $currentSegment;
+    }
+}
+
 // Kayıt ekleme/silme formlarının ve "temizle" linklerinin geçerli sort/filter
 // durumunu koruması için ortak query string parçaları.
 $sortState = array();
@@ -147,22 +211,48 @@ if (!empty($hiddenFieldIds)) {
     $hiddenFieldsState['hidden_fields'] = implode(',', $hiddenFieldIds);
 }
 
+$groupState = array();
+if ($groupRule !== null) {
+    $groupState['group_field'] = $groupRule['field_id'];
+    $groupState['group_dir'] = strtolower($groupRule['dir']);
+}
+
+$rowHeightState = array();
+if ($rowHeight !== 'short') {
+    $rowHeightState['row_height'] = $rowHeight;
+}
+
+$wrapHeadersState = array();
+if ($wrapHeaders) {
+    $wrapHeadersState['wrap_headers'] = '1';
+}
+
 $baseState = array('table_id' => $table['id']);
-$stateQueryString = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState);
-$clearSortQueryString = http_build_query($baseState + $filterState + $hiddenFieldsState);
-$clearFilterQueryString = http_build_query($baseState + $sortState + $hiddenFieldsState);
+$stateQueryString = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState);
+$clearSortQueryString = http_build_query($baseState + $filterState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState);
+$clearFilterQueryString = http_build_query($baseState + $sortState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState);
+$clearGroupQueryString = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState + $rowHeightState + $wrapHeadersState);
 
 // Hide fields panelinin "Tümünü göster/gizle" kısayolları için hazır sorgu dizeleri
 // (mevcut sort/filter durumu korunur — grid.php'nin diğer state linkleriyle aynı desen).
 // Birincil alan "Tümünü gizle"den her zaman muaf tutulur.
-$showAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState);
+$showAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState);
 $nonPrimaryFieldIds = array();
 foreach ($fields as $f) {
     if ((int) $f['id'] !== $primaryFieldId) {
         $nonPrimaryFieldIds[] = (int) $f['id'];
     }
 }
-$hideAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState + array('hidden_fields' => implode(',', $nonPrimaryFieldIds)));
+$hideAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState + array('hidden_fields' => implode(',', $nonPrimaryFieldIds)));
+
+// Group panelinin boş alan listesi (henüz gruplama yokken) her alan için hazır bir
+// bağlantı üretir — mevcut sort/filter/hidden_fields durumu korunur.
+$groupFieldLinkBase = $baseState + $sortState + $filterState + $hiddenFieldsState + $rowHeightState + $wrapHeadersState;
+
+// Row height panelinin kendi linkleri (yükseklik seçenekleri + Wrap headers) için
+// mevcut tüm state (row_height/wrap_headers hariç, onlar linkler tarafından ayrı
+// ayrı eklenir/değiştirilir).
+$rowHeightPanelBase = $baseState + $sortState + $filterState + $hiddenFieldsState + $groupState;
 
 $cellsByRecord = array();
 if (!empty($records) && !empty($fields)) {
@@ -177,6 +267,49 @@ if (!empty($records) && !empty($fields)) {
 
 $typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
 $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
+
+// Bir kayıt satırını (hücreler + varsa "Sil" formu) basar. Gruplu ve düz (grupsuz)
+// tbody render'ı arasında paylaşılır (Grid araçları Adım 2a); $groupIndex verilirse
+// satıra data-group-index eklenir (grid-group.js aç/kapa için bunu kullanır).
+function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupIndex = null)
+{
+    ?>
+    <tr data-record-id="<?php echo (int) $record['id']; ?>" <?php echo $groupIndex !== null ? 'data-group-index="' . (int) $groupIndex . '"' : ''; ?>>
+        <td class="grid-rownum"><?php echo (int) $rowNum; ?></td>
+        <?php foreach ($visibleFields as $f):
+            $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
+            $rawValue = cell_raw_value($f['field_type'], $cellRow);
+            $displayText = cell_display_text($f['field_type'], $cellRow);
+            $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
+        ?>
+            <td
+                class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
+                data-field-id="<?php echo (int) $f['id']; ?>"
+                data-field-type="<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"
+                data-value="<?php echo htmlspecialchars($rawValue, ENT_QUOTES, 'UTF-8'); ?>"
+                <?php if ($choices): ?>data-options="<?php echo htmlspecialchars(json_encode($choices, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+            >
+                <?php if ($f['field_type'] === 'checkbox'): ?>
+                    <input type="checkbox" class="cell-checkbox" <?php echo $rawValue === '1' ? 'checked' : ''; ?> <?php echo $canEdit ? '' : 'disabled'; ?>>
+                <?php else: ?>
+                    <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php endif; ?>
+            </td>
+        <?php endforeach; ?>
+        <?php if ($canEdit): ?>
+            <td class="grid-actions-col">
+                <form method="post" action="/grid.php?<?php echo htmlspecialchars($stateQueryString, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?');">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="delete_record">
+                    <input type="hidden" name="table_id" value="<?php echo (int) $tableId; ?>">
+                    <input type="hidden" name="record_id" value="<?php echo (int) $record['id']; ?>">
+                    <button type="submit" class="btn-sm btn-danger">Sil</button>
+                </form>
+            </td>
+        <?php endif; ?>
+    </tr>
+    <?php
+}
 
 // Tablo sekme şeridi için: aynı base'in diğer tabloları (görünüm amaçlı, salt-okunur).
 // base_id zaten yukarıda require_team_access($table['team_id']) ile doğrulandı,
@@ -278,6 +411,12 @@ $gridUser = current_user();
                     <?php foreach ($filterState as $k => $v): ?>
                         <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endforeach; ?>
+                    <?php foreach ($groupState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
+                    <?php foreach ($rowHeightState + $wrapHeadersState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
                     <input type="text" class="hide-fields-search" placeholder="Find a field" data-hide-fields-search>
                     <?php foreach ($fields as $f):
                         if ((int) $f['id'] === $primaryFieldId) {
@@ -320,6 +459,12 @@ $gridUser = current_user();
                     <?php if (!empty($hiddenFieldIds)): ?>
                         <input type="hidden" name="hidden_fields" value="<?php echo htmlspecialchars(implode(',', $hiddenFieldIds), ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endif; ?>
+                    <?php foreach ($groupState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
+                    <?php foreach ($rowHeightState + $wrapHeadersState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
                     <?php for ($slot = 1; $slot <= 5; $slot++):
                         $currentRule = null;
                         foreach ($filterRules as $rule) {
@@ -385,10 +530,70 @@ $gridUser = current_user();
             </details>
             <?php endif; ?>
 
-            <button type="button" class="gs-tool-btn">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="2" stroke="#5f6368" stroke-width="1.3"/><circle cx="14" cy="14" r="2" stroke="#5f6368" stroke-width="1.3"/><path d="M8 6h9M3 14h3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
-                Group
-            </button>
+            <?php if (!empty($fields)): ?>
+            <details class="group-panel gs-tool-details">
+                <summary class="gs-tool-btn <?php echo $groupRule !== null ? 'hide-fields-btn-active' : ''; ?>">
+                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="2" stroke="#5f6368" stroke-width="1.3"/><circle cx="14" cy="14" r="2" stroke="#5f6368" stroke-width="1.3"/><path d="M8 6h9M3 14h3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    <?php echo $groupRule !== null ? 'Grouped by 1 field' : 'Group'; ?>
+                </summary>
+                <?php if ($groupRule === null): ?>
+                    <div class="group-form" id="group-form-empty">
+                        <input type="text" class="hide-fields-search" placeholder="Find a field" data-group-search>
+                        <div class="group-field-list">
+                            <?php foreach ($fields as $f): ?>
+                                <a
+                                    class="group-field-option"
+                                    href="/grid.php?<?php echo htmlspecialchars(http_build_query($groupFieldLinkBase + array('group_field' => $f['id'], 'group_dir' => 'asc')), ENT_QUOTES, 'UTF-8'); ?>"
+                                >
+                                    <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <form method="get" action="/grid.php" class="group-form" id="group-form">
+                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                        <?php foreach ($sortState as $k => $v): ?>
+                            <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php endforeach; ?>
+                        <?php foreach ($filterState as $k => $v): ?>
+                            <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php endforeach; ?>
+                        <?php if (!empty($hiddenFieldIds)): ?>
+                            <input type="hidden" name="hidden_fields" value="<?php echo htmlspecialchars(implode(',', $hiddenFieldIds), ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php endif; ?>
+                        <?php foreach ($rowHeightState + $wrapHeadersState as $k => $v): ?>
+                            <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php endforeach; ?>
+                        <div class="group-panel-header">
+                            <button type="button" class="btn-sm" data-group-collapse-all>Collapse all</button>
+                            <button type="button" class="btn-sm" data-group-expand-all>Expand all</button>
+                        </div>
+                        <div class="group-active-row">
+                            <select name="group_field">
+                                <?php foreach ($fields as $f): ?>
+                                    <option value="<?php echo (int) $f['id']; ?>" <?php echo (int) $f['id'] === $groupRule['field_id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php $groupDirLabels = $GLOBALS['BCC_GROUP_DIR_LABELS'][$groupRule['field_type']]; ?>
+                            <select name="group_dir">
+                                <option value="asc" <?php echo $groupRule['dir'] === 'ASC' ? 'selected' : ''; ?>><?php echo htmlspecialchars($groupDirLabels['asc'], ENT_QUOTES, 'UTF-8'); ?></option>
+                                <option value="desc" <?php echo $groupRule['dir'] === 'DESC' ? 'selected' : ''; ?>><?php echo htmlspecialchars($groupDirLabels['desc'], ENT_QUOTES, 'UTF-8'); ?></option>
+                            </select>
+                            <a class="group-remove-btn" href="/grid.php?<?php echo htmlspecialchars($clearGroupQueryString, ENT_QUOTES, 'UTF-8'); ?>" title="Gruplamayı kaldır" aria-label="Gruplamayı kaldır">
+                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </a>
+                        </div>
+                        <div class="hide-fields-actions">
+                            <button type="submit" class="btn-sm" data-group-apply>Uygula</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </details>
+            <?php endif; ?>
 
             <?php if (!empty($fields)): ?>
             <details class="sort-panel gs-tool-details">
@@ -401,6 +606,12 @@ $gridUser = current_user();
                     <?php if (!empty($hiddenFieldIds)): ?>
                         <input type="hidden" name="hidden_fields" value="<?php echo htmlspecialchars(implode(',', $hiddenFieldIds), ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endif; ?>
+                    <?php foreach ($groupState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
+                    <?php foreach ($rowHeightState + $wrapHeadersState as $k => $v): ?>
+                        <input type="hidden" name="<?php echo htmlspecialchars($k, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endforeach; ?>
                     <?php for ($slot = 1; $slot <= 3; $slot++):
                         $currentFieldId = 0;
                         $currentDir = 'asc';
@@ -441,10 +652,38 @@ $gridUser = current_user();
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="#5f6368" stroke-width="1.4"/><path d="M10 3.5a6.5 6.5 0 010 13" fill="#5f6368"/></svg>
                 Color
             </button>
-            <button type="button" class="gs-tool-btn">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="12" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/></svg>
-                Row height
-            </button>
+            <?php if (!empty($fields)): ?>
+            <details class="row-height-panel gs-tool-details">
+                <summary class="gs-tool-btn <?php echo $rowHeight !== 'short' ? 'hide-fields-btn-active' : ''; ?>">
+                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="12" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/></svg>
+                    Row height
+                </summary>
+                <div class="row-height-form">
+                    <?php foreach ($GLOBALS['BCC_ROW_HEIGHT_LABELS'] as $rhKey => $rhLabel):
+                        $rhOptState = ($rhKey !== 'short') ? array('row_height' => $rhKey) : array();
+                        $rhQuery = http_build_query($rowHeightPanelBase + $rhOptState + $wrapHeadersState);
+                    ?>
+                        <a class="row-height-option" href="/grid.php?<?php echo htmlspecialchars($rhQuery, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="row-height-option-label"><?php echo htmlspecialchars($rhLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php if ($rowHeight === $rhKey): ?>
+                                <svg class="row-height-check" width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <?php endif; ?>
+                        </a>
+                    <?php endforeach; ?>
+                    <div class="row-height-divider"></div>
+                    <?php
+                        $wrapToggleState = $wrapHeaders ? array() : array('wrap_headers' => '1');
+                        $wrapQuery = http_build_query($rowHeightPanelBase + $rowHeightState + $wrapToggleState);
+                    ?>
+                    <a class="row-height-option" href="/grid.php?<?php echo htmlspecialchars($wrapQuery, ENT_QUOTES, 'UTF-8'); ?>">
+                        <span class="row-height-option-label">Wrap headers</span>
+                        <?php if ($wrapHeaders): ?>
+                            <svg class="row-height-check" width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <?php endif; ?>
+                    </a>
+                </div>
+            </details>
+            <?php endif; ?>
             <button type="button" class="gs-tool-btn">
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M14 6.5a2 2 0 10-1.9-2.6M6 10a2 2 0 10-1.9 2.6M14 13.5a2 2 0 10-1.9 2.6M5.8 9l6.4-3.4M5.8 11l6.4 3.4" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                 Share and sync
@@ -486,7 +725,7 @@ $gridUser = current_user();
             </div>
         <?php else: ?>
             <div class="grid-wrap">
-                <table class="grid">
+                <table class="grid row-h-<?php echo htmlspecialchars($rowHeight, ENT_QUOTES, 'UTF-8'); ?> <?php echo $wrapHeaders ? 'wrap-headers' : ''; ?>">
                     <thead>
                         <tr>
                             <th class="grid-rownum">#</th>
@@ -505,43 +744,30 @@ $gridUser = current_user();
                             <tr>
                                 <td class="grid-empty" colspan="<?php echo count($visibleFields) + 1 + ($canEdit ? 1 : 0); ?>">Bu tabloda henüz kayıt yok.</td>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($records as $i => $record): ?>
-                                <tr data-record-id="<?php echo (int) $record['id']; ?>">
-                                    <td class="grid-rownum"><?php echo (int) $i + 1; ?></td>
-                                    <?php foreach ($visibleFields as $f):
-                                        $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
-                                        $rawValue = cell_raw_value($f['field_type'], $cellRow);
-                                        $displayText = cell_display_text($f['field_type'], $cellRow);
-                                        $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
-                                    ?>
-                                        <td
-                                            class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
-                                            data-field-id="<?php echo (int) $f['id']; ?>"
-                                            data-field-type="<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-value="<?php echo htmlspecialchars($rawValue, ENT_QUOTES, 'UTF-8'); ?>"
-                                            <?php if ($choices): ?>data-options="<?php echo htmlspecialchars(json_encode($choices, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
-                                        >
-                                            <?php if ($f['field_type'] === 'checkbox'): ?>
-                                                <input type="checkbox" class="cell-checkbox" <?php echo $rawValue === '1' ? 'checked' : ''; ?> <?php echo $canEdit ? '' : 'disabled'; ?>>
-                                            <?php else: ?>
-                                                <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
-                                            <?php endif; ?>
-                                        </td>
-                                    <?php endforeach; ?>
-                                    <?php if ($canEdit): ?>
-                                        <td class="grid-actions-col">
-                                            <form method="post" action="/grid.php?<?php echo htmlspecialchars($stateQueryString, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?');">
-                                                <?php echo csrf_field(); ?>
-                                                <input type="hidden" name="action" value="delete_record">
-                                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                                <input type="hidden" name="record_id" value="<?php echo (int) $record['id']; ?>">
-                                                <button type="submit" class="btn-sm btn-danger">Sil</button>
-                                            </form>
-                                        </td>
-                                    <?php endif; ?>
+                        <?php elseif ($groupedRecords !== null): ?>
+                            <?php $rowNum = 0; ?>
+                            <?php foreach ($groupedRecords as $segIndex => $segment): ?>
+                                <tr class="group-header-row" data-group-header data-group-index="<?php echo (int) $segIndex; ?>">
+                                    <td colspan="<?php echo count($visibleFields) + 1 + ($canEdit ? 1 : 0); ?>">
+                                        <button type="button" class="group-header-toggle" data-group-toggle aria-expanded="true">
+                                            <svg class="group-header-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            <span class="group-header-info">
+                                                <span class="group-header-field-name"><?php echo htmlspecialchars(mb_strtoupper($groupFieldName, 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?></span>
+                                                <span class="group-header-value"><?php echo htmlspecialchars($segment['display'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                            </span>
+                                            <span class="group-header-count"><?php echo count($segment['records']); ?></span>
+                                        </button>
+                                    </td>
                                 </tr>
+                                <?php foreach ($segment['records'] as $record):
+                                    $rowNum++;
+                                    bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $segIndex);
+                                endforeach; ?>
                             <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($records as $i => $record):
+                                bcc_render_grid_data_row($record, $i + 1, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString);
+                            endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -580,6 +806,7 @@ $gridUser = current_user();
 <script src="/assets/grid-toolbar.js" defer></script>
 <script src="/assets/grid-filter.js" defer></script>
 <script src="/assets/grid-hide-fields.js" defer></script>
+<script src="/assets/grid-group.js" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="/assets/grid.js" defer></script>

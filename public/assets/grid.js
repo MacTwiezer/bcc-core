@@ -57,6 +57,126 @@
         });
     }
 
+    // Kayıt ekleme: (a) yuvarlak + butonu, (b) tablo tabanı + satırı ve (c)
+    // Shift+Enter kısayolu ÜÇÜ DE bu TEK fonksiyonu çağırır (aşağıda wire edilir) —
+    // ikinci bir "kayıt ekle" mekanizması yok.
+    var addingRecord = false; // istek kilidi: hızlı tekrar tıklama/kısayol çoklu kayıt üretmesin
+
+    function renumberRows() {
+        var rows = document.querySelectorAll('table.grid tbody tr[data-record-id]');
+        rows.forEach(function (tr, idx) {
+            var cell = tr.querySelector('.grid-rownum');
+            if (cell) {
+                cell.textContent = idx + 1;
+            }
+        });
+
+        var countEl = document.getElementById('grid-row-count');
+        if (countEl) {
+            countEl.textContent = rows.length + ' kayıt';
+        }
+    }
+
+    // Toast: ikinci bir bildirim sistemi kurmak yerine projedeki mevcut .ok/.error
+    // metin deseni (src/partials/flash.php) yeniden kullanılır — burada tek fark,
+    // async bir fetch sonrası sayfa yenilenmediği için elemanın JS ile eklenip
+    // birkaç saniye sonra kendiliğinden kaldırılmasıdır.
+    function showToast(message) {
+        var footer = document.querySelector('.gs-grid-footer');
+        if (!footer) {
+            return;
+        }
+
+        var existing = footer.querySelector('.grid-add-toast');
+        if (existing && existing.parentNode) {
+            existing.parentNode.removeChild(existing);
+        }
+
+        var toast = document.createElement('p');
+        toast.className = 'ok grid-add-toast';
+        toast.textContent = message;
+        footer.appendChild(toast);
+
+        setTimeout(function () {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 4000);
+    }
+
+    function addRecord(afterRecordId, targetRow) {
+        if (addingRecord) {
+            return;
+        }
+        addingRecord = true;
+
+        var tableId = new URLSearchParams(window.location.search).get('table_id') || '';
+        var params = {
+            csrf_token: CSRF,
+            table_id: tableId,
+            state_query_string: window.location.search.replace(/^\?/, ''),
+        };
+
+        // Sort/group aktifken after_record_id kasıtlı olarak GÖNDERİLMEZ — sunucu
+        // sona ekler ((a)/(b) ile aynı davranış), çünkü görünen sıra zaten
+        // position'dan değil sort/group kolonlarından geliyor.
+        if (!window.BCC_SORT_OR_GROUP_ACTIVE && afterRecordId) {
+            params.after_record_id = afterRecordId;
+        }
+
+        post('/api/record_add.php', params).then(function (result) {
+            addingRecord = false;
+
+            if (!(result.httpOk && result.data && result.data.ok)) {
+                var message = (result.data && result.data.error) ? result.data.error : 'Kayıt eklenemedi.';
+                window.alert(message);
+                return; // DOM'a satır eklenmez.
+            }
+
+            var temp = document.createElement('tbody');
+            temp.innerHTML = result.data.row_html;
+            var newRow = temp.querySelector('tr[data-record-id]');
+            if (!newRow) {
+                return;
+            }
+
+            if (targetRow && targetRow.parentNode) {
+                targetRow.insertAdjacentElement('afterend', newRow);
+            } else {
+                var addRowEl = document.querySelector('[data-grid-add-row]');
+                if (addRowEl && addRowEl.parentNode) {
+                    addRowEl.insertAdjacentElement('beforebegin', newRow);
+                } else {
+                    var tbody = document.querySelector('table.grid tbody');
+                    if (tbody) {
+                        tbody.appendChild(newRow);
+                    }
+                }
+            }
+
+            renumberRows();
+
+            // Sütun dondurma: yeni satır da mevcut dondurma durumunu almalı —
+            // ikinci bir pozisyonlama mekanizması yazmak yerine grid-freeze-columns.js'in
+            // kendi apply fonksiyonu çağrılır (o script her zaman yüklenir).
+            if (window.BCC_reapplyFreeze) {
+                window.BCC_reapplyFreeze();
+            }
+
+            var firstCell = newRow.querySelector('td.editable');
+            if (firstCell) {
+                startEdit(firstCell);
+            }
+
+            if (window.BCC_SORT_OR_GROUP_ACTIVE || window.BCC_FILTER_ACTIVE) {
+                showToast('Kayıt eklendi. Aktif filtre/sıralama/gruplama nedeniyle konumu sayfa yenilenince değişebilir.');
+            }
+        }).catch(function () {
+            addingRecord = false;
+            window.alert('Kayıt eklenemedi (bağlantı hatası).');
+        });
+    }
+
     function getChoices(td) {
         var raw = td.getAttribute('data-options');
         if (!raw) {
@@ -237,6 +357,45 @@
                     checkbox.checked = !checked;
                 }
             });
+        });
+
+        // (a) yuvarlak + butonu: JS'siz de çalışan normal form POST'unu yakalar,
+        // yerine tek addRecord() fonksiyonunu çağırır (sayfa yenilenmez).
+        var addForm = document.querySelector('[data-grid-add-record]');
+        if (addForm) {
+            addForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                addRecord(null, null);
+            });
+        }
+
+        // (b) tablo tabanı + satırı: aynı addRecord() fonksiyonu.
+        var addRow = document.querySelector('[data-grid-add-row]');
+        if (addRow) {
+            addRow.addEventListener('click', function () {
+                addRecord(null, null);
+            });
+        }
+
+        // (c) Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea HARİÇ —
+        // orada satır atlamalı) aktif kaydın hemen altına ekler.
+        document.addEventListener('keydown', function (e) {
+            if (!e.shiftKey || e.key !== 'Enter') {
+                return;
+            }
+
+            var targetTag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            if (targetTag === 'textarea') {
+                return;
+            }
+
+            var row = e.target.closest ? e.target.closest('tr[data-record-id]') : null;
+            if (!row) {
+                return;
+            }
+
+            e.preventDefault();
+            addRecord(row.getAttribute('data-record-id'), row);
         });
     });
 })();

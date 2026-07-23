@@ -127,11 +127,28 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 - `register.php` — aynı tasarım; kayıt `is_active=0` + ekipsiz → admin onaylar (KVKK)
 - `dashboard.php` — Airtable Home (üst bar, sol panel, base kartları)
 - `grid.php` — Airtable Data ekranı (üst bar, sol dikey şerit, tablo sekmeleri, araç şeridi)
+- `base.php` — `dashboard.php` → `grid.php` arasındaki `base_tables.php` ara adımını atlayan köprü sayfası (base'in ilk tablosuna yönlendirir, boşsa `base_tables.php`'ye düşer)
+- Tablo sekmeleri barı (`grid.php`) — ortak `bcc_list_base_tables()` (base.php ile paylaşılır), "+ Add table" artık `$canEdit`'e bağlı, uzun tablo adında ellipsis
+- Sol üst logo/Base adı (`grid.php`) — küp ikonu zaten dashboard linkiydi; Base adı artık yönlendirmesiz `<div>`, yanıltıcı hover kaldırıldı
+- Sekme seçenekleri menüsü (`grid.php`) — her sekmede `<details name="gs-table-tab-menu">` ok, Import/Clear data pasif buton, `grid-table-tabs.js` dışarı tık/Escape ile kapatır
+- "All tables" arama/geçiş menüsü (`grid.php`) — $siblingTables tek kaynaktan, TR-locale arama, aktif tabloda tik; grid-table-tabs.js'e toggle-tabanlı "tek menü açık" + açılınca arama kutusuna odak eklendi
+- `Ctrl+J`/`⌘+J` kısayolu (`grid-table-tabs.js`) — "All tables" panelini aç/kapat, hücre düzenlerken pasif; koyu tooltip + platforma göre Ctrl J/⌘ J rozeti
+- Görünüm bilgi popover'ı (`grid.php`) — `.gs-view-trigger` saf CSS hover (JS'siz, ~300ms gecikme); "Created by" atlandı, `views.created_by` kolonu yok (uydurma veri yok) — migration için YAPILACAKLAR-UI.md maddesi açıldı
+- Görünüm seçenekleri dropdown'ı (`grid.php`) — `.gs-view-trigger`'a kardeş `<details name="gs-table-tab-menu">` (ok tetikleyici), tüm öğeler pasif; "Rename view" bağlanacağı yer tek satır yorumla işaretli; kapatma mevcut grid-table-tabs.js mekanizmasıyla
+- Görünüm adını satır içi düzenleme (`grid.php`+`grid-table-tabs.js`+`public/api/view_rename.php`) — `bcc_get_or_create_default_view()` (views tablosu, yarış-güvenli get-or-create, DDL yok) her table_id için tek satır garanti eder; dblclick yalnızca editor'de render edilir (`data-view-id`), sunucu da `require_role('editor')` ile ayrıca reddeder; Escape/blur yarışı bayrakla çözüldü, 9/9 uçtan uca doğrulandı (geçici script silindi)
+- Dashboard görünüm değiştirici — liste/kart (`dashboard.php`+`home.js`) — önceden var olan işlevsiz `.home-icon-btn` çifti gerçek `data-view-mode-btn` tetikleyicisine bağlandı; `localStorage` tek doğrulama noktası `<head>`'teki senkron script (FOUC yok), `.view-mode-list`/`html.home-view-list` aynı kurala akar; "Çalışma alanı" kolonu $teams'ten (yeni sorgu yok), 8/8 uçtan uca doğrulandı (geçici script silindi)
+- Dashboard tarih filtresi (`dashboard.php`+`src/audit.php`+`base.php`) — "son açılma" ne `bases`'te ne `audit_log`'da vardı, `log_base_open()` ile audit_log'a `base.open` yazılmaya başlandı (aynı kullanıcı+base 5 dk içinde tekrar açılırsa güncellenir, F5 satır biriktirmez); işlevsiz eski `.home-filter` div/li stub'ı gerçek `<details>`+whitelist'e (`timeframe`) bağlandı; index eksikliği (~167 satırda maliyetsiz) YAPILACAKLAR-UI.md'ye not düşüldü; 13/13 uçtan uca doğrulandı (geçici script silindi)
+- Profil dropdown'ı (`src/partials/account_menu.php`, dashboard.php+grid.php ile paylaşılır) — mevcut avatar/toggle/logout iskeletine Account/Manage groups/Notification/Language/Appearance/Contact sales/Upgrade/Tell a friend/Integrations/Builder hub/Trash pasif öğeleri + Business/Beta rozetleri eklendi; tek gerçek işlev "Log out" (adı "Çıkış"tan değiştirildi) korundu; ikinci menü/kapatma mekanizması açılmadı, `max-height`+scroll eklendi, 9/9 uçtan uca doğrulandı (geçici script silindi)
+- Kayıt ekleme — (a) yuvarlak buton, (b) tablo tabanı + satırı, (c) Shift+Enter (`grid.php`+`grid.js`+`public/api/record_add.php`) — üçü de TEK uç noktayı çağırır; `bcc_render_grid_data_row()` grid.php'den `src/schema.php`'ye taşınıp AJAX yanıtıyla paylaşıldı; sort/group aktifken `after_record_id` gönderilmez (sona ekler), filtre/sort/group aktifken tek toast (`.ok` sınıfı yeniden kullanıldı, ikinci bildirim sistemi yok); araya ekleme `position` kaydırmasıyla, istek kilidi ile, viewer'da hem buton gizli hem `require_role('editor')` sunucuda; 13/13 + 9/9 uçtan uca doğrulandı (geçici scriptler silindi)
+- Sütun dondurma (`grid.php`+`grid-freeze-columns.js`+`public/api/view_config_update.php`) — `views.config` JSON tek kaynak (localStorage yok, DDL yok); `bcc_get_frozen_column_count()` savunmacı okuma (NULL/bozuk/beklenmedik tip → sessizce 1), read-modify-write diğer config anahtarlarını EZMEZ; satır no kolonu (`.grid-rownum`) zaten sticky olduğundan dokunulmadı, yeni dondurma yalnızca EK kolonlara uygulanır (frozen_column_count=1 = eski davranışla birebir aynı); alt sınır 1, üst sınır `bcc_max_frozen_columns()` (görünür kolonların yarısı, hem istemci hem sunucuda); viewer'da tutamaç yok + sunucuda `require_role('editor')`; mousemove `requestAnimationFrame`'e alındı, pencere dışında bırakma `mouseleave`+`buttons===0` ile temizleniyor; kayıt ekleme ile `window.BCC_reapplyFreeze` üzerinden entegre; 28/28 uçtan uca doğrulandı (geçici script silindi)
 
 **PDO → mysqli geçişi (8 faz)**
 - 21 dosya, ~113 sorgu, 2 transaction
 - PDO projede tek satır kalmadı (kod + yorum + dokümantasyon)
-- Regresyonlar: **6/6 izolasyon, 8/8 sıralama, 19/19 filtre**
+- Regresyonlar (o zamanki durum): **6/6 izolasyon, 8/8 sıralama, 19/19 filtre**.
+  Güncel durum: **sıralama 7/8** — row-height özelliği eklenince testin aradığı
+  tam `<table class="grid">` dizesi hiç oluşmaz oldu (`row-h-*` sınıfı yüzünden);
+  ilgisiz, `field_id` doğrulamasıyla alakasız, bu oturumda defalarca doğrulandı.
 
 **Kod tekrarı temizliği**
 - `flash.php` partial (7 dosya)
@@ -142,8 +159,9 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 
 **Grid araçları**
 - **Hide fields** — Airtable tarzı toggle, birincil alan gizlenemez, "Find a field", Hide all/Show all
-- **Group** (tek seviye) — alan + yön (tipe göre etiket), grup başlıkları, `(Empty)` grubu, aç/kapa, Collapse/Expand all
+- **Group** — backend çok seviyeli (en fazla 3): parser (`parse_grid_group_rules`), SQL (JOIN+ORDER BY seviye başına), tek geçişte ağaç segmentasyonu, hiyerarşik `data-group-path` ile aç/kapa (iç içe gruplar dahil), `(Empty)` grubu, Collapse/Expand all — hepsi tamam. Panel arayüzü (dropdown, "Add subgroup" linki, seviye silme, durum taşıma) HENÜZ YOK — bkz. Kalan İşler #1; şu an ikinci/üçüncü seviye yalnızca URL'e `group_field_2`/`group_field_3` elle yazılarak kurulabiliyor
 - **Row height** — Short/Medium/Tall/Extra Tall + Wrap headers
+- **Görünüm listesi paneli (hamburger) — hata düzeltmesi** — `.gs-view-drawer` `.gs-view-toolbar`'ın kardeşiydi, konumlandırma referansı (`position:relative`) toolbar'daydı; drawer toolbar'ın içine taşındı, aç/kapat artık çalışıyor
 
 **Not:** Beş aracın durumu (hidden_fields, sort_*, filter_*, group_*, row_height/wrap_headers) URL'de taşınır ve birbirini korur.
 
@@ -153,14 +171,14 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 
 | # | İş | Not |
 |---|---|---|
-| 1 | **Add subgroup** | Group'un çok seviyeli hali (Airtable 3 seviye) |
+| 1 | **Add subgroup — yalnızca panel UI** | Backend (parser/SQL/segmentasyon/aç-kapa, 3 seviyeye kadar) TAMAM — bkz. Biten İşler. Kalan: Group paneli arayüzü (seviye satırları, "Add subgroup" linki, seviye silme) + beş panelin gizli input tekrarını `bcc_grid_state_inputs()` gibi ortak fonksiyona çıkarma |
 | 2 | **Arama iyileştirmesi** | Airtable gibi: eşleşmeyi sarı vurgula, "1 of 219" sayacı, yukarı/aşağı ok ile gezinme. Satırları gizleme yerine vurgulama. Tamamen istemci tarafı. |
 | 3 | **Color** | İki yöntem: select seçeneğine göre (önce seçeneklere renk desteği gerekir) veya koşula göre (filtre altyapısı kullanılabilir) |
 | 4 | **Yeni alan tipleri** | User (@kullanıcı), Saat |
 | 5 | **Sütun ekleme akışı** | Airtable gibi: önce tür sor, sonra başlık |
 | 6 | **Zengin metin editörü** | Word gibi punto/kalın/link — tek başına büyük iş |
 | 7 | **Slack otomasyonu** | Hiç başlanmadı. Apache'ye `curl` uzantısı gerekecek. |
-| 8 | Kaydedilebilir görünümler | `views` tablosu şemada var; şu an ayarlar sadece URL'de |
+| 8 | Kaydedilebilir görünümler (çoklu) | `views` tablosu artık gerçekten kullanılıyor ama her tabloda TEK varsayılan satır var (`bcc_get_or_create_default_view`) — adı ve `config.frozen_column_count` kalıcı. Kalan: birden fazla adlandırılmış görünüm oluşturma/arasında geçiş; filtre/sort/group hâlâ URL'de, view'e kaydedilmiyor |
 
 **Bilerek yapılmayanlar:** Automations / Interfaces / Forms / Launch / Share and sync → sadece görünüm. `login`/`register` auth shell refactoru (kazanç/risk oranı düşük).
 

@@ -127,7 +127,9 @@ a { text-decoration: none; color: inherit; }
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
     min-width: 220px;
-    overflow: hidden;
+    max-height: min(80vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .home-account-menu.is-open { display: block; }
@@ -139,6 +141,43 @@ a { text-decoration: none; color: inherit; }
 
 .home-account-name { font-weight: 600; font-size: 0.9rem; }
 .home-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+
+.home-account-section { padding: 0.3rem; }
+
+.home-account-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1d1d1f;
+}
+
+.home-account-item:hover { background: #f2f2f4; }
+
+.home-account-item-arrow, .home-account-item-icon { flex-shrink: 0; }
+.home-account-item-arrow { margin-left: auto; }
+
+.home-account-badge {
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.home-account-badge-blue { background: #e8f0fe; color: #1a56db; }
+.home-account-badge-orange { background: #fff1e0; color: #b5610a; }
+
+.home-account-divider { height: 1px; background: #eee; margin: 0.3rem 0; }
 
 .home-account-logout { padding: 0.4rem; }
 
@@ -252,8 +291,11 @@ a { text-decoration: none; color: inherit; }
     font-size: 0.85rem;
     color: #444;
     cursor: pointer;
+    list-style: none;
     font-family: inherit;
 }
+
+.home-filter-btn::-webkit-details-marker { display: none; }
 
 .home-filter-btn:hover { background: #f5f5f7; }
 
@@ -269,20 +311,37 @@ a { text-decoration: none; color: inherit; }
     list-style: none;
     margin: 0;
     padding: 0.4rem;
-    min-width: 170px;
+    min-width: 220px;
     z-index: 10;
 }
 
-.home-filter-menu.is-open { display: block; }
+.home-filter[open] .home-filter-menu { display: block; }
 
-.home-filter-menu li {
+.home-filter-menu li { padding: 0; }
+
+.home-filter-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.5rem 0.6rem;
     border-radius: 6px;
     font-size: 0.85rem;
     cursor: pointer;
 }
 
-.home-filter-menu li:hover { background: #f2f2f4; }
+.home-filter-menu li a:hover { background: #f2f2f4; }
+
+.home-filter-menu li a.is-selected {
+    background: #e8f0fe;
+    color: #1a56db;
+    font-weight: 600;
+}
+
+.home-filter-check {
+    width: 12px;
+    flex-shrink: 0;
+    display: flex;
+}
 
 .home-view-toggle {
     display: flex;
@@ -347,3 +406,68 @@ a { text-decoration: none; color: inherit; }
     color: #8a8a8e;
     margin-top: 0.2rem;
 }
+
+.home-base-workspace { display: none; }
+
+/* Görünüm değiştirici — liste modu. html.home-view-list, sayfa boyanmadan önce
+   <head>'teki senkron script tarafından eklenir (FOUC önleme); .view-mode-list,
+   home.js tarafından #home-base-grid'e uygulanır (JS yüklendikten sonraki asıl
+   durum). İkisi de aynı kuralları tetikler, tek bir stil bloğu tekrar edilmez. */
+html.home-view-list .home-base-grid,
+.home-base-grid.view-mode-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+html.home-view-list .home-base-card,
+.view-mode-list .home-base-card {
+    border: none;
+    border-bottom: 1px solid #e6e6e9;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+html.home-view-list .home-base-card:last-child,
+.view-mode-list .home-base-card:last-child { border-bottom: none; }
+
+html.home-view-list .home-base-card:hover,
+.view-mode-list .home-base-card:hover {
+    background: #f7f8fa;
+    box-shadow: none;
+    transform: none;
+}
+
+html.home-view-list .home-base-info,
+.view-mode-list .home-base-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    gap: 1.5rem;
+}
+
+html.home-view-list .home-base-name,
+.view-mode-list .home-base-name { flex: 0 0 240px; }
+
+html.home-view-list .home-base-meta,
+.view-mode-list .home-base-meta { flex: 0 0 160px; margin-top: 0; }
+
+html.home-view-list .home-base-workspace,
+.view-mode-list .home-base-workspace {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.82rem;
+    color: #5f6368;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.view-btn-active { background: #e8f0fe; }
+.view-btn-active svg path { stroke: #1a56db; }
+.view-btn-active svg rect { stroke: #1a56db; }

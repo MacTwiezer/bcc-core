@@ -18,6 +18,31 @@ $teams = bcc_fetch_all(
     array('uid' => $user['id'])
 );
 
+// Tarih filtresi: timeframe GET parametresi ASLA doğrudan SQL'e girmez —
+// yalnızca aşağıdaki sabit dizinin anahtarı olarak kullanılır (whitelist);
+// dizide olmayan/eksik bir değer sessizce 'anytime'a düşer. Eklenen SQL parçası
+// her zaman bu dizideki 4 sabit string'den biridir, kullanıcı girdisinden
+// üretilmez.
+$timeframeConditions = array(
+    'today' => 'al.last_opened >= CURDATE()',
+    '7days' => 'al.last_opened >= (NOW() - INTERVAL 7 DAY)',
+    '30days' => 'al.last_opened >= (NOW() - INTERVAL 30 DAY)',
+    'anytime' => null,
+);
+$timeframeButtonLabels = array(
+    'today' => 'Opened today',
+    '7days' => 'Opened in the past 7 days',
+    '30days' => 'Opened in the past 30 days',
+    'anytime' => 'Opened anytime',
+);
+$timeframeOptionLabels = array(
+    'today' => 'Today',
+    '7days' => 'In the past 7 days',
+    '30days' => 'In the past 30 days',
+    'anytime' => 'Anytime',
+);
+$timeframe = (isset($_GET['timeframe']) && array_key_exists($_GET['timeframe'], $timeframeConditions)) ? $_GET['timeframe'] : 'anytime';
+
 $bases = array();
 if (!empty($teams)) {
     $teamIds = array();
@@ -25,14 +50,39 @@ if (!empty($teams)) {
         $teamIds[] = (int) $t['id'];
     }
 
+    // Ekip izolasyonu (team_id IN ...) her zaman ÖNCE gelir; tarih koşulu ancak
+    // whitelist'ten geçerliyse (anytime hariç) buna EK olarak eklenir, onun
+    // yerine geçmez. "Son açılma" kaydı olmayan (NULL) base'ler
+    // today/7days/30days koşullarında otomatik elenir (NULL >= ... => NULL/false),
+    // yalnızca 'anytime'da görünür.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $bases = bcc_fetch_all(
-        "SELECT id, team_id, name, description, created_at FROM bases WHERE team_id IN ($placeholders) ORDER BY name",
-        $teamIds
-    );
+    $sql = "SELECT b.id, b.team_id, b.name, b.description, b.created_at, al.last_opened
+            FROM bases b
+            LEFT JOIN (
+                SELECT entity_id, MAX(created_at) AS last_opened
+                FROM audit_log
+                WHERE action = 'base.open' AND entity_type = 'base'
+                GROUP BY entity_id
+            ) al ON al.entity_id = b.id
+            WHERE b.team_id IN ($placeholders)";
+
+    if ($timeframeConditions[$timeframe] !== null) {
+        $sql .= ' AND ' . $timeframeConditions[$timeframe];
+    }
+
+    $sql .= ' ORDER BY b.name';
+
+    $bases = bcc_fetch_all($sql, $teamIds);
 }
 
 $bccHomeIconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
+
+// Liste görünümünün "Çalışma alanı" kolonu için — $teams zaten yukarıda çekildi,
+// yeni sorgu yazılmıyor.
+$teamNamesById = array();
+foreach ($teams as $t) {
+    $teamNamesById[(int) $t['id']] = $t['name'];
+}
 
 function bcc_home_relative_date($datetimeStr)
 {
@@ -68,6 +118,20 @@ function bcc_home_relative_date($datetimeStr)
 <meta charset="utf-8">
 <title>BCC-Core — Home</title>
 <link rel="stylesheet" href="/assets/home.css">
+<script>
+// Sayfa boyanmadan ÖNCE çalışır (senkron, defer değil) — localStorage'daki
+// görünüm tercihini burada okuyup doğrulamak, .home-base-grid henüz DOM'da
+// yokken bile <html>'e işaretleyerek liste modunda kart->liste sıçramasını
+// (FOUC) önler. Bu, localStorage'ı DOĞRULAYAN tek yerdir; home.js bu kararı
+// <html> sınıfından devralır, tekrar okumaz/doğrulamaz.
+(function () {
+    var stored = null;
+    try { stored = window.localStorage.getItem('bcc_home_view_mode'); } catch (e) {}
+    if (stored === 'list') {
+        document.documentElement.classList.add('home-view-list');
+    }
+})();
+</script>
 </head>
 <body class="home-page">
 
@@ -142,24 +206,35 @@ function bcc_home_relative_date($datetimeStr)
         </div>
 
         <div class="home-toolbar">
-            <div class="home-filter" id="home-filter">
-                <button type="button" class="home-filter-btn" id="home-filter-toggle">
-                    <span id="home-filter-label">Opened anytime</span>
+            <details class="home-filter" id="home-filter">
+                <summary class="home-filter-btn">
+                    <span><?php echo htmlspecialchars($timeframeButtonLabels[$timeframe], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3 3.5-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <ul class="home-filter-menu" id="home-filter-menu">
-                    <li data-label="Today">Today</li>
-                    <li data-label="Son 7 gün">Son 7 gün</li>
-                    <li data-label="Son 30 gün">Son 30 gün</li>
-                    <li data-label="Her zaman">Her zaman</li>
+                </summary>
+                <ul class="home-filter-menu">
+                    <?php foreach ($timeframeOptionLabels as $tfKey => $tfLabel): ?>
+                        <li>
+                            <a
+                                href="/dashboard.php?timeframe=<?php echo urlencode($tfKey); ?>"
+                                class="<?php echo $tfKey === $timeframe ? 'is-selected' : ''; ?>"
+                            >
+                                <span class="home-filter-check">
+                                    <?php if ($tfKey === $timeframe): ?>
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#1a56db" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    <?php endif; ?>
+                                </span>
+                                <?php echo htmlspecialchars($tfLabel, ENT_QUOTES, 'UTF-8'); ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
                 </ul>
-            </div>
+            </details>
 
             <div class="home-view-toggle">
-                <button type="button" class="home-icon-btn" aria-label="Liste görünümü">
+                <button type="button" class="home-icon-btn" data-view-mode-btn="list" aria-label="Liste görünümü" aria-pressed="false">
                     <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M4 5.5h12M4 10h12M4 14.5h12" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
                 </button>
-                <button type="button" class="home-icon-btn" aria-label="Izgara görünümü">
+                <button type="button" class="home-icon-btn" data-view-mode-btn="card" aria-label="Kart görünümü" aria-pressed="true">
                     <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="#5f6368" stroke-width="1.4"/></svg>
                 </button>
             </div>
@@ -170,9 +245,9 @@ function bcc_home_relative_date($datetimeStr)
                 <p>Henüz erişebileceğiniz bir base yok.</p>
             </div>
         <?php else: ?>
-            <div class="home-base-grid">
+            <div class="home-base-grid" id="home-base-grid">
                 <?php foreach ($bases as $i => $b): ?>
-                    <a class="home-base-card" href="/base_tables.php?base_id=<?php echo (int) $b['id']; ?>">
+                    <a class="home-base-card" href="/base.php?base_id=<?php echo (int) $b['id']; ?>">
                         <div class="home-base-icon" style="background: <?php echo htmlspecialchars($bccHomeIconColors[$i % count($bccHomeIconColors)], ENT_QUOTES, 'UTF-8'); ?>;">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>
                         </div>
@@ -180,6 +255,7 @@ function bcc_home_relative_date($datetimeStr)
                             <div class="home-base-name"><?php echo htmlspecialchars($b['name'], ENT_QUOTES, 'UTF-8'); ?></div>
                             <div class="home-base-meta">Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($b['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
+                        <div class="home-base-workspace"><?php echo htmlspecialchars(isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '', ENT_QUOTES, 'UTF-8'); ?></div>
                     </a>
                 <?php endforeach; ?>
             </div>
@@ -188,30 +264,13 @@ function bcc_home_relative_date($datetimeStr)
 </div>
 
 <script src="/assets/account-menu.js" defer></script>
+<script src="/assets/home.js" defer></script>
 <script>
 (function () {
     var sidebar = document.getElementById('home-sidebar');
     var sidebarToggle = document.getElementById('home-sidebar-toggle');
     sidebarToggle.addEventListener('click', function () {
         sidebar.classList.toggle('is-collapsed');
-    });
-
-    var filterToggle = document.getElementById('home-filter-toggle');
-    var filterMenu = document.getElementById('home-filter-menu');
-    var filterLabel = document.getElementById('home-filter-label');
-    filterToggle.addEventListener('click', function (e) {
-        e.stopPropagation();
-        filterMenu.classList.toggle('is-open');
-    });
-    Array.prototype.forEach.call(filterMenu.querySelectorAll('li'), function (item) {
-        item.addEventListener('click', function () {
-            filterLabel.textContent = item.getAttribute('data-label');
-            filterMenu.classList.remove('is-open');
-        });
-    });
-
-    document.addEventListener('click', function () {
-        filterMenu.classList.remove('is-open');
     });
 })();
 </script>

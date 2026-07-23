@@ -230,6 +230,57 @@ table.grid tbody tr:hover .grid-rownum {
     background: #f0f0f2;
 }
 
+/* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
+   buraya dokunulmuyor (frozen_column_count=1 = bugünkü varsayılan davranışla
+   birebir aynı). .grid-frozen-cell yalnızca EK dondurulmuş veri kolonlarına
+   (assets/grid-freeze-columns.js tarafından dinamik olarak) uygulanır; sol
+   konumu (left) satırın genişliğine göre değiştiği için satır içi stil olarak
+   JS'den gelir, geri kalan her şey burada. */
+.grid-frozen-cell {
+    position: sticky;
+    z-index: 1;
+    background: #fff;
+}
+
+table.grid thead th.grid-frozen-cell {
+    z-index: 2;
+    background: #f5f5f7;
+}
+
+table.grid tbody tr:hover td.grid-frozen-cell {
+    background: #fafafa;
+}
+
+.grid-frozen-edge { border-right: 2px solid #d8d8dc; }
+
+.grid-freeze-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -6px;
+    width: 12px;
+    cursor: grab;
+    z-index: 10;
+}
+
+.grid-freeze-handle::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 5px;
+    width: 2px;
+    background: #2d7ff9;
+    opacity: 0;
+}
+
+.grid-freeze-handle:hover::after,
+.grid-freeze-handle.is-dragging::after {
+    opacity: 1;
+}
+
+.grid-freeze-handle.is-dragging { cursor: grabbing; }
+
 .grid-actions-col {
     text-align: center;
     white-space: nowrap;

@@ -1,0 +1,213 @@
+# BCC-Core — Proje Durumu
+
+> Bu dosya, yeni bir sohbete başlarken bağlam olarak yapıştırılır.
+> Her özellik bittiğinde güncellenir ve commit'lenir.
+
+---
+
+## 1. Proje Nedir
+
+Airtable'ın birebir kopyası (arayüz + işlev) + Airtable'ın çözemediği eksikler.
+BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
+
+**Airtable'da olmayan, bizde olması gerekenler:**
+- KVKK ekip izolasyonu (TY / GULF / ATP ekipleri birbirinin verisini göremez)
+- Slack'e otomatik duyuru
+- Zengin metin editörü (Word gibi punto/link)
+- Editör sayısı sınırsız (Airtable free 5 editörle sınırlı)
+- Türkçe karakter desteği
+
+**Pusula:** "Bu, Airtable taklidi mi, yoksa Airtable'ın çözemediği bir eksik mi?"
+
+---
+
+## 2. Ortam
+
+| | |
+|---|---|
+| Proje yolu | `C:\xampp\htdocs\bcc-core` |
+| Web sunucusu | Apache (XAMPP), DocumentRoot = `public/` |
+| Adres | `http://localhost/` |
+| PHP | **7.3.33** — `C:\php73\php.exe` (typed properties / 7.4+ özellik YOK) |
+| DB | MariaDB 10.4 (XAMPP MySQL), `127.0.0.1:3306`, root, şifresiz, `bcc_core`, utf8mb4 |
+| Erişim katmanı | **mysqli** (PDO tamamen kaldırıldı) |
+| Git | GitHub private/public repo, her faz ayrı commit |
+
+**Apache'ye PHP 7.3 nasıl bağlandı** (bir daha yaşanmasın diye):
+- `httpd-xampp.conf`: PHP 8.2 satırları `#` ile kapatıldı, altına eklendi:
+  ```
+  LoadModule php7_module "C:/php73/php7apache2_4.dll"
+  PHPIniDir "C:/php73"
+  ```
+- `C:\php73\php.ini`: `extension_dir = "C:\php73\ext"` (TAM YOL), eklentiler kısa ad (`extension=mysqli`)
+- `C:\php73\ext` DLL'leri **7.3.33 için derlenmiş** olmalı (thread-safe, VC15)
+- `httpd.conf`: `DocumentRoot "C:/xampp/htdocs/bcc-core/public"`
+
+**Başlatma:** XAMPP Control Panel → Apache Start + MySQL Start.
+
+---
+
+## 3. Kalıcı Kurallar
+
+1. **Partials** — tekrar eden HTML/mantık tek yerde (`src/partials/`)
+2. **htdocs** — proje Apache'nin göreceği yerde
+3. **Apache** — `php -S` KULLANILMAZ
+4. **mysqli** — PDO yok, `bcc_query` / `bcc_fetch_all` / `bcc_fetch_one` / `bcc_fetch_column` / `bcc_execute` / `bcc_last_insert_id` / `bcc_begin_transaction` / `bcc_commit` / `bcc_rollback`
+5. **Kod tekrarı yok** — aynı şey iki yerde yazılmaz, ortak fonksiyon/partial'a alınır
+6. **Özelliğini yazmadığım şeyi ekleme** — belirtilmemiş butonlar sadece görünüm olarak durur
+
+**Güvenlik değişmezleri:**
+- Tüm çıktı `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`
+- Tüm sorgular prepared statement
+- Tüm formlar CSRF'li
+- Her veri erişiminde `require_team_access()` / `require_role()`
+- `team_id` her zaman satırdan alınır, URL'den değil
+- `audit_log`'a kayıt
+- SQL'e gömülen tablo/kolon adları whitelist'ten (prepared statement ile bağlanamazlar)
+- `json_encode(..., JSON_UNESCAPED_UNICODE)` — Türkçe için
+
+---
+
+## 4. Mimari
+
+**EAV (Entity-Attribute-Value)** — 13 tablo, hepsi InnoDB + utf8mb4:
+
+`teams`, `users`, `team_members`, `bases`, `tables_meta`, `fields`, `records`,
+`cell_values`, `record_links`, `views`, `attachments`, `slack_webhooks`, `audit_log`
+
+- `cell_values`: `value_text` / `value_number` / `value_date` / `value_json`
+- Ekipler: TY, GULF, ATP
+- Roller: owner / editor / commenter / viewer
+- Alan tipleri (7): `single_line_text`, `long_text`, `number`, `checkbox`, `date`, `single_select`, `multiple_select`
+
+**Dosya haritası:**
+```
+config/database.php        mysqli bağlantısı + yardımcılar
+src/
+  bootstrap.php            csrf → auth → audit → schema yükler
+  auth.php                 current_user, require_login, require_team_access,
+                           require_role, attempt_login, bcc_user_initial
+  schema.php               find_base/table/field_or_404, bcc_find_field,
+                           parse_grid_* (sort/filter/hidden/group/row_height),
+                           filter_condition_sql, bcc_reorder_sibling,
+                           normalize_cell_value, cell_display_text
+  csrf.php  audit.php
+  partials/                header.php, top_nav.php, footer.php,
+                           flash.php, account_menu.php
+public/
+  login.php register.php terms.php privacy.php
+  dashboard.php            Airtable Home ekranı
+  bases.php base_tables.php table_fields.php
+  grid.php                 Airtable Data ekranı (en büyük dosya)
+  api/cell_update.php      AJAX hücre kaydetme
+  admin/                   index, create_user, create_team, assign_team
+  assets/                  style.css, login.css, home.css, grid-shell.css,
+                           grid.js, grid-toolbar.js, grid-filter.js,
+                           grid-hide-fields.js, grid-group.js,
+                           account-menu.js, bcc-logo.svg
+scripts/                   create_admin, test_isolation, _isolation_case,
+                           _seed/_cleanup_phase2/3, _verify_phase4_*
+```
+
+---
+
+## 5. Biten İşler
+
+**Faz 0-4 (çekirdek)**
+- Şema, bağlantı, tanı sayfası (`diag.php`)
+- Kimlik: login/logout/dashboard, roller, ilk admin, admin paneli, CSRF
+- **KVKK ekip izolasyonu — 6/6 testle kanıtlı** (`scripts/test_isolation.php`)
+- Base/tablo/alan yönetimi, 7 alan tipi
+- Grid + hücre düzenleme (AJAX)
+- Arama, sıralama (3 slot), filtreleme (5 kural, VE/VEYA) — **19/19 test**
+
+**Airtable arayüz kopyası**
+- `login.php` — ortada beyaz kart, BCC logo, "Hoş geldiniz", beyaz arka plan
+- `register.php` — aynı tasarım; kayıt `is_active=0` + ekipsiz → admin onaylar (KVKK)
+- `dashboard.php` — Airtable Home (üst bar, sol panel, base kartları)
+- `grid.php` — Airtable Data ekranı (üst bar, sol dikey şerit, tablo sekmeleri, araç şeridi)
+
+**PDO → mysqli geçişi (8 faz)**
+- 21 dosya, ~113 sorgu, 2 transaction
+- PDO projede tek satır kalmadı (kod + yorum + dokümantasyon)
+- Regresyonlar: **6/6 izolasyon, 8/8 sıralama, 19/19 filtre**
+
+**Kod tekrarı temizliği**
+- `flash.php` partial (7 dosya)
+- `bcc_find_field()` — KVKK sorgusu tek yerde
+- `teams.php` → `terms.php`, partials'a geçti
+- `account_menu.php` + `account-menu.js` + `bcc_user_initial()`
+- `bcc_reorder_sibling()` — sıra değiştirme mantığı
+
+**Grid araçları**
+- **Hide fields** — Airtable tarzı toggle, birincil alan gizlenemez, "Find a field", Hide all/Show all
+- **Group** (tek seviye) — alan + yön (tipe göre etiket), grup başlıkları, `(Empty)` grubu, aç/kapa, Collapse/Expand all
+- **Row height** — Short/Medium/Tall/Extra Tall + Wrap headers
+
+**Not:** Beş aracın durumu (hidden_fields, sort_*, filter_*, group_*, row_height/wrap_headers) URL'de taşınır ve birbirini korur.
+
+---
+
+## 6. Kalan İşler
+
+| # | İş | Not |
+|---|---|---|
+| 1 | **Add subgroup** | Group'un çok seviyeli hali (Airtable 3 seviye) |
+| 2 | **Arama iyileştirmesi** | Airtable gibi: eşleşmeyi sarı vurgula, "1 of 219" sayacı, yukarı/aşağı ok ile gezinme. Satırları gizleme yerine vurgulama. Tamamen istemci tarafı. |
+| 3 | **Color** | İki yöntem: select seçeneğine göre (önce seçeneklere renk desteği gerekir) veya koşula göre (filtre altyapısı kullanılabilir) |
+| 4 | **Yeni alan tipleri** | User (@kullanıcı), Saat |
+| 5 | **Sütun ekleme akışı** | Airtable gibi: önce tür sor, sonra başlık |
+| 6 | **Zengin metin editörü** | Word gibi punto/kalın/link — tek başına büyük iş |
+| 7 | **Slack otomasyonu** | Hiç başlanmadı. Apache'ye `curl` uzantısı gerekecek. |
+| 8 | Kaydedilebilir görünümler | `views` tablosu şemada var; şu an ayarlar sadece URL'de |
+
+**Bilerek yapılmayanlar:** Automations / Interfaces / Forms / Launch / Share and sync → sadece görünüm. `login`/`register` auth shell refactoru (kazanç/risk oranı düşük).
+
+**Bilinen küçük kusur:** İstemci araması grup başlıklarını dikkate almıyor — bir grubun tüm satırları gizlenirse başlık yine görünür.
+
+---
+
+## 7. Çalışma Yöntemi
+
+- Kod **Claude Code** yazar; Claude (bu sohbet) danışman — brifing hazırlar, onay ekranlarını inceler
+- Komutlar **tek tek** onaylanır: hep `1 = Yes`. Toplu izin (`2`) **ASLA**
+- Silme öncesi: "bunu kullanan kaldı mı?" grep kontrolü
+- Onay ekranlarında kod sık **kırpık** görünür (önizleme) → şüphede `php -l`
+- Tüm PHP komutlarında `C:/php73/php.exe` — düz `php` XAMPP'in 8.2 CLI'ı
+- **Yeni panel eklerken eski işlevsiz butonu SİLMEYİ ilk adım yap** (üç kez unutuldu)
+- CSS değişince tarayıcıda **Ctrl+Shift+R** (önbellek iki kez yanılttı)
+
+**Test betikleri** (her büyük değişiklikten sonra):
+```
+C:/php73/php.exe scripts/test_isolation.php            → 6/6
+C:/php73/php.exe scripts/_verify_phase4_sort_search.php → 8/8
+C:/php73/php.exe scripts/_verify_phase4_filter.php      → 19/19
+```
+
+**Git akışı** (her özellik sonunda, ayrı cmd'den):
+```
+cd C:\xampp\htdocs\bcc-core
+git add .
+git commit -m "kisa aciklama"
+git push
+```
+Geri alma: `git checkout .` (son commit'e döner)
+
+---
+
+## 8. Sorun Giderme
+
+**"Sonsuz yüklenme" / bağlantı hatası** → MySQL takılmıştır.
+XAMPP'te **Stop → 5 sn bekle → Start**. "MySQL yeşil" ≠ "MySQL sağlıklı".
+Doğrulama: tarayıcıdan `localhost/diag.php` → "Bağlantı başarılı".
+
+**Şifre sıfırlama** (kullanıcı kendi çalıştırır, şifre paylaşılmaz):
+```
+cd C:\xampp\htdocs\bcc-core
+C:\php73\php.exe -r "require 'config/database.php'; $e='EPOSTA'; $p='YENI_SIFRE'; $h=password_hash($p,PASSWORD_DEFAULT); bcc_execute('UPDATE users SET password_hash=:h WHERE email=:e', array(':h'=>$h,':e'=>$e)); echo 'ok';"
+```
+
+**Test kullanıcısı oluşturma:** Admin paneli → Yeni Kullanıcı (aktif gelir) → Ekibe Ata.
+Temizlik: `DELETE FROM users WHERE email LIKE '%@bcc-test.local'`
+
+**Klasik hata:** `cd C:\xampp\htdocs\bcc-core` yapmadan komut çalıştırmak.

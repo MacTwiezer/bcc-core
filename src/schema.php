@@ -74,6 +74,27 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
 // Değer girdisi gerektirmeyen operatörler (input UI'da gizlenir).
 $GLOBALS['BCC_FILTER_NO_VALUE_OPS'] = array('empty', 'not_empty', 'checked', 'unchecked');
 
+// Grid gruplama (Grid araçları Adım 2a): alan tipine göre yön dropdown etiketleri
+// (mantık her zaman artan/azalan — yalnızca metin değişir, Airtable'daki gibi).
+$GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
+    'single_line_text' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'long_text' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'single_select' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'multiple_select' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'number' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
+    'date' => array('asc' => 'Earliest → Latest', 'desc' => 'Latest → Earliest'),
+    'checkbox' => array('asc' => 'Unchecked → Checked', 'desc' => 'Checked → Unchecked'),
+);
+
+// Grid satır yüksekliği (Grid araçları Adım 3): whitelist + kaçta kaç satırın
+// gösterileceği (line-clamp) etiketleri. Sıra panel render'ında da kullanılır.
+$GLOBALS['BCC_ROW_HEIGHT_LABELS'] = array(
+    'short' => 'Short',
+    'medium' => 'Medium',
+    'tall' => 'Tall',
+    'extra' => 'Extra Tall',
+);
+
 // team_id, bases üzerinden gelir; bir base'in verisine erişen her sayfa bunu kullanmalı.
 function find_base_or_404($baseId)
 {
@@ -220,6 +241,19 @@ function cell_display_text($fieldType, $cellRow)
         default:
             return '';
     }
+}
+
+// Grid gruplama (Grid araçları Adım 2a): bir grup başlığının ham hücre değerini
+// cell_display_text() ile biçimlendirebilmek için, o fonksiyonun beklediği
+// cell_values satırı şeklinde sahte bir dizi üretir (GROUP BY sorgusu tek bir kolon
+// SELECT ettiği için diğer üç kolon her zaman null'dur) — cell_update.php'deki
+// aynı desenin tekrarı.
+function bcc_group_cell_row($column, $rawValue)
+{
+    $row = array('value_text' => null, 'value_number' => null, 'value_date' => null, 'value_json' => null);
+    $row[$column] = $rawValue;
+
+    return $row;
 }
 
 // Kardeş kayıtlar arasında sıra değiştirme (yukarı/aşağı taşı) — base_tables.php
@@ -392,6 +426,36 @@ function parse_grid_sort_rules($params, $fieldsById)
     return $rules;
 }
 
+// Grid'in Group panelinden gelen group_field / group_dir GET parametrelerini
+// doğrular (Adım 2a — tek seviye, en fazla 1 kural). Yalnızca $fieldsById'e ait (bu
+// tabloya ait) bir alan id'si kabul edilir — gizli (Hide fields ile kapatılmış) bir
+// alan da gruplama için geçerlidir, whitelist kaynağı her zaman $fieldsById'in
+// tamamıdır. Yön parse_grid_sort_rules ile aynı şekilde ele alınır: yalnızca tam
+// olarak "desc" DESC'e karşılık gelir, başka her şey (eksik dahil) ASC sayılır.
+// Alan id'si eksik/geçersizse gruplama kapalı sayılır ve null döner.
+function parse_grid_group_rule($params, $fieldsById)
+{
+    if (empty($params['group_field'])) {
+        return null;
+    }
+
+    $fieldId = (int) $params['group_field'];
+
+    if (!isset($fieldsById[$fieldId])) {
+        return null;
+    }
+
+    $dir = (isset($params['group_dir']) && $params['group_dir'] === 'desc') ? 'DESC' : 'ASC';
+    $fieldType = $fieldsById[$fieldId]['field_type'];
+
+    return array(
+        'field_id' => $fieldId,
+        'field_type' => $fieldType,
+        'dir' => $dir,
+        'column' => $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType],
+    );
+}
+
 // Grid'in filtre panelinden gelen filter_field_N / filter_cond_N / filter_value_N
 // (N=1..5) GET parametrelerini doğrular. Yalnızca $fieldsById'e ait alan id'leri VE
 // o alan tipi için whitelist'te tanımlı operatörler kabul edilir; geri kalanı
@@ -494,6 +558,22 @@ function parse_grid_hidden_fields($params, $fieldsById, $primaryFieldId)
     }
 
     return $hidden;
+}
+
+// Grid'in Row height panelinden gelen row_height GET parametresini doğrular
+// (whitelist, BCC_ROW_HEIGHT_LABELS'in anahtarları). Geçersiz/eksikse 'short' döner.
+function parse_grid_row_height($params)
+{
+    $value = isset($params['row_height']) ? (string) $params['row_height'] : 'short';
+
+    return isset($GLOBALS['BCC_ROW_HEIGHT_LABELS'][$value]) ? $value : 'short';
+}
+
+// Grid'in Row height panelinden gelen wrap_headers GET parametresini doğrular.
+// Yalnızca tam olarak "1" açık sayılır — eksik ya da başka her şey kapalı demektir.
+function parse_grid_wrap_headers($params)
+{
+    return isset($params['wrap_headers']) && $params['wrap_headers'] === '1';
 }
 
 // Doğrulanmış tek bir filtre kuralını SQL WHERE parçasına çevirir.

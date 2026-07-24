@@ -38,25 +38,11 @@ salt görsel kabuk özellikleri JS'e bağlı olabilsin. Başlamadan netleştir.
 
 ---
 
-## 1. `audit_log` index migration'ı (opsiyonel, ileride)
-
-Tarih filtresi (dashboard.php) `audit_log`'da `entity_type='base' AND entity_id=... `
-üzerinden alt sorgu/JOIN yapıyor ama tabloda bu kolonlar üzerinde index yok (yalnızca
-`team_id`/`user_id` indeksli) — şu an ~167 satırda maliyetsiz, ancak tablo büyürse
-`(entity_type, entity_id, action)` bileşik index'i eklenmeli (DDL, ayrı bir migration işi).
-
 ---
 
 # D. Grid Tablosu
 
 ---
-
-## 2. `views.created_by` migration'ı (opsiyonel, ileride)
-
-`views` tablosunda oluşturan kullanıcı bilgisi yok — görünüm bilgi popover'ındaki
-"Created by" satırı bu yüzden atlandı (uydurma veri gösterilmedi). Gerçekten
-isteniyorsa: `views` tablosuna `created_by INT UNSIGNED NULL` kolonu + FK migration'ı,
-sonra popover'a "Created by" satırının geri eklenmesi.
 
 **Test:**
 1. (a) butonuna bas → satır ekleniyor, sayaç artıyor mu

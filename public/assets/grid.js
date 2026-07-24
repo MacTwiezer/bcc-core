@@ -18,6 +18,21 @@
         });
     }
 
+    // Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
+    // görüntülenir. Kullanıcı verisi (chip.text) yalnızca textContent ile
+    // yazılır, innerHTML string birleştirme YOK — sunucudan gelen zaten
+    // htmlspecialchars'lı metnin DOM'daki düz hâli güvenle enjekte edilir.
+    function renderChips(view, chips) {
+        view.textContent = '';
+        chips.forEach(function (chip) {
+            var span = document.createElement('span');
+            span.className = 'choice-chip';
+            span.style.background = chip.color;
+            span.textContent = chip.text;
+            view.appendChild(span);
+        });
+    }
+
     function flash(td, ok) {
         td.classList.remove('cell-flash-ok', 'cell-flash-error');
         void td.offsetWidth; // reflow, animasyonu yeniden başlatmak için
@@ -44,7 +59,17 @@
                 td.setAttribute('data-value', result.data.raw);
                 var view = td.querySelector('.cell-view');
                 if (view) {
-                    view.textContent = result.data.display;
+                    if (result.data.display_chips) {
+                        renderChips(view, result.data.display_chips);
+                    } else if (td.getAttribute('data-field-type') === 'long_text') {
+                        // GÜVENLİ: result.data.display burada sunucuda
+                        // bcc_sanitize_rich_text() ile temizlenmiş HTML —
+                        // ham kullanıcı girdisi DEĞİL, innerHTML ile yazmak
+                        // güvenlidir (bkz. src/schema.php).
+                        view.innerHTML = result.data.display;
+                    } else {
+                        view.textContent = result.data.display;
+                    }
                 }
                 flash(td, true);
             } else {
@@ -201,11 +226,7 @@
     function buildInput(type, td, raw) {
         var input;
 
-        if (type === 'long_text') {
-            input = document.createElement('textarea');
-            input.rows = 3;
-            input.value = raw;
-        } else if (type === 'number') {
+        if (type === 'number') {
             input = document.createElement('input');
             input.type = 'number';
             input.step = 'any';
@@ -214,11 +235,25 @@
             input = document.createElement('input');
             input.type = 'date';
             input.value = raw;
+        } else if (type === 'time') {
+            input = document.createElement('input');
+            input.type = 'time';
+            input.value = raw;
         } else if (type === 'single_select') {
             input = document.createElement('select');
             addOption(input, '', '— boş —');
             getChoices(td).forEach(function (c) {
                 addOption(input, c, c);
+            });
+            input.value = raw;
+        } else if (type === 'user') {
+            // data-options burada [{"id":..,"name":..}] şeklinde (single_select'in
+            // düz string listesinden farklı — id ile görünen ad ayrı, bkz.
+            // bcc_user_choices_from_map, src/schema.php).
+            input = document.createElement('select');
+            addOption(input, '', '— boş —');
+            getChoices(td).forEach(function (c) {
+                addOption(input, c.id, c.name);
             });
             input.value = raw;
         } else if (type === 'multiple_select') {
@@ -317,7 +352,7 @@
 
         input.addEventListener('blur', commit);
         input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && type !== 'long_text') {
+            if (e.key === 'Enter') {
                 e.preventDefault();
                 commit();
             } else if (e.key === 'Escape') {
@@ -325,6 +360,202 @@
                 cancel();
             }
         });
+    }
+
+    // Zengin metin (long_text — F6, "ilk aşama"): kalın/italik/font
+    // büyüklüğü/link. Diğer tiplerin startEdit()/buildInput() akışını
+    // KULLANMAZ — araç çubuğu düğmeleri contenteditable'ın blur'unu
+    // tetikleyeceğinden ("blur = kaydet" deseni burada işe yaramaz),
+    // ayrı bir popover + açık Kaydet/İptal butonlarıyla çalışır.
+    var BCC_RICH_TEXT_FONT_SIZES = [10, 12, 14, 16, 18, 24, 32];
+
+    function startRichTextEdit(td) {
+        if (td.classList.contains('editing')) {
+            return;
+        }
+
+        var view = td.querySelector('.cell-view');
+        var raw = td.getAttribute('data-value') || '';
+
+        td.classList.add('editing', 'richtext-editing');
+
+        var popover = document.createElement('div');
+        popover.className = 'richtext-popover';
+
+        var toolbar = document.createElement('div');
+        toolbar.className = 'richtext-toolbar';
+
+        var editable = document.createElement('div');
+        editable.className = 'richtext-editable';
+        editable.contentEditable = 'true';
+        // GÜVENLİ: raw, data-value attribute'undan geliyor — sunucuda zaten
+        // bcc_sanitize_rich_text() ile temizlenmiş HTML'in tarayıcı
+        // tarafından otomatik decode edilmiş hâli (attribute'a
+        // htmlspecialchars ile yazılmıştı, ham kullanıcı girdisi değil).
+        editable.innerHTML = raw;
+
+        function makeToolbarButton(label, title, onClick) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'richtext-toolbar-btn';
+            btn.textContent = label;
+            btn.title = title;
+            // mousedown'da preventDefault: contenteditable'daki metin seçimi
+            // buton tıklamasıyla kaybolmasın — execCommand mevcut seçime
+            // uygulanır, seçim korunmalı.
+            btn.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+            });
+            btn.addEventListener('click', onClick);
+            return btn;
+        }
+
+        var boldBtn = makeToolbarButton('B', 'Kalın', function () {
+            document.execCommand('bold', false, null);
+            editable.focus();
+        });
+        boldBtn.style.fontWeight = 'bold';
+
+        var italicBtn = makeToolbarButton('i', 'İtalik', function () {
+            document.execCommand('italic', false, null);
+            editable.focus();
+        });
+        italicBtn.style.fontStyle = 'italic';
+
+        var sizeSelect = document.createElement('select');
+        sizeSelect.className = 'richtext-size-select';
+        var defaultSizeOpt = document.createElement('option');
+        defaultSizeOpt.value = '';
+        defaultSizeOpt.textContent = 'Boyut';
+        sizeSelect.appendChild(defaultSizeOpt);
+        BCC_RICH_TEXT_FONT_SIZES.forEach(function (size) {
+            var opt = document.createElement('option');
+            opt.value = String(size);
+            opt.textContent = size + 'px';
+            sizeSelect.appendChild(opt);
+        });
+        sizeSelect.addEventListener('mousedown', function (e) {
+            e.stopPropagation();
+        });
+        sizeSelect.addEventListener('change', function () {
+            var px = sizeSelect.value;
+            sizeSelect.value = '';
+            if (!px) {
+                return;
+            }
+            editable.focus();
+            // execCommand('fontSize') yalnızca eski 1-7 ölçeğini kabul eder;
+            // sabit "7" işaretleyicisiyle çağırıp hemen ardından üretilen
+            // <font size="7"> etiketlerini gerçek px değerli
+            // <span style="font-size:Npx">'e çeviriyoruz — sunucudaki
+            // whitelist tek desende kalsın diye (bkz. bcc_sanitize_rich_text).
+            document.execCommand('fontSize', false, '7');
+            var fonts = editable.querySelectorAll('font[size="7"]');
+            fonts.forEach(function (font) {
+                var span = document.createElement('span');
+                span.style.fontSize = px + 'px';
+                while (font.firstChild) {
+                    span.appendChild(font.firstChild);
+                }
+                font.parentNode.replaceChild(span, font);
+            });
+        });
+
+        var linkBtn = makeToolbarButton('🔗', 'Link ekle', function () {
+            var url = window.prompt('Link URL:', 'https://');
+            if (!url) {
+                return;
+            }
+            if (!/^https?:\/\//i.test(url)) {
+                window.alert('Link https:// veya http:// ile başlamalı.');
+                return;
+            }
+            editable.focus();
+            document.execCommand('createLink', false, url);
+        });
+
+        toolbar.appendChild(boldBtn);
+        toolbar.appendChild(italicBtn);
+        toolbar.appendChild(sizeSelect);
+        toolbar.appendChild(linkBtn);
+
+        var actions = document.createElement('div');
+        actions.className = 'richtext-actions';
+        var cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-sm';
+        cancelBtn.textContent = 'İptal';
+        var saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn-sm';
+        saveBtn.textContent = 'Kaydet';
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+
+        popover.appendChild(toolbar);
+        popover.appendChild(editable);
+        popover.appendChild(actions);
+
+        if (view) {
+            view.style.display = 'none';
+        }
+        td.appendChild(popover);
+        editable.focus();
+
+        var done = false;
+
+        function endEdit() {
+            td.classList.remove('editing', 'richtext-editing');
+            if (popover.parentNode === td) {
+                td.removeChild(popover);
+            }
+            if (view) {
+                view.style.display = '';
+            }
+            document.removeEventListener('mousedown', outsideClickHandler, true);
+        }
+
+        function cancel() {
+            if (done) {
+                return;
+            }
+            done = true;
+            endEdit();
+        }
+
+        function commit() {
+            if (done) {
+                return;
+            }
+            done = true;
+            var value = editable.innerHTML;
+            endEdit();
+            saveCell(td, value);
+        }
+
+        cancelBtn.addEventListener('click', cancel);
+        saveBtn.addEventListener('click', commit);
+
+        editable.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cancel();
+            }
+            // Enter: taslak satır sonu olarak bırakılır (tarayıcı varsayılanı) —
+            // kaydetme yalnızca "Kaydet" butonuyla, yanlışlıkla Enter'da
+            // erken kaydetme yok.
+        });
+
+        // Dışarı tıklayınca İptal (kaydetmeden kapan) — aynı tetikleyici click'in
+        // hemen kendisini yakalamaması için bir sonraki turda bağlanır.
+        function outsideClickHandler(e) {
+            if (!popover.contains(e.target)) {
+                cancel();
+            }
+        }
+        setTimeout(function () {
+            document.addEventListener('mousedown', outsideClickHandler, true);
+        }, 0);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -341,7 +572,11 @@
             if (!td) {
                 return;
             }
-            startEdit(td);
+            if (td.getAttribute('data-field-type') === 'long_text') {
+                startRichTextEdit(td);
+            } else {
+                startEdit(td);
+            }
         });
 
         grid.addEventListener('change', function (e) {
@@ -377,8 +612,9 @@
             });
         }
 
-        // (c) Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea HARİÇ —
-        // orada satır atlamalı) aktif kaydın hemen altına ekler.
+        // (c) Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea VE
+        // zengin metin editörü HARİÇ — orada satır atlamalı) aktif kaydın hemen
+        // altına ekler.
         document.addEventListener('keydown', function (e) {
             if (!e.shiftKey || e.key !== 'Enter') {
                 return;
@@ -386,6 +622,9 @@
 
             var targetTag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
             if (targetTag === 'textarea') {
+                return;
+            }
+            if (e.target && e.target.classList && e.target.classList.contains('richtext-editable')) {
                 return;
             }
 
@@ -397,5 +636,30 @@
             e.preventDefault();
             addRecord(row.getAttribute('data-record-id'), row);
         });
+
+        // Kaydedilebilir görünümler: "Save view" menü öğesi, ekranda görünen
+        // sort/filter/group/hidden fields/row height/wrap headers durumunu
+        // views.config'e yazar (view_save_state.php). Sonraki ziyarette grid.php
+        // parametresiz açılırsa bu state'e otomatik yönlendirir (redirect).
+        var saveViewBtn = document.getElementById('gs-view-save-state-btn');
+        if (saveViewBtn) {
+            saveViewBtn.addEventListener('click', function () {
+                var viewId = window.BCC_VIEW_ID || '';
+                post('/api/view_save_state.php', {
+                    csrf_token: CSRF,
+                    view_id: viewId,
+                    state_query_string: window.location.search.replace(/^\?/, ''),
+                }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok) {
+                        showToast('Görünüm kaydedildi.');
+                    } else {
+                        var message = (result.data && result.data.error) ? result.data.error : 'Görünüm kaydedilemedi.';
+                        window.alert(message);
+                    }
+                }).catch(function () {
+                    window.alert('Görünüm kaydedilemedi (bağlantı hatası).');
+                });
+            });
+        }
     });
 })();

@@ -11,6 +11,8 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     'date' => 'Tarih',
     'single_select' => 'Tekli seçim',
     'multiple_select' => 'Çoklu seçim',
+    'time' => 'Saat',
+    'user' => 'Kullanıcı',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
@@ -24,6 +26,13 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     'date' => 'value_date',
     'single_select' => 'value_text',
     'multiple_select' => 'value_json',
+    // Saat: DDL yok, date'in aynısı gibi value_text'e "HH:MM" (24 saat, sıfır dolgulu)
+    // yazılır — string karşılaştırma kronolojik sırayla birebir örtüşür.
+    'time' => 'value_text',
+    // User: DDL yok, users.id value_number'a yazılır (mevcut kolon, tamsayı olarak
+    // kullanılır). Görünen ad DEĞİL id saklanır — görüntüleme id→ad haritası
+    // (bcc_team_users_by_id) ile cell_display_text()'te çözülür.
+    'user' => 'value_number',
 );
 
 // Grid sütun başlığında gösterilen kısa tip rozeti.
@@ -35,6 +44,8 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'date' => '📅',
     'single_select' => '▾',
     'multiple_select' => '☰',
+    'time' => '🕐',
+    'user' => '@',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -69,6 +80,14 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
     'multiple_select' => array(
         'contains' => 'içerir', 'not_contains' => 'içermez',
     ),
+    'time' => array(
+        'before' => 'önce', 'after' => 'sonra', 'equals' => 'eşittir',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    'user' => array(
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
 );
 
 // Değer girdisi gerektirmeyen operatörler (input UI'da gizlenir).
@@ -84,7 +103,34 @@ $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
     'number' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
     'date' => array('asc' => 'Earliest → Latest', 'desc' => 'Latest → Earliest'),
     'checkbox' => array('asc' => 'Unchecked → Checked', 'desc' => 'Checked → Unchecked'),
+    'time' => array('asc' => 'Earliest → Latest', 'desc' => 'Latest → Earliest'),
+    // Ada göre değil, alttaki id'ye göre (görüntü adı değil ham değer sıralanır —
+    // diğer tüm tiplerle aynı kural, bkz. bcc_build_grouped_tree segmentasyon notu).
+    'user' => array('asc' => 'Küçük → Büyük', 'desc' => 'Büyük → Küçük'),
 );
+
+// Tekli/çoklu seçim seçeneklerinin renk paleti (Color): serbest hex DEĞİL, sabit
+// whitelist — kullanıcıdan gelen bir rengi doğrudan style attribute'una basmak
+// yerine (CSS/attribute injection riski + tutarsız görsel sonuç) yalnızca bu
+// anahtarlardan biri kabul edilir, fields.options'ta ("colors" anahtarı) renk KEY'i
+// saklanır, hex değeri her zaman buradan çözülür.
+$GLOBALS['BCC_CHOICE_COLORS'] = array(
+    'blue' => '#cfe2ff',
+    'cyan' => '#cdf3f5',
+    'teal' => '#d0f0e8',
+    'green' => '#d7f0d1',
+    'yellow' => '#fdf1c7',
+    'orange' => '#fde2c8',
+    'red' => '#fbdbd7',
+    'pink' => '#fbdce8',
+    'purple' => '#e6d9f7',
+    'gray' => '#e6e6e9',
+);
+
+// Zengin metin (long_text — F6, "ilk aşama": kalın/italik/font büyüklüğü/link).
+// Sabit boyut listesi — serbest CSS değil, hem sanitize edici (bcc_sanitize_rich_text)
+// hem de düzenleme araç çubuğu (grid.js) AYNI listeyi kullanır.
+$GLOBALS['BCC_RICH_TEXT_FONT_SIZES'] = array(10, 12, 14, 16, 18, 24, 32);
 
 // Grid satır yüksekliği (Grid araçları Adım 3): whitelist + kaçta kaç satırın
 // gösterileceği (line-clamp) etiketleri. Sıra panel render'ında da kullanılır.
@@ -144,27 +190,33 @@ function find_table_or_404($tableId)
 // hiçbir çağıran "az önce ben oluşturdum" varsayımıyla ikinci bir satır üretmez.
 function bcc_get_or_create_default_view($tableId)
 {
-    $view = bcc_fetch_one(
-        'SELECT id, name, config FROM views WHERE table_id = :table_id ORDER BY id ASC LIMIT 1',
-        array('table_id' => $tableId)
-    );
+    $sql = 'SELECT v.id, v.name, v.config, v.created_by, u.full_name AS created_by_name
+            FROM views v
+            LEFT JOIN users u ON u.id = v.created_by
+            WHERE v.table_id = :table_id ORDER BY v.id ASC LIMIT 1';
+
+    $view = bcc_fetch_one($sql, array('table_id' => $tableId));
 
     if ($view) {
         return $view;
     }
 
+    $creator = current_user();
+
     bcc_execute(
-        'INSERT INTO views (table_id, name, view_type)
-         SELECT :table_id, :name, :view_type
+        'INSERT INTO views (table_id, name, view_type, created_by)
+         SELECT :table_id, :name, :view_type, :created_by
          FROM DUAL
          WHERE NOT EXISTS (SELECT 1 FROM views WHERE table_id = :table_id)',
-        array('table_id' => $tableId, 'name' => 'Grid view', 'view_type' => 'grid')
+        array(
+            'table_id' => $tableId,
+            'name' => 'Grid view',
+            'view_type' => 'grid',
+            'created_by' => $creator ? $creator['id'] : null,
+        )
     );
 
-    return bcc_fetch_one(
-        'SELECT id, name, config FROM views WHERE table_id = :table_id ORDER BY id ASC LIMIT 1',
-        array('table_id' => $tableId)
-    );
+    return bcc_fetch_one($sql, array('table_id' => $tableId));
 }
 
 // Dondurulabilecek en fazla sütun sayısı (satır no dahil) — görünür alan sayısının
@@ -250,6 +302,134 @@ function select_choices_from_options($optionsJson)
     return array();
 }
 
+// fields.options'ın "colors" anahtarını okur: seçenek metni => BCC_CHOICE_COLORS
+// anahtarı haritası. select_choices_from_options() ile AYNI JSON'un paralel bir
+// alt-alanı — choices listesi düz string kalır, hiçbir doğrulama/filtre/sort/group
+// fonksiyonu bu yüzden değişmez, yalnızca render ve düzenleme formu okur.
+function select_choice_colors_from_options($optionsJson)
+{
+    if ($optionsJson === null || $optionsJson === '') {
+        return array();
+    }
+
+    $decoded = json_decode($optionsJson, true);
+
+    if (is_array($decoded) && isset($decoded['colors']) && is_array($decoded['colors'])) {
+        return $decoded['colors'];
+    }
+
+    return array();
+}
+
+// Bir seçeneğin renk KEY'ini çözer. Alan açıkça bir renk kaydetmemişse (eski
+// alanlar, ya da henüz seçilmemiş) palete sırayla (seçeneğin listedeki indeksine
+// göre) düşer — böylece hiçbir seçenek "renksiz" görünmez, migration/backfill
+// gerekmez ("Yeni alan OLUŞTURULURKEN renkler otomatik sırayla atanır" — bu geri
+// dönüş, o davranışın kendisidir, ayrıca INSERT anında yazılmaz).
+function bcc_resolved_choice_color_key($choiceColors, $choice, $index)
+{
+    $palette = $GLOBALS['BCC_CHOICE_COLORS'];
+
+    if (isset($choiceColors[$choice]) && isset($palette[$choiceColors[$choice]])) {
+        return $choiceColors[$choice];
+    }
+
+    $keys = array_keys($palette);
+
+    return $keys[$index % count($keys)];
+}
+
+// Bir alanın TÜM seçenek listesi + kaydedilmiş renkler haritasından, her
+// seçeneğin çözümlenmiş renk KEY'ini üretir (bcc_resolved_choice_color_key'in
+// listeye uygulanmış hâli) — bcc_render_grid_data_row VE cell_update.php AYNI
+// haritayı üretmek için bunu paylaşır, kod tekrarı olmaz.
+function bcc_build_choice_color_map($choices, $savedColors)
+{
+    $map = array();
+    foreach ($choices as $i => $choiceText) {
+        $map[$choiceText] = bcc_resolved_choice_color_key($savedColors, $choiceText, $i);
+    }
+
+    return $map;
+}
+
+// bcc_render_choice_chips() ile AYNI mantığın JSON API karşılığı —
+// cell_update.php'nin AJAX yanıtında istemciye (grid.js) gönderilecek
+// {text, color} çiftlerini üretir (renk hex'i sunucuda çözülür, istemci
+// palette'i bilmek zorunda kalmaz).
+function bcc_choice_chip_data($values, $choiceColorMap)
+{
+    $palette = $GLOBALS['BCC_CHOICE_COLORS'];
+    $chips = array();
+
+    foreach ($values as $value) {
+        $colorKey = isset($choiceColorMap[$value]) ? $choiceColorMap[$value] : null;
+        $hex = ($colorKey !== null && isset($palette[$colorKey])) ? $palette[$colorKey] : $palette['gray'];
+        $chips[] = array('text' => (string) $value, 'color' => $hex);
+    }
+
+    return $chips;
+}
+
+// Tekli/çoklu seçim hücrelerinde renkli "chip" render eder — htmlspecialchars
+// burada uygulanır, çağıran taraf kaçırmaz. $values: gösterilecek seçenek
+// metinleri (tekli için tek elemanlı, çoklu için seçili olanların dizisi);
+// $choiceColorMap: seçenek metni => renk KEY'i (bcc_resolved_choice_color_key
+// ile ÖNCEDEN, alanın TÜM seçenek listesi üzerinden hesaplanmış olmalı — indeks
+// tabanlı geri dönüşün doğru çalışması için).
+function bcc_render_choice_chips($values, $choiceColorMap)
+{
+    $palette = $GLOBALS['BCC_CHOICE_COLORS'];
+
+    foreach ($values as $value) {
+        $colorKey = isset($choiceColorMap[$value]) ? $choiceColorMap[$value] : null;
+        $hex = ($colorKey !== null && isset($palette[$colorKey])) ? $palette[$colorKey] : $palette['gray'];
+        ?>
+        <span class="choice-chip" style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?></span>
+        <?php
+    }
+}
+
+// grid.php'nin Sort/Filter/Group/Hide-fields panelleri, kendi form'u submit
+// olduğunda DİĞER panellerin durumunu (o panelin kendi state'i HARİÇ — o zaten
+// kendi adlı alanlarıyla submit edilir) gizli input olarak taşır. Dört panelde
+// ayrı ayrı yazılan aynı "foreach + htmlspecialchars" deseni TEK yerde: $state,
+// birden fazla *State dizisinin ('+' ile) birleştirilmiş hâli (name => value).
+// Davranış değişmez — yalnızca tekrar eden kod tek fonksiyona taşınır.
+function bcc_render_grid_state_hidden_inputs($state)
+{
+    foreach ($state as $key => $value) {
+        ?>
+        <input type="hidden" name="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); ?>">
+        <?php
+    }
+}
+
+// "User" alan tipi için TEK kaynak: o takımın (KVKK — yalnızca o takım) aktif
+// üyelerini id => full_name haritası olarak döndürür. Hem hücre görüntüleme
+// (cell_display_text), hem hücre/filtre editörünün seçenek listesi (data-options /
+// BCC_TEAM_MEMBERS), hem de kayıt doğrulama (normalize_cell_value — gönderilen
+// user_id gerçekten bu takımın üyesi mi) AYNI haritayı kullanır; başka bir takımın
+// üyesi asla listeye girmez.
+function bcc_team_users_by_id($teamId)
+{
+    $rows = bcc_fetch_all(
+        'SELECT u.id, u.full_name
+         FROM team_members tm
+         INNER JOIN users u ON u.id = tm.user_id
+         WHERE tm.team_id = :team_id AND u.is_active = 1
+         ORDER BY u.full_name',
+        array('team_id' => $teamId)
+    );
+
+    $byId = array();
+    foreach ($rows as $row) {
+        $byId[(int) $row['id']] = $row['full_name'];
+    }
+
+    return $byId;
+}
+
 // team_id, fields -> tables_meta -> bases üzerinden gelir; bir alanın hücre verisine
 // erişen her sayfa/uçnokta bunu kullanmalı. Bulunamazsa null döner (404/die yapmaz) —
 // çağıran taraf kendi hata davranışını (die ile HTML ya da JSON) seçer.
@@ -298,13 +478,20 @@ function cell_raw_value($fieldType, $cellRow)
             return $cellRow['value_date'] !== null ? substr($cellRow['value_date'], 0, 10) : '';
         case 'multiple_select':
             return $cellRow['value_json'] !== null ? $cellRow['value_json'] : '[]';
+        case 'time':
+            return (string) $cellRow['value_text'];
+        case 'user':
+            return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
         default:
             return '';
     }
 }
 
 // Grid hücresinde salt-okunur görüntülenecek metni üretir (htmlspecialchars çağıran taraf yapar).
-function cell_display_text($fieldType, $cellRow)
+// $usersById: bcc_team_users_by_id() ile hazırlanmış id => full_name haritası —
+// yalnızca 'user' tipi için kullanılır, diğer tüm tipler bu parametreyi görmezden
+// gelir (opsiyonel, geriye dönük uyumlu — mevcut 3 çağrı yeri dışında imza değişmedi).
+function cell_display_text($fieldType, $cellRow, $usersById = array())
 {
     if ($cellRow === null) {
         return '';
@@ -322,9 +509,31 @@ function cell_display_text($fieldType, $cellRow)
         case 'multiple_select':
             $choices = $cellRow['value_json'] !== null ? json_decode($cellRow['value_json'], true) : array();
             return is_array($choices) ? implode(', ', $choices) : '';
+        case 'time':
+            return (string) $cellRow['value_text'];
+        case 'user':
+            if ($cellRow['value_number'] === null) {
+                return '';
+            }
+            $userId = (int) $cellRow['value_number'];
+            return isset($usersById[$userId]) ? $usersById[$userId] : '';
         default:
             return '';
     }
+}
+
+// fields.options'a değil, bcc_team_users_by_id() id => full_name haritasına
+// dayanır — hücre editörünün (grid.js buildInput) ve filtre panelinin 'user'
+// alanları için data-options / BCC_TEAM_MEMBERS ile paylaştığı TEK şekil:
+// [{"id": .., "name": ..}, ...], id sırası korunur (ad sırasına göre gelir).
+function bcc_user_choices_from_map($usersById)
+{
+    $choices = array();
+    foreach ($usersById as $id => $name) {
+        $choices[] = array('id' => $id, 'name' => $name);
+    }
+
+    return $choices;
 }
 
 // Bir kayıt satırını (hücreler + varsa "Sil" formu) basar. Gruplu ve düz (grupsuz)
@@ -332,8 +541,9 @@ function cell_display_text($fieldType, $cellRow)
 // data-group-path eklenir (grid-group.js aç/kapa bunu prefix eşleşmesiyle kullanır).
 // grid.php'nin ilk sayfa render'ı VE public/api/record_add.php (AJAX ile eklenen
 // tek bir satırın HTML'ini üretmek için) aynı fonksiyonu paylaşır — iki yerde
-// ayrı ayrı yazılmaz.
-function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null)
+// ayrı ayrı yazılmaz. $usersById: bcc_team_users_by_id() (yalnızca 'user' tipi
+// hücreler için isim çözümü ve seçenek listesi — opsiyonel, boş dizi varsayılan).
+function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null, $usersById = array())
 {
     ?>
     <tr data-record-id="<?php echo (int) $record['id']; ?>" <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
@@ -341,8 +551,20 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
         <?php foreach ($visibleFields as $f):
             $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
             $rawValue = cell_raw_value($f['field_type'], $cellRow);
-            $displayText = cell_display_text($f['field_type'], $cellRow);
-            $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
+            $displayText = cell_display_text($f['field_type'], $cellRow, $usersById);
+            $isSelectType = is_select_field_type($f['field_type']);
+            if ($isSelectType) {
+                $choices = select_choices_from_options($f['options']);
+            } elseif ($f['field_type'] === 'user') {
+                $choices = bcc_user_choices_from_map($usersById);
+            } else {
+                $choices = array();
+            }
+            // Color: her seçeneğin renk KEY'i, alanın TÜM seçenek listesi üzerinden
+            // (indeks tabanlı geri dönüş doğru çalışsın diye) önceden hesaplanır.
+            $choiceColorMap = $isSelectType
+                ? bcc_build_choice_color_map($choices, select_choice_colors_from_options($f['options']))
+                : array();
         ?>
             <td
                 class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
@@ -353,6 +575,22 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             >
                 <?php if ($f['field_type'] === 'checkbox'): ?>
                     <input type="checkbox" class="cell-checkbox" <?php echo $rawValue === '1' ? 'checked' : ''; ?> <?php echo $canEdit ? '' : 'disabled'; ?>>
+                <?php elseif ($f['field_type'] === 'single_select'): ?>
+                    <div class="cell-view"><?php bcc_render_choice_chips($displayText !== '' ? array($displayText) : array(), $choiceColorMap); ?></div>
+                <?php elseif ($f['field_type'] === 'multiple_select'): ?>
+                    <?php
+                        $selectedValues = array();
+                        if ($cellRow !== null && $cellRow['value_json'] !== null) {
+                            $decodedSelected = json_decode($cellRow['value_json'], true);
+                            $selectedValues = is_array($decodedSelected) ? $decodedSelected : array();
+                        }
+                    ?>
+                    <div class="cell-view"><?php bcc_render_choice_chips($selectedValues, $choiceColorMap); ?></div>
+                <?php elseif ($f['field_type'] === 'long_text'): ?>
+                    <?php /* GÜVENLİ: $displayText burada YAZMA anında bcc_sanitize_rich_text()
+                       ile temizlenmiş HTML — htmlspecialchars UYGULANMAZ (uygulansaydı <b>
+                       literal &lt;b&gt; olarak görünürdü). Tek istisna, bkz. bcc_sanitize_rich_text(). */ ?>
+                    <div class="cell-view rich-text-view"><?php echo $displayText; ?></div>
                 <?php else: ?>
                     <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
@@ -434,10 +672,130 @@ function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $dir
     return true;
 }
 
+// long_text alanları için whitelist tabanlı HTML temizleyici (F6, "ilk aşama").
+// GÜVENLİK MODELİ — bu, projenin geri kalanındaki "her zaman render'da
+// htmlspecialchars" kuralının TEK istisnasıdır: long_text hücreleri YAZMA
+// anında burada temizlenir ve DB'ye zaten güvenli HTML olarak yazılır; render
+// tarafında (bcc_render_grid_data_row) bu alan için AYRICA htmlspecialchars
+// uygulanmaz (uygulansaydı <b> yerine literal &lt;b&gt; görünür, özellik bozulurdu).
+// Regex tabanlı etiket silme KULLANILMAZ (bilinen şekilde atlatılabilir) —
+// bunun yerine DOMDocument ile ağaç yeniden inşa edilir: yalnızca whitelist'teki
+// etiket+attribute çiftleri korunur, GERİ KALAN HER ŞEY (script/style/img/on*
+// event handler'lar dahil TÜM attribute'lar) düşer. Bir etiket whitelist dışıysa
+// yalnızca etiket silinir, iç metni/izinli alt etiketleri korunur (kullanıcının
+// yazdığı metin kaybolmaz) — script/style istisna, onların içeriği de atılır.
+// Bilinen sınır: girdi tarayıcı DIŞINDA (doğrudan API çağrısıyla) çıplak "<"/">"
+// gibi HTML'e benzeyen ama etiket olmayan karakterler içeriyorsa, libxml'in
+// hoşgörülü ayrıştırıcısı bunları yanlış yorumlayıp o kısmı düşürebilir —
+// GÜVENLİK sorunu değildir (yine hiçbir etiket/script sızmaz), yalnızca metin
+// sadakati düşer. Gerçek yol (grid.js'in contenteditable düzenleyicisi) bu
+// karakterleri tarayıcı serileştirmesi sayesinde zaten &lt;/&gt; olarak
+// kaçırılmış gönderir, bu yüzden pratikte karşılaşılmaz.
+function bcc_sanitize_rich_text($html)
+{
+    $html = trim((string) $html);
+    if ($html === '') {
+        return null;
+    }
+    if (mb_strlen($html, 'UTF-8') > 20000) {
+        $html = mb_substr($html, 0, 20000, 'UTF-8');
+    }
+
+    // tag => izinli attribute listesi. strong/b/em/i/br: attribute yok.
+    $allowedTags = array(
+        'strong' => array(), 'b' => array(), 'em' => array(), 'i' => array(),
+        'br' => array(), 'a' => array('href'), 'span' => array('style'),
+    );
+
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    // UTF-8 meta bildirimi olmadan loadHTML Türkçe karakterleri (ş/ç/ğ/ı/ö/ü)
+    // bozar (F7) — XML encoding ön eki (aşağıda) bunu önler, çıktıya karışmaz.
+    $dom->loadHTML('<?xml encoding="utf-8" ?><body>' . $html . '</body>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+
+    $body = $dom->getElementsByTagName('body')->item(0);
+    if (!$body) {
+        return null;
+    }
+
+    $output = trim(bcc_sanitize_rich_text_children($body, $allowedTags));
+
+    return $output === '' ? null : $output;
+}
+
+function bcc_sanitize_rich_text_children($node, $allowedTags)
+{
+    $out = '';
+    foreach (iterator_to_array($node->childNodes) as $child) {
+        $out .= bcc_sanitize_rich_text_node($child, $allowedTags);
+    }
+
+    return $out;
+}
+
+function bcc_sanitize_rich_text_node($node, $allowedTags)
+{
+    if ($node->nodeType === XML_TEXT_NODE) {
+        return htmlspecialchars($node->textContent, ENT_QUOTES, 'UTF-8');
+    }
+
+    if ($node->nodeType !== XML_ELEMENT_NODE) {
+        return '';
+    }
+
+    $tag = strtolower($node->nodeName);
+
+    if ($tag === 'script' || $tag === 'style') {
+        return ''; // etiket + İÇERİK tamamen atılır
+    }
+
+    $childrenHtml = bcc_sanitize_rich_text_children($node, $allowedTags);
+
+    if ($tag === 'div' || $tag === 'p') {
+        // contenteditable'ın satır sonu için ürettiği kapsayıcılar -> <br>'a indirgenir.
+        return $childrenHtml . '<br>';
+    }
+
+    if (!isset($allowedTags[$tag])) {
+        return $childrenHtml; // whitelist dışı: etiket silinir, iç metin kalır
+    }
+
+    if ($tag === 'br') {
+        return '<br>';
+    }
+
+    if ($tag === 'a') {
+        $href = $node->getAttribute('href');
+        if (!preg_match('#^https?://#i', $href)) {
+            return $childrenHtml; // güvensiz şema (javascript:, data: vb.) -> link soyulur
+        }
+
+        return '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">' . $childrenHtml . '</a>';
+    }
+
+    if ($tag === 'span') {
+        $style = trim($node->getAttribute('style'));
+        $sizes = implode('|', $GLOBALS['BCC_RICH_TEXT_FONT_SIZES']);
+        if (!preg_match('/^font-size:(' . $sizes . ')px$/', $style)) {
+            return $childrenHtml; // whitelist dışı stil -> span soyulur
+        }
+
+        return '<span style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '">' . $childrenHtml . '</span>';
+    }
+
+    // strong/b/em/i: attribute'suz, yalnızca etiketin kendisi korunur.
+    return '<' . $tag . '>' . $childrenHtml . '</' . $tag . '>';
+}
+
 // Kullanıcıdan gelen ham değeri (POST'tan) fields.field_type'a göre doğrular ve
 // cell_values'a yazılacak kolon + normalize edilmiş değeri döndürür.
 // Dönüş: array('ok' => bool, 'error' => string|null, 'column' => string|null, 'value' => mixed)
-function normalize_cell_value($fieldType, $optionsJson, $rawValue)
+// $usersById: bcc_team_users_by_id() — yalnızca 'user' tipi için whitelist olarak
+// kullanılır (single_select'in $optionsJson'dan gelen $choices'ıyla AYNI rol:
+// gönderilen id bu haritada yoksa KVKK/veri bütünlüğü gereği reddedilir), diğer
+// tipler bu parametreyi görmezden gelir.
+function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = array())
 {
     $columnMap = $GLOBALS['BCC_FIELD_VALUE_COLUMN'];
 
@@ -449,10 +807,12 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue)
 
     switch ($fieldType) {
         case 'single_line_text':
-        case 'long_text':
             $text = trim((string) $rawValue);
 
             return array('ok' => true, 'column' => $column, 'value' => $text === '' ? null : $text);
+
+        case 'long_text':
+            return array('ok' => true, 'column' => $column, 'value' => bcc_sanitize_rich_text($rawValue));
 
         case 'number':
             $raw = trim((string) $rawValue);
@@ -515,6 +875,37 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue)
             }
 
             return array('ok' => true, 'column' => $column, 'value' => empty($valid) ? null : json_encode($valid, JSON_UNESCAPED_UNICODE));
+
+        case 'time':
+            $raw = trim((string) $rawValue);
+
+            if ($raw === '') {
+                return array('ok' => true, 'column' => $column, 'value' => null);
+            }
+
+            $t = DateTime::createFromFormat('H:i', $raw);
+            if (!$t || $t->format('H:i') !== $raw) {
+                return array('ok' => false, 'error' => 'Geçersiz saat (SS:DD).');
+            }
+
+            return array('ok' => true, 'column' => $column, 'value' => $raw);
+
+        case 'user':
+            $raw = trim((string) $rawValue);
+
+            if ($raw === '') {
+                return array('ok' => true, 'column' => $column, 'value' => null);
+            }
+            if (!ctype_digit($raw)) {
+                return array('ok' => false, 'error' => 'Geçersiz kullanıcı.');
+            }
+
+            $userId = (int) $raw;
+            if (!isset($usersById[$userId])) {
+                return array('ok' => false, 'error' => 'Geçersiz kullanıcı (bu ekibin üyesi değil).');
+            }
+
+            return array('ok' => true, 'column' => $column, 'value' => $userId);
 
         default:
             return array('ok' => false, 'error' => 'Bilinmeyen alan tipi.');
@@ -756,6 +1147,89 @@ function parse_grid_wrap_headers($params)
     return isset($params['wrap_headers']) && $params['wrap_headers'] === '1';
 }
 
+// $_GET'te hiç grid state parametresi yoksa true döner (yalnızca table_id ile
+// açılmış "çıplak" istek) — grid.php bu durumda view'ın kayıtlı grid_state'ine
+// (varsa) yönlendirir. Doğrulama yapmaz, yalnızca varlık kontrolüdür.
+function bcc_grid_state_is_empty($params)
+{
+    $keys = array('hidden_fields', 'visible_fields_submitted', 'row_height', 'wrap_headers', 'filter_logic');
+
+    for ($i = 1; $i <= 3; $i++) {
+        $keys[] = 'sort_field_' . $i;
+        $keys[] = 'group_field_' . $i;
+    }
+    for ($i = 1; $i <= 5; $i++) {
+        $keys[] = 'filter_field_' . $i;
+    }
+
+    foreach ($keys as $key) {
+        if (isset($params[$key]) && $params[$key] !== '') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Doğrulanmış sort/group/filter/hidden/row-height/wrap-headers durumunu grid.php'nin
+// $_GET'te beklediği anahtar biçimine (sort_field_1, filter_cond_2, ... ) çevirir —
+// view_save_state.php bunu views.config['grid_state']'e yazar, grid.php de aynı
+// diziyi http_build_query() ile redirect URL'ine çevirir. Varsayılan değerde olan
+// alanlar (row_height=short, wrap_headers kapalı, boş filtre/hidden) hiç yazılmaz.
+function bcc_grid_state_to_array($sortRules, $groupRules, $filterRules, $filterLogic, $hiddenFieldIds, $rowHeight, $wrapHeaders)
+{
+    $state = array();
+
+    foreach ($sortRules as $rule) {
+        $state['sort_field_' . $rule['slot']] = $rule['field_id'];
+        $state['sort_dir_' . $rule['slot']] = strtolower($rule['dir']);
+    }
+
+    foreach ($groupRules as $rule) {
+        $state['group_field_' . $rule['slot']] = $rule['field_id'];
+        $state['group_dir_' . $rule['slot']] = strtolower($rule['dir']);
+    }
+
+    foreach ($filterRules as $rule) {
+        $state['filter_field_' . $rule['slot']] = $rule['field_id'];
+        $state['filter_cond_' . $rule['slot']] = $rule['operator'];
+        $state['filter_value_' . $rule['slot']] = $rule['raw_value'];
+    }
+    if (!empty($filterRules)) {
+        $state['filter_logic'] = (strtolower((string) $filterLogic) === 'or') ? 'or' : 'and';
+    }
+
+    if (!empty($hiddenFieldIds)) {
+        $state['hidden_fields'] = implode(',', $hiddenFieldIds);
+    }
+
+    if ($rowHeight !== 'short') {
+        $state['row_height'] = $rowHeight;
+    }
+
+    if ($wrapHeaders) {
+        $state['wrap_headers'] = '1';
+    }
+
+    return $state;
+}
+
+// views.config'in grid_state anahtarını SAVUNMACI biçimde okur (bcc_get_frozen_column_count
+// ile aynı yaklaşım): NULL/bozuk JSON/eksik anahtar/beklenmedik tip -> boş dizi.
+function bcc_get_view_grid_state($configJson)
+{
+    if ($configJson === null || $configJson === '') {
+        return array();
+    }
+
+    $decoded = json_decode($configJson, true);
+    if (!is_array($decoded) || !isset($decoded['grid_state']) || !is_array($decoded['grid_state'])) {
+        return array();
+    }
+
+    return $decoded['grid_state'];
+}
+
 // Doğrulanmış tek bir filtre kuralını SQL WHERE parçasına çevirir.
 // $alias: bu kural için LEFT JOIN edilmiş cell_values takma adı (ör. "fv0").
 // $paramName: SQL'de kullanılacak bind parametre adı (ör. ":fval0"), kolonu içerir.
@@ -809,6 +1283,37 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         }
 
         return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $value));
+    }
+
+    if ($fieldType === 'user') {
+        if ($raw === '' || !ctype_digit($raw)) {
+            return null;
+        }
+
+        $value = (int) $raw;
+
+        if ($operator === 'not_equals') {
+            return array('sql' => "({$alias}.{$column} <> {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $value));
+        }
+        if ($operator === 'equals') {
+            return array('sql' => "{$alias}.{$column} = {$paramName}", 'params' => array($paramName => $value));
+        }
+
+        return null;
+    }
+
+    if ($fieldType === 'time') {
+        $t = DateTime::createFromFormat('H:i', $raw);
+        if (!$t || $t->format('H:i') !== $raw) {
+            return null;
+        }
+
+        $map = array('before' => '<', 'after' => '>', 'equals' => '=');
+        if (!isset($map[$operator])) {
+            return null;
+        }
+
+        return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $raw));
     }
 
     if ($fieldType === 'date') {

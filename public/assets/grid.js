@@ -42,35 +42,47 @@
         }, 700);
     }
 
-    function saveCell(td, value) {
-        var tr = td.closest('tr');
-        var recordId = tr ? tr.getAttribute('data-record-id') : '';
-        var fieldId = td.getAttribute('data-field-id');
-
+    // postCellValue/applyCellResultToTd: saveCell()'in iki katmana ayrılmış hâli —
+    // grid-row-detail.js (satır genişletme paneli) AYNI kaydetme/DOM-güncelleme
+    // mantığını window.BCC_GRID üzerinden yeniden kullanır, cell_update.php'yi
+    // ikinci kez çağıran/yazan bir kod YOK. Panelde <td> her zaman yok (gizli
+    // alanlar) — bu yüzden postCellValue tek başına da (td'siz) kullanılabilir.
+    function postCellValue(recordId, fieldId, value) {
         return post('/api/cell_update.php', {
             csrf_token: CSRF,
             record_id: recordId,
             field_id: fieldId,
             value: value,
-        }).then(function (result) {
+        });
+    }
+
+    function applyCellResultToTd(td, data) {
+        td.setAttribute('data-value', data.raw);
+        var view = td.querySelector('.cell-view');
+        if (view) {
+            if (data.display_chips) {
+                renderChips(view, data.display_chips);
+            } else if (td.getAttribute('data-field-type') === 'long_text') {
+                // GÜVENLİ: data.display burada sunucuda bcc_sanitize_rich_text()
+                // ile temizlenmiş HTML — ham kullanıcı girdisi DEĞİL, innerHTML
+                // ile yazmak güvenlidir (bkz. src/schema.php).
+                view.innerHTML = data.display;
+            } else {
+                view.textContent = data.display;
+            }
+        }
+    }
+
+    function saveCell(td, value) {
+        var tr = td.closest('tr');
+        var recordId = tr ? tr.getAttribute('data-record-id') : '';
+        var fieldId = td.getAttribute('data-field-id');
+
+        return postCellValue(recordId, fieldId, value).then(function (result) {
             var okResult = result.httpOk && result.data && result.data.ok;
 
             if (okResult) {
-                td.setAttribute('data-value', result.data.raw);
-                var view = td.querySelector('.cell-view');
-                if (view) {
-                    if (result.data.display_chips) {
-                        renderChips(view, result.data.display_chips);
-                    } else if (td.getAttribute('data-field-type') === 'long_text') {
-                        // GÜVENLİ: result.data.display burada sunucuda
-                        // bcc_sanitize_rich_text() ile temizlenmiş HTML —
-                        // ham kullanıcı girdisi DEĞİL, innerHTML ile yazmak
-                        // güvenlidir (bkz. src/schema.php).
-                        view.innerHTML = result.data.display;
-                    } else {
-                        view.textContent = result.data.display;
-                    }
-                }
+                applyCellResultToTd(td, result.data);
                 flash(td, true);
             } else {
                 flash(td, false);
@@ -223,8 +235,14 @@
         return opt;
     }
 
-    function buildInput(type, td, raw) {
+    // choices: ÖNCEDEN PARSE EDİLMİŞ dizi (td'den data-options okunmuş VEYA
+    // grid-row-detail.js'de data-fields JSON'undan gelen .options — ikisi de
+    // aynı şekle sahip: select tipleri için string dizisi, 'user' için
+    // [{"id":..,"name":..}]). buildInput artık bir <td>'ye bağlı değil, bu
+    // yüzden gizli alanlar (satırda <td>'si olmayan) için de kullanılabilir.
+    function buildInput(type, choices, raw) {
         var input;
+        choices = choices || [];
 
         if (type === 'number') {
             input = document.createElement('input');
@@ -242,7 +260,7 @@
         } else if (type === 'single_select') {
             input = document.createElement('select');
             addOption(input, '', '— boş —');
-            getChoices(td).forEach(function (c) {
+            choices.forEach(function (c) {
                 addOption(input, c, c);
             });
             input.value = raw;
@@ -252,14 +270,13 @@
             // bcc_user_choices_from_map, src/schema.php).
             input = document.createElement('select');
             addOption(input, '', '— boş —');
-            getChoices(td).forEach(function (c) {
+            choices.forEach(function (c) {
                 addOption(input, c.id, c.name);
             });
             input.value = raw;
         } else if (type === 'multiple_select') {
             input = document.createElement('select');
             input.multiple = true;
-            var choices = getChoices(td);
             input.size = Math.min(6, Math.max(3, choices.length));
             var selected = [];
             try {
@@ -296,7 +313,7 @@
 
         var view = td.querySelector('.cell-view');
         var raw = td.getAttribute('data-value') || '';
-        var input = buildInput(type, td, raw);
+        var input = buildInput(type, getChoices(td), raw);
         var done = false;
 
         td.classList.add('editing');
@@ -594,17 +611,7 @@
             });
         });
 
-        // (a) yuvarlak + butonu: JS'siz de çalışan normal form POST'unu yakalar,
-        // yerine tek addRecord() fonksiyonunu çağırır (sayfa yenilenmez).
-        var addForm = document.querySelector('[data-grid-add-record]');
-        if (addForm) {
-            addForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                addRecord(null, null);
-            });
-        }
-
-        // (b) tablo tabanı + satırı: aynı addRecord() fonksiyonu.
+        // Tablo tabanı "+" satırı: addRecord() fonksiyonunu tetikler.
         var addRow = document.querySelector('[data-grid-add-row]');
         if (addRow) {
             addRow.addEventListener('click', function () {
@@ -612,9 +619,10 @@
             });
         }
 
-        // (c) Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea VE
+        // Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea VE
         // zengin metin editörü HARİÇ — orada satır atlamalı) aktif kaydın hemen
-        // altına ekler.
+        // altına ekler — yukarıdaki "+" satırıyla AYNI addRecord() fonksiyonu,
+        // ikinci bir mekanizma yok.
         document.addEventListener('keydown', function (e) {
             if (!e.shiftKey || e.key !== 'Enter') {
                 return;
@@ -662,4 +670,15 @@
             });
         }
     });
+
+    // grid-row-detail.js (satır genişletme paneli) için paylaşılan yüzey —
+    // cell_update.php'yi ikinci kez çağıran/yazan kod olmasın diye. grid.php'de
+    // bu script HER ZAMAN grid-row-detail.js'den ÖNCE yüklenir (defer sırası
+    // doküman sırasına uyar), bu yüzden window.BCC_GRID orada hazır olur.
+    window.BCC_GRID = {
+        postCellValue: postCellValue,
+        applyCellResultToTd: applyCellResultToTd,
+        buildInput: buildInput,
+        getChoices: getChoices,
+    };
 })();

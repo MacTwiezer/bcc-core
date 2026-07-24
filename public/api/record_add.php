@@ -116,7 +116,7 @@ try {
 $usersById = bcc_team_users_by_id($table['team_id']);
 $record = array('id' => $newRecordId);
 ob_start();
-bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById);
+bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById, $fields);
 $rowHtml = ob_get_clean();
 
 echo json_encode(array(

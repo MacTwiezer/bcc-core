@@ -25,13 +25,14 @@ CREATE TABLE IF NOT EXISTS teams (
 -- users — sistem kullanıcıları (giriş bilgisi)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    email          VARCHAR(190) NOT NULL,
-    password_hash  VARCHAR(255) NOT NULL,
-    full_name      VARCHAR(150) NOT NULL,
-    is_admin       TINYINT(1) NOT NULL DEFAULT 0,
-    is_active      TINYINT(1) NOT NULL DEFAULT 1,
-    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    email                       VARCHAR(190) NOT NULL,
+    password_hash               VARCHAR(255) NOT NULL,
+    full_name                   VARCHAR(150) NOT NULL,
+    is_admin                    TINYINT(1) NOT NULL DEFAULT 0,
+    is_active                   TINYINT(1) NOT NULL DEFAULT 1,
+    last_seen_notifications_at  DATETIME NULL,
+    created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -66,6 +67,21 @@ CREATE TABLE IF NOT EXISTS bases (
     KEY idx_bases_team (team_id),
     CONSTRAINT fk_bases_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     CONSTRAINT fk_bases_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- user_starred_bases — kullanıcı bazlı favori/yıldızlı base'ler
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_starred_bases (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id     INT UNSIGNED NOT NULL,
+    base_id     INT UNSIGNED NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_starred_bases (user_id, base_id),
+    KEY idx_user_starred_bases_user (user_id),
+    CONSTRAINT fk_user_starred_bases_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_starred_bases_base FOREIGN KEY (base_id) REFERENCES bases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -165,7 +181,9 @@ CREATE TABLE IF NOT EXISTS views (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
     table_id       INT UNSIGNED NOT NULL,
     name           VARCHAR(150) NOT NULL,
+    description    VARCHAR(500) DEFAULT NULL,
     view_type      VARCHAR(30) NOT NULL DEFAULT 'grid',
+    position       INT NOT NULL DEFAULT 0,
     config         JSON DEFAULT NULL,
     created_by     INT UNSIGNED DEFAULT NULL,
     is_published   TINYINT(1) NOT NULL DEFAULT 0,
@@ -175,6 +193,21 @@ CREATE TABLE IF NOT EXISTS views (
     KEY idx_views_table (table_id),
     CONSTRAINT fk_views_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
     CONSTRAINT fk_views_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- user_favorite_views — kullanıcı bazlı favori/yıldızlı görünümler
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_favorite_views (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id     INT UNSIGNED NOT NULL,
+    view_id     INT UNSIGNED NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_favorite_views (user_id, view_id),
+    KEY idx_user_favorite_views_user (user_id),
+    CONSTRAINT fk_user_favorite_views_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_favorite_views_view FOREIGN KEY (view_id) REFERENCES views(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

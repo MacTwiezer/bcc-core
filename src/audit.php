@@ -52,3 +52,71 @@ function log_base_open($baseId, $teamId)
         array('team_id' => $teamId, 'user_id' => $userId, 'action' => 'base.open', 'entity_type' => 'base', 'entity_id' => $baseId)
     );
 }
+
+// Bildirim paneli (zil ikonu) — YENİ bir notifications tablosu YOK (onaylanan
+// "basit" model): audit_log salt-okunur gösterilir, KVKK team_id IN (...) ile
+// filtrelenir, yalnızca bu whitelist'teki action'lar bildirim sayılır — user.login
+// (368 satırın %66'sı) ve cell.update (%7'si) gibi gürültülü/kişisel olaylar
+// KASITLI olarak DIŞARIDA (bkz. PROJE-DURUM.md analiz notu).
+$GLOBALS['BCC_NOTIFICATION_ACTIONS'] = array(
+    'record.create',
+    'view.rename',
+    'slack.notify_sent',
+    'slack.notify_failed',
+    'team_member.assign',
+);
+
+// current_user_team_ids() (src/auth.php) ile AYNI kaynaktan — ikinci bir
+// "kullanıcının takımları" sorgusu YAZILMADI.
+function bcc_fetch_notifications($limit = 30)
+{
+    $teamIds = current_user_team_ids();
+    if (empty($teamIds)) {
+        return array();
+    }
+
+    $actions = $GLOBALS['BCC_NOTIFICATION_ACTIONS'];
+    $teamPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
+    $actionPlaceholders = implode(',', array_fill(0, count($actions), '?'));
+
+    $sql = "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at, u.full_name AS actor_name
+            FROM audit_log al
+            LEFT JOIN users u ON u.id = al.user_id
+            WHERE al.team_id IN ($teamPlaceholders)
+              AND al.action IN ($actionPlaceholders)
+            ORDER BY al.created_at DESC
+            LIMIT " . (int) $limit;
+
+    return bcc_fetch_all($sql, array_merge($teamIds, $actions));
+}
+
+// Her action için okunabilir tek cümle — details JSON'undaki alanlar action'a
+// göre değişir (bkz. log_audit() çağrı noktaları), bu yüzden switch/case.
+function bcc_notification_message($row)
+{
+    $actor = ($row['actor_name'] !== null && $row['actor_name'] !== '') ? $row['actor_name'] : 'Bir kullanıcı';
+
+    $details = array();
+    if ($row['details'] !== null) {
+        $decoded = json_decode($row['details'], true);
+        if (is_array($decoded)) {
+            $details = $decoded;
+        }
+    }
+
+    switch ($row['action']) {
+        case 'record.create':
+            return $actor . ' yeni bir kayıt ekledi.';
+        case 'view.rename':
+            $name = isset($details['name']) ? (string) $details['name'] : '';
+            return $actor . ' bir görünümü yeniden adlandırdı' . ($name !== '' ? ': "' . $name . '"' : '') . '.';
+        case 'slack.notify_sent':
+            return $actor . '\'in eklediği kayıt için Slack bildirimi gönderildi.';
+        case 'slack.notify_failed':
+            return $actor . '\'in eklediği kayıt için Slack bildirimi gönderilemedi.';
+        case 'team_member.assign':
+            return $actor . ' ekibe yeni bir üye ekledi.';
+        default:
+            return $actor . ' bir işlem yaptı.';
+    }
+}

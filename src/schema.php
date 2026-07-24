@@ -190,7 +190,7 @@ function find_table_or_404($tableId)
 // hiçbir çağıran "az önce ben oluşturdum" varsayımıyla ikinci bir satır üretmez.
 function bcc_get_or_create_default_view($tableId)
 {
-    $sql = 'SELECT v.id, v.name, v.config, v.created_by, u.full_name AS created_by_name
+    $sql = 'SELECT v.id, v.name, v.description, v.config, v.created_by, u.full_name AS created_by_name
             FROM views v
             LEFT JOIN users u ON u.id = v.created_by
             WHERE v.table_id = :table_id ORDER BY v.id ASC LIMIT 1';
@@ -217,6 +217,39 @@ function bcc_get_or_create_default_view($tableId)
     );
 
     return bcc_fetch_one($sql, array('table_id' => $tableId));
+}
+
+// ?view_id= ile GELEN bir view — YALNIZCA verilen $tableId'ye aitse döner
+// (başka bir tablonun view_id'sini geçmeye çalışan istek sessizce reddedilir,
+// çağıran bcc_get_or_create_default_view()'e düşer). grid.php'nin çoklu view
+// desteği (sol panel) için — bcc_get_or_create_default_view() hâlâ "hiç
+// view_id verilmemişse" veya "geçersizse" düşülecek varsayılan.
+function bcc_find_view($viewId, $tableId)
+{
+    return bcc_fetch_one(
+        'SELECT v.id, v.name, v.description, v.config, v.created_by, u.full_name AS created_by_name
+         FROM views v
+         LEFT JOIN users u ON u.id = v.created_by
+         WHERE v.id = :id AND v.table_id = :table_id LIMIT 1',
+        array('id' => $viewId, 'table_id' => $tableId)
+    );
+}
+
+// Sol Views paneli: tablonun TÜM view'ları — favoriler ÖNCE (kullanıcı bazlı,
+// user_favorite_views), sonra position/id. $userId olmadan (ör. viewer için de
+// panel dolduruluyor) favori bilgisi olmadan da çalışır.
+function bcc_list_table_views($tableId, $userId = null)
+{
+    return bcc_fetch_all(
+        'SELECT v.id, v.name, v.description, v.position, v.created_by, u.full_name AS created_by_name,
+                (ufv.id IS NOT NULL) AS is_favorite
+         FROM views v
+         LEFT JOIN users u ON u.id = v.created_by
+         LEFT JOIN user_favorite_views ufv ON ufv.view_id = v.id AND ufv.user_id = :user_id
+         WHERE v.table_id = :table_id
+         ORDER BY is_favorite DESC, v.position, v.id',
+        array('table_id' => $tableId, 'user_id' => $userId)
+    );
 }
 
 // Dondurulabilecek en fazla sütun sayısı (satır no dahil) — görünür alan sayısının
@@ -253,6 +286,31 @@ function bcc_get_frozen_column_count($configJson, $maxAllowed = null)
     }
 
     return $count;
+}
+
+// views.config JSON'ından sütun genişliklerini (field_id => piksel) SAVUNMACI
+// biçimde okur — bcc_get_frozen_column_count() ile AYNI desen. Bozuk/eksik
+// veri sessizce boş diziye düşer (hiçbir sütun özelleştirilmemiş demektir,
+// varsayılan otomatik genişlik kullanılır).
+function bcc_get_column_widths($configJson)
+{
+    if ($configJson === null || $configJson === '') {
+        return array();
+    }
+
+    $decoded = json_decode($configJson, true);
+    if (!is_array($decoded) || !isset($decoded['column_widths']) || !is_array($decoded['column_widths'])) {
+        return array();
+    }
+
+    $widths = array();
+    foreach ($decoded['column_widths'] as $fieldId => $width) {
+        if (ctype_digit((string) $fieldId) && is_int($width) && $width >= 80 && $width <= 800) {
+            $widths[(int) $fieldId] = $width;
+        }
+    }
+
+    return $widths;
 }
 
 // Bir base'e ait tüm tabloları (id + name) position,id sırasına göre döndürür.
@@ -369,6 +427,92 @@ function bcc_choice_chip_data($values, $choiceColorMap)
     }
 
     return $chips;
+}
+
+// Seçim alanları (single_select/multiple_select) için options JSON'u kurar —
+// hem alan OLUŞTURMA (bcc_create_field) hem GÜNCELLEME (table_fields.php
+// update_field) tarafından PAYLAŞILIR, ikinci bir kopya YOK. Select-olmayan
+// tipler için sessizce options:null döner; select tipinde $optionsText boş
+// seçenek listesine çözümlenirse hata döner (en az bir seçenek şart).
+function bcc_build_field_options($fieldType, $optionsText, $colorsPost = null)
+{
+    if (!is_select_field_type($fieldType)) {
+        return array('ok' => true, 'options' => null);
+    }
+
+    $choices = parse_select_choices($optionsText);
+    if (empty($choices)) {
+        return array('ok' => false, 'error' => 'Tekli/çoklu seçim alanları için en az bir seçenek girilmeli (her satıra bir tane).');
+    }
+
+    $optionsData = array('choices' => $choices);
+
+    // colors[i]: $choices dizisindeki İNDEKS (seçenek metnini array key yapmak
+    // yerine — özel karakter/[] riski yok). Whitelist dışı renk KEY'i ya da
+    // $choices sınırları dışındaki indeks sessizce yok sayılır.
+    if (is_array($colorsPost)) {
+        $palette = $GLOBALS['BCC_CHOICE_COLORS'];
+        $colors = array();
+        foreach ($colorsPost as $i => $colorKey) {
+            if (!ctype_digit((string) $i) || !isset($choices[(int) $i]) || !isset($palette[$colorKey])) {
+                continue;
+            }
+            $colors[$choices[(int) $i]] = $colorKey;
+        }
+        if (!empty($colors)) {
+            $optionsData['colors'] = $colors;
+        }
+    }
+
+    return array('ok' => true, 'options' => json_encode($optionsData, JSON_UNESCAPED_UNICODE));
+}
+
+// Yeni alan (sütun) oluşturur — table_fields.php'nin tam sayfa formu VE
+// /api/field_create.php (grid.php'deki "+" popup'ı, tip-önce-isim-sonra akışı)
+// tarafından PAYLAŞILIR, ikinci bir insert mantığı YOK. $postData: name,
+// field_type, is_required, options_text, colors[] anahtarlarını (ör. $_POST
+// şeklinde) bekler.
+function bcc_create_field($tableId, $teamId, $postData)
+{
+    $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
+    $name = isset($postData['name']) ? trim($postData['name']) : '';
+    $fieldType = isset($postData['field_type']) ? $postData['field_type'] : '';
+    $isRequired = !empty($postData['is_required']) ? 1 : 0;
+    $optionsText = isset($postData['options_text']) ? $postData['options_text'] : '';
+
+    if ($name === '') {
+        return array('ok' => false, 'error' => 'Alan adı boş olamaz.');
+    }
+    if (!isset($fieldTypes[$fieldType])) {
+        return array('ok' => false, 'error' => 'Geçersiz alan tipi.');
+    }
+
+    $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($postData['colors']) ? $postData['colors'] : null);
+    if (!$optionsResult['ok']) {
+        return array('ok' => false, 'error' => $optionsResult['error']);
+    }
+
+    $nextPos = (int) bcc_fetch_column(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM fields WHERE table_id = :table_id',
+        array('table_id' => $tableId)
+    );
+
+    bcc_execute(
+        'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
+         VALUES (:table_id, :name, :field_type, :options, :position, :is_required)',
+        array(
+            'table_id' => $tableId,
+            'name' => $name,
+            'field_type' => $fieldType,
+            'options' => $optionsResult['options'],
+            'position' => $nextPos,
+            'is_required' => $isRequired,
+        )
+    );
+    $newId = bcc_last_insert_id();
+    log_audit('field.create', 'field', $newId, array('name' => $name, 'field_type' => $fieldType, 'table_id' => $tableId), $teamId);
+
+    return array('ok' => true, 'field_id' => $newId, 'name' => $name, 'field_type' => $fieldType, 'is_required' => $isRequired);
 }
 
 // Tekli/çoklu seçim hücrelerinde renkli "chip" render eder — htmlspecialchars
@@ -543,11 +687,62 @@ function bcc_user_choices_from_map($usersById)
 // tek bir satırın HTML'ini üretmek için) aynı fonksiyonu paylaşır — iki yerde
 // ayrı ayrı yazılmaz. $usersById: bcc_team_users_by_id() (yalnızca 'user' tipi
 // hücreler için isim çözümü ve seçenek listesi — opsiyonel, boş dizi varsayılan).
-function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null, $usersById = array())
+// Satır genişletme paneli (grid-row-detail.js) TÜM alanları gösterir, sadece
+// görünür sütunları değil — bu yüzden her satıra $allFields'in tamamı
+// data-fields JSON'u olarak gömülür (id/tip/options/raw). Görünür alanlar
+// zaten kendi <td>'sinde aynı veriyi taşıyor (data-value/data-options); panel
+// önce canlı <td>'yi arar, yoksa (gizli alan) bu JSON'a düşer — ikinci bir
+// AJAX/sorgu YOK. $allFields verilmezse (eski çağıranlarla uyumluluk)
+// $visibleFields'e düşer.
+function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById)
 {
+    $out = array();
+    foreach ($allFields as $f) {
+        $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
+        $rawValue = cell_raw_value($f['field_type'], $cellRow);
+
+        if (is_select_field_type($f['field_type'])) {
+            $choices = select_choices_from_options($f['options']);
+        } elseif ($f['field_type'] === 'user') {
+            $choices = bcc_user_choices_from_map($usersById);
+        } else {
+            $choices = array();
+        }
+
+        $out[] = array(
+            'id' => (int) $f['id'],
+            'name' => $f['name'],
+            'field_type' => $f['field_type'],
+            'options' => $choices ? $choices : null,
+            'raw' => $rawValue,
+        );
+    }
+
+    return json_encode($out, JSON_UNESCAPED_UNICODE);
+}
+
+function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null, $usersById = array(), $allFields = null)
+{
+    if ($allFields === null) {
+        $allFields = $visibleFields;
+    }
     ?>
-    <tr data-record-id="<?php echo (int) $record['id']; ?>" <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
-        <td class="grid-rownum"><?php echo (int) $rowNum; ?></td>
+    <tr
+        data-record-id="<?php echo (int) $record['id']; ?>"
+        <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>
+        <?php if ($canEdit): ?>data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+    >
+        <td class="grid-rownum">
+            <?php if ($canEdit): ?>
+                <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
+                <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
+                <button type="button" class="grid-row-expand" aria-label="Expand" title="Expand">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            <?php else: ?>
+                <?php echo (int) $rowNum; ?>
+            <?php endif; ?>
+        </td>
         <?php foreach ($visibleFields as $f):
             $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
             $rawValue = cell_raw_value($f['field_type'], $cellRow);
@@ -596,17 +791,6 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                 <?php endif; ?>
             </td>
         <?php endforeach; ?>
-        <?php if ($canEdit): ?>
-            <td class="grid-actions-col">
-                <form method="post" action="/grid.php?<?php echo htmlspecialchars($stateQueryString, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?');">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="delete_record">
-                    <input type="hidden" name="table_id" value="<?php echo (int) $tableId; ?>">
-                    <input type="hidden" name="record_id" value="<?php echo (int) $record['id']; ?>">
-                    <button type="submit" class="btn-sm btn-danger">Sil</button>
-                </form>
-            </td>
-        <?php endif; ?>
     </tr>
     <?php
 }
@@ -636,6 +820,7 @@ function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $dir
     $allowedParents = array(
         'tables_meta' => 'base_id',
         'fields' => 'table_id',
+        'views' => 'table_id',
     );
 
     if (!isset($allowedParents[$tableName]) || $allowedParents[$tableName] !== $parentColumn) {
@@ -1367,4 +1552,261 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
     }
 
     return null;
+}
+
+// grid.php'nin kayıt sorgusunu (sort/filter/group JOIN'leri + WHERE + ORDER BY)
+// kuran mantık — grid.php'nin KENDİSİ VE public/api/view_export_csv.php (CSV
+// indirme, aktif sort/filter'ı AYNEN uygulamalı) tarafından çağrılır. Grup
+// desteği CSV'de kullanılmaz ($groupRules = array() geçilir), fonksiyon yine de
+// grid.php'nin tam ihtiyacını (3 seviyeye kadar grup) karşılar — paralel bir
+// sorgu-kurma mantığı YOK, grid.php'nin ZATEN çalışan/test edilmiş satırları
+// buraya taşındı.
+function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filterRules, $filterLogic)
+{
+    $groupSelectExtra = '';
+    foreach ($groupRules as $gIdx => $gRule) {
+        $groupSelectExtra .= ", gv{$gIdx}.{$gRule['column']} AS group_raw_value_{$gIdx}";
+    }
+    $recordsSql = "SELECT r.id, r.position, r.created_at{$groupSelectExtra} FROM records r";
+    $recordsParams = array(':table_id' => $tableId);
+    $orderParts = array();
+
+    foreach ($groupRules as $gIdx => $gRule) {
+        $alias = 'gv' . $gIdx;
+        $recordsSql .= " LEFT JOIN cell_values {$alias} ON {$alias}.record_id = r.id AND {$alias}.field_id = :gfid{$gIdx}";
+        $recordsParams[':gfid' . $gIdx] = $gRule['field_id'];
+        $orderParts[] = "({$alias}.{$gRule['column']} IS NULL) DESC";
+        $orderParts[] = "{$alias}.{$gRule['column']} {$gRule['dir']}";
+    }
+
+    foreach ($sortRules as $idx => $rule) {
+        $alias = 'sv' . $idx;
+        $recordsSql .= " LEFT JOIN cell_values {$alias} ON {$alias}.record_id = r.id AND {$alias}.field_id = :sfid{$idx}";
+        $recordsParams[':sfid' . $idx] = $rule['field_id'];
+        $orderParts[] = "{$alias}.{$rule['column']} {$rule['dir']}";
+    }
+
+    $filterConds = array();
+    foreach ($filterRules as $idx => $rule) {
+        $alias = 'fv' . $idx;
+        $paramName = ':fval' . $idx;
+        $frag = filter_condition_sql($rule['field_type'], $rule['operator'], $rule['raw_value'], $alias, $paramName);
+
+        if ($frag === null) {
+            continue;
+        }
+
+        $recordsSql .= " LEFT JOIN cell_values {$alias} ON {$alias}.record_id = r.id AND {$alias}.field_id = :ffid{$idx}";
+        $recordsParams[':ffid' . $idx] = $rule['field_id'];
+        foreach ($frag['params'] as $pName => $pValue) {
+            $recordsParams[$pName] = $pValue;
+        }
+        $filterConds[] = $frag['sql'];
+    }
+
+    $orderParts[] = 'r.position ASC';
+    $orderParts[] = 'r.id ASC';
+
+    $recordsSql .= ' WHERE r.table_id = :table_id';
+    if (!empty($filterConds)) {
+        $joinWord = ($filterLogic === 'OR') ? ' OR ' : ' AND ';
+        $recordsSql .= ' AND (' . implode($joinWord, $filterConds) . ')';
+    }
+    $recordsSql .= ' ORDER BY ' . implode(', ', $orderParts);
+
+    return array($recordsSql, $recordsParams);
+}
+
+// dashboard.php (Home) ve starred.php (Starred) ortak kullanır — "kod tekrarı
+// yok" kuralı gereği iki ayrı sayfada aynı satır/kart döngüsü YAZILMAZ.
+function bcc_home_relative_date($datetimeStr)
+{
+    $ts = strtotime((string) $datetimeStr);
+    if ($ts === false) {
+        return '';
+    }
+
+    $days = intdiv(time() - $ts, 86400);
+
+    if ($days <= 0) {
+        return 'Bugün';
+    }
+    if ($days === 1) {
+        return 'Dün';
+    }
+    if ($days < 30) {
+        return $days . ' gün önce';
+    }
+
+    $months = intdiv($days, 30);
+    if ($months < 12) {
+        return $months . ' ay önce';
+    }
+
+    return intdiv($months, 12) . ' yıl önce';
+}
+
+// Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
+// şekilde kullanılır). $isStarred true ise yıldız butonu hover'dan bağımsız
+// hep görünür kalır (CSS: .home-base-star-btn[aria-pressed="true"]).
+function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName)
+{
+    // $workspaceName artık BASILMIYOR (kasıtlı) — Airtable referansı Workspace
+    // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
+    // parametre imzası geriye dönük uyumluluk için duruyor (çağıranlar hâlâ
+    // $teamNamesById hesaplayıp geçiriyor), yalnızca çıktı kaldırıldı.
+    unset($workspaceName);
+    ?>
+    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>">
+        <div class="home-base-icon" style="background: <?php echo htmlspecialchars($iconColor, ENT_QUOTES, 'UTF-8'); ?>;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>
+        </div>
+        <div class="home-base-info">
+            <div class="home-base-name"><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="home-base-meta">
+                <span class="home-base-meta-star" aria-hidden="true">
+                    <svg width="11" height="11" viewBox="0 0 20 20"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="#f5b400"/></svg>
+                </span>
+                Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($base['created_at']), ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+        </div>
+        <div class="home-base-workspace"></div>
+        <div class="home-base-card-actions">
+            <button type="button" class="home-base-star-btn" aria-label="Favorilere ekle/çıkar" aria-pressed="<?php echo $isStarred ? 'true' : 'false'; ?>">
+                <svg width="16" height="16" viewBox="0 0 20 20" class="home-base-star-icon"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </button>
+            <details class="home-base-more-menu">
+                <summary class="home-base-more-btn" aria-label="Diğer aksiyonlar">
+                    <svg width="16" height="16" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
+                </summary>
+                <div class="home-base-more-panel">
+                    <details class="home-base-more-submenu">
+                        <summary class="home-base-more-item home-base-more-item-parent">
+                            <span>Open</span>
+                            <svg class="home-base-more-caret" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5l3.5 3.5-3.5 3.5" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </summary>
+                        <div class="home-base-more-submenu-panel">
+                            <button type="button" class="home-base-more-item" data-nav-href="/interface.php?base_id=<?php echo (int) $base['id']; ?>">Interface</button>
+                        </div>
+                    </details>
+                    <button type="button" class="home-base-more-item" disabled>Duplicate</button>
+                </div>
+            </details>
+        </div>
+    </a>
+    <?php
+}
+
+// Base grid'in TAMAMI (boş durum VEYA liste-başlığı + kartlar) — Home ve
+// Starred sayfaları AYNI fonksiyonu çağırır, yalnızca $bases/$emptyMessage
+// farklıdır. $teamNamesById: team_id => takım adı (liste modu "Workspace"
+// kolonu için).
+function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage)
+{
+    $iconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
+
+    if (empty($bases)) {
+        ?>
+        <div class="home-empty">
+            <p><?php echo htmlspecialchars($emptyMessage, ENT_QUOTES, 'UTF-8'); ?></p>
+        </div>
+        <?php
+        return;
+    }
+    ?>
+    <div class="home-base-grid" id="home-base-grid">
+        <div class="home-list-header" aria-hidden="true">
+            <div class="home-list-header-icon"></div>
+            <div class="home-list-header-info">
+                <div class="home-list-header-name">Name</div>
+                <div class="home-list-header-meta">Last opened</div>
+            </div>
+            <div class="home-list-header-workspace">Workspace</div>
+        </div>
+        <?php foreach ($bases as $i => $b):
+            $isStarred = isset($starredBaseIds[(int) $b['id']]);
+            $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
+            $iconColor = $iconColors[$i % count($iconColors)];
+            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName);
+        endforeach; ?>
+    </div>
+    <?php
+}
+
+// ---------------------------------------------------------------------------
+// F3 — Duyuru (Interface / yayınlanmış görünüm), salt-okunur. public/interface.php
+// VE public/api/interface_search.php AYNI bcc_interface_fetch_records()'u
+// çağırır (paralel sorgu YOK) — arama yalnızca WHERE'e bir EXISTS koşulu ekler.
+// ---------------------------------------------------------------------------
+
+// "Özet" alanı sabit bir kurala göre seçilir (view/field ayarı YOK, DB'de
+// böyle bir kavram hiç yoktu): tablodaki İLK long_text tipli alan — F3'ün
+// detay panelinde zaten "Notes (içerik)" olarak aynı alan tam hâliyle
+// gösteriliyor, listedeki özet onun kırpılmış önizlemesi. Yoksa null (özet
+// satırı boş kalır, hata OLMAZ).
+function bcc_interface_summary_field($fields)
+{
+    foreach ($fields as $f) {
+        if ($f['field_type'] === 'long_text') {
+            return $f;
+        }
+    }
+    return null;
+}
+
+function bcc_fetch_cells_by_record($recordIds)
+{
+    if (empty($recordIds)) {
+        return array();
+    }
+
+    $placeholders = implode(',', array_fill(0, count($recordIds), '?'));
+    $cellRows = bcc_fetch_all(
+        "SELECT record_id, field_id, value_text, value_number, value_date, value_json FROM cell_values WHERE record_id IN ($placeholders)",
+        $recordIds
+    );
+
+    $cellsByRecord = array();
+    foreach ($cellRows as $cell) {
+        $cellsByRecord[$cell['record_id']][$cell['field_id']] = $cell;
+    }
+
+    return $cellsByRecord;
+}
+
+// "Last Update" / "en yeni en üstte" sıralaması records.updated_at'e DEĞİL
+// (yalnızca records satırının KENDİSİ değişince — ör. pozisyon — bumps olur,
+// hücre düzenlemesi cell_values'a yazar, records'a DOKUNMAZ) MAX(cell_values.
+// updated_at)'e dayanır — hücre içeriği değişince gerçekten "son güncelleme"
+// ilerlesin diye. Hiç hücresi olmayan (yeni, boş) kayıt records.created_at'e düşer.
+function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, $searchTerm = null)
+{
+    $sql = "SELECT r.id, r.created_at,
+                   COALESCE((SELECT MAX(cv2.updated_at) FROM cell_values cv2 WHERE cv2.record_id = r.id), r.created_at) AS last_update
+            FROM records r
+            WHERE r.table_id = ?";
+    $params = array($tableId);
+
+    if ($searchTerm !== null && $searchTerm !== '') {
+        // Arama, listede görünen KIRPILMIŞ önizlemede değil TAM içerikte
+        // eşleşmeli — bu yüzden client-side DOM filtreleme değil, DB'deki
+        // ham value_text üzerinde LIKE. Yalnızca birincil + özet alanı
+        // taranır (F3: "hem başlıkta hem içerikte").
+        $fieldIds = array_values(array_filter(array($primaryFieldId, $summaryFieldId)));
+        if (empty($fieldIds)) {
+            return array();
+        }
+        $fieldPlaceholders = implode(',', array_fill(0, count($fieldIds), '?'));
+        $sql .= " AND EXISTS (
+                SELECT 1 FROM cell_values cv
+                WHERE cv.record_id = r.id
+                  AND cv.field_id IN ($fieldPlaceholders)
+                  AND cv.value_text LIKE ?
+            )";
+        $params = array_merge($params, $fieldIds, array('%' . $searchTerm . '%'));
+    }
+
+    $sql .= ' ORDER BY last_update DESC, r.id DESC';
+
+    return bcc_fetch_all($sql, $params);
 }

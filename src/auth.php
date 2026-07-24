@@ -29,7 +29,7 @@ function current_user($forceReload = false)
     }
 
     $row = bcc_fetch_one(
-        'SELECT id, email, full_name, is_admin, is_active FROM users WHERE id = :id LIMIT 1',
+        'SELECT id, email, full_name, is_admin, is_active, last_seen_notifications_at FROM users WHERE id = :id LIMIT 1',
         array('id' => $_SESSION['user_id'])
     );
 

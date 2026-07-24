@@ -2,13 +2,17 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Sekme seçenekleri menüsü ve "All tables" menüsü — ikisi de
-        // <details class="gs-table-tab-menu">. name="gs-table-tab-menu" modern
+        // Sekme seçenekleri menüsü, "All tables" menüsü VE toolbar panelleri
+        // (Hide fields/Filter/Group/Sort/Row height, class="gs-tool-details") —
+        // hepsi <details name="gs-table-tab-menu">. name özniteliği modern
         // tarayıcılarda zaten aynı anda tek birini açık tutuyor, ama eski
         // Firefox/Safari bunu desteklemiyor — bu yüzden "toggle" olayıyla da
         // aynı davranış JS tarafında garanti ediliyor. Ayrıca projedeki ortak
         // "dışarı tıklayınca / Escape ile kapanma" deseni burada uygulanıyor.
-        var menus = document.querySelectorAll('.gs-table-tab-menu');
+        // (Toolbar panelleri daha önce bu gruba dahil değildi — Group ve Sort
+        // aynı anda açılabiliyor, dışarı tıklayınca kapanmıyordu; kök neden
+        // buydu, aşağıdaki tek satırlık selector genişletmesiyle çözüldü.)
+        var menus = document.querySelectorAll('.gs-table-tab-menu, .gs-tool-details');
 
         if (!menus.length) {
             return;

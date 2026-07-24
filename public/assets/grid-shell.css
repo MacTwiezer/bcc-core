@@ -84,6 +84,16 @@ body.gs-body a { text-decoration: none; color: inherit; }
 .gs-icon-btn-dark { background: none; }
 .gs-icon-btn-dark:hover { background: #f2f2f4; }
 
+/* Bildirim paneli (home.css'ten aynen gelir) — orada üst bardan AŞAĞI açılır,
+   burada dar sol şeridin EN ALTINDA olduğu için varsayılan top/right konumu
+   ekranın dışına taşardı; panel bunun yerine zilin sağına, yukarı doğru açılır. */
+.gs-rail .home-notif-panel {
+    top: auto;
+    bottom: 0;
+    left: calc(100% + 8px);
+    right: auto;
+}
+
 .gs-account { position: relative; }
 
 .gs-avatar {
@@ -467,37 +477,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
 html.is-mac .gs-kbd-mac { display: inline; }
 html.is-mac .gs-kbd-other { display: none; }
 
-/* Kayıt ekleme (a)/(b) tetikleyicileri — grid.js aynı fonksiyonu ikisine de bağlar. */
-
-.grid-add-record-fab {
-    position: fixed;
-    bottom: 24px;
-    left: 68px;
-    z-index: 15;
-}
-
-.grid-add-record-fab-btn {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #2d7ff9;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-}
-
-.grid-add-record-fab-btn:hover { background: #1a6fe0; }
-
-.grid-add-record-fab-btn .gs-kbd-tooltip {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-}
-
 .grid-add-row-plus {
     color: #8a8a8e;
     font-weight: 600;
@@ -820,21 +799,28 @@ html.is-mac .gs-kbd-other { display: none; }
 
 /* ---------- Görünüm listesi paneli (hamburger) ---------- */
 
+/* Airtable'da tablo sekmelerinin altında sol tarafta duran kalıcı görünüm
+   paneli — önceden #gs-view-panel-toggle'ın açtığı yüzen bir dropdown'du,
+   şimdi .gs-body-row'un normal-akış bir sütunu (bkz. grid.php). Daraltma,
+   Home sayfasının #home-sidebar-toggle'ıyla AYNI desen: width sıfırlanır,
+   dropdown gibi display:none/is-open YOK. */
 .gs-view-drawer {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0.5rem;
-    z-index: 30;
-    background: #fff;
-    border: 1px solid #e6e6e9;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
-    min-width: 260px;
+    width: 260px;
+    flex-shrink: 0;
+    background: #fafafb;
+    border-right: 1px solid #e6e6e9;
     padding: 0.6rem;
+    overflow-y: auto;
+    transition: width 0.15s ease;
 }
 
-.gs-view-drawer.is-open { display: block; }
+.gs-view-drawer.is-collapsed {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow: hidden;
+    border-right: none;
+}
 
 .gs-view-drawer-create {
     width: 100%;
@@ -888,6 +874,12 @@ html.is-mac .gs-kbd-other { display: none; }
 
 /* ---------- Ana alan ---------- */
 
+.gs-body-row {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
 .gs-main {
     flex: 1;
     padding: 1rem 1.25rem 1.5rem;
@@ -918,4 +910,153 @@ html.is-mac .gs-kbd-other { display: none; }
 .gs-grid-footer .grid-add-toast {
     margin: 0 0 0 0.75rem;
     font-size: 0.82rem;
+}
+
+/* ---------- Sol Views paneli — satır (favori/isim/⋯) ---------- */
+
+.gs-view-drawer-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 6px;
+}
+
+.gs-view-drawer-row[hidden] { display: none; }
+
+.gs-view-drawer-row:hover { background: #f2f2f4; }
+
+.gs-view-drawer-row.is-selected { background: #e8f0fe; }
+
+.gs-view-drawer-view {
+    flex: 1;
+    min-width: 0;
+}
+
+.gs-view-drawer-view span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gs-view-star-btn,
+.gs-view-row-menu-btn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0;
+    list-style: none;
+}
+
+.gs-view-row-menu-btn::-webkit-details-marker { display: none; }
+
+.gs-view-drawer-row:hover .gs-view-star-btn,
+.gs-view-drawer-row:hover .gs-view-row-menu-btn { opacity: 1; }
+
+.gs-view-star-btn[aria-pressed="true"] { opacity: 1; }
+
+.gs-view-star-btn:hover,
+.gs-view-row-menu-btn:hover { background: #e2e2e5; }
+
+.gs-view-star-icon { fill: none; stroke: #8a8a8e; }
+
+.gs-view-star-btn[aria-pressed="true"] .gs-view-star-icon {
+    fill: #f5b400;
+    stroke: #f5b400;
+}
+
+/* .gs-view-drawer'ın overflow-y:auto olması nedeniyle position:absolute
+   (diğer .gs-table-tab-menu-panel'lerin varsayılanı) bu panel için satır
+   listenin altındaysa KIRPILIRDI — aynı ders, bkz. home.css .home-base-more-panel
+   (Starred işi). position:fixed + JS'de hesaplanan konum bunu atlıyor. */
+.gs-view-row-menu-panel {
+    position: fixed;
+    top: auto;
+    left: auto;
+}
+
+.gs-view-drawer-empty {
+    padding: 1rem 0.6rem;
+    text-align: center;
+    color: #9a9aa0;
+    font-size: 0.82rem;
+}
+
+/* ---------- Edit view description popover ---------- */
+
+.gs-view-desc-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(15, 15, 20, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gs-view-desc-overlay[hidden] { display: none; }
+
+.gs-view-desc-modal {
+    width: 380px;
+    max-width: 90vw;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    padding: 1rem;
+}
+
+.gs-view-desc-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 0.6rem;
+}
+
+.gs-view-desc-textarea {
+    width: 100%;
+    min-height: 5rem;
+    box-sizing: border-box;
+    border: 1px solid #d8d8dc;
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+    font-size: 0.85rem;
+    resize: vertical;
+}
+
+.gs-view-desc-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+}
+
+/* ---------- Yazdırma ---------- */
+
+@media print {
+    .gs-rail,
+    .gs-topbar,
+    .gs-view-toolbar,
+    .gs-view-drawer,
+    .gs-grid-footer,
+    .grid-actions-col,
+    .grid-add-row-plus,
+    .gs-view-desc-overlay {
+        display: none !important;
+    }
+
+    .gs-body-row,
+    .gs-main {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    table.grid .grid-rownum { position: static; }
 }

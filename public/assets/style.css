@@ -223,7 +223,7 @@ table.grid thead th {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #f5f5f7;
+    background: #fff;
     border-bottom: 2px solid #d8d8dc;
     border-right: 1px solid #eee;
     white-space: nowrap;
@@ -255,24 +255,226 @@ table.grid .grid-rownum {
     position: sticky;
     left: 0;
     z-index: 1;
-    background: #f5f5f7;
+    background: #fff;
     color: #86868b;
-    text-align: right;
-    padding: 0.4rem 0.6rem;
-    border-right: 1px solid #d8d8dc;
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-right: none;
     min-width: 2.5rem;
 }
 
 table.grid thead .grid-rownum {
     z-index: 3;
+    text-align: left;
+    border-right: none;
 }
+
+table.grid thead .grid-rownum-selectall { vertical-align: middle; }
 
 table.grid tbody tr:hover td {
     background: #fafafa;
 }
 
-table.grid tbody tr:hover .grid-rownum {
-    background: #f0f0f2;
+/* Satır seçim checkbox'ı + genişlet ikonu: sayı üzerine gelen hover'da yer
+   değiştirir (sayı gizlenir, checkbox görünür); checkbox işaretliyken
+   (.is-row-selected) hover'dan bağımsız görünür kalır — Starred kartındaki
+   yıldız ikonuyla AYNI opacity/display deseni. */
+table.grid tbody .grid-rownum {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    min-width: 3.8rem;
+}
+
+.grid-rownum-number { flex: 1; text-align: left; }
+
+.grid-row-select {
+    display: none;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+table.grid tbody tr:hover .grid-row-select,
+table.grid tbody tr.is-row-selected .grid-row-select { display: inline-block; }
+
+table.grid tbody tr:hover .grid-rownum-number,
+table.grid tbody tr.is-row-selected .grid-rownum-number { display: none; }
+
+.grid-row-expand {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+}
+
+table.grid tbody tr:hover .grid-row-expand { opacity: 1; }
+
+.grid-row-expand:hover { background: #e2e2e5; }
+
+table.grid tbody tr.is-row-selected td { background: #eef4fe; }
+table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
+
+/* ---------- Satır genişletme paneli (detail modal) ---------- */
+
+.grid-detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(15, 15, 20, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* [hidden] tek başına yetmez: yukarıdaki display:flex, author-stylesheet
+   olarak UA'nın [hidden]{display:none} varsayılanını her zaman ezer (aynı
+   ders: bkz. home.css .home-search-result[hidden]) — burada açıkça geri
+   kazanılıyor. */
+.grid-detail-overlay[hidden] { display: none; }
+
+.grid-detail-modal {
+    width: 760px;
+    max-width: 92vw;
+    height: 620px;
+    max-height: 88vh;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.grid-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.grid-detail-nav {
+    display: flex;
+    gap: 0.15rem;
+    flex-shrink: 0;
+}
+
+.grid-detail-nav-btn,
+.grid-detail-close {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.grid-detail-nav-btn:hover,
+.grid-detail-close:hover { background: #f2f2f4; }
+
+.grid-detail-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.grid-detail-nav-btn:disabled:hover { background: none; }
+
+.grid-detail-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.grid-detail-close { margin-left: auto; flex-shrink: 0; }
+
+.grid-detail-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.grid-detail-fields {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 1rem 1.1rem;
+}
+
+.grid-detail-field { margin-bottom: 0.9rem; }
+
+.grid-detail-field-label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #86868b;
+    margin-bottom: 0.3rem;
+}
+
+.grid-detail-field-value .cell-input,
+.grid-detail-field-value select,
+.grid-detail-field-value input[type="text"],
+.grid-detail-field-value input[type="number"],
+.grid-detail-field-value input[type="date"],
+.grid-detail-field-value input[type="time"] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d8d8dc;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    font: inherit;
+    font-size: 0.88rem;
+}
+
+.grid-detail-textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+.grid-detail-comments {
+    width: 260px;
+    flex-shrink: 0;
+    border-left: 1px solid #eee;
+    background: #fafafb;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.grid-detail-comments-header {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.grid-detail-comments-empty {
+    flex: 1;
+    color: #9a9aa0;
+    font-size: 0.82rem;
+}
+
+.grid-detail-comments-input input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #e6e6e9;
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+    font-size: 0.85rem;
+    background: #fff;
+    color: #9a9aa0;
 }
 
 /* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
@@ -289,7 +491,7 @@ table.grid tbody tr:hover .grid-rownum {
 
 table.grid thead th.grid-frozen-cell {
     z-index: 2;
-    background: #f5f5f7;
+    background: #fff;
 }
 
 table.grid tbody tr:hover td.grid-frozen-cell {
@@ -326,10 +528,35 @@ table.grid tbody tr:hover td.grid-frozen-cell {
 
 .grid-freeze-handle.is-dragging { cursor: grabbing; }
 
-.grid-actions-col {
-    text-align: center;
-    white-space: nowrap;
-    padding: 0.3rem 0.5rem !important;
+/* Sütun genişletme tutamacı — .grid-freeze-handle ile AYNI görsel dil
+   (kenarda ince şerit, hover/dragging'de mavi çizgi), yalnızca col-resize
+   imleci ve sürükleme davranışı farklı (bkz. grid-resize-columns.js). */
+.grid-resizable-th { position: relative; }
+
+.grid-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -4px;
+    width: 8px;
+    cursor: col-resize;
+    z-index: 10;
+}
+
+.grid-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 2px;
+    background: #2d7ff9;
+    opacity: 0;
+}
+
+.grid-resize-handle:hover::after,
+.grid-resize-handle.is-dragging::after {
+    opacity: 1;
 }
 
 .grid-empty {
@@ -709,6 +936,55 @@ td.cell-flash-error {
     min-width: 240px;
     max-height: 360px;
     overflow-y: auto;
+}
+
+/* Grid'in en sağındaki "+" (yeni sütun) başlık hücresi — Bölüm A'daki
+   tip-önce-isim-sonra sihirbazının AYNISI, panel yalnızca sağa hizalanmış
+   (sütun tablonun en ucunda, soldan açılsa taşardı). */
+
+.grid-add-field-th {
+    width: 40px;
+    text-align: center;
+    padding: 0 !important;
+}
+
+.grid-add-field-menu { position: relative; }
+
+.grid-add-field-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 2.1rem;
+    cursor: pointer;
+    color: #5f6368;
+    font-size: 1.1rem;
+    list-style: none;
+}
+
+.grid-add-field-btn::-webkit-details-marker { display: none; }
+
+.grid-add-field-btn:hover { background: #eaeaec; }
+
+/* .grid-wrap { overflow: auto } sütun başlığının torunu olan absolute bir
+   paneli kırpardı (bkz. .home-base-more-panel/.gs-view-row-menu-panel'deki AYNI
+   düzeltme) — position:fixed + açılışta JS'in hesapladığı top/right (bkz.
+   grid-add-field.js) bunu atlar. */
+.grid-add-field-panel {
+    position: fixed;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.85rem;
+    min-width: 260px;
+    max-width: 320px;
+    max-height: min(70vh, 420px);
+    overflow-y: auto;
+    text-align: left;
+    font-weight: normal;
+    white-space: normal;
 }
 
 .hide-fields-search {

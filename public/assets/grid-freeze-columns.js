@@ -92,10 +92,6 @@
             return;
         }
 
-        var dragging = false;
-        var rafPending = false;
-        var pendingClientX = null;
-
         function computeFrozenCountForX(clientX) {
             var rect = table.getBoundingClientRect();
             var x = clientX - rect.left;
@@ -138,55 +134,20 @@
             });
         }
 
-        function endDrag() {
-            if (!dragging) {
-                return;
-            }
-            dragging = false;
-            document.body.style.userSelect = '';
-            handle.classList.remove('is-dragging');
-            persistFrozenCount(frozenCount);
-        }
-
-        handle.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-            dragging = true;
-            document.body.style.userSelect = 'none';
-            handle.classList.add('is-dragging');
-        });
-
-        document.addEventListener('mousemove', function (e) {
-            if (!dragging) {
-                return;
-            }
-
-            // Fare tuşu bırakılmış (ör. pencere dışında bırakılmış) — dinleyicileri
-            // temizlemek için sürüklemeyi hemen bitir.
-            if (e.buttons === 0) {
-                endDrag();
-                return;
-            }
-
-            pendingClientX = e.clientX;
-            if (rafPending) {
-                return;
-            }
-            rafPending = true;
-            requestAnimationFrame(function () {
-                rafPending = false;
-                if (!dragging) {
-                    return;
-                }
-                var newCount = computeFrozenCountForX(pendingClientX);
+        // mousedown/mousemove(rAF throttle)/mouseup/mouseleave iskeleti
+        // assets/grid-column-drag.js'de — grid-resize-columns.js ile PAYLAŞILIR,
+        // burada yalnızca "sürüklerken ne hesaplanır / bırakınca ne kaydedilir" var.
+        window.bcc_bindColumnDrag(handle, {
+            onMove: function (clientX) {
+                var newCount = computeFrozenCountForX(clientX);
                 if (newCount !== frozenCount) {
                     frozenCount = newCount;
                     applyFreeze();
                 }
-            });
+            },
+            onEnd: function () {
+                persistFrozenCount(frozenCount);
+            },
         });
-
-        document.addEventListener('mouseup', endDrag);
-        // Fare pencere dışına çıkarsa (mouseup hiç tetiklenmeyebilir) temizle.
-        document.addEventListener('mouseleave', endDrag);
     });
 })();

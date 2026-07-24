@@ -1,0 +1,207 @@
+/* F3 — Duyuru (Interface / yayınlanmış görünüm), salt-okunur. Yalnızca
+   public/interface.php tarafından kullanılır; app'in normal .home-*/.gs-*
+   kabuğunu paylaşmaz (GEREKSINIMLER.md F3 kendi başına bağımsız bir ekran
+   tarifliyor: sol nav + orta liste + sağ detay + arama, başka hiçbir şey). */
+
+* { box-sizing: border-box; }
+
+body.if-page {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1d1d1f;
+    background: #fff;
+}
+
+body.if-page a { text-decoration: none; color: inherit; }
+
+.if-shell {
+    display: flex;
+    height: 100vh;
+}
+
+/* ---------- Sol: sarı nav paneli ---------- */
+
+.if-nav {
+    width: 220px;
+    flex-shrink: 0;
+    background: #f6c343;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0.75rem;
+    overflow-y: auto;
+}
+
+.if-nav-back {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.4rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #4a3b00;
+    border-radius: 6px;
+}
+
+.if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
+
+.if-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.if-nav-item {
+    padding: 0.55rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #5a4a00;
+}
+
+.if-nav-item:hover { background: rgba(255, 255, 255, 0.35); }
+
+.if-nav-item.is-active {
+    background: #fff;
+    color: #4a3b00;
+}
+
+/* ---------- Orta: kayıt listesi + arama ---------- */
+
+.if-list-panel {
+    width: 340px;
+    flex-shrink: 0;
+    border-right: 1px solid #e6e6e9;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.if-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.85rem;
+    padding: 0.45rem 0.7rem;
+    background: #f2f2f4;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.if-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.88rem;
+    flex: 1;
+    font-family: inherit;
+    color: #1d1d1f;
+}
+
+.if-record-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0.5rem 1rem;
+}
+
+.if-record-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #f0f0f2;
+    padding: 0.75rem 0.6rem;
+    cursor: pointer;
+    font: inherit;
+}
+
+/* [hidden] tek başına yetmez: yukarıdaki display:block, author-stylesheet
+   olarak UA'nın [hidden]{display:none} varsayılanını her zaman ezer (aynı
+   ders — bkz. home.css .home-search-result[hidden]) — burada açıkça geri
+   kazanılıyor. Arama eşleşmeyen satırları bununla gizler. */
+.if-record-row[hidden] { display: none; }
+
+.if-record-row:hover { background: #fafafa; }
+
+.if-record-row.is-selected { background: #fff8e1; }
+
+.if-record-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #1d1d1f;
+    margin-bottom: 0.2rem;
+}
+
+.if-record-summary {
+    font-size: 0.82rem;
+    color: #8a8a8e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.if-record-date {
+    font-size: 0.74rem;
+    color: #9a9aa0;
+}
+
+.if-empty,
+.if-no-results {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #9a9aa0;
+    font-size: 0.88rem;
+}
+
+/* ---------- Sağ: detay paneli ---------- */
+
+.if-detail-panel {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 2rem 2.5rem;
+}
+
+.if-detail-placeholder {
+    color: #9a9aa0;
+    font-size: 0.95rem;
+    padding-top: 2rem;
+    text-align: center;
+}
+
+.if-detail-title {
+    font-size: 1.6rem;
+    margin: 0 0 1rem;
+    word-break: break-word;
+}
+
+.if-detail-meta {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: #6b6b70;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.if-detail-meta-label { font-weight: 600; }
+
+.if-detail-field { margin-bottom: 1.1rem; }
+
+.if-detail-field-label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #86868b;
+    margin-bottom: 0.3rem;
+}
+
+.if-detail-field-value {
+    font-size: 0.92rem;
+    color: #1d1d1f;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

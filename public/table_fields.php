@@ -26,7 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
-    if ($action === 'create_field' || $action === 'update_field') {
+    if ($action === 'create_field') {
+        $result = bcc_create_field($table['id'], $table['team_id'], $_POST);
+        if ($result['ok']) {
+            $success = 'Alan oluşturuldu: ' . $result['name'];
+        } else {
+            $error = $result['error'];
+        }
+    } elseif ($action === 'update_field') {
         $name = isset($_POST['name']) ? trim($_POST['name']) : '';
         $fieldType = isset($_POST['field_type']) ? $_POST['field_type'] : '';
         $isRequired = !empty($_POST['is_required']) ? 1 : 0;
@@ -37,91 +44,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!isset($fieldTypes[$fieldType])) {
             $error = 'Geçersiz alan tipi.';
         } else {
-            $options = null;
+            // Color: seçenek başına renk yalnızca "Alanı Düzenle" formunda
+            // gönderilir (create formunda hiç renk seçici yok — yeni alanlar
+            // render sırasında palete otomatik sırayla düşer, bkz.
+            // bcc_resolved_choice_color_key). Aynı istekte hem metni hem rengi
+            // değiştirmek indeksleri kaydırabilir — kozmetik bir sınır.
+            $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($_POST['colors']) ? $_POST['colors'] : null);
 
-            if (is_select_field_type($fieldType)) {
-                $choices = parse_select_choices($optionsText);
-                if (empty($choices)) {
-                    $error = 'Tekli/çoklu seçim alanları için en az bir seçenek girilmeli (her satıra bir tane).';
-                } else {
-                    $optionsData = array('choices' => $choices);
+            if (!$optionsResult['ok']) {
+                $error = $optionsResult['error'];
+            } else {
+                $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
 
-                    // Color: seçenek başına renk yalnızca "Alanı Düzenle" formunda
-                    // gönderilir (create formunda hiç renk seçici yok — yeni alanlar
-                    // render sırasında palete otomatik sırayla düşer, bkz.
-                    // bcc_resolved_choice_color_key). colors[i]: i, $choices
-                    // dizisindeki İNDEKS'tir (seçenek metnini array key yapmak
-                    // yerine — özel karakter/[] riski yok). Whitelist dışı renk
-                    // KEY'i ya da $choices sınırları dışındaki indeks sessizce
-                    // yok sayılır. (Aynı istekte hem metni hem rengi değiştirmek
-                    // indeksleri kaydırabilir — kozmetik bir sınır, sonradan
-                    // düzeltilebilir.)
-                    if (isset($_POST['colors']) && is_array($_POST['colors'])) {
-                        $palette = $GLOBALS['BCC_CHOICE_COLORS'];
-                        $colors = array();
-                        foreach ($_POST['colors'] as $i => $colorKey) {
-                            if (!ctype_digit((string) $i) || !isset($choices[(int) $i]) || !isset($palette[$colorKey])) {
-                                continue;
-                            }
-                            $colors[$choices[(int) $i]] = $colorKey;
-                        }
-                        if (!empty($colors)) {
-                            $optionsData['colors'] = $colors;
-                        }
-                    }
+                $existing = bcc_fetch_one(
+                    'SELECT id FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1',
+                    array('id' => $fieldId, 'table_id' => $table['id'])
+                );
 
-                    $options = json_encode($optionsData, JSON_UNESCAPED_UNICODE);
+                if (!$existing) {
+                    http_response_code(403);
+                    die('Bu alan bu tabloya ait değil.');
                 }
-            }
 
-            if ($error === null) {
-                if ($action === 'create_field') {
-                    $nextPos = (int) bcc_fetch_column(
-                        'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM fields WHERE table_id = :table_id',
-                        array('table_id' => $table['id'])
-                    );
-
-                    bcc_execute(
-                        'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
-                         VALUES (:table_id, :name, :field_type, :options, :position, :is_required)',
-                        array(
-                            'table_id' => $table['id'],
-                            'name' => $name,
-                            'field_type' => $fieldType,
-                            'options' => $options,
-                            'position' => $nextPos,
-                            'is_required' => $isRequired,
-                        )
-                    );
-                    $newId = bcc_last_insert_id();
-                    log_audit('field.create', 'field', $newId, array('name' => $name, 'field_type' => $fieldType, 'table_id' => $table['id']), $table['team_id']);
-                    $success = 'Alan oluşturuldu: ' . $name;
-                } else {
-                    $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
-
-                    $existing = bcc_fetch_one(
-                        'SELECT id FROM fields WHERE id = :id AND table_id = :table_id LIMIT 1',
-                        array('id' => $fieldId, 'table_id' => $table['id'])
-                    );
-
-                    if (!$existing) {
-                        http_response_code(403);
-                        die('Bu alan bu tabloya ait değil.');
-                    }
-
-                    bcc_execute(
-                        'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
-                        array(
-                            'name' => $name,
-                            'field_type' => $fieldType,
-                            'options' => $options,
-                            'is_required' => $isRequired,
-                            'id' => $fieldId,
-                        )
-                    );
-                    log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
-                    $success = 'Alan güncellendi: ' . $name;
-                }
+                bcc_execute(
+                    'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
+                    array(
+                        'name' => $name,
+                        'field_type' => $fieldType,
+                        'options' => $optionsResult['options'],
+                        'is_required' => $isRequired,
+                        'id' => $fieldId,
+                    )
+                );
+                log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
+                $success = 'Alan güncellendi: ' . $name;
             }
         }
     } elseif ($action === 'delete_field' || $action === 'move_field') {
@@ -303,76 +259,17 @@ require __DIR__ . '/../src/partials/top_nav.php';
                 <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                 <input type="hidden" name="field_type" id="new-field-type-input" required>
 
-                <!-- Adım 1: önce TİP (Airtable gibi) — liste $GLOBALS['BCC_FIELD_TYPES']'tan gelir, elle tekrar yazılmaz. -->
-                <div id="new-field-type-step">
-                    <p class="hint">Alan tipini seçin</p>
-                    <div class="field-type-grid">
-                        <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
-                            <button
-                                type="button"
-                                class="field-type-option"
-                                data-field-type="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>"
-                                data-field-type-label="<?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>"
-                            >
-                                <span class="field-type-badge"><?php echo htmlspecialchars($typeBadges[$typeKey], ENT_QUOTES, 'UTF-8'); ?></span>
-                                <span class="field-type-label"><?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <!-- Adım 2: TİP seçilince görünür — başlık burada sorulur. -->
-                <div id="new-field-details-step" hidden>
-                    <p class="hint">
-                        Seçilen tip: <strong id="new-field-type-chosen-label"></strong>
-                        · <button type="button" class="link-btn" id="new-field-type-change">Tip değiştir</button>
-                    </p>
-                    <label>Alan adı
-                        <input type="text" name="name" id="new-field-name-input">
-                    </label>
-                    <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
-                        <textarea name="options_text" rows="4"></textarea>
-                    </label>
-                    <label>
-                        <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">
-                        Zorunlu alan
-                    </label>
-                    <button type="submit">Alan Oluştur</button>
-                </div>
+                <?php
+                $fieldTypeLabels = $fieldTypes;
+                $fieldTypeBadges = $typeBadges;
+                require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
+                ?>
             </form>
         </div>
         <script>
             var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
-            (function () {
-                'use strict';
-
-                var typeStep = document.getElementById('new-field-type-step');
-                var detailsStep = document.getElementById('new-field-details-step');
-                var typeInput = document.getElementById('new-field-type-input');
-                var chosenLabel = document.getElementById('new-field-type-chosen-label');
-                var optionsRow = document.getElementById('new-field-options-row');
-                var nameInput = document.getElementById('new-field-name-input');
-
-                Array.prototype.forEach.call(document.querySelectorAll('.field-type-option'), function (btn) {
-                    btn.addEventListener('click', function () {
-                        var type = btn.getAttribute('data-field-type');
-
-                        typeInput.value = type;
-                        chosenLabel.textContent = btn.getAttribute('data-field-type-label');
-                        optionsRow.hidden = (BCC_SELECT_FIELD_TYPES.indexOf(type) === -1);
-
-                        typeStep.hidden = true;
-                        detailsStep.hidden = false;
-                        nameInput.focus();
-                    });
-                });
-
-                document.getElementById('new-field-type-change').addEventListener('click', function () {
-                    detailsStep.hidden = true;
-                    typeStep.hidden = false;
-                });
-            })();
         </script>
+        <script src="/assets/field-type-wizard.js" defer></script>
     <?php else: ?>
         <p class="hint">Bu ekipte alan oluşturmak/düzenlemek için editor veya owner rolü gerekir.</p>
     <?php endif; ?>

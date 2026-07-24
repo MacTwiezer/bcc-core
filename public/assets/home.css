@@ -42,25 +42,33 @@ a { text-decoration: none; color: inherit; }
 }
 
 .home-search {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+}
+
+.home-search-trigger {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    max-width: 420px;
     background: #f2f2f4;
     border: 1px solid #e6e6e9;
     border-radius: 8px;
     padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    list-style: none;
 }
 
-.home-search input {
-    border: none;
-    background: transparent;
-    outline: none;
-    font-size: 0.9rem;
+.home-search-trigger::-webkit-details-marker { display: none; }
+
+.home-search-trigger:hover { background: #ececef; }
+
+.home-search-trigger-label {
     flex: 1;
-    font-family: inherit;
-    color: #1d1d1f;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #8a8a8e;
 }
 
 .home-search-kbd {
@@ -70,6 +78,128 @@ a { text-decoration: none; color: inherit; }
     border-radius: 4px;
     padding: 0.05rem 0.35rem;
     background: #fff;
+    flex-shrink: 0;
+}
+
+/* Ctrl+K popover — Airtable tarzı: sayfanın üstünde sabit konumlu,
+   arkası kararmış (overlay) yüzen panel. <details> açma/kapama +
+   dışarı-tık deseni #home-filter ile aynı (bkz. home.js). */
+.home-search-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 20, 0.35);
+    z-index: 90;
+}
+
+.home-search-popover {
+    position: fixed;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 560px;
+    max-width: 92vw;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    z-index: 91;
+    overflow: hidden;
+}
+
+.home-search-popover-inputwrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.home-search-popover-inputwrap svg { flex-shrink: 0; }
+
+.home-search-popover input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1.05rem;
+    flex: 1;
+    font-family: inherit;
+    color: #1d1d1f;
+}
+
+.home-search-results {
+    overflow-y: auto;
+    padding: 0.4rem;
+}
+
+.home-search-result {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    color: inherit;
+}
+
+/* [hidden] tek başına yetmez: yukarıdaki display:flex, author-stylesheet
+   olarak UA'nın varsayılan [hidden]{display:none} kuralını her zaman ezer
+   (aynı özgüllük ama author > UA) — bu yüzden burada açıkça geri kazanılıyor. */
+.home-search-result[hidden] { display: none; }
+
+.home-search-result:hover { background: #f2f2f4; }
+
+.home-search-result .home-base-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+}
+
+.home-search-result .home-base-icon svg { width: 15px; height: 15px; }
+
+.home-search-result-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-search-result-type {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #5f6368;
+    background: #f2f2f4;
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    flex-shrink: 0;
+}
+
+.home-search-result-meta {
+    font-size: 0.78rem;
+    color: #8a8a8e;
+    flex-shrink: 0;
+    min-width: 100px;
+    text-align: right;
+}
+
+.home-search-empty {
+    padding: 1.5rem 1.1rem;
+    text-align: center;
+    color: #8a8a8e;
+    font-size: 0.85rem;
+}
+
+.home-search-hint {
+    flex-shrink: 0;
+    padding: 0.55rem 1.1rem;
+    border-top: 1px solid #eee;
+    font-size: 0.72rem;
+    color: #9a9aa0;
+    background: #fafafb;
 }
 
 .home-topbar-right {
@@ -258,6 +388,31 @@ a { text-decoration: none; color: inherit; }
     margin: 0.85rem 0.7rem;
 }
 
+.home-starred-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+
+.home-starred-item {
+    padding-left: 2.1rem;
+    font-size: 0.85rem;
+}
+
+.home-starred-item-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #9a9aa0;
+    flex-shrink: 0;
+}
+
+.home-starred-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ---------- Main area ---------- */
 
 .home-main {
@@ -278,17 +433,22 @@ a { text-decoration: none; color: inherit; }
     margin-bottom: 1.5rem;
 }
 
+/* starred.php'de tarih filtresi yok — tek çocuk (view-toggle) space-between
+   ile sola yapışır, bu kural sağa iter (Home'daki gibi). */
+.home-toolbar-end { justify-content: flex-end; }
+
 .home-filter { position: relative; }
 
 .home-filter-btn {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    background: #fff;
-    border: 1px solid #d8d8dc;
-    border-radius: 8px;
-    padding: 0.45rem 0.8rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
     font-size: 0.85rem;
+    font-weight: 600;
     color: #444;
     cursor: pointer;
     list-style: none;
@@ -297,7 +457,7 @@ a { text-decoration: none; color: inherit; }
 
 .home-filter-btn::-webkit-details-marker { display: none; }
 
-.home-filter-btn:hover { background: #f5f5f7; }
+.home-filter-btn:hover { background: #f2f2f4; }
 
 .home-filter-menu {
     display: none;
@@ -365,6 +525,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .home-base-card {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.85rem;
@@ -374,6 +535,140 @@ a { text-decoration: none; color: inherit; }
     padding: 1rem 1.1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+/* Yıldız / ⋯ aksiyonları — hover'da belirir; yıldız BUTONU ayrıca
+   "starred" durumdayken (aria-pressed="true") hover olmasa da görünür
+   kalır (⋯ menüsü her zaman yalnızca hover'da). */
+.home-base-card-actions {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.7rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.home-base-star-btn,
+.home-base-more-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.1s ease, background 0.1s ease;
+}
+
+.home-base-card:hover .home-base-star-btn,
+.home-base-card:hover .home-base-more-btn { opacity: 1; }
+
+.home-base-star-btn[aria-pressed="true"] { opacity: 1; }
+
+/* Liste modunda kalıcı (hover'sız) yıldız göstergesi artık actions
+   overlay'de DEĞİL — "Last opened" hücresinin içinde (.home-base-meta-star,
+   aşağıda). Bu yüzden liste modunda actions overlay'in yıldızı yalnızca
+   HOVER'da görünür, kart modundaki gibi kalıcı görünmez (çakışan iki
+   gösterge olmasın diye). */
+html.home-view-list .home-base-star-btn[aria-pressed="true"],
+.view-mode-list .home-base-star-btn[aria-pressed="true"] { opacity: 0; }
+
+html.home-view-list .home-base-card:hover .home-base-star-btn,
+.view-mode-list .home-base-card:hover .home-base-star-btn { opacity: 1; }
+
+.home-base-more-btn {
+    list-style: none;
+}
+
+.home-base-more-btn::-webkit-details-marker { display: none; }
+
+.home-base-star-btn:hover,
+.home-base-more-btn:hover { background: #f2f2f4; }
+
+.home-base-star-icon { fill: none; stroke: #5f6368; }
+
+.home-base-star-btn[aria-pressed="true"] .home-base-star-icon {
+    fill: #f5b400;
+    stroke: #f5b400;
+}
+
+/* "Last opened" hücresi içindeki kalıcı yıldız (yalnızca liste modunda VE
+   yıldızlıyken) — madde 3: hover'a bağımlı olmayan actions overlay'in
+   yerini alır, "⭐ Açıldı: ..." tek satırda görünür. */
+.home-base-meta-star {
+    display: none;
+    vertical-align: middle;
+    margin-right: 0.25rem;
+}
+
+html.home-view-list .home-base-card.is-starred .home-base-meta-star,
+.view-mode-list .home-base-card.is-starred .home-base-meta-star {
+    display: inline-flex;
+}
+
+/* ---------- "..." menüsü (Open > Interface / Duplicate) ----------
+   <details>+dışarı-tık deseni (grid-table-tabs.js ile aynı, bkz. home.js).
+   Panel position:fixed — Home listesindeki .home-base-grid.view-mode-list
+   köşe yuvarlaklığı için overflow:hidden taşıyor, position:absolute olsaydı
+   kırpılırdı; fixed + JS'de hesaplanan konum bunu tamamen atlıyor. */
+.home-base-more-menu { position: relative; }
+
+.home-base-more-panel {
+    position: fixed;
+    z-index: 40;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    padding: 0.35rem;
+    min-width: 170px;
+}
+
+.home-base-more-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    color: #1d1d1f;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.home-base-more-item::-webkit-details-marker { display: none; }
+
+.home-base-more-item:hover { background: #f2f2f4; }
+
+.home-base-more-item:disabled {
+    color: #b5b5ba;
+    cursor: default;
+}
+
+.home-base-more-item:disabled:hover { background: none; }
+
+.home-base-more-submenu { position: relative; }
+
+.home-base-more-submenu-panel {
+    position: fixed;
+    z-index: 41;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    padding: 0.35rem;
+    min-width: 140px;
 }
 
 .home-base-card:hover {
@@ -468,6 +763,355 @@ html.home-view-list .home-base-workspace,
     white-space: nowrap;
 }
 
+/* Liste modu kolon başlıkları — kart moduyla aynı hizada (aynı 42px ikon
+   genişliği, 0.85rem/1.5rem boşluklar, 240px/160px sabit genişlikler)
+   .home-base-card ile birebir eşleşecek şekilde tekrarlanır, böylece
+   başlıklar altındaki gerçek hücrelerle piksel piksel hizalanır. */
+.home-list-header {
+    display: none;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.55rem 1.1rem;
+    border-bottom: 1px solid #e6e6e9;
+    background: #fafafb;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #9a9aa0;
+}
+
+html.home-view-list .home-list-header,
+.view-mode-list .home-list-header { display: flex; }
+
+.home-list-header-icon { width: 42px; flex-shrink: 0; }
+
+.home-list-header-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    gap: 1.5rem;
+}
+
+.home-list-header-name { flex: 0 0 240px; }
+.home-list-header-meta { flex: 0 0 160px; }
+
+.home-list-header-workspace {
+    flex: 1;
+    min-width: 0;
+}
+
 .view-btn-active { background: #e8f0fe; }
 .view-btn-active svg path { stroke: #1a56db; }
 .view-btn-active svg rect { stroke: #1a56db; }
+
+/* ---------- Workspaces sayfası ---------- */
+
+.ws-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.ws-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    padding: 1.1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.ws-card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
+
+.ws-card.is-active {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 1px #1a56db;
+}
+
+.ws-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #2d7ff9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ws-card-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #1d1d1f;
+}
+
+.ws-card-meta {
+    font-size: 0.78rem;
+    color: #8a8a8e;
+}
+
+.ws-detail {
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 640px;
+}
+
+.ws-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid #eee;
+}
+
+.ws-detail-title {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.ws-detail-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.ws-detail-btn {
+    background: #f2f2f4;
+    border: 1px solid #e6e6e9;
+    border-radius: 6px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #b5b5ba;
+    cursor: default;
+}
+
+.ws-collab-heading {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #6b6b70;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 0 0 0.85rem;
+}
+
+.ws-collab-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.ws-collab-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.3rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.ws-collab-row:last-child { border-bottom: none; }
+
+.ws-collab-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ws-collab-info { flex: 1; min-width: 0; }
+
+.ws-collab-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #1d1d1f;
+}
+
+.ws-collab-email {
+    font-size: 0.78rem;
+    color: #8a8a8e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ws-collab-role {
+    font-size: 0.78rem;
+    color: #5f6368;
+    background: #f2f2f4;
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+    flex-shrink: 0;
+}
+
+/* ---------- Bildirim paneli (zil ikonu) ---------- */
+
+.home-notif { position: relative; }
+
+.home-notif-toggle {
+    position: relative;
+    list-style: none;
+}
+
+.home-notif-toggle::-webkit-details-marker { display: none; }
+
+.home-notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: #d93636;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+}
+
+.home-notif-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 340px;
+    max-height: min(75vh, 480px);
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.home-notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 0.85rem 0;
+    flex-shrink: 0;
+}
+
+.home-notif-tabs { display: flex; gap: 0.3rem; }
+
+.home-notif-tab {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #8a8a8e;
+    padding: 0.4rem 0.2rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.home-notif-tab.is-active {
+    color: #1d1d1f;
+    border-bottom-color: #1a56db;
+}
+
+.home-notif-mark-all {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #1a56db;
+    cursor: pointer;
+    padding: 0.3rem 0;
+}
+
+.home-notif-mark-all:disabled { color: #b5b5ba; cursor: default; }
+
+.home-notif-search {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.6rem 0.85rem;
+    padding: 0.35rem 0.6rem;
+    background: #f2f2f4;
+    border-radius: 7px;
+    flex-shrink: 0;
+}
+
+.home-notif-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.83rem;
+    flex: 1;
+    font-family: inherit;
+    color: #1d1d1f;
+}
+
+.home-notif-list {
+    overflow-y: auto;
+    padding: 0.2rem 0.4rem 0.5rem;
+}
+
+.home-notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.55rem 0.5rem;
+    border-radius: 8px;
+}
+
+.home-notif-item[hidden] { display: none; }
+
+.home-notif-item.is-unread { background: #f2f7ff; }
+
+.home-notif-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.76rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-notif-body { min-width: 0; }
+
+.home-notif-message {
+    font-size: 0.83rem;
+    color: #1d1d1f;
+    line-height: 1.35;
+}
+
+.home-notif-time {
+    font-size: 0.72rem;
+    color: #9a9aa0;
+    margin-top: 0.15rem;
+}
+
+.home-notif-empty,
+.home-notif-no-match {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: #9a9aa0;
+    font-size: 0.85rem;
+}

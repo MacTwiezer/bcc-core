@@ -103,6 +103,7 @@ try {
     bcc_commit();
 
     log_audit('record.create', 'record', $newRecordId, array('table_id' => $table['id'], 'after_record_id' => $afterRecordId ?: null), $table['team_id']);
+    bcc_notify_slack_new_record($table['id'], $newRecordId);
 } catch (Throwable $e) {
     bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
@@ -110,9 +111,12 @@ try {
 
 // Yeni satırın HTML'i grid.php'nin ilk sayfa render'ıyla AYNI fonksiyondan üretilir
 // (bcc_render_grid_data_row, src/schema.php) — ikinci bir satır şablonu yazılmaz.
+// $usersById: yeni satırda henüz hücre verisi yok (görüntülenecek isim yok) ama
+// 'user' tipi hücrelerin editör seçeneği (data-options) için yine de gerekir.
+$usersById = bcc_team_users_by_id($table['team_id']);
 $record = array('id' => $newRecordId);
 ob_start();
-bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null);
+bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById);
 $rowHtml = ob_get_clean();
 
 echo json_encode(array(

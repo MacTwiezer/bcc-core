@@ -167,12 +167,14 @@ CREATE TABLE IF NOT EXISTS views (
     name           VARCHAR(150) NOT NULL,
     view_type      VARCHAR(30) NOT NULL DEFAULT 'grid',
     config         JSON DEFAULT NULL,
+    created_by     INT UNSIGNED DEFAULT NULL,
     is_published   TINYINT(1) NOT NULL DEFAULT 0,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_views_table (table_id),
-    CONSTRAINT fk_views_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE
+    CONSTRAINT fk_views_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
+    CONSTRAINT fk_views_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

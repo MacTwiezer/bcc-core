@@ -47,7 +47,12 @@ try {
         json_fail(400, 'Bu kayıt bu alana ait değil.');
     }
 
-    $result = normalize_cell_value($field['field_type'], $field['options'], $rawValue);
+    // 'user' tipi için tek kaynak: bu takımın (KVKK) aktif üyeleri — hem gönderilen
+    // id'nin gerçekten üye olduğunu doğrulamak hem de yanıttaki 'display' adını
+    // çözmek için kullanılır (bkz. bcc_team_users_by_id, src/schema.php).
+    $usersById = bcc_team_users_by_id($field['team_id']);
+
+    $result = normalize_cell_value($field['field_type'], $field['options'], $rawValue, $usersById);
 
     if (!$result['ok']) {
         json_fail(422, $result['error']);
@@ -68,8 +73,28 @@ try {
 $cellRow = array('value_text' => null, 'value_number' => null, 'value_date' => null, 'value_json' => null);
 $cellRow[$column] = $value;
 
-echo json_encode(array(
+$response = array(
     'ok' => true,
-    'display' => cell_display_text($field['field_type'], $cellRow),
+    'display' => cell_display_text($field['field_type'], $cellRow, $usersById),
     'raw' => cell_raw_value($field['field_type'], $cellRow),
-), JSON_UNESCAPED_UNICODE);
+);
+
+// Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
+// render edilir (bkz. bcc_render_grid_data_row) — bu anahtar VARSA (boş dizi
+// dahil), grid.js kaydettikten sonra .cell-view'ı chip olarak yeniden çizer;
+// yoksa (diğer tüm tipler) her zamanki gibi düz metin yazılır.
+if (is_select_field_type($field['field_type'])) {
+    $choices = select_choices_from_options($field['options']);
+    $choiceColorMap = bcc_build_choice_color_map($choices, select_choice_colors_from_options($field['options']));
+
+    if ($field['field_type'] === 'single_select') {
+        $selectedValues = ($cellRow['value_text'] !== null && $cellRow['value_text'] !== '') ? array($cellRow['value_text']) : array();
+    } else {
+        $decodedSelected = ($cellRow['value_json'] !== null) ? json_decode($cellRow['value_json'], true) : array();
+        $selectedValues = is_array($decodedSelected) ? $decodedSelected : array();
+    }
+
+    $response['display_chips'] = bcc_choice_chip_data($selectedValues, $choiceColorMap);
+}
+
+echo json_encode($response, JSON_UNESCAPED_UNICODE);

@@ -51,16 +51,20 @@ function http_request($method, $path, $cookie = null, $postFields = null)
     $body = @file_get_contents(BASE_URL . $path, false, $context);
 
     $newCookie = null;
+    $status = null;
     if (isset($http_response_header)) {
         foreach ($http_response_header as $h) {
             if (stripos($h, 'Set-Cookie:') === 0) {
                 $parts = explode(';', substr($h, 11));
                 $newCookie = trim($parts[0]);
             }
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) {
+                $status = (int) $m[1];
+            }
         }
     }
 
-    return array('body' => $body, 'cookie' => $newCookie);
+    return array('body' => $body, 'cookie' => $newCookie, 'status' => $status);
 }
 
 function extract_csrf($html)
@@ -160,7 +164,7 @@ try {
 
     // --- Gecersiz/yabanci alan id'si sessizce yok sayilmali (baska tabloya ait olabilir) ---
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1=999999&sort_dir_1=asc", $cookie);
-    check('Gecersiz alan id sayfayi kirmiyor (200 dönüyor)', strpos($resp['body'], '<table class="grid">') !== false);
+    check('Gecersiz alan id sayfayi kirmiyor (200 dönüyor)', $resp['status'] === 200 && strpos($resp['body'], 'class="grid') !== false);
 
     // --- Arama kutusu ve sayaç DOM'da mevcut (client-side JS elle test edilir) ---
     check('Arama input alani sayfada mevcut', strpos($resp['body'], 'id="grid-search"') !== false);

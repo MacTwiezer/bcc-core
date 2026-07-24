@@ -100,6 +100,51 @@ form.stacked button {
     font-size: 0.9rem;
 }
 
+.field-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.field-type-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.field-type-option:hover {
+    border-color: #1a73e8;
+    background: #f2f6fe;
+}
+
+.field-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    color: #5f6368;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: #1a73e8;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 0;
+    text-decoration: underline;
+}
+
 .row-actions {
     white-space: nowrap;
 }
@@ -307,6 +352,18 @@ td.editable {
     cursor: text;
 }
 
+/* Color: tekli/çoklu seçim hücrelerindeki renkli "chip"ler. */
+
+.choice-chip {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: #1d1d1f;
+    margin: 0 0.25rem 0.15rem 0;
+    white-space: nowrap;
+}
+
 td.editable .cell-view:hover {
     background: #f0f7ff;
 }
@@ -314,6 +371,87 @@ td.editable .cell-view:hover {
 td.editable.editing {
     padding: 0;
     box-shadow: inset 0 0 0 2px #1a73e8;
+}
+
+/* Zengin metin (long_text — F6, "ilk aşama") düzenleme popover'ı. Mevcut
+   panel popover deseniyle (.hide-fields-form/.group-form) aynı görsel dil. */
+
+td.editable.richtext-editing {
+    position: relative;
+    box-shadow: none;
+}
+
+.richtext-popover {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 15;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    width: 320px;
+    padding: 0.6rem;
+    cursor: default;
+    white-space: normal;
+}
+
+.richtext-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #eee;
+}
+
+.richtext-toolbar-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.richtext-toolbar-btn:hover {
+    background: #f2f2f4;
+}
+
+.richtext-size-select {
+    height: 26px;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.8rem;
+}
+
+.richtext-editable {
+    min-height: 4.5rem;
+    max-height: 12rem;
+    overflow-y: auto;
+    border: 1px solid #d8d8dc;
+    border-radius: 4px;
+    padding: 0.4rem 0.5rem;
+    font: inherit;
+    outline: none;
+}
+
+.richtext-editable:focus {
+    border-color: #1a73e8;
+}
+
+.richtext-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.rich-text-view a {
+    color: #1a73e8;
 }
 
 .cell-input {
@@ -644,6 +782,49 @@ td.cell-flash-error {
     white-space: nowrap;
 }
 
+/* Color: "Alanı Düzenle" formundaki seçenek başına renk seçici (Kalan İşler #2). */
+
+.choice-color-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+}
+
+.choice-color-choice-name {
+    min-width: 90px;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.choice-color-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.choice-color-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    margin-right: 0.3rem;
+}
+
+.choice-color-input:checked + .choice-color-swatch {
+    border-color: #1d1d1f;
+}
+
+.choice-color-input:focus-visible + .choice-color-swatch {
+    outline: 2px solid #2D7FF9;
+    outline-offset: 2px;
+}
+
 .hide-fields-actions {
     display: flex;
     align-items: center;
@@ -682,20 +863,26 @@ td.cell-flash-error {
     border-bottom: 1px solid #eee;
 }
 
-.group-active-row {
+.group-level-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.group-level-row {
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
 
-.group-active-row select {
+.group-level-row select {
     padding: 0.3rem 0.4rem;
     border: 1px solid #d8d8dc;
     border-radius: 4px;
     font: inherit;
 }
 
-.group-active-row select:first-child {
+.group-level-row select:first-child {
     flex: 1;
     min-width: 0;
 }
@@ -712,6 +899,12 @@ td.cell-flash-error {
 
 .group-remove-btn:hover {
     background: #fdecea;
+}
+
+.group-form .link-btn {
+    display: block;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
 }
 
 /* Row height paneli (Grid araçları Adım 3). */

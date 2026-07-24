@@ -772,6 +772,52 @@ html.is-mac .gs-kbd-other { display: none; }
     width: 110px;
 }
 
+.gs-search-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding-left: 0.35rem;
+    border-left: 1px solid #e6e6e9;
+}
+
+.gs-search-count {
+    font-size: 0.78rem;
+    color: #5f6368;
+    white-space: nowrap;
+    margin-right: 0.1rem;
+}
+
+.gs-search-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.gs-search-nav-btn:hover:not(:disabled) { background: #e6e6e9; }
+
+.gs-search-nav-btn:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.grid-search-mark {
+    background: #fff2a8;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+.grid-search-mark.is-active {
+    background: #ffb300;
+}
+
 /* ---------- Görünüm listesi paneli (hamburger) ---------- */
 
 .gs-view-drawer {

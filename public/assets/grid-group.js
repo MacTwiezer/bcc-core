@@ -21,6 +21,32 @@
             }
         }
 
+        // "+ Add subgroup": en fazla 3 seviyeye kadar, DOM'da zaten sunucu
+        // tarafından basılmış (ama `hidden`) bir sonraki seviye satırını açar —
+        // yeni bir form elemanı YOK, yalnızca görünürlük değişir. O satırdaki
+        // alan seçilince yukarıdaki genel "select değişince submit et" davranışı
+        // (aynı dinleyiciler, sayfa yüklenirken zaten bağlandı) devreye girer.
+        var addSubgroupBtn = document.getElementById('group-add-subgroup');
+        if (addSubgroupBtn) {
+            addSubgroupBtn.addEventListener('click', function () {
+                var hiddenRow = document.querySelector('.group-level-row[hidden]');
+                if (!hiddenRow) {
+                    return;
+                }
+
+                hiddenRow.hidden = false;
+
+                if (!document.querySelector('.group-level-row[hidden]')) {
+                    addSubgroupBtn.style.display = 'none';
+                }
+
+                var select = hiddenRow.querySelector('select');
+                if (select) {
+                    select.focus();
+                }
+            });
+        }
+
         // "Find a field": henüz gruplama yokken gösterilen alan listesini istemci
         // tarafında filtreler (Hide fields panelindeki arama ile aynı desen).
         var searchInput = document.querySelector('[data-group-search]');

@@ -14,6 +14,7 @@ $role = current_user_role_in_team($table['team_id']);
 $canEdit = in_array($role, array('editor', 'owner'), true);
 
 $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
+$typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
 
 $error = null;
 $success = null;
@@ -43,7 +44,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($choices)) {
                     $error = 'Tekli/çoklu seçim alanları için en az bir seçenek girilmeli (her satıra bir tane).';
                 } else {
-                    $options = json_encode(array('choices' => $choices), JSON_UNESCAPED_UNICODE);
+                    $optionsData = array('choices' => $choices);
+
+                    // Color: seçenek başına renk yalnızca "Alanı Düzenle" formunda
+                    // gönderilir (create formunda hiç renk seçici yok — yeni alanlar
+                    // render sırasında palete otomatik sırayla düşer, bkz.
+                    // bcc_resolved_choice_color_key). colors[i]: i, $choices
+                    // dizisindeki İNDEKS'tir (seçenek metnini array key yapmak
+                    // yerine — özel karakter/[] riski yok). Whitelist dışı renk
+                    // KEY'i ya da $choices sınırları dışındaki indeks sessizce
+                    // yok sayılır. (Aynı istekte hem metni hem rengi değiştirmek
+                    // indeksleri kaydırabilir — kozmetik bir sınır, sonradan
+                    // düzeltilebilir.)
+                    if (isset($_POST['colors']) && is_array($_POST['colors'])) {
+                        $palette = $GLOBALS['BCC_CHOICE_COLORS'];
+                        $colors = array();
+                        foreach ($_POST['colors'] as $i => $colorKey) {
+                            if (!ctype_digit((string) $i) || !isset($choices[(int) $i]) || !isset($palette[$colorKey])) {
+                                continue;
+                            }
+                            $colors[$choices[(int) $i]] = $colorKey;
+                        }
+                        if (!empty($colors)) {
+                            $optionsData['colors'] = $colors;
+                        }
+                    }
+
+                    $options = json_encode($optionsData, JSON_UNESCAPED_UNICODE);
                 }
             }
 
@@ -149,6 +176,7 @@ require __DIR__ . '/../src/partials/top_nav.php';
     <p>
         <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>">&larr; <?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?> tablolarına dön</a>
         · <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">Grid'i görüntüle</a>
+        · <a href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>">Slack bildirimleri</a>
     </p>
     <h1><?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
     <?php if ($table['description']): ?>
@@ -231,6 +259,33 @@ require __DIR__ . '/../src/partials/top_nav.php';
                     <label>Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
                         <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                     </label>
+                    <?php if (is_select_field_type($editField['field_type'])):
+                        $editChoices = select_choices_from_options($editField['options']);
+                        $editSavedColors = select_choice_colors_from_options($editField['options']);
+                        $editColorMap = bcc_build_choice_color_map($editChoices, $editSavedColors);
+                    ?>
+                        <div class="choice-color-picker">
+                            <p class="hint">Renkler (her seçenek için)</p>
+                            <?php foreach ($editChoices as $ci => $choiceText): ?>
+                                <div class="choice-color-row">
+                                    <span class="choice-color-choice-name"><?php echo htmlspecialchars($choiceText, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php foreach ($GLOBALS['BCC_CHOICE_COLORS'] as $colorKey => $hex):
+                                        $inputId = 'cc-' . (int) $editField['id'] . '-' . $ci . '-' . $colorKey;
+                                    ?>
+                                        <input
+                                            type="radio"
+                                            id="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="choice-color-input"
+                                            name="colors[<?php echo $ci; ?>]"
+                                            value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"
+                                            <?php echo $editColorMap[$choiceText] === $colorKey ? 'checked' : ''; ?>
+                                        >
+                                        <label for="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>" class="choice-color-swatch" style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"></label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                     <label>
                         <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?> style="display:inline-block;width:auto;">
                         Zorunlu alan
@@ -242,30 +297,82 @@ require __DIR__ . '/../src/partials/top_nav.php';
 
         <div class="card">
             <h2>Yeni Alan</h2>
-            <form class="stacked" method="post" action="/table_fields.php">
+            <form class="stacked" method="post" action="/table_fields.php" id="new-field-form">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="create_field">
                 <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                <label>Alan adı
-                    <input type="text" name="name" required>
-                </label>
-                <label>Tip
-                    <select name="field_type" required>
+                <input type="hidden" name="field_type" id="new-field-type-input" required>
+
+                <!-- Adım 1: önce TİP (Airtable gibi) — liste $GLOBALS['BCC_FIELD_TYPES']'tan gelir, elle tekrar yazılmaz. -->
+                <div id="new-field-type-step">
+                    <p class="hint">Alan tipini seçin</p>
+                    <div class="field-type-grid">
                         <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
-                            <option value="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+                            <button
+                                type="button"
+                                class="field-type-option"
+                                data-field-type="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>"
+                                data-field-type-label="<?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+                                <span class="field-type-badge"><?php echo htmlspecialchars($typeBadges[$typeKey], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <span class="field-type-label"><?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                            </button>
                         <?php endforeach; ?>
-                    </select>
-                </label>
-                <label>Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
-                    <textarea name="options_text" rows="4"></textarea>
-                </label>
-                <label>
-                    <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">
-                    Zorunlu alan
-                </label>
-                <button type="submit">Alan Oluştur</button>
+                    </div>
+                </div>
+
+                <!-- Adım 2: TİP seçilince görünür — başlık burada sorulur. -->
+                <div id="new-field-details-step" hidden>
+                    <p class="hint">
+                        Seçilen tip: <strong id="new-field-type-chosen-label"></strong>
+                        · <button type="button" class="link-btn" id="new-field-type-change">Tip değiştir</button>
+                    </p>
+                    <label>Alan adı
+                        <input type="text" name="name" id="new-field-name-input">
+                    </label>
+                    <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
+                        <textarea name="options_text" rows="4"></textarea>
+                    </label>
+                    <label>
+                        <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">
+                        Zorunlu alan
+                    </label>
+                    <button type="submit">Alan Oluştur</button>
+                </div>
             </form>
         </div>
+        <script>
+            var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
+            (function () {
+                'use strict';
+
+                var typeStep = document.getElementById('new-field-type-step');
+                var detailsStep = document.getElementById('new-field-details-step');
+                var typeInput = document.getElementById('new-field-type-input');
+                var chosenLabel = document.getElementById('new-field-type-chosen-label');
+                var optionsRow = document.getElementById('new-field-options-row');
+                var nameInput = document.getElementById('new-field-name-input');
+
+                Array.prototype.forEach.call(document.querySelectorAll('.field-type-option'), function (btn) {
+                    btn.addEventListener('click', function () {
+                        var type = btn.getAttribute('data-field-type');
+
+                        typeInput.value = type;
+                        chosenLabel.textContent = btn.getAttribute('data-field-type-label');
+                        optionsRow.hidden = (BCC_SELECT_FIELD_TYPES.indexOf(type) === -1);
+
+                        typeStep.hidden = true;
+                        detailsStep.hidden = false;
+                        nameInput.focus();
+                    });
+                });
+
+                document.getElementById('new-field-type-change').addEventListener('click', function () {
+                    detailsStep.hidden = true;
+                    typeStep.hidden = false;
+                });
+            })();
+        </script>
     <?php else: ?>
         <p class="hint">Bu ekipte alan oluşturmak/düzenlemek için editor veya owner rolü gerekir.</p>
     <?php endif; ?>

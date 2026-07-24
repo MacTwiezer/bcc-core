@@ -18,5 +18,6 @@ require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/schema.php';
+require_once __DIR__ . '/slack.php';
 
 header('Content-Type: text/html; charset=utf-8');

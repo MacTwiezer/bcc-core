@@ -1005,7 +1005,7 @@ $gridUser = current_user();
                                 <details class="grid-add-field-menu gs-tool-details" name="gs-table-tab-menu">
                                     <summary class="grid-add-field-btn" aria-label="Yeni alan ekle">+</summary>
                                     <div class="grid-add-field-panel">
-                                        <form id="new-field-form" data-grid-add-field>
+                                        <form class="stacked" id="new-field-form" data-grid-add-field>
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                                             <input type="hidden" name="field_type" id="new-field-type-input" required>

@@ -89,7 +89,7 @@ try {
     }
 
     if (!isset($teamIdByName['TY']) || !isset($teamIdByName['GULF'])) {
-        echo "HATA: 'TY' ve/veya 'GULF' ekibi teams tablosunda bulunamadı. Önce migrations/001_faz1.sql uygulanmalı.\n";
+        echo "HATA: 'TY' ve/veya 'GULF' ekibi teams tablosunda bulunamadı. schema.sql uygulanmalı.\n";
         exit(1);
     }
 

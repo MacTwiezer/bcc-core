@@ -28,7 +28,23 @@ body.if-page a { text-decoration: none; color: inherit; }
     display: flex;
     flex-direction: column;
     padding: 1rem 0.75rem;
+    transition: width 0.15s ease;
+}
+
+/* Yalnızca tablo listesi kayar — .if-nav'ın kendisi overflow'suz kalmalı,
+   yoksa .if-nav-bottom'daki bildirim/hesap panelleri (position:absolute,
+   .if-nav'ın dışına taşan) kırpılır. */
+.if-nav-scroll {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+}
+
+.if-nav-top {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
 }
 
 .if-nav-back {
@@ -36,14 +52,42 @@ body.if-page a { text-decoration: none; color: inherit; }
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.4rem;
-    margin-bottom: 1rem;
     font-weight: 700;
     font-size: 0.92rem;
     color: #4a3b00;
     border-radius: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.if-nav-back span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
+
+.if-nav-collapse-btn {
+    background: none;
+    border: none;
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+}
+
+.if-nav-collapse-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* Daraltılmış durumda tablo listesi yerine gösterilen dekoratif klasör ikonu —
+   genişken gizli, .if-nav.is-collapsed'de görünür (aşağıda). */
+.if-nav-list-icon {
+    display: none;
+    justify-content: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+}
 
 .if-nav-list {
     display: flex;
@@ -57,14 +101,181 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-size: 0.86rem;
     font-weight: 600;
     color: #5a4a00;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .if-nav-item:hover { background: rgba(255, 255, 255, 0.35); }
 
+/* Airtable referansı: seçili öğe kutucuk DEĞİL, aynı sarı zemin üzerinde
+   hafif koyu (yarı saydam amber) bir vurgu — önceki hâli (background:#fff)
+   düz beyaz bir kutucuk gibi göründüğü için değiştirildi. */
 .if-nav-item.is-active {
-    background: #fff;
+    background: rgba(74, 59, 0, 0.14);
     color: #4a3b00;
 }
+
+/* ---------- Sol nav alt satırı: paylaş/bildirim/hesap ---------- */
+
+.if-nav-bottom {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.if-nav-icon-btn {
+    background: none;
+    border: none;
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #5a4a00;
+    flex-shrink: 0;
+}
+
+.if-nav-icon-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+.if-nav-share-btn {
+    flex: 1;
+    min-width: 0;
+}
+
+.if-nav-bottom-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.if-nav-expand-btn { display: none; }
+
+/* ---------- Daraltılmış durum (.if-nav.is-collapsed) ---------- */
+
+.if-nav.is-collapsed {
+    width: 64px;
+    padding: 1rem 0.5rem;
+    align-items: center;
+}
+
+.if-nav.is-collapsed .if-nav-top { justify-content: center; }
+.if-nav.is-collapsed .if-nav-back span,
+.if-nav.is-collapsed .if-nav-collapse-btn,
+.if-nav.is-collapsed .if-nav-list,
+.if-nav.is-collapsed .if-nav-bottom-label {
+    display: none;
+}
+
+.if-nav.is-collapsed .if-nav-back { flex: none; padding: 0.5rem; }
+.if-nav.is-collapsed .if-nav-list-icon { display: flex; }
+
+.if-nav.is-collapsed .if-nav-bottom {
+    flex-direction: column;
+    width: 100%;
+}
+
+.if-nav.is-collapsed .if-nav-share-btn { flex: none; }
+.if-nav.is-collapsed .if-nav-expand-btn { display: flex; }
+
+/* Bildirim/hesap panelleri varsayılan olarak tetikleyicinin ALTINDA-SAĞINDA
+   açılır (bkz. home.css .home-notif-panel top:calc(100%+8px)) — burada
+   tetikleyici sol sütunun EN ALTINDA olduğu için grid.php'nin .gs-rail
+   .home-notif-panel'iyle AYNI düzeltme: panel sağa doğru açılır. */
+.if-nav-bottom .home-notif-panel {
+    top: auto;
+    bottom: 0;
+    left: calc(100% + 8px);
+    right: auto;
+}
+
+.if-account { position: relative; }
+
+.if-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.if-account-menu {
+    display: none;
+    position: absolute;
+    left: calc(100% + 10px);
+    bottom: 0;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    min-width: 220px;
+    max-height: min(80vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: 40;
+}
+
+.if-account-menu.is-open { display: block; }
+
+.if-account-info {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.if-account-name { font-weight: 600; font-size: 0.9rem; }
+.if-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+
+.if-account-section { padding: 0.3rem; }
+
+.if-account-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1d1d1f;
+}
+
+.if-account-item:hover { background: #f2f2f4; }
+
+.if-account-divider { height: 1px; background: #eee; margin: 0.3rem 0; }
+
+.if-account-logout { padding: 0.4rem; }
+
+.if-account-logout button {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #c62828;
+}
+
+.if-account-logout button:hover { background: #fdecea; }
 
 /* ---------- Orta: kayıt listesi + arama ---------- */
 

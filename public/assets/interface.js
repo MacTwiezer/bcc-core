@@ -2,6 +2,22 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Sol nav daralt/genişlet (« / ») — dashboard.php'nin #home-sidebar-toggle
+        // deseniyle AYNI fikir (class toggle), burada yalnızca iki ayrı buton
+        // (daralt/genişlet) görünürlüğü de birlikte değişiyor (CSS bu ikisini
+        // .if-nav.is-collapsed altında otomatik gösterip/gizliyor).
+        var nav = document.getElementById('if-nav');
+        var collapseBtn = document.getElementById('if-nav-collapse');
+        var expandBtn = document.getElementById('if-nav-expand');
+        if (nav && collapseBtn && expandBtn) {
+            collapseBtn.addEventListener('click', function () {
+                nav.classList.add('is-collapsed');
+            });
+            expandBtn.addEventListener('click', function () {
+                nav.classList.remove('is-collapsed');
+            });
+        }
+
         var recordList = document.getElementById('if-record-list');
         var searchInput = document.getElementById('if-search-input');
         var noResults = document.getElementById('if-no-results');

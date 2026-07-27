@@ -107,7 +107,7 @@ public/
                            grid-hide-fields.js, grid-group.js,
                            account-menu.js, bcc-logo.svg
 scripts/                   create_admin, test_isolation, _isolation_case,
-                           _seed/_cleanup_phase2/3, _verify_phase4_*
+                           _verify_phase4_*
 ```
 
 ---
@@ -215,6 +215,19 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 
 - **Duyuru (Interface/F3-F4) arayüzü Airtable referansına hizalandı.** (1) Seçili tablo sekmesi (`.if-nav-item.is-active`) düz beyaz kutucuk (`background:#fff`) yerine sarı zeminin üzerinde hafif koyu-amber yarı saydam vurguya (`rgba(74,59,0,0.14)`) çevrildi — Airtable'daki "düz liste, kutucuk değil" görünümüyle eşleşiyor. (2) Kullanıcının hatırladığı "profil+bildirim zaten hazır, bu ekrana kopyala" talimatı — `git log`'da yine hiç karşılığı yoktu (aynı desen, bkz. Grid üst bar notu). Şimdi gerçekten eklendi: mevcut `notifications_panel.php` VE `account_menu.php` partial'ları `if` önekiyle require edildi (ikinci bir kopya YAZILMADI), yeni bir "Paylaş" butonu (dekoratif, projedeki diğer "Bilerek yapılmayanlar" butonlarıyla AYNI desen) eklendi — sol nav'ın alt satırında Paylaş/zil/avatar. Bunun için `interface.php` artık `home.css`'i de yüklüyor (`.home-notif-*` sınıfları oradan geliyor, style.css/grid-shell.css'in home.css'i YANINDA yüklediği desenle AYNI) + `home.js`/`dismissable-panel.js`/`account-menu.js` script'leri eklendi (home.js'deki TÜM diğer bloklar null-check'li olduğu için bu sayfada sessizce no-op kalıyor, yalnızca `#home-notif` bloğu aktif oluyor). Yeni CSS: `.if-account`/`.if-avatar`/`.if-account-menu`/... (`.gs-account`/`.gs-avatar` deseninin `if` öneki birebir kopyası, koyu-üzerine-amber yerine amber zemine uyarlanmış). **Bulunan gerçek bug (uygulama sırasında, doğrudan test edilerek yakalandı):** panel'ler `is-open`+`display:block` olmasına rağmen ekranda hiç görünmüyordu — `.if-nav { overflow-y:auto }` (tablo listesi kayabilsin diye) `position:absolute` açılan panelleri kırpıyordu, projede DAHA ÖNCE yaşanan `.grid-wrap`/`.grid-add-field-panel` ile AYNI ders. Düzeltme: kaydırma `.if-nav`'ın kendisinden yeni bir `.if-nav-scroll` sarmalayıcısına taşındı (yalnızca tablo listesini kapsar), `.if-nav`'ın kendisi artık overflow'suz — panel/menü artık `.if-nav`'ın dışına (sağına) taşabiliyor. (3) Daralt/genişlet (« / ») — hiç yoktu, eklendi: `.if-nav.is-collapsed` (64px, yalnızca ikonlar: geri-git oku, dekoratif klasör ikonu, Paylaş/zil/genişlet/avatar dikey sıralı) — `interface.js`'e dashboard'ın `#home-sidebar-toggle` deseniyle AYNI fikirde (class toggle) küçük bir handler eklendi. `/browse` ile genişletilmiş hâl, daraltılmış hâl, genişlet-geri-dönüş, bildirim paneli VE hesap menüsü panelinin artık tam görünür açıldığı ayrı ayrı doğrulandı, konsol temiz; 6/6+8/8+19/19 regresyon yeşil.
 
+- **Kod kalitesi temizliği (devir öncesi).** Kapsamlı bir denetim raporunun (partials tekrarı, PDO/`php -S` taraması, kod fazlalığı, ölü kod, yorum kalitesi, isimlendirme tutarlılığı) önceliklendirilen 7 maddesi uygulandı:
+  1. `public/curl_test.php` silindi — auth'suz, herkese açık teşhis scripti (Slack curl hata ayıklamasından kalma).
+  2. **Yeni `src/api_bootstrap.php`** — `public/api/`'deki **18 dosyanın** birebir aynı kopyaladığı `json_fail()` fonksiyonu + POST/login/CSRF kontrol boilerplate'i tek yerde toplandı (`api_require_post()`/`api_require_login()`/`api_require_csrf()`). 17 dosya üçünü de çağırıyor, `interface_search.php` (salt-okunur GET uç noktası) yalnızca `api_require_login()` çağırıyor — davranış (durum kodu, mesaj, sıra) BİREBİR AYNI kaldı. `view_export_csv.php` bilinçli olarak dokunulmadı (JSON değil CSV döner, zaten `json_fail()` kullanmıyordu).
+  3. `public/assets/account-menu.js`'deki elle yazılmış dışarı-tık-kapatma kodu kaldırıldı, `window.bcc_bindDismissable()` (dismissable-panel.js) ile değiştirildi — dismissable-panel.js'in "6 kopya artık bunu çağırıyor" notundaki unutulmuş 7. kopya artık merkezi mekanizmayı kullanıyor. Bu arada gerçek bir sıralama bug'ı bulundu ve düzeltildi: `src/partials/home_shell_bottom.php` `account-menu.js`'i `dismissable-panel.js`'den ÖNCE yüklüyordu (dashboard/starred/workspaces/account.php'de `bcc_bindDismissable is not a function` hatasına yol açardı) — script sırası düzeltildi. Yan etki (kabul edilebilir): menü artık Escape ile de kapanıyor (projedeki her diğer panelle tutarlı).
+  4. Ölü kod temizliği: `src/schema.php`'deki çağrılmayan `find_field_or_404()` silindi; `style.css`'teki `.login-box`/`.page-wide`/`.grid-add-record`, `grid-shell.css`'teki `.grid-actions-col`, `home.css`'teki `.home-sidenav-divider` (hiçbiri hiçbir `.php`/`.js`'de referans edilmiyordu) silindi; PDO→mysqli geçişinin Faz 2/3'üne özel 4 tek-kullanımlık script (`scripts/_seed_phase2_test.php`, `_cleanup_phase2_test.php`, `_seed_phase3_test.php`, `_cleanup_phase3_test.php`) silindi, dosya haritasından çıkarıldı.
+  5. **Yeni `src/validation.php`** — e-posta format kontrolü (`bcc_is_valid_email()`) ve şifre uzunluk kuralı (`bcc_is_valid_password()`) 4'er ayrı dosyada (register.php, admin/create_user.php, scripts/create_admin.php, api/account_update_*.php) tekrarlanıyordu, tek yere çıkarıldı; `src/bootstrap.php`'ye eklendi (tüm `public/*.php`'ye otomatik gelir), `scripts/create_admin.php` bootstrap.php kullanmadığı için ayrıca require ediyor.
+  6. `docs/PROJE-DURUM.md:260,265`'teki hatalı `YAPILACAKLAR.md` referansı `YAPILACAKLAR-UI.md` olarak düzeltildi (dosya bu adla hiç var olmamıştı).
+  7. Bu bölümün üstünde yeni "9. Devir/Deploy Notları" bölümü eklendi (`bootstrap.php`'nin `secure=false` session cookie ayarı, canlıya HTTPS ile çıkarken `true` yapılmalı).
+
+  Denetimin kendisi ayrıca `docs/PROJE-DURUM.md`'nin TÜM "Biten İşler" listesini (40 madde) git log ile çapraz doğruladı — hiçbiri işaretlenmedi, hepsinin gerçek karşılığı var (önceki oturumlarda yakalanan "yapıldı deniyor ama git'te yok" durumları zaten düzeltilmişti). KVKK `team_id` erişim kontrolü de ayrıca (CRITICAL öncelikle) tek tek tarandı, atlayan bir yol bulunamadı.
+
+  `/browse` ile 2 ve 3. maddeler özellikle test edildi (davranış değişmemeli talimatı gereği): hesap güncelleme (ad/e-posta) `api_bootstrap.php` üzerinden uçtan uca doğrulandı (DB'de kalıcı), `view_rename.php` doğrudan fetch ile doğrulandı, hesap menüsü dışarı-tık-kapatma davranışı `dashboard.php`/`grid.php`/`interface.php`'nin ÜÇÜNDE de ayrı ayrı doğrulandı (konsol hatası yok, Escape ile kapanma da çalışıyor), `register.php`/`admin/create_user.php` yeni `bcc_is_valid_email()`/`bcc_is_valid_password()` ile doğru mesajları veriyor. 6/6+8/8+19/19 regresyon her madde sonrası yeşil.
+
 ---
 
 ## 6. Kalan İşler
@@ -257,12 +270,12 @@ Geri alma: `git checkout .` (son commit'e döner)
 
 Uzun sohbetlerde her mesaj tüm geçmişi taşır. Bu yüzden **her özellik için yeni sohbet**:
 
-1. Yeni sohbet aç, `docs/PROJE-DURUM.md` ve `docs/YAPILACAKLAR.md` dosyalarını **ekle** (ataç ikonu)
+1. Yeni sohbet aç, `docs/PROJE-DURUM.md` ve `docs/YAPILACAKLAR-UI.md` dosyalarını **ekle** (ataç ikonu)
 2. "Şimdi şu maddeyi yapacağız, Claude Code için brifing hazırla" de
 3. Özellik bitince Claude Code'a dokümanları güncellettir:
    ```
    [Özellik] tamamlandı ve test edildi. İki dokümanı güncelle:
-   1) docs/YAPILACAKLAR.md — ilgili bölümü tamamen sil, kalan maddeleri yeniden numaralandır.
+   1) docs/YAPILACAKLAR-UI.md — ilgili bölümü tamamen sil, kalan maddeleri yeniden numaralandır.
    2) docs/PROJE-DURUM.md — "Biten İşler"e bir satır ekle, "Kalan İşler" tablosundan sil.
    Başka hiçbir şeye dokunma.
    ```
@@ -294,3 +307,13 @@ C:\php73\php.exe -r "require 'config/database.php'; $e='EPOSTA'; $p='YENI_SIFRE'
 Temizlik: `DELETE FROM users WHERE email LIKE '%@bcc-test.local'`
 
 **Klasik hata:** `cd C:\xampp\htdocs\bcc-core` yapmadan komut çalıştırmak.
+
+---
+
+## 9. Devir/Deploy Notları
+
+**`src/bootstrap.php`'deki session cookie ayarı** — `secure => false` yalnızca
+localhost/HTTP içindir (kodun kendi yorumu da bunu söylüyor). Proje HTTPS
+arkasına alınarak canlıya çıkarken bu **`true` yapılmalı**, yoksa oturum
+çerezi HTTPS üzerinden de şifresiz (secure olmayan) bağlantılarla
+paylaşılabilir hale gelir.

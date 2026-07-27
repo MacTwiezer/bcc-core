@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullName = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    if (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
     } elseif ($fullName === '') {
         $error = 'Ad Soyad boş olamaz.';
-    } elseif (strlen($password) < 8) {
+    } elseif (!bcc_is_valid_password($password)) {
         $error = 'Şifre en az 8 karakter olmalı.';
     } else {
         $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email', array('email' => $email));

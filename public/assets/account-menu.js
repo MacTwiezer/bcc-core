@@ -14,9 +14,13 @@
         menu.classList.toggle('is-open');
     });
 
-    document.addEventListener('click', function (e) {
-        if (!menu.contains(e.target)) {
-            menu.classList.remove('is-open');
-        }
+    // Dışarı tıklayınca kapatma artık projenin ortak mekanizmasıyla (bkz.
+    // dismissable-panel.js) — elle yeniden yazılmış kopya kaldırıldı. Bu menü
+    // native <details> DEĞİL (is-open class'ıyla açılıp kapanıyor), bu yüzden
+    // isOpen/close override edilir; dışarı-tık koşulu varsayılanla (!el.contains)
+    // ÖNCEKİYLE BİREBİR AYNI.
+    window.bcc_bindDismissable(menu, {
+        isOpen: function () { return menu.classList.contains('is-open'); },
+        close: function () { menu.classList.remove('is-open'); },
     });
 })();

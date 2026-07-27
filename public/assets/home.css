@@ -376,12 +376,6 @@ a { text-decoration: none; color: inherit; }
 
 .home-sidenav-item.is-active svg { color: #1a56db; }
 
-.home-sidenav-divider {
-    height: 1px;
-    background: #e6e6e9;
-    margin: 0.85rem 0.7rem;
-}
-
 .home-starred-list {
     display: flex;
     flex-direction: column;

@@ -7,20 +7,9 @@
 // bcc_interface_fetch_records() interface.php'nin İLK yüklemede kullandığı AYNI
 // fonksiyon — paralel sorgu YOK.
 
-require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../src/api_bootstrap.php';
 
-header('Content-Type: application/json; charset=utf-8');
-
-function json_fail($status, $message)
-{
-    http_response_code($status);
-    echo json_encode(array('ok' => false, 'error' => $message), JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if (!is_logged_in()) {
-    json_fail(401, 'Giriş gerekli.');
-}
+api_require_login();
 
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : 0;
 $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';

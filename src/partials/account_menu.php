@@ -20,11 +20,11 @@ $accountMenuInitial = bcc_user_initial($accountMenuUser);
             <div class="<?php echo $accountMenuPrefix; ?>-account-email"><?php echo htmlspecialchars($accountMenuUser['email'], ENT_QUOTES, 'UTF-8'); ?></div>
         </div>
 
-        <!-- Account/Trash işlev yapmaz (özelliği yazılmamış) — tıklanınca sessizce
-             hiçbir şey yapmaz, onaylanmış karar (bkz. PROJE-DURUM.md). Gerçek işlevi
-             olan TEK öğe en alttaki "Log out" formudur. -->
+        <!-- Trash işlev yapmaz (özelliği yazılmamış) — tıklanınca sessizce hiçbir
+             şey yapmaz, onaylanmış karar (bkz. PROJE-DURUM.md). "Hesap" artık
+             gerçek bir sayfaya gidiyor (bkz. public/account.php). -->
         <div class="<?php echo $accountMenuPrefix; ?>-account-section">
-            <button type="button" class="<?php echo $accountMenuPrefix; ?>-account-item">Hesap</button>
+            <a href="/account.php" class="<?php echo $accountMenuPrefix; ?>-account-item">Hesap</a>
         </div>
 
         <div class="<?php echo $accountMenuPrefix; ?>-account-divider"></div>

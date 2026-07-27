@@ -88,7 +88,7 @@ form.stacked textarea {
     font-family: inherit;
 }
 
-form.stacked button {
+form.stacked button:not(.field-type-option):not(.link-btn) {
     background: #1d1d1f;
     color: #fff;
     border: none;

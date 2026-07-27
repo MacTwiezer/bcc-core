@@ -74,6 +74,8 @@ form.stacked label {
     margin-bottom: 0.75rem;
 }
 
+form.stacked [hidden] { display: none; }
+
 form.stacked input,
 form.stacked select,
 form.stacked textarea {

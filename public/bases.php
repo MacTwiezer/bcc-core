@@ -84,7 +84,7 @@ require __DIR__ . '/../src/partials/top_nav.php';
         <div class="card">
             <h2>
                 <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
-                <span class="pill"><?php echo htmlspecialchars($t['role'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="pill"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$t['role']], ENT_QUOTES, 'UTF-8'); ?></span>
             </h2>
 
             <?php if (!empty($basesByTeam[$t['id']])): ?>

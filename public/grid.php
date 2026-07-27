@@ -114,11 +114,6 @@ foreach ($fields as $f) {
 $maxFrozenColumns = bcc_max_frozen_columns(count($visibleFields));
 $frozenColumnCount = bcc_get_frozen_column_count($view['config'], $maxFrozenColumns);
 
-// Sütun genişliği (Bölüm C, madde 12): dondurma sayısıyla AYNI kalıcılık deseni —
-// views.config'te ayrı bir anahtar (column_widths), sürükleme bırakılınca anında
-// kaydedilir (bkz. /api/view_config_update.php).
-$columnWidths = bcc_get_column_widths($view['config']);
-
 // Sıralama (Faz 4): sort_field_1..3 / sort_dir_1..3 GET parametreleri, yalnızca bu
 // tabloya ait alanlar kabul edilir. Kalıcılık henüz yok — durum URL'de taşınıyor.
 $sortRules = parse_grid_sort_rules($_GET, $fieldsById);
@@ -321,9 +316,9 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
             $rawValue = $keys[$lvl];
 
             if ($rawValue === null) {
-                $display = '(Empty)';
+                $display = '(Boş)';
             } elseif ($rule['field_type'] === 'checkbox') {
-                $display = ((int) $rawValue === 1) ? 'Checked' : 'Unchecked';
+                $display = ((int) $rawValue === 1) ? 'İşaretli' : 'İşaretsiz';
             } else {
                 $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById);
             }
@@ -422,7 +417,7 @@ $gridUser = current_user();
 
 <aside class="gs-rail">
     <a href="/dashboard.php" class="gs-rail-logo" title="Home'a dön">
-        <img src="/assets/bcc-logo.svg" alt="BCC-Core" class="gs-rail-logo-img">
+        <img src="/assets/logo.png" alt="BCC-Core" class="gs-rail-logo-img">
         <svg class="gs-rail-back-icon" width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M12.5 4.5L6 10l6.5 5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
     <div class="gs-rail-bottom">
@@ -480,9 +475,9 @@ $gridUser = current_user();
                             <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </summary>
                         <div class="gs-table-tab-menu-panel">
-                            <button type="button" class="gs-table-tab-menu-item">Import data</button>
+                            <button type="button" class="gs-table-tab-menu-item">Veri içe aktar</button>
                             <div class="gs-table-tab-menu-divider"></div>
-                            <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger">Clear data</button>
+                            <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger">Verileri temizle</button>
                         </div>
                     </details>
                 </div>
@@ -495,14 +490,14 @@ $gridUser = current_user();
             <summary class="gs-table-tab-caret gs-all-tables-caret" aria-label="Tüm tablolar (Ctrl+J)">
                 <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <span class="gs-kbd-tooltip">
-                    <span class="gs-kbd-tooltip-label">All tables</span>
+                    <span class="gs-kbd-tooltip-label">Tüm tablolar</span>
                     <span class="gs-kbd-badge"><span class="gs-kbd-mac">⌘ J</span><span class="gs-kbd-other">Ctrl J</span></span>
                 </span>
             </summary>
             <div class="gs-table-tab-menu-panel gs-all-tables-panel">
                 <div class="gs-all-tables-search">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
-                    <input type="text" placeholder="Find a table" data-all-tables-search>
+                    <input type="text" placeholder="Tablo ara" data-all-tables-search>
                 </div>
                 <div class="gs-all-tables-list">
                     <?php foreach ($siblingTables as $st):
@@ -540,12 +535,12 @@ $gridUser = current_user();
                 <div class="gs-view-info-popover">
                     <div class="gs-view-info-title"><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></div>
                     <div class="gs-view-info-row">
-                        <span class="gs-view-info-label">Editing</span>
-                        <span class="gs-view-info-value">Everyone can edit the view configuration.</span>
+                        <span class="gs-view-info-label">Düzenleme</span>
+                        <span class="gs-view-info-value">Herkes görünüm yapılandırmasını düzenleyebilir.</span>
                     </div>
                     <?php if (!empty($view['created_by_name'])): ?>
                     <div class="gs-view-info-row">
-                        <span class="gs-view-info-label">Created by</span>
+                        <span class="gs-view-info-label">Oluşturan</span>
                         <span class="gs-view-info-value"><?php echo htmlspecialchars($view['created_by_name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     </div>
                     <?php endif; ?>
@@ -558,8 +553,8 @@ $gridUser = current_user();
                 <div class="gs-table-tab-menu-panel gs-view-options-panel">
                     <div class="gs-view-options-collab">
                         <span class="gs-view-options-collab-text">
-                            <span class="gs-view-options-collab-label">Collaborative view</span>
-                            <span class="gs-view-options-collab-desc">Editors and up can edit the view configuration.</span>
+                            <span class="gs-view-options-collab-label">Ortak görünüm</span>
+                            <span class="gs-view-options-collab-desc">Düzenleyici ve üzeri roller görünüm yapılandırmasını düzenleyebilir.</span>
                         </span>
                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
@@ -567,36 +562,36 @@ $gridUser = current_user();
                     <?php if ($canEdit): ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-save-state-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 4.5A1.5 1.5 0 015.5 3h8l3.5 3.5v9a1.5 1.5 0 01-1.5 1.5h-10A1.5 1.5 0 014 15.5v-11z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 3v4h6V3M6.5 17v-5h7v5" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/></svg>
-                        Save view
+                        Görünümü kaydet
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-rename-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3-9.5 9.5H4v-3l9.5-9.5z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/></svg>
-                        Rename view
+                        Görünümü yeniden adlandır
                     </button>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-edit-desc-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#5f6368" stroke-width="1.3"/><path d="M10 9v5M10 6.5v.01" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
-                        Edit view description
+                        Görünüm açıklamasını düzenle
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-duplicate-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="7" y="7" width="9" height="9" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M4 13V5.5A1.5 1.5 0 015.5 4H13" stroke="#5f6368" stroke-width="1.3"/></svg>
-                        Duplicate view
+                        Görünümü çoğalt
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <?php endif; ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-csv-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
-                        Download CSV
+                        CSV indir
                     </button>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-print-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="3" width="10" height="5" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="8" width="14" height="6" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="6" y="12" width="8" height="5" stroke="#5f6368" stroke-width="1.3"/></svg>
-                        Print view
+                        Görünümü yazdır
                     </button>
                     <?php if ($canEdit): ?>
                     <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" id="gs-view-delete-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Delete view
+                        Görünümü sil
                     </button>
                     <?php endif; ?>
                 </div>
@@ -606,7 +601,7 @@ $gridUser = current_user();
         <?php if ($canEdit): ?>
         <div class="gs-view-desc-overlay" id="gs-view-desc-overlay" hidden>
             <div class="gs-view-desc-modal">
-                <div class="gs-view-desc-title">Edit view description</div>
+                <div class="gs-view-desc-title">Görünüm açıklamasını düzenle</div>
                 <textarea class="gs-view-desc-textarea" id="gs-view-desc-textarea" maxlength="500" placeholder="Bu görünüm hakkında kısa bir açıklama..."><?php echo htmlspecialchars((string) $view['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                 <div class="gs-view-desc-actions">
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-desc-cancel">İptal</button>
@@ -621,18 +616,18 @@ $gridUser = current_user();
                 <summary class="gs-tool-btn <?php echo !empty($hiddenFieldIds) ? 'hide-fields-btn-active' : ''; ?>">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M2.5 6h15M2.5 10h10M2.5 14h6" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <?php if (empty($hiddenFieldIds)): ?>
-                        Hide fields
+                        Alanları gizle
                     <?php elseif (count($hiddenFieldIds) === 1): ?>
-                        1 hidden field
+                        1 gizli alan
                     <?php else: ?>
-                        <?php echo count($hiddenFieldIds); ?> hidden fields
+                        <?php echo count($hiddenFieldIds); ?> gizli alan
                     <?php endif; ?>
                 </summary>
                 <form method="get" action="/grid.php" class="hide-fields-form" id="hide-fields-form">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                     <input type="hidden" name="visible_fields_submitted" value="1">
                     <?php bcc_render_grid_state_hidden_inputs($sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState); ?>
-                    <input type="text" class="hide-fields-search" placeholder="Find a field" data-hide-fields-search>
+                    <input type="text" class="hide-fields-search" placeholder="Alan ara" data-hide-fields-search>
                     <?php foreach ($fields as $f):
                         if ((int) $f['id'] === $primaryFieldId) {
                             continue; // birincil alan Airtable'daki gibi panelde listelenmez, hep görünür
@@ -667,7 +662,7 @@ $gridUser = current_user();
             <details class="filter-panel gs-tool-details" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4z" stroke="#5f6368" stroke-width="1.4" stroke-linejoin="round"/></svg>
-                    Filter<?php echo !empty($filterRules) ? ' (' . count($filterRules) . ')' : ''; ?>
+                    Filtrele<?php echo !empty($filterRules) ? ' (' . count($filterRules) . ')' : ''; ?>
                 </summary>
                 <form method="get" action="/grid.php" class="filter-form">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -763,11 +758,11 @@ $gridUser = current_user();
             <details class="group-panel gs-tool-details" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn <?php echo !empty($groupRules) ? 'hide-fields-btn-active' : ''; ?>">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="2" stroke="#5f6368" stroke-width="1.3"/><circle cx="14" cy="14" r="2" stroke="#5f6368" stroke-width="1.3"/><path d="M8 6h9M3 14h3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
-                    Group<?php echo !empty($groupRules) ? ' (' . count($groupRules) . ')' : ''; ?>
+                    Grupla<?php echo !empty($groupRules) ? ' (' . count($groupRules) . ')' : ''; ?>
                 </summary>
                 <?php if (empty($groupRules)): ?>
                     <div class="group-form" id="group-form-empty">
-                        <input type="text" class="hide-fields-search" placeholder="Find a field" data-group-search>
+                        <input type="text" class="hide-fields-search" placeholder="Alan ara" data-group-search>
                         <div class="group-field-list">
                             <?php foreach ($fields as $f): ?>
                                 <a
@@ -785,8 +780,8 @@ $gridUser = current_user();
                         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                         <?php bcc_render_grid_state_hidden_inputs($sortState + $filterState + $hiddenFieldsState + $rowHeightState + $wrapHeadersState); ?>
                         <div class="group-panel-header">
-                            <button type="button" class="btn-sm" data-group-collapse-all>Collapse all</button>
-                            <button type="button" class="btn-sm" data-group-expand-all>Expand all</button>
+                            <button type="button" class="btn-sm" data-group-collapse-all>Tümünü daralt</button>
+                            <button type="button" class="btn-sm" data-group-expand-all>Tümünü genişlet</button>
                         </div>
                         <div class="group-level-rows" id="group-level-rows">
                             <?php for ($slot = 1; $slot <= 3; $slot++):
@@ -830,7 +825,7 @@ $gridUser = current_user();
                             <?php endfor; ?>
                         </div>
                         <?php if (count($groupRules) < 3): ?>
-                            <button type="button" class="link-btn" id="group-add-subgroup">+ Add subgroup</button>
+                            <button type="button" class="link-btn" id="group-add-subgroup">+ Alt grup ekle</button>
                         <?php endif; ?>
                         <div class="hide-fields-actions">
                             <button type="submit" class="btn-sm" data-group-apply>Uygula</button>
@@ -845,7 +840,7 @@ $gridUser = current_user();
             <details class="sort-panel gs-tool-details" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4 5h9M4 10h6M4 15h3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/><path d="M15 4v11m0 0l-2.5-2.5M15 15l2.5-2.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Sort<?php echo !empty($sortRules) ? ' (' . count($sortRules) . ')' : ''; ?>
+                    Sırala<?php echo !empty($sortRules) ? ' (' . count($sortRules) . ')' : ''; ?>
                 </summary>
                 <form method="get" action="/grid.php" class="sort-form">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -890,7 +885,7 @@ $gridUser = current_user();
             <details class="row-height-panel gs-tool-details" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn <?php echo $rowHeight !== 'short' ? 'hide-fields-btn-active' : ''; ?>">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="12" width="14" height="4" rx="1" stroke="#5f6368" stroke-width="1.3"/></svg>
-                    Row height
+                    Satır yüksekliği
                 </summary>
                 <div class="row-height-form">
                     <?php foreach ($GLOBALS['BCC_ROW_HEIGHT_LABELS'] as $rhKey => $rhLabel):
@@ -910,7 +905,7 @@ $gridUser = current_user();
                         $wrapQuery = http_build_query($rowHeightPanelBase + $rowHeightState + $wrapToggleState);
                     ?>
                     <a class="row-height-option" href="/grid.php?<?php echo htmlspecialchars($wrapQuery, ENT_QUOTES, 'UTF-8'); ?>">
-                        <span class="row-height-option-label">Wrap headers</span>
+                        <span class="row-height-option-label">Başlıkları sarmala</span>
                         <?php if ($wrapHeaders): ?>
                             <svg class="row-height-check" width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         <?php endif; ?>
@@ -939,10 +934,10 @@ $gridUser = current_user();
 
     <div class="gs-body-row">
         <div class="gs-view-drawer" id="gs-view-drawer">
-            <button type="button" class="gs-view-drawer-create">+ Create new...</button>
+            <button type="button" class="gs-view-drawer-create">+ Yeni oluştur...</button>
             <div class="gs-view-drawer-search">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
-                <input type="text" id="gs-view-search-input" placeholder="Find a view" autocomplete="off">
+                <input type="text" id="gs-view-search-input" placeholder="Görünüm ara" autocomplete="off">
             </div>
             <div class="gs-view-drawer-list" id="gs-view-drawer-list">
                 <?php foreach ($allViews as $v):
@@ -976,8 +971,8 @@ $gridUser = current_user();
                                 <svg width="13" height="13" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
                             </summary>
                             <div class="gs-table-tab-menu-panel gs-view-row-menu-panel">
-                                <button type="button" class="gs-table-tab-menu-item" data-view-move="up" data-view-id="<?php echo (int) $v['id']; ?>">Move up</button>
-                                <button type="button" class="gs-table-tab-menu-item" data-view-move="down" data-view-id="<?php echo (int) $v['id']; ?>">Move down</button>
+                                <button type="button" class="gs-table-tab-menu-item" data-view-move="up" data-view-id="<?php echo (int) $v['id']; ?>">Yukarı taşı</button>
+                                <button type="button" class="gs-table-tab-menu-item" data-view-move="down" data-view-id="<?php echo (int) $v['id']; ?>">Aşağı taşı</button>
                             </div>
                         </details>
                         <?php endif; ?>
@@ -1006,18 +1001,11 @@ $gridUser = current_user();
                             <th class="grid-rownum">
                                 <?php if ($canEdit): ?><input type="checkbox" class="grid-rownum-selectall" id="grid-rownum-selectall" aria-label="Tüm satırları seç"><?php else: ?>#<?php endif; ?>
                             </th>
-                            <?php foreach ($visibleFields as $f):
-                                $savedWidth = isset($columnWidths[(int) $f['id']]) ? $columnWidths[(int) $f['id']] : null;
-                            ?>
-                                <th
-                                    class="grid-resizable-th"
-                                    data-field-id="<?php echo (int) $f['id']; ?>"
-                                    <?php echo $savedWidth !== null ? 'style="width:' . (int) $savedWidth . 'px;max-width:' . (int) $savedWidth . 'px;"' : ''; ?>
-                                >
+                            <?php foreach ($visibleFields as $f): ?>
+                                <th>
                                     <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
-                                    <?php if ($canEdit): ?><div class="grid-resize-handle" data-grid-resize-handle></div><?php endif; ?>
                                 </th>
                             <?php endforeach; ?>
                             <?php if ($canEdit): ?>
@@ -1071,7 +1059,7 @@ $gridUser = current_user();
                             <tr class="grid-add-row" data-grid-add-row data-tooltip-host>
                                 <td class="grid-rownum grid-add-row-plus">+</td>
                                 <td colspan="<?php echo count($visibleFields) + 1; ?>" class="grid-add-row-hint">
-                                    <span class="gs-kbd-tooltip gs-kbd-tooltip-light">You can also insert a new record anywhere by pressing Shift-Enter</span>
+                                    <span class="gs-kbd-tooltip gs-kbd-tooltip-light">Shift-Enter'a basarak herhangi bir yere yeni kayıt da ekleyebilirsiniz</span>
                                 </td>
                             </tr>
                         <?php endif; ?>
@@ -1126,7 +1114,6 @@ $gridUser = current_user();
 <script src="/assets/grid-group.js" defer></script>
 <script src="/assets/grid-column-drag.js" defer></script>
 <script src="/assets/grid-freeze-columns.js" defer></script>
-<script src="/assets/grid-resize-columns.js" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="/assets/grid.js" defer></script>
@@ -1156,10 +1143,10 @@ $gridUser = current_user();
         <div class="grid-detail-body">
             <div class="grid-detail-fields" id="grid-detail-fields"></div>
             <div class="grid-detail-comments">
-                <div class="grid-detail-comments-header">All comments</div>
-                <div class="grid-detail-comments-empty">Start a conversation</div>
+                <div class="grid-detail-comments-header">Tüm yorumlar</div>
+                <div class="grid-detail-comments-empty">Bir konuşma başlatın</div>
                 <div class="grid-detail-comments-input">
-                    <input type="text" placeholder="Leave a comment" disabled>
+                    <input type="text" placeholder="Yorum bırakın" disabled>
                 </div>
             </div>
         </div>

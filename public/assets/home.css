@@ -211,12 +211,6 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
 }
 
-.home-help-link {
-    font-size: 0.88rem;
-    color: #5f6368;
-    font-weight: 500;
-}
-
 .home-icon-btn {
     background: none;
     border: none;

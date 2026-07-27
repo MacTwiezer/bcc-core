@@ -44,7 +44,7 @@ if (!isset($homeActiveNav)) {
         <button type="button" class="home-icon-btn" id="home-sidebar-toggle" aria-label="Menüyü aç/kapat">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 5h16M2 10h16M2 15h16" stroke="#5f6368" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <a href="/dashboard.php" class="home-logo"><img src="/assets/bcc-logo.svg" alt="BCC-Core"></a>
+        <a href="/dashboard.php" class="home-logo"><img src="/assets/logo.png" alt="BCC-Core"></a>
     </div>
 
     <div class="home-topbar-center">
@@ -62,13 +62,12 @@ if (!isset($homeActiveNav)) {
                 </div>
                 <div class="home-search-results" id="home-search-results"></div>
                 <div class="home-search-empty" id="home-search-empty" hidden>Aramanızla eşleşen base bulunamadı.</div>
-                <div class="home-search-hint">Press Ctrl K any time to search</div>
+                <div class="home-search-hint">Aramak için istediğiniz zaman Ctrl K'ya basın</div>
             </div>
         </details>
     </div>
 
     <div class="home-topbar-right">
-        <a href="#" class="home-help-link">Yardım</a>
         <?php
         $notifUser = $user;
         $notifTriggerClass = 'home-icon-btn';
@@ -90,11 +89,11 @@ if (!isset($homeActiveNav)) {
         <nav class="home-sidenav">
             <a href="/dashboard.php" class="home-sidenav-item<?php echo $homeActiveNav === 'home' ? ' is-active' : ''; ?>">
                 <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8.5V17h10V8.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                <span>Home</span>
+                <span>Ana Sayfa</span>
             </a>
             <a href="/starred.php" class="home-sidenav-item<?php echo $homeActiveNav === 'starred' ? ' is-active' : ''; ?>">
                 <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-                <span>Starred</span>
+                <span>Yıldızlılar</span>
             </a>
             <div class="home-starred-list" id="home-starred-list">
                 <?php foreach ($starredBases as $sb): ?>
@@ -104,13 +103,9 @@ if (!isset($homeActiveNav)) {
                     </a>
                 <?php endforeach; ?>
             </div>
-            <a href="#" class="home-sidenav-item">
-                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M6 8.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4zM14 8.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4zM6 17.5a2.2 2.2 0 100-4.4 2.2 2.2 0 000 4.4z" stroke="currentColor" stroke-width="1.4"/><path d="M7.8 7.3l4.4-1.6M7.8 15l4.4-4.8" stroke="currentColor" stroke-width="1.3"/></svg>
-                <span>Shared</span>
-            </a>
             <a href="/workspaces.php" class="home-sidenav-item<?php echo $homeActiveNav === 'workspaces' ? ' is-active' : ''; ?>">
                 <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
-                <span>Workspaces</span>
+                <span>Çalışma Alanları</span>
             </a>
         </nav>
     </aside>

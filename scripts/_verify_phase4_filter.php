@@ -276,7 +276,7 @@ try {
 
     // --- Filtre panel özeti ve sayfa saglamligi -----------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Kirmizi'), $cookie);
-    check('Filtre paneli ozet sayaci "Filter (1)" gosteriyor', strpos($resp['body'], 'Filter (1)') !== false);
+    check('Filtre paneli ozet sayaci "Filtrele (1)" gosteriyor', strpos($resp['body'], 'Filtrele (1)') !== false);
 } finally {
     $cleanup();
     echo "\nTemizlik tamam (test kullanicisi/base'i silindi).\n";

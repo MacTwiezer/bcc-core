@@ -137,7 +137,7 @@ if ($tableId) {
                     </button>
                 <?php endforeach; ?>
             <?php endif; ?>
-            <div class="if-no-results" id="if-no-results" hidden>No records found</div>
+            <div class="if-no-results" id="if-no-results" hidden>Kayıt bulunamadı</div>
         </div>
     </main>
 
@@ -146,7 +146,7 @@ if ($tableId) {
         <div class="if-detail-content" id="if-detail-content" hidden>
             <h1 class="if-detail-title" id="if-detail-title"></h1>
             <div class="if-detail-meta">
-                <span class="if-detail-meta-label">Last Update</span>
+                <span class="if-detail-meta-label">Son Güncelleme</span>
                 <span id="if-detail-last-update"></span>
             </div>
             <div class="if-detail-fields" id="if-detail-fields"></div>

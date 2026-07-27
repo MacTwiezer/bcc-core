@@ -2,10 +2,9 @@
     'use strict';
 
     // Ortak sürükleme iskeleti — mousedown/mousemove(rAF throttle)/mouseup/mouseleave
-    // deseni grid-freeze-columns.js (sütun dondurma) VE grid-resize-columns.js (sütun
-    // genişletme) TARAFINDAN PAYLAŞILIR, ikinci bir kopya YOK. Yalnızca "sürüklerken ne
-    // hesaplanacak" (onMove) ve "bırakınca ne kaydedilecek" (onEnd) farklı — o kısım
-    // çağıran dosyada kalır, iskelet burada.
+    // deseni grid-freeze-columns.js (sütun dondurma) TARAFINDAN KULLANILIR, ikinci bir
+    // kopya YOK. Yalnızca "sürüklerken ne hesaplanacak" (onMove) ve "bırakınca ne
+    // kaydedilecek" (onEnd) farklı — o kısım çağıran dosyada kalır, iskelet burada.
     //
     // handle: mousedown ile sürüklemeyi başlatan element (bir tutamaç <div>'i).
     // options.onStart(mousedownEvent) - (opsiyonel) sürükleme başlarken bir kez çağrılır

@@ -24,13 +24,13 @@ $accountMenuInitial = bcc_user_initial($accountMenuUser);
              hiçbir şey yapmaz, onaylanmış karar (bkz. PROJE-DURUM.md). Gerçek işlevi
              olan TEK öğe en alttaki "Log out" formudur. -->
         <div class="<?php echo $accountMenuPrefix; ?>-account-section">
-            <button type="button" class="<?php echo $accountMenuPrefix; ?>-account-item">Account</button>
+            <button type="button" class="<?php echo $accountMenuPrefix; ?>-account-item">Hesap</button>
         </div>
 
         <div class="<?php echo $accountMenuPrefix; ?>-account-divider"></div>
 
         <div class="<?php echo $accountMenuPrefix; ?>-account-section">
-            <button type="button" class="<?php echo $accountMenuPrefix; ?>-account-item">Trash</button>
+            <button type="button" class="<?php echo $accountMenuPrefix; ?>-account-item">Çöp kutusu</button>
         </div>
 
         <!-- Trash/Log out arasında bilinçli ikinci ayırıcı: ikisi yan yana/bitişik
@@ -39,7 +39,7 @@ $accountMenuInitial = bcc_user_initial($accountMenuUser);
 
         <form method="post" action="/logout.php" class="<?php echo $accountMenuPrefix; ?>-account-logout">
             <?php echo csrf_field(); ?>
-            <button type="submit">Log out</button>
+            <button type="submit">Çıkış</button>
         </form>
     </div>
 </div>

@@ -51,11 +51,11 @@ if (!empty($teamIds)) {
 $starredBases = $bases;
 
 $homeActiveNav = 'starred';
-$homePageTitle = 'BCC-Core — Starred';
+$homePageTitle = 'BCC-Core — Yıldızlılar';
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
-            <h1>Starred</h1>
+            <h1>Yıldızlılar</h1>
         </div>
 
         <div class="home-toolbar home-toolbar-end">

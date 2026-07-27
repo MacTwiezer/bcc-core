@@ -30,16 +30,16 @@ $timeframeConditions = array(
     'anytime' => null,
 );
 $timeframeButtonLabels = array(
-    'today' => 'Opened today',
-    '7days' => 'Opened in the past 7 days',
-    '30days' => 'Opened in the past 30 days',
-    'anytime' => 'Opened anytime',
+    'today' => 'Bugün açıldı',
+    '7days' => 'Son 7 günde açıldı',
+    '30days' => 'Son 30 günde açıldı',
+    'anytime' => 'Herhangi bir zamanda açıldı',
 );
 $timeframeOptionLabels = array(
-    'today' => 'Today',
-    '7days' => 'In the past 7 days',
-    '30days' => 'In the past 30 days',
-    'anytime' => 'Anytime',
+    'today' => 'Bugün',
+    '7days' => 'Son 7 gün',
+    '30days' => 'Son 30 gün',
+    'anytime' => 'Herhangi bir zaman',
 );
 $timeframe = (isset($_GET['timeframe']) && array_key_exists($_GET['timeframe'], $timeframeConditions)) ? $_GET['timeframe'] : 'anytime';
 
@@ -105,11 +105,11 @@ foreach ($teams as $t) {
 }
 
 $homeActiveNav = 'home';
-$homePageTitle = 'BCC-Core — Home';
+$homePageTitle = 'BCC-Core — Ana Sayfa';
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
-            <h1>Home</h1>
+            <h1>Ana Sayfa</h1>
         </div>
 
         <div class="home-toolbar">

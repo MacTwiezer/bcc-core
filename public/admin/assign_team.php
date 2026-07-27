@@ -66,7 +66,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
                 <select name="role" required>
                     <?php foreach ($roles as $r): ?>
                         <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>
+                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

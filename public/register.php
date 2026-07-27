@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-card-header">
-        <img src="/assets/bcc-logo.svg" alt="BCC-Core">
+        <img src="/assets/logo.png" alt="BCC-Core">
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Kayıt ol</h1>

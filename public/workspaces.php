@@ -84,11 +84,11 @@ if (!empty($teamIds)) {
 }
 
 $homeActiveNav = 'workspaces';
-$homePageTitle = 'BCC-Core — Workspaces';
+$homePageTitle = 'BCC-Core — Çalışma Alanları';
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
-            <h1>Workspaces</h1>
+            <h1>Çalışma Alanları</h1>
         </div>
 
         <?php if (empty($teams)): ?>
@@ -116,13 +116,13 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <div class="ws-detail-header">
                     <h2 class="ws-detail-title"><?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?></h2>
                     <div class="ws-detail-actions">
-                        <button type="button" class="ws-detail-btn" disabled>Create</button>
-                        <button type="button" class="ws-detail-btn" disabled>Share</button>
-                        <button type="button" class="ws-detail-btn" disabled>Settings</button>
+                        <button type="button" class="ws-detail-btn" disabled>Oluştur</button>
+                        <button type="button" class="ws-detail-btn" disabled>Paylaş</button>
+                        <button type="button" class="ws-detail-btn" disabled>Ayarlar</button>
                     </div>
                 </div>
 
-                <h3 class="ws-collab-heading">Collaborators (<?php echo count($collaborators); ?>)</h3>
+                <h3 class="ws-collab-heading">Katılımcılar (<?php echo count($collaborators); ?>)</h3>
                 <div class="ws-collab-list">
                     <?php foreach ($collaborators as $c): ?>
                         <div class="ws-collab-row">
@@ -131,7 +131,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <div class="ws-collab-name"><?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <div class="ws-collab-email"><?php echo htmlspecialchars($c['email'], ENT_QUOTES, 'UTF-8'); ?></div>
                             </div>
-                            <div class="ws-collab-role"><?php echo htmlspecialchars(ucfirst($c['role']), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="ws-collab-role"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>

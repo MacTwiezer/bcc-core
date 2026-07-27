@@ -528,37 +528,6 @@ table.grid tbody tr:hover td.grid-frozen-cell {
 
 .grid-freeze-handle.is-dragging { cursor: grabbing; }
 
-/* Sütun genişletme tutamacı — .grid-freeze-handle ile AYNI görsel dil
-   (kenarda ince şerit, hover/dragging'de mavi çizgi), yalnızca col-resize
-   imleci ve sürükleme davranışı farklı (bkz. grid-resize-columns.js). */
-.grid-resizable-th { position: relative; }
-
-.grid-resize-handle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: -4px;
-    width: 8px;
-    cursor: col-resize;
-    z-index: 10;
-}
-
-.grid-resize-handle::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 3px;
-    width: 2px;
-    background: #2d7ff9;
-    opacity: 0;
-}
-
-.grid-resize-handle:hover::after,
-.grid-resize-handle.is-dragging::after {
-    opacity: 1;
-}
-
 .grid-empty {
     color: #86868b;
     padding: 1rem !important;

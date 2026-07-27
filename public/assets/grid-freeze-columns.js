@@ -37,7 +37,7 @@
             handle.setAttribute('tabindex', '-1');
             var tip = document.createElement('span');
             tip.className = 'gs-kbd-tooltip';
-            tip.textContent = 'Drag to adjust the number of frozen columns';
+            tip.textContent = 'Dondurulan sütun sayısını ayarlamak için sürükleyin';
             handle.appendChild(tip);
         }
 
@@ -135,8 +135,8 @@
         }
 
         // mousedown/mousemove(rAF throttle)/mouseup/mouseleave iskeleti
-        // assets/grid-column-drag.js'de — grid-resize-columns.js ile PAYLAŞILIR,
-        // burada yalnızca "sürüklerken ne hesaplanır / bırakınca ne kaydedilir" var.
+        // assets/grid-column-drag.js'de — burada yalnızca "sürüklerken ne hesaplanır /
+        // bırakınca ne kaydedilir" var.
         window.bcc_bindColumnDrag(handle, {
             onMove: function (clientX) {
                 var newCount = computeFrozenCountForX(clientX);

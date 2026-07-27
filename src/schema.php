@@ -101,9 +101,9 @@ $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
     'single_select' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
     'multiple_select' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
     'number' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
-    'date' => array('asc' => 'Earliest → Latest', 'desc' => 'Latest → Earliest'),
-    'checkbox' => array('asc' => 'Unchecked → Checked', 'desc' => 'Checked → Unchecked'),
-    'time' => array('asc' => 'Earliest → Latest', 'desc' => 'Latest → Earliest'),
+    'date' => array('asc' => 'Erken → Geç', 'desc' => 'Geç → Erken'),
+    'checkbox' => array('asc' => 'İşaretsiz → İşaretli', 'desc' => 'İşaretli → İşaretsiz'),
+    'time' => array('asc' => 'Erken → Geç', 'desc' => 'Geç → Erken'),
     // Ada göre değil, alttaki id'ye göre (görüntü adı değil ham değer sıralanır —
     // diğer tüm tiplerle aynı kural, bkz. bcc_build_grouped_tree segmentasyon notu).
     'user' => array('asc' => 'Küçük → Büyük', 'desc' => 'Büyük → Küçük'),
@@ -135,10 +135,10 @@ $GLOBALS['BCC_RICH_TEXT_FONT_SIZES'] = array(10, 12, 14, 16, 18, 24, 32);
 // Grid satır yüksekliği (Grid araçları Adım 3): whitelist + kaçta kaç satırın
 // gösterileceği (line-clamp) etiketleri. Sıra panel render'ında da kullanılır.
 $GLOBALS['BCC_ROW_HEIGHT_LABELS'] = array(
-    'short' => 'Short',
-    'medium' => 'Medium',
-    'tall' => 'Tall',
-    'extra' => 'Extra Tall',
+    'short' => 'Kısa',
+    'medium' => 'Orta',
+    'tall' => 'Uzun',
+    'extra' => 'Ekstra uzun',
 );
 
 // team_id, bases üzerinden gelir; bir base'in verisine erişen her sayfa bunu kullanmalı.
@@ -210,7 +210,7 @@ function bcc_get_or_create_default_view($tableId)
          WHERE NOT EXISTS (SELECT 1 FROM views WHERE table_id = :table_id)',
         array(
             'table_id' => $tableId,
-            'name' => 'Grid view',
+            'name' => 'Tablo görünümü',
             'view_type' => 'grid',
             'created_by' => $creator ? $creator['id'] : null,
         )
@@ -286,31 +286,6 @@ function bcc_get_frozen_column_count($configJson, $maxAllowed = null)
     }
 
     return $count;
-}
-
-// views.config JSON'ından sütun genişliklerini (field_id => piksel) SAVUNMACI
-// biçimde okur — bcc_get_frozen_column_count() ile AYNI desen. Bozuk/eksik
-// veri sessizce boş diziye düşer (hiçbir sütun özelleştirilmemiş demektir,
-// varsayılan otomatik genişlik kullanılır).
-function bcc_get_column_widths($configJson)
-{
-    if ($configJson === null || $configJson === '') {
-        return array();
-    }
-
-    $decoded = json_decode($configJson, true);
-    if (!is_array($decoded) || !isset($decoded['column_widths']) || !is_array($decoded['column_widths'])) {
-        return array();
-    }
-
-    $widths = array();
-    foreach ($decoded['column_widths'] as $fieldId => $width) {
-        if (ctype_digit((string) $fieldId) && is_int($width) && $width >= 80 && $width <= 800) {
-            $widths[(int) $fieldId] = $width;
-        }
-    }
-
-    return $widths;
 }
 
 // Bir base'e ait tüm tabloları (id + name) position,id sırasına göre döndürür.
@@ -736,7 +711,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             <?php if ($canEdit): ?>
                 <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
                 <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
-                <button type="button" class="grid-row-expand" aria-label="Expand" title="Expand">
+                <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             <?php else: ?>
@@ -1682,14 +1657,14 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
                 <div class="home-base-more-panel">
                     <details class="home-base-more-submenu">
                         <summary class="home-base-more-item home-base-more-item-parent">
-                            <span>Open</span>
+                            <span>Aç</span>
                             <svg class="home-base-more-caret" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5l3.5 3.5-3.5 3.5" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </summary>
                         <div class="home-base-more-submenu-panel">
-                            <button type="button" class="home-base-more-item" data-nav-href="/interface.php?base_id=<?php echo (int) $base['id']; ?>">Interface</button>
+                            <button type="button" class="home-base-more-item" data-nav-href="/interface.php?base_id=<?php echo (int) $base['id']; ?>">Duyuru</button>
                         </div>
                     </details>
-                    <button type="button" class="home-base-more-item" disabled>Duplicate</button>
+                    <button type="button" class="home-base-more-item" disabled>Çoğalt</button>
                 </div>
             </details>
         </div>
@@ -1718,10 +1693,10 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
         <div class="home-list-header" aria-hidden="true">
             <div class="home-list-header-icon"></div>
             <div class="home-list-header-info">
-                <div class="home-list-header-name">Name</div>
-                <div class="home-list-header-meta">Last opened</div>
+                <div class="home-list-header-name">Ad</div>
+                <div class="home-list-header-meta">Son açılma</div>
             </div>
-            <div class="home-list-header-workspace">Workspace</div>
+            <div class="home-list-header-workspace">Çalışma alanı</div>
         </div>
         <?php foreach ($bases as $i => $b):
             $isStarred = isset($starredBaseIds[(int) $b['id']]);

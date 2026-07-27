@@ -81,9 +81,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 .gs-rail-icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
 
-.gs-icon-btn-dark { background: none; }
-.gs-icon-btn-dark:hover { background: #f2f2f4; }
-
 /* Bildirim paneli (home.css'ten aynen gelir) — orada üst bardan AŞAĞI açılır,
    burada dar sol şeridin EN ALTINDA olduğu için varsayılan top/right konumu
    ekranın dışına taşardı; panel bunun yerine zilin sağına, yukarı doğru açılır. */
@@ -205,6 +202,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
 .gs-topbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     height: 52px;
     padding: 0 1rem;
     background: #fff;
@@ -240,32 +238,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.gs-topbar-tabs {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    gap: 0.25rem;
-}
-
-.gs-topbar-tab {
-    background: none;
-    border: none;
-    font: inherit;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-size: 0.88rem;
-    color: #5f6368;
-    cursor: pointer;
-}
-
-.gs-topbar-tab:hover { background: #f2f2f4; }
-
-.gs-topbar-tab.is-active {
-    color: #1d1d1f;
-    font-weight: 600;
-    background: #edf0f3;
 }
 
 .gs-topbar-right {

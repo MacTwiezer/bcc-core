@@ -445,18 +445,8 @@ $gridUser = current_user();
             <span class="gs-base-icon">▤</span>
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
-        <nav class="gs-topbar-tabs">
-            <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>" class="gs-topbar-tab is-active">Data</a>
-            <button type="button" class="gs-topbar-tab">Automations</button>
-            <button type="button" class="gs-topbar-tab">Interfaces</button>
-            <button type="button" class="gs-topbar-tab">Forms</button>
-        </nav>
         <div class="gs-topbar-right">
-            <button type="button" class="gs-rail-icon-btn gs-icon-btn-dark" aria-label="Geçmiş">
-                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 5.5V10l3 2" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.3 6.5A6.5 6.5 0 1110 16.5" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/><path d="M3 3.5v3.3h3.3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <a href="/interface.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-btn-ghost">Launch</a>
-            <button type="button" class="gs-btn-primary">Share</button>
         </div>
     </header>
 

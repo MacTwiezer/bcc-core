@@ -6,35 +6,17 @@
 // kontrolü (kullanıcı dostu mesaj için), ayrıca DB'de zaten uq_users_email
 // UNIQUE kısıtı var (son savunma hattı).
 
-require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../src/api_bootstrap.php';
 
-header('Content-Type: application/json; charset=utf-8');
-
-function json_fail($status, $message)
-{
-    http_response_code($status);
-    echo json_encode(array('ok' => false, 'error' => $message), JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_fail(405, 'Yalnızca POST.');
-}
-
-if (!is_logged_in()) {
-    json_fail(401, 'Giriş gerekli.');
-}
-
-$token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
-if (!csrf_verify($token)) {
-    json_fail(403, 'Geçersiz istek (CSRF). Sayfayı yenileyip tekrar deneyin.');
-}
+api_require_post();
+api_require_login();
+api_require_csrf();
 
 $user = current_user();
 $rawEmail = isset($_POST['email']) ? $_POST['email'] : '';
 $email = trim((string) $rawEmail);
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if (!bcc_is_valid_email($email)) {
     json_fail(422, 'Geçersiz e-posta adresi.');
 }
 if (mb_strlen($email, 'UTF-8') > 190) {

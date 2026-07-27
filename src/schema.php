@@ -564,18 +564,6 @@ function bcc_find_field($fieldId)
     );
 }
 
-function find_field_or_404($fieldId)
-{
-    $field = bcc_find_field($fieldId);
-
-    if (!$field) {
-        http_response_code(404);
-        die('Alan bulunamadı.');
-    }
-
-    return $field;
-}
-
 // Bir cell_values satırından (veya kayıt yoksa null'dan), o hücrenin edit alanına
 // dolduracağımız "ham" değeri çıkarır (input/select doldurmak için).
 function cell_raw_value($fieldType, $cellRow)

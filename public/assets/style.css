@@ -179,15 +179,6 @@ form.stacked button:not(.field-type-option):not(.link-btn) {
     color: #c62828;
 }
 
-.login-box {
-    max-width: 360px;
-    margin: 4rem auto;
-    background: #fff;
-    border: 1px solid #d8d8dc;
-    border-radius: 8px;
-    padding: 2rem;
-}
-
 .pill {
     display: inline-block;
     background: #eee;
@@ -197,12 +188,6 @@ form.stacked button:not(.field-type-option):not(.link-btn) {
 }
 
 /* ---- Grid (Faz 3) ---------------------------------------------------- */
-
-.page-wide {
-    max-width: none;
-    margin: 2rem 1.5rem;
-    padding: 0;
-}
 
 .grid-wrap {
     background: #fff;
@@ -693,19 +678,6 @@ td.cell-flash-ok {
 
 td.cell-flash-error {
     animation: cellFlashError 0.7s ease-out;
-}
-
-.grid-add-record {
-    display: inline-block;
-}
-
-.grid-add-record button {
-    background: #1d1d1f;
-    color: #fff;
-    border: none;
-    padding: 0.5rem 1.25rem;
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 /* ---- Grid araç çubuğu: arama + sıralama (Faz 4) ----------------------- */

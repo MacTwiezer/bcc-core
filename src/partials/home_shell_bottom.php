@@ -5,8 +5,8 @@
     </main>
 </div>
 
-<script src="/assets/account-menu.js" defer></script>
 <script src="/assets/dismissable-panel.js" defer></script>
+<script src="/assets/account-menu.js" defer></script>
 <script src="/assets/home.js" defer></script>
 <script>
 (function () {

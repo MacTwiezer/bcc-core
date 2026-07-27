@@ -9,6 +9,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../src/validation.php';
 
 function prompt($label)
 {
@@ -28,7 +29,7 @@ $fullName = prompt('Ad Soyad: ');
 $password = prompt('Şifre (en az 8 karakter): ');
 $passwordConfirm = prompt('Şifre (tekrar): ');
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if (!bcc_is_valid_email($email)) {
     fwrite(STDERR, "HATA: Geçersiz e-posta.\n");
     exit(1);
 }
@@ -38,7 +39,7 @@ if ($fullName === '') {
     exit(1);
 }
 
-if (strlen($password) < 8) {
+if (!bcc_is_valid_password($password)) {
     fwrite(STDERR, "HATA: Şifre en az 8 karakter olmalı.\n");
     exit(1);
 }

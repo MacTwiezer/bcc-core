@@ -4,29 +4,11 @@
 // ile hep en az bir tane garanti ediyor, silme burada bu garantiyi bozmamalı).
 // Güvenlik deseni view_rename.php ile AYNI.
 
-require __DIR__ . '/../../src/bootstrap.php';
+require __DIR__ . '/../../src/api_bootstrap.php';
 
-header('Content-Type: application/json; charset=utf-8');
-
-function json_fail($status, $message)
-{
-    http_response_code($status);
-    echo json_encode(array('ok' => false, 'error' => $message), JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_fail(405, 'Yalnızca POST.');
-}
-
-if (!is_logged_in()) {
-    json_fail(401, 'Giriş gerekli.');
-}
-
-$token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
-if (!csrf_verify($token)) {
-    json_fail(403, 'Geçersiz istek (CSRF). Sayfayı yenileyip tekrar deneyin.');
-}
+api_require_post();
+api_require_login();
+api_require_csrf();
 
 $viewId = isset($_POST['view_id']) ? (int) $_POST['view_id'] : 0;
 

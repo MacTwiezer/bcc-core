@@ -18,9 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($fullName === '' || $email === '' || $password === '') {
         $error = 'Tüm alanları doldurun.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
-    } elseif (strlen($password) < 8) {
+    } elseif (!bcc_is_valid_password($password)) {
         $error = 'Şifre en az 8 karakter olmalı.';
     } else {
         $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email LIMIT 1', array('email' => $email));

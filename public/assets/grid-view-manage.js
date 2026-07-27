@@ -119,6 +119,28 @@
             });
         }
 
+        // ---- Sol panel: "+ Yeni oluştur..." — view_duplicate.php ile AYNI
+        // ekleme/yönlendirme deseni, yalnızca kaynak view'ı kopyalamak yerine
+        // view_create.php boş bir view oluşturuyor.
+        var createBtn = document.querySelector('.gs-view-drawer-create');
+        if (createBtn) {
+            createBtn.addEventListener('click', function () {
+                var tableId = new URLSearchParams(window.location.search).get('table_id');
+                createBtn.disabled = true;
+                post('/api/view_create.php', { csrf_token: CSRF, table_id: tableId }).then(function (result) {
+                    createBtn.disabled = false;
+                    if (result.httpOk && result.data && result.data.ok) {
+                        window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.view_id);
+                    } else {
+                        window.alert((result.data && result.data.error) || 'Görünüm oluşturulamadı.');
+                    }
+                }).catch(function () {
+                    createBtn.disabled = false;
+                    window.alert('Görünüm oluşturulamadı (bağlantı hatası).');
+                });
+            });
+        }
+
         // ---- Duplicate view ----
         var duplicateItem = document.getElementById('gs-view-duplicate-item');
         if (duplicateItem) {

@@ -934,7 +934,9 @@ $gridUser = current_user();
 
     <div class="gs-body-row">
         <div class="gs-view-drawer" id="gs-view-drawer">
+            <?php if ($canEdit): ?>
             <button type="button" class="gs-view-drawer-create">+ Yeni oluştur...</button>
+            <?php endif; ?>
             <div class="gs-view-drawer-search">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
                 <input type="text" id="gs-view-search-input" placeholder="Görünüm ara" autocomplete="off">

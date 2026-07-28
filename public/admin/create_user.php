@@ -56,10 +56,30 @@ require __DIR__ . '/../../src/partials/top_nav.php';
                 <input type="text" name="full_name" required>
             </label>
             <label>Şifre (en az 8 karakter)
-                <input type="password" name="password" required minlength="8">
+                <div class="input-with-toggle">
+                    <input type="password" name="password" id="create-user-password" required minlength="8">
+                    <button type="button" class="input-toggle-btn" id="create-user-password-toggle" aria-label="Şifreyi göster">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                    </button>
+                </div>
             </label>
-            <button type="submit">Oluştur</button>
+            <div class="form-actions">
+                <button type="submit">Oluştur</button>
+                <a href="/admin/index.php" class="form-cancel-link">İptal</a>
+            </div>
         </form>
     </div>
 </div>
+<script>
+(function () {
+    var toggle = document.getElementById('create-user-password-toggle');
+    var input = document.getElementById('create-user-password');
+    if (!toggle || !input) { return; }
+    toggle.addEventListener('click', function () {
+        var showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        toggle.setAttribute('aria-label', showing ? 'Şifreyi göster' : 'Şifreyi gizle');
+    });
+})();
+</script>
 <?php require __DIR__ . '/../../src/partials/footer.php'; ?>

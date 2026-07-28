@@ -25,6 +25,9 @@ $accountMenuInitial = bcc_user_initial($accountMenuUser);
              gerçek bir sayfaya gidiyor (bkz. public/account.php). -->
         <div class="<?php echo $accountMenuPrefix; ?>-account-section">
             <a href="/account.php" class="<?php echo $accountMenuPrefix; ?>-account-item">Hesap</a>
+            <?php if (is_platform_admin()): ?>
+                <a href="/admin/index.php" class="<?php echo $accountMenuPrefix; ?>-account-item">Admin</a>
+            <?php endif; ?>
         </div>
 
         <div class="<?php echo $accountMenuPrefix; ?>-account-divider"></div>

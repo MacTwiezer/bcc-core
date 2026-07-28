@@ -71,7 +71,10 @@ require __DIR__ . '/../../src/partials/top_nav.php';
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button type="submit">Ata</button>
+            <div class="form-actions">
+                <button type="submit">Ata</button>
+                <a href="/admin/index.php" class="form-cancel-link">İptal</a>
+            </div>
         </form>
     </div>
 </div>

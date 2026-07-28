@@ -42,7 +42,10 @@ require __DIR__ . '/../../src/partials/top_nav.php';
             <label>Ekip adı
                 <input type="text" name="name" required>
             </label>
-            <button type="submit">Oluştur</button>
+            <div class="form-actions">
+                <button type="submit">Oluştur</button>
+                <a href="/admin/index.php" class="form-cancel-link">İptal</a>
+            </div>
         </form>
     </div>
 </div>

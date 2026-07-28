@@ -5,6 +5,9 @@ body {
     color: #1d1d1f;
 }
 
+a { color: #1a56db; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
 .topnav {
     display: flex;
     align-items: center;
@@ -299,10 +302,11 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 
 .card {
     background: #fff;
-    border: 1px solid #d8d8dc;
-    border-radius: 8px;
-    padding: 1rem 1.5rem;
+    border: 1px solid #e6e6e9;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
     margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 h1 { font-size: 1.5rem; }
@@ -324,7 +328,9 @@ td, th {
 
 form.stacked label {
     display: block;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
 form.stacked [hidden] { display: none; }
@@ -334,21 +340,80 @@ form.stacked select,
 form.stacked textarea {
     display: block;
     width: 100%;
-    max-width: 320px;
-    padding: 0.4rem 0.5rem;
-    margin-top: 0.25rem;
+    max-width: 360px;
+    padding: 0.55rem 0.7rem;
+    margin-top: 0.35rem;
     box-sizing: border-box;
     font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #1d1d1f;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-form.stacked button:not(.field-type-option):not(.link-btn) {
-    background: #1d1d1f;
+form.stacked input:focus,
+form.stacked select:focus,
+form.stacked textarea:focus {
+    outline: none;
+    border-color: #1a56db;
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14);
+}
+
+form.stacked .input-with-toggle {
+    position: relative;
+    max-width: 360px;
+}
+
+form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; padding-right: 2.4rem; }
+
+.input-toggle-btn {
+    position: absolute;
+    right: 0.4rem;
+    bottom: 0.32rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    color: #8a8a8e;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-toggle-btn:hover { background: #f2f2f4; color: #5f6368; }
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 0.4rem;
+}
+
+form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn) {
+    background: #1a56db;
     color: #fff;
     border: none;
-    padding: 0.5rem 1.25rem;
-    border-radius: 4px;
+    padding: 0.55rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
     cursor: pointer;
 }
+
+form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn):hover { background: #1746b3; }
+
+.form-cancel-link {
+    color: #5f6368;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.form-cancel-link:hover { color: #1d1d1f; }
 
 .hint {
     color: #6e6e73;

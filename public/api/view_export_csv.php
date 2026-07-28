@@ -60,7 +60,10 @@ $headerRow = array();
 foreach ($visibleFields as $f) {
     $headerRow[] = $f['name'];
 }
-fputcsv($out, $headerRow);
+// Ayırıcı noktalı virgül (;) — Türkçe Windows/Excel'de virgül ondalık
+// ayracı olduğu için varsayılan CSV ayırıcısı olarak "," değil ";" bekleniyor;
+// aksi halde tüm satır tek sütuna düşüyor (ayrılmıyormuş gibi görünüyor).
+fputcsv($out, $headerRow, ';');
 
 foreach ($records as $rec) {
     $cellsForRecord = isset($cellsByRecord[$rec['id']]) ? $cellsByRecord[$rec['id']] : array();
@@ -76,7 +79,7 @@ foreach ($records as $rec) {
         }
         $row[] = $displayText;
     }
-    fputcsv($out, $row);
+    fputcsv($out, $row, ';');
 }
 
 fclose($out);

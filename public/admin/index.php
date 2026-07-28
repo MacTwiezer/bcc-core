@@ -108,7 +108,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
 
         <div class="admin-toolbar">
             <input type="text" class="admin-search-input" id="admin-users-search" placeholder="İsim veya e-posta ara..." autocomplete="off">
-            <a href="/admin/export_users_csv.php" class="admin-csv-link">CSV indir</a>
+            <a href="/admin/export_users_xlsx.php" class="admin-csv-link">Excel indir</a>
         </div>
 
         <form id="admin-users-bulk-form" method="post" action="/admin/index.php">
@@ -211,7 +211,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
         </div>
 
         <div class="admin-toolbar admin-toolbar-end">
-            <a href="/admin/export_team_members_csv.php" class="admin-csv-link">CSV indir</a>
+            <a href="/admin/export_team_members_xlsx.php" class="admin-csv-link">Excel indir</a>
         </div>
 
         <?php

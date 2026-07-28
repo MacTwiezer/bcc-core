@@ -167,6 +167,130 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
     border-top: 1px solid #f0f0f2;
 }
 
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+}
+
+.admin-toolbar-end { justify-content: flex-end; margin-bottom: 0.75rem; }
+
+.admin-search-input {
+    flex: 1;
+    max-width: 280px;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.admin-csv-link {
+    color: #1a56db;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.admin-csv-link:hover { text-decoration: underline; }
+
+table.admin-table th.admin-checkbox-col,
+table.admin-table td.admin-checkbox-cell { width: 30px; padding-right: 0; }
+
+table.admin-table th.admin-actions-col,
+table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
+
+.admin-row-checkbox,
+.admin-select-all { cursor: pointer; }
+
+/* "..." satır menüsü ve "İşlemler" bulk menüsü — home-base-more-menu ile
+   aynı <details>+dışarı-tık desenini kullanır (bkz. admin.js). */
+.admin-menu { position: relative; display: inline-block; }
+.admin-menu > summary { list-style: none; }
+.admin-menu > summary::-webkit-details-marker { display: none; }
+
+.admin-row-menu-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.admin-row-menu-btn:hover { background: #f2f2f4; }
+
+.admin-menu-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 190px;
+    background: #fff;
+    border: 1px solid #e6e6e9;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.35rem;
+    z-index: 30;
+}
+
+.admin-menu-panel form { display: block; }
+
+.admin-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: #1d1d1f;
+    cursor: pointer;
+}
+
+.admin-menu-item:hover { background: #f2f2f4; }
+.admin-menu-item:disabled { color: #b8b8bc; cursor: not-allowed; }
+.admin-menu-item:disabled:hover { background: none; }
+.admin-menu-item-danger { color: #c62828; }
+
+.admin-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.6rem 0 0.9rem;
+}
+
+.admin-bulk-trigger {
+    background: #1a56db;
+    color: #fff;
+    border: none;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.admin-bulk-trigger:hover { background: #1746b3; }
+
+.admin-bulk-trigger-muted {
+    background: #eceef1;
+    color: #1d1d1f;
+}
+
+.admin-bulk-trigger-muted:hover { background: #dfe1e5; }
+
+details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none; }
+
 .page {
     max-width: 900px;
     margin: 2rem auto;

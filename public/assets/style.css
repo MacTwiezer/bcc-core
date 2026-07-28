@@ -8,21 +8,47 @@ body {
 .topnav {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    background: #1d1d1f;
-    color: #fff;
-    padding: 0.75rem 1.5rem;
+    gap: 0.25rem;
+    background: #fff;
+    color: #1d1d1f;
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid #e6e6e9;
 }
 
 .topnav a {
-    color: #fff;
+    color: #1d1d1f;
     text-decoration: none;
     font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
 }
+
+.topnav a:hover { background: #f2f2f4; }
+
+.topnav a:first-child { margin-right: 0.5rem; }
 
 .topnav .navuser {
     margin-left: auto;
-    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #5f6368;
+}
+
+.topnav .navuser-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .navlogout {
@@ -31,11 +57,114 @@ body {
 
 .navlogout button {
     background: none;
-    border: 1px solid #666;
-    color: #fff;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
+    border: 1px solid #d8d8dc;
+    color: #5f6368;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.navlogout button:hover { background: #f2f2f4; border-color: #c8c8cc; }
+
+/* ---------- Admin paneli (Airtable benzeri liste/pill görünümü) ---------- */
+
+.admin-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.admin-section-header h2 { margin: 0; }
+
+.admin-section-count { color: #8a8a8e; font-size: 0.85rem; font-weight: 500; }
+
+table.admin-table { border-collapse: collapse; width: 100%; }
+
+table.admin-table thead th {
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #8a8a8e;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid #e6e6e9;
+}
+
+table.admin-table tbody td {
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid #f0f0f2;
+    vertical-align: middle;
+}
+
+table.admin-table tbody tr:last-child td { border-bottom: none; }
+
+table.admin-table tbody tr:hover td { background: #f7f8fa; }
+
+.admin-user-cell { display: flex; align-items: center; gap: 0.65rem; }
+
+.admin-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2d7ff9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.admin-user-name { font-weight: 600; font-size: 0.9rem; }
+.admin-user-email { font-size: 0.8rem; color: #8a8a8e; }
+.admin-muted { color: #8a8a8e; font-size: 0.85rem; }
+
+.admin-pill {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-pill-blue   { background: #e8f0fe; color: #1a56db; }
+.admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
+.admin-pill-gray   { background: #eceef1; color: #5f6368; }
+.admin-pill-amber  { background: #fef3e2; color: #b45309; }
+.admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
+
+.admin-team-block { margin-bottom: 1.5rem; }
+.admin-team-block:last-child { margin-bottom: 0; }
+
+.admin-team-header { margin-bottom: 0.5rem; }
+.admin-team-header h3 { margin: 0; font-size: 0.95rem; }
+
+.admin-empty { color: #8a8a8e; font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
+
+.admin-add-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #1a56db;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    padding: 0.4rem 0;
+}
+
+.admin-add-link:hover { text-decoration: underline; }
+
+.admin-actions-row {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f0f0f2;
 }
 
 .page {

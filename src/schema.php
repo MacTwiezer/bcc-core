@@ -13,11 +13,17 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     'multiple_select' => 'Çoklu seçim',
     'time' => 'Saat',
     'user' => 'Kullanıcı',
+    'attachment' => 'Dosya eki',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
 
 // Bir alan tipinin değeri cell_values'ta hangi kolonda saklanır (Faz 3).
+// 'attachment' BİLEREK burada YOK — bir hücrede birden fazla dosya olabildiği
+// için değeri cell_values'ta değil, ayrı bir 'attachments' tablosunda
+// (record_id/field_id doğrudan kolon) saklanıyor. Bu yüzden attachment alanları
+// sort/filter/group'a hiç girmez (parse_grid_sort_rules/parse_grid_group_rules
+// bu haritada anahtarı olmayan tipleri savunmacı biçimde atlar).
 $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     'single_line_text' => 'value_text',
     'long_text' => 'value_text',
@@ -46,6 +52,7 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'multiple_select' => '☰',
     'time' => '🕐',
     'user' => '@',
+    'attachment' => '📎',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -564,6 +571,76 @@ function bcc_find_field($fieldId)
     );
 }
 
+// bcc_find_field() ile AYNI amaç, 'attachment' alan tipi için: bir ek dosyanın
+// (attachments.id) hangi alana/tabloya/ekibe ait olduğunu tek sorguda getirir —
+// attachment_upload/delete/download.php'nin KVKK (require_team_access/require_role)
+// kontrolü bu zincire dayanır. Bulunamazsa false döner (bcc_fetch_one ile aynı).
+function bcc_find_attachment($attachmentId)
+{
+    return bcc_fetch_one(
+        'SELECT a.id, a.field_id, a.record_id, a.original_name, a.stored_name, a.mime_type, a.file_size,
+                f.table_id, tm.base_id, b.team_id
+         FROM attachments a
+         INNER JOIN fields f ON f.id = a.field_id
+         INNER JOIN tables_meta tm ON tm.id = f.table_id
+         INNER JOIN bases b ON b.id = tm.base_id
+         WHERE a.id = :id LIMIT 1',
+        array('id' => $attachmentId)
+    );
+}
+
+// Ek dosyaların diskteki gerçek yolu — storage/attachments/, public/ DIŞINDA
+// (bkz. attachment_download.php yorumu: tek erişim yolu KVKK kontrollü uç nokta).
+function bcc_attachment_storage_path($storedName)
+{
+    return __DIR__ . '/../storage/attachments/' . $storedName;
+}
+
+// Bir kayıt/alan SİLİNMEDEN ÖNCE çağrılmalı: attachments satırları ON DELETE
+// CASCADE ile otomatik silinir ama diskteki fiziksel dosyalar silinmez — bu
+// yüzden stored_name'ler DB satırı hâlâ varken (silme sorgusundan ÖNCE) okunup
+// diskten temizlenir. DB satırının kendisini SİLMEZ (cascade zaten yapıyor).
+function bcc_delete_attachment_files_by_record($recordId)
+{
+    $rows = bcc_fetch_all('SELECT stored_name FROM attachments WHERE record_id = :id', array('id' => $recordId));
+    foreach ($rows as $row) {
+        $path = bcc_attachment_storage_path($row['stored_name']);
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
+function bcc_delete_attachment_files_by_field($fieldId)
+{
+    $rows = bcc_fetch_all('SELECT stored_name FROM attachments WHERE field_id = :id', array('id' => $fieldId));
+    foreach ($rows as $row) {
+        $path = bcc_attachment_storage_path($row['stored_name']);
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
+// Dosya adı/boyutu kısaltılmış küçük rozet metni (mime türüne göre) — grid,
+// satır genişletme paneli VE interface.php (Duyuru) AYNI fonksiyonu paylaşır.
+// Resimler zaten <img> ile küçük resim olarak gösterildiği için buraya hiç
+// düşmez (bkz. bcc_render_grid_data_row) — yalnızca doküman tipleri için.
+function bcc_attachment_type_badge($mimeType)
+{
+    $map = array(
+        'application/pdf' => 'PDF',
+        'application/msword' => 'DOC',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'DOC',
+        'application/vnd.ms-excel' => 'XLS',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'XLS',
+        'application/vnd.ms-powerpoint' => 'PPT',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'PPT',
+    );
+
+    return isset($map[$mimeType]) ? $map[$mimeType] : 'DOSYA';
+}
+
 // Bir cell_values satırından (veya kayıt yoksa null'dan), o hücrenin edit alanına
 // dolduracağımız "ham" değeri çıkarır (input/select doldurmak için).
 function cell_raw_value($fieldType, $cellRow)
@@ -657,7 +734,7 @@ function bcc_user_choices_from_map($usersById)
 // önce canlı <td>'yi arar, yoksa (gizli alan) bu JSON'a düşer — ikinci bir
 // AJAX/sorgu YOK. $allFields verilmezse (eski çağıranlarla uyumluluk)
 // $visibleFields'e düşer.
-function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById)
+function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord = array())
 {
     $out = array();
     foreach ($allFields as $f) {
@@ -672,19 +749,27 @@ function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $u
             $choices = array();
         }
 
+        // 'attachment': "raw" tek bir değer değil (birden fazla dosya olabilir) —
+        // panel (grid-row-detail.js) bu alanı 'files' üzerinden, ayrı bir
+        // yükle/sil arayüzüyle yönetir, buildInput()'a hiç girmez.
+        $files = ($f['field_type'] === 'attachment' && isset($attachmentsByRecord[$record['id']][$f['id']]))
+            ? $attachmentsByRecord[$record['id']][$f['id']]
+            : null;
+
         $out[] = array(
             'id' => (int) $f['id'],
             'name' => $f['name'],
             'field_type' => $f['field_type'],
             'options' => $choices ? $choices : null,
             'raw' => $rawValue,
+            'files' => $files,
         );
     }
 
     return json_encode($out, JSON_UNESCAPED_UNICODE);
 }
 
-function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null, $usersById = array(), $allFields = null)
+function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $groupPath = null, $usersById = array(), $allFields = null, $attachmentsByRecord = array())
 {
     if ($allFields === null) {
         $allFields = $visibleFields;
@@ -693,7 +778,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
     <tr
         data-record-id="<?php echo (int) $record['id']; ?>"
         <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>
-        <?php if ($canEdit): ?>data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+        <?php if ($canEdit): ?>data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
     >
         <td class="grid-rownum">
             <?php if ($canEdit): ?>
@@ -723,6 +808,13 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             $choiceColorMap = $isSelectType
                 ? bcc_build_choice_color_map($choices, select_choice_colors_from_options($f['options']))
                 : array();
+            // 'attachment': değer cell_values'ta değil, attachmentsByRecord'da
+            // (bkz. bcc_fetch_attachments_by_record) — data-value/data-options
+            // burada anlamsız, kendi data-attachments JSON'unu taşır.
+            $isAttachmentType = ($f['field_type'] === 'attachment');
+            $attachmentFiles = $isAttachmentType && isset($attachmentsByRecord[$record['id']][$f['id']])
+                ? $attachmentsByRecord[$record['id']][$f['id']]
+                : array();
         ?>
             <td
                 class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
@@ -730,6 +822,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                 data-field-type="<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"
                 data-value="<?php echo htmlspecialchars($rawValue, ENT_QUOTES, 'UTF-8'); ?>"
                 <?php if ($choices): ?>data-options="<?php echo htmlspecialchars(json_encode($choices, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+                <?php if ($isAttachmentType): ?>data-attachments="<?php echo htmlspecialchars(json_encode($attachmentFiles, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
             >
                 <?php if ($f['field_type'] === 'checkbox'): ?>
                     <input type="checkbox" class="cell-checkbox" <?php echo $rawValue === '1' ? 'checked' : ''; ?> <?php echo $canEdit ? '' : 'disabled'; ?>>
@@ -749,6 +842,26 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                        ile temizlenmiş HTML — htmlspecialchars UYGULANMAZ (uygulansaydı <b>
                        literal &lt;b&gt; olarak görünürdü). Tek istisna, bkz. bcc_sanitize_rich_text(). */ ?>
                     <div class="cell-view rich-text-view"><?php echo $displayText; ?></div>
+                <?php elseif ($isAttachmentType): ?>
+                    <div class="cell-view attachment-cell-view">
+                        <?php foreach ($attachmentFiles as $file):
+                            $isImage = strpos($file['mime'], 'image/') === 0;
+                        ?>
+                            <a
+                                class="attachment-chip"
+                                href="/api/attachment_download.php?id=<?php echo (int) $file['id']; ?>"
+                                target="_blank" rel="noopener noreferrer"
+                                title="<?php echo htmlspecialchars($file['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+                                <?php if ($isImage): ?>
+                                    <img src="/api/attachment_download.php?id=<?php echo (int) $file['id']; ?>" class="attachment-thumb" alt="">
+                                <?php else: ?>
+                                    <span class="attachment-badge"><?php echo htmlspecialchars(bcc_attachment_type_badge($file['mime']), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="attachment-name"><?php echo htmlspecialchars($file['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 <?php else: ?>
                     <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
@@ -1080,9 +1193,17 @@ function parse_grid_sort_rules($params, $fieldsById)
             continue;
         }
 
+        $fieldType = $fieldsById[$fieldId]['field_type'];
+
+        // 'attachment' gibi cell_values'ta karşılığı olmayan tipler (bkz.
+        // BCC_FIELD_VALUE_COLUMN yorumu) sıralanamaz — URL'e elle yazılsa bile
+        // sessizce atlanır (boş SQL kolon adına düşüp sorgu hatası vermez).
+        if (!isset($GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType])) {
+            continue;
+        }
+
         $dirKey = 'sort_dir_' . $i;
         $dir = (isset($params[$dirKey]) && $params[$dirKey] === 'desc') ? 'DESC' : 'ASC';
-        $fieldType = $fieldsById[$fieldId]['field_type'];
 
         $rules[] = array(
             'slot' => $i,
@@ -1159,8 +1280,15 @@ function parse_grid_group_rules($params, $fieldsById)
             continue;
         }
 
-        $dir = (isset($params[$source['dir_key']]) && $params[$source['dir_key']] === 'desc') ? 'DESC' : 'ASC';
         $fieldType = $fieldsById[$fieldId]['field_type'];
+
+        // parse_grid_sort_rules'daki AYNI savunma — 'attachment' gibi cell_values
+        // karşılığı olmayan tipler gruplanamaz (bkz. BCC_FIELD_VALUE_COLUMN yorumu).
+        if (!isset($GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType])) {
+            continue;
+        }
+
+        $dir = (isset($params[$source['dir_key']]) && $params[$source['dir_key']] === 'desc') ? 'DESC' : 'ASC';
 
         $rules[] = array(
             'slot' => count($rules) + 1,
@@ -1735,6 +1863,37 @@ function bcc_fetch_cells_by_record($recordIds)
     }
 
     return $cellsByRecord;
+}
+
+// bcc_fetch_cells_by_record() ile AYNI toplu-sorgu deseni ('attachment' alanları
+// cell_values'ta değil, ayrı attachments tablosunda yaşadığı için paralel bir
+// fonksiyon). Dönüş: $byRecord[record_id][field_id] = [{id,name,mime,size}, ...]
+// — grid.php/record_add.php/view_export_csv.php/interface.php hepsi bunu çağırır,
+// paralel bir sorgu yazılmaz.
+function bcc_fetch_attachments_by_record($recordIds)
+{
+    if (empty($recordIds)) {
+        return array();
+    }
+
+    $placeholders = implode(',', array_fill(0, count($recordIds), '?'));
+    $rows = bcc_fetch_all(
+        "SELECT id, record_id, field_id, original_name, mime_type, file_size
+         FROM attachments WHERE record_id IN ($placeholders) ORDER BY id",
+        $recordIds
+    );
+
+    $byRecord = array();
+    foreach ($rows as $row) {
+        $byRecord[$row['record_id']][$row['field_id']][] = array(
+            'id' => (int) $row['id'],
+            'name' => $row['original_name'],
+            'mime' => $row['mime_type'],
+            'size' => (int) $row['file_size'],
+        );
+    }
+
+    return $byRecord;
 }
 
 // "Last Update" / "en yeni en üstte" sıralaması records.updated_at'e DEĞİL

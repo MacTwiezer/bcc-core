@@ -157,6 +157,30 @@ CREATE TABLE IF NOT EXISTS cell_values (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- attachments — "attachment" alan tipinin dosyaları (bir hücrede birden fazla
+-- dosya olabilir, bu yüzden cell_values'a değil buraya — record_id/field_id
+-- doğrudan kolon). stored_name diskteki rastgele dosya adı (storage/attachments/,
+-- public/ DIŞINDA); indirme yalnızca attachment_download.php üzerinden, KVKK
+-- kontrolünden geçerek.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS attachments (
+    id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    field_id       INT UNSIGNED NOT NULL,
+    record_id      INT UNSIGNED NOT NULL,
+    original_name  VARCHAR(255) NOT NULL,
+    stored_name    VARCHAR(64) NOT NULL,
+    mime_type      VARCHAR(150) NOT NULL,
+    file_size      INT UNSIGNED NOT NULL,
+    uploaded_by    INT UNSIGNED DEFAULT NULL,
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_attachments_record_field (record_id, field_id),
+    CONSTRAINT fk_attachments_record FOREIGN KEY (record_id) REFERENCES records(id) ON DELETE CASCADE,
+    CONSTRAINT fk_attachments_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE,
+    CONSTRAINT fk_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- views — görünümler (grid ve "interface"/duyuru arayüzü ayarları)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS views (

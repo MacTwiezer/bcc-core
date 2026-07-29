@@ -34,6 +34,7 @@ $primaryFieldId = null;
 $summaryField = null;
 $records = array();
 $cellsByRecord = array();
+$attachmentsByRecord = array();
 $usersById = array();
 
 if ($tableId) {
@@ -49,6 +50,7 @@ if ($tableId) {
 
     $records = bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, null);
     $cellsByRecord = bcc_fetch_cells_by_record(array_column($records, 'id'));
+    $attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 }
 
 ?>
@@ -58,6 +60,10 @@ if ($tableId) {
 <meta charset="utf-8">
 <title>BCC-Core — <?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></title>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+<!-- Dosya eki (attachment) rozet/küçük resim stilleri (.attachment-*) style.css'te
+     tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
+     kopya YAZILMADI. -->
+<link rel="stylesheet" href="/assets/style.css">
 <link rel="stylesheet" href="/assets/interface.css?v=<?php echo (int) @filemtime(__DIR__ . '/assets/interface.css'); ?>">
 <!-- Bildirim paneli + hesap menüsü partial'ları home.css'teki .home-notif-*/
      paylaşılan sınıfları kullanıyor (bkz. src/partials/notifications_panel.php
@@ -163,11 +169,28 @@ if ($tableId) {
                         if ((int) $f['id'] === $primaryFieldId) {
                             continue;
                         }
+                        // 'attachment': değer cell_values'ta değil — dosya listesi
+                        // 'files' olarak ayrıca taşınır, interface.js küçük
+                        // resim/rozet + indirme linki olarak render eder (grid.php'nin
+                        // salt-okunur karşılığı, yükleme/silme YOK).
+                        if ($f['field_type'] === 'attachment') {
+                            $files = isset($attachmentsByRecord[$recordId][$f['id']]) ? $attachmentsByRecord[$recordId][$f['id']] : array();
+                            $detailFields[] = array(
+                                'label' => $f['name'],
+                                'value' => '',
+                                'is_rich' => false,
+                                'field_type' => 'attachment',
+                                'files' => $files,
+                            );
+                            continue;
+                        }
                         $fCell = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
                         $detailFields[] = array(
                             'label' => $f['name'],
                             'value' => cell_display_text($f['field_type'], $fCell, $usersById),
                             'is_rich' => $f['field_type'] === 'long_text',
+                            'field_type' => $f['field_type'],
+                            'files' => null,
                         );
                     }
                 ?>

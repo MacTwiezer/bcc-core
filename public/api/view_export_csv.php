@@ -41,6 +41,7 @@ list($recordsSql, $recordsParams) = bcc_build_grid_records_query($table['id'], a
 $records = bcc_fetch_all($recordsSql, $recordsParams);
 
 $cellsByRecord = bcc_fetch_cells_by_record(array_column($records, 'id'));
+$attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 $usersById = bcc_team_users_by_id($table['team_id']);
 
 $fileName = preg_replace('/[^a-zA-Z0-9_\-]+/', '_', $table['name']);
@@ -69,6 +70,14 @@ foreach ($records as $rec) {
     $cellsForRecord = isset($cellsByRecord[$rec['id']]) ? $cellsByRecord[$rec['id']] : array();
     $row = array();
     foreach ($visibleFields as $f) {
+        // 'attachment': değer cell_values'ta değil — dosya adları virgülle
+        // birleştirilir (multiple_select'in zaten yaptığı implode(', ', ...) ile AYNI).
+        if ($f['field_type'] === 'attachment') {
+            $files = isset($attachmentsByRecord[$rec['id']][$f['id']]) ? $attachmentsByRecord[$rec['id']][$f['id']] : array();
+            $row[] = implode(', ', array_column($files, 'name'));
+            continue;
+        }
+
         $cellRow = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
         $displayText = cell_display_text($f['field_type'], $cellRow, $usersById);
         // long_text'in salt-okunur çıktısı sanitize edilmiş HTML — CSV düz metin

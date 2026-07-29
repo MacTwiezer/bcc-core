@@ -157,24 +157,6 @@ CREATE TABLE IF NOT EXISTS cell_values (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
--- record_links — tablolar arası bağlantı (link tipi alan)
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS record_links (
-    id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    field_id           INT UNSIGNED NOT NULL,
-    source_record_id   INT UNSIGNED NOT NULL,
-    target_record_id   INT UNSIGNED NOT NULL,
-    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_record_links (field_id, source_record_id, target_record_id),
-    KEY idx_record_links_source (source_record_id),
-    KEY idx_record_links_target (target_record_id),
-    CONSTRAINT fk_record_links_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE,
-    CONSTRAINT fk_record_links_source FOREIGN KEY (source_record_id) REFERENCES records(id) ON DELETE CASCADE,
-    CONSTRAINT fk_record_links_target FOREIGN KEY (target_record_id) REFERENCES records(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------------------------------------
 -- views — görünümler (grid ve "interface"/duyuru arayüzü ayarları)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS views (
@@ -208,27 +190,6 @@ CREATE TABLE IF NOT EXISTS user_favorite_views (
     KEY idx_user_favorite_views_user (user_id),
     CONSTRAINT fk_user_favorite_views_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_favorite_views_view FOREIGN KEY (view_id) REFERENCES views(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------------------------------------
--- attachments — dosya ekleri
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS attachments (
-    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    record_id     INT UNSIGNED NOT NULL,
-    field_id      INT UNSIGNED NOT NULL,
-    file_name     VARCHAR(255) NOT NULL,
-    stored_path   VARCHAR(500) NOT NULL,
-    mime_type     VARCHAR(150) DEFAULT NULL,
-    file_size     INT UNSIGNED DEFAULT NULL,
-    uploaded_by   INT UNSIGNED DEFAULT NULL,
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_attachments_record (record_id),
-    KEY idx_attachments_field (field_id),
-    CONSTRAINT fk_attachments_record FOREIGN KEY (record_id) REFERENCES records(id) ON DELETE CASCADE,
-    CONSTRAINT fk_attachments_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE,
-    CONSTRAINT fk_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

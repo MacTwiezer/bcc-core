@@ -364,7 +364,7 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
 // padding'iyle birebir aynıdır — tek seviyeli gruplama bu yüzden görsel olarak
 // bugünküyle birebir aynı kalır. $rowNum referansla geçirilir ki satır numarası
 // tüm ağaç boyunca (gruplar VE seviyeler arasında) kesintisiz artsın.
-function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById = array())
+function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById = array(), $allFields = null)
 {
     $paddingLeftRem = 0.9 + $node['level'] * 1.1;
     ?>
@@ -384,11 +384,11 @@ function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields
     if ($node['is_leaf']) {
         foreach ($node['records'] as $record) {
             $rowNum++;
-            bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $node['path'], $usersById, $fields);
+            bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $node['path'], $usersById, $allFields);
         }
     } else {
         foreach ($node['children'] as $child) {
-            bcc_render_group_node($child, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById);
+            bcc_render_group_node($child, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById, $allFields);
         }
     }
 }
@@ -1037,7 +1037,7 @@ $gridUser = current_user();
                                 $rowNum = 0;
                                 $groupColspan = count($visibleFields) + 1 + ($canEdit ? 1 : 0);
                                 foreach ($groupTree as $topNode) {
-                                    bcc_render_group_node($topNode, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $groupColspan, $usersById);
+                                    bcc_render_group_node($topNode, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $groupColspan, $usersById, $fields);
                                 }
                             ?>
                         <?php else: ?>

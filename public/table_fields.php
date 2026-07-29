@@ -94,6 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'delete_field') {
+            // DB satırı (ve attachments'taki karşılıkları) CASCADE ile siliniyor ama
+            // diskteki fiziksel dosyalar otomatik silinmez — bu yüzden DELETE'ten ÖNCE.
+            bcc_delete_attachment_files_by_field($field['id']);
             bcc_execute('DELETE FROM fields WHERE id = :id', array('id' => $field['id']));
             log_audit('field.delete', 'field', $field['id'], array('name' => $field['name']), $table['team_id']);
             $success = 'Alan silindi: ' . $field['name'];

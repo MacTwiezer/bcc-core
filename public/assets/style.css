@@ -955,6 +955,139 @@ td.editable.richtext-editing {
     color: #1a73e8;
 }
 
+/* Dosya eki (attachment) hücresi: küçük resim (image/*) ya da rozet+ad "chip"i,
+   birden fazla dosya yan yana. .cell-view'ın nowrap/ellipsis'ini flex ile geçersiz
+   kılar (metin değil, dosya kutucukları). */
+
+.attachment-cell-view {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    background: #f2f2f4;
+    color: #1d1d1f;
+    text-decoration: none;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.attachment-chip:hover {
+    background: #e6e6ea;
+}
+
+.attachment-thumb {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+}
+
+.attachment-badge {
+    display: inline-block;
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.attachment-name {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Dosya eki yükle/sil popover'ı — .richtext-popover ile AYNI görsel dil. */
+
+td.editable.attachment-editing {
+    position: relative;
+    box-shadow: none;
+}
+
+.attachment-popover {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 15;
+    background: #fff;
+    border: 1px solid #d8d8dc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    width: 260px;
+    padding: 0.6rem;
+    cursor: default;
+    white-space: normal;
+}
+
+.attachment-popover-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 12rem;
+    overflow-y: auto;
+    margin-bottom: 0.5rem;
+}
+
+.attachment-popover-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.attachment-popover-row .attachment-chip {
+    flex: 1;
+    min-width: 0;
+}
+
+.attachment-popover-row .attachment-name {
+    max-width: 140px;
+}
+
+.attachment-remove-btn {
+    border: none;
+    background: none;
+    color: #c62828;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.1rem 0.3rem;
+    flex-shrink: 0;
+}
+
+.attachment-remove-btn:hover {
+    background: #fbdbd7;
+    border-radius: 4px;
+}
+
+.attachment-file-input {
+    font-size: 0.8rem;
+    width: 100%;
+}
+
+.attachment-popover-close {
+    margin-top: 0.5rem;
+}
+
+/* Satır genişletme panelindeki (grid-row-detail.js) attachment widget'ı — popover
+   çerçevesi olmadan, panelin normal akışında. */
+
+.attachment-manager .attachment-popover-list {
+    max-height: 10rem;
+}
+
 .cell-input {
     width: 100%;
     min-width: 140px;

@@ -76,6 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die('Bu kayıt bu tabloya ait değil.');
         }
 
+        // DB satırı (ve attachments'taki karşılıkları) CASCADE ile siliniyor ama
+        // diskteki fiziksel dosyalar otomatik silinmez — bu yüzden DELETE'ten ÖNCE.
+        bcc_delete_attachment_files_by_record($recordId);
         bcc_execute('DELETE FROM records WHERE id = :id', array(':id' => $recordId));
         log_audit('record.delete', 'record', $recordId, array('table_id' => $table['id']), $table['team_id']);
         $success = 'Kayıt silindi.';
@@ -254,6 +257,10 @@ if (!empty($records) && !empty($fields)) {
     }
 }
 
+// 'attachment' alanları cell_values'ta değil, ayrı bir tabloda yaşıyor — aynı
+// toplu-sorgu deseni (bcc_fetch_cells_by_record ile paralel).
+$attachmentsByRecord = !empty($records) ? bcc_fetch_attachments_by_record(array_column($records, 'id')) : array();
+
 $typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
 $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 
@@ -364,7 +371,7 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
 // padding'iyle birebir aynıdır — tek seviyeli gruplama bu yüzden görsel olarak
 // bugünküyle birebir aynı kalır. $rowNum referansla geçirilir ki satır numarası
 // tüm ağaç boyunca (gruplar VE seviyeler arasında) kesintisiz artsın.
-function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById = array(), $allFields = null)
+function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById = array(), $allFields = null, $attachmentsByRecord = array())
 {
     $paddingLeftRem = 0.9 + $node['level'] * 1.1;
     ?>
@@ -384,11 +391,11 @@ function bcc_render_group_node($node, $groupFieldNames, &$rowNum, $visibleFields
     if ($node['is_leaf']) {
         foreach ($node['records'] as $record) {
             $rowNum++;
-            bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $node['path'], $usersById, $allFields);
+            bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $node['path'], $usersById, $allFields, $attachmentsByRecord);
         }
     } else {
         foreach ($node['children'] as $child) {
-            bcc_render_group_node($child, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById, $allFields);
+            bcc_render_group_node($child, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $tableId, $stateQueryString, $colspan, $usersById, $allFields, $attachmentsByRecord);
         }
     }
 }
@@ -688,7 +695,11 @@ $gridUser = current_user();
                         <div class="filter-row">
                             <select name="filter_field_<?php echo $slot; ?>" class="filter-field-select">
                                 <option value="">— yok —</option>
-                                <?php foreach ($fields as $f): ?>
+                                <?php foreach ($fields as $f):
+                                    if ($f['field_type'] === 'attachment') {
+                                        continue; // dosya eki alanları filtrelenemez (cell_values karşılığı yok)
+                                    }
+                                ?>
                                     <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     </option>
@@ -754,7 +765,11 @@ $gridUser = current_user();
                     <div class="group-form" id="group-form-empty">
                         <input type="text" class="hide-fields-search" placeholder="Alan ara" data-group-search>
                         <div class="group-field-list">
-                            <?php foreach ($fields as $f): ?>
+                            <?php foreach ($fields as $f):
+                                if ($f['field_type'] === 'attachment') {
+                                    continue; // dosya eki alanlarına göre gruplanamaz (cell_values karşılığı yok)
+                                }
+                            ?>
                                 <a
                                     class="group-field-option"
                                     href="/grid.php?<?php echo htmlspecialchars(http_build_query($groupFieldLinkBase + array('group_field_1' => $f['id'], 'group_dir_1' => 'asc')), ENT_QUOTES, 'UTF-8'); ?>"
@@ -796,7 +811,11 @@ $gridUser = current_user();
                                 <div class="group-level-row" data-level="<?php echo $slot; ?>" <?php echo (!$isActive && $slot > 1) ? 'hidden' : ''; ?>>
                                     <select name="group_field_<?php echo $slot; ?>">
                                         <option value="">— seç —</option>
-                                        <?php foreach ($fields as $f): ?>
+                                        <?php foreach ($fields as $f):
+                                            if ($f['field_type'] === 'attachment') {
+                                                continue;
+                                            }
+                                        ?>
                                             <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                             </option>
@@ -849,7 +868,11 @@ $gridUser = current_user();
                         <div class="sort-row">
                             <select name="sort_field_<?php echo $slot; ?>">
                                 <option value="">— yok —</option>
-                                <?php foreach ($fields as $f): ?>
+                                <?php foreach ($fields as $f):
+                                    if ($f['field_type'] === 'attachment') {
+                                        continue; // dosya eki alanlarına göre sıralanamaz (cell_values karşılığı yok)
+                                    }
+                                ?>
                                     <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     </option>
@@ -1037,12 +1060,12 @@ $gridUser = current_user();
                                 $rowNum = 0;
                                 $groupColspan = count($visibleFields) + 1 + ($canEdit ? 1 : 0);
                                 foreach ($groupTree as $topNode) {
-                                    bcc_render_group_node($topNode, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $groupColspan, $usersById, $fields);
+                                    bcc_render_group_node($topNode, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $groupColspan, $usersById, $fields, $attachmentsByRecord);
                                 }
                             ?>
                         <?php else: ?>
                             <?php foreach ($records as $i => $record):
-                                bcc_render_grid_data_row($record, $i + 1, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, null, $usersById, $fields);
+                                bcc_render_grid_data_row($record, $i + 1, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, null, $usersById, $fields, $attachmentsByRecord);
                             endforeach; ?>
                         <?php endif; ?>
                         <?php if ($canEdit): ?>

@@ -98,7 +98,9 @@ try {
 $usersById = bcc_team_users_by_id($table['team_id']);
 $record = array('id' => $newRecordId);
 ob_start();
-bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById, $fields);
+// Yeni kayıtta henüz hiç ek dosya yok — boş dizi (bcc_fetch_attachments_by_record'a
+// ikinci bir sorgu atmaya gerek yok).
+bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById, $fields, array());
 $rowHtml = ob_get_clean();
 
 echo json_encode(array(

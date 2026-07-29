@@ -18,6 +18,22 @@
         });
     }
 
+    // post()'un multipart/form-data hâli — yalnızca dosya yükleme için (attachment_
+    // upload.php). URLSearchParams değil FormData kullanır, Content-Type header'ı
+    // BİLEREK elle set edilmez (tarayıcı boundary'yi kendisi ekler).
+    function postFile(url, formData) {
+        return fetch(url, {
+            method: 'POST',
+            body: formData,
+        }).then(function (res) {
+            return res.json().catch(function () {
+                return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+            }).then(function (data) {
+                return { httpOk: res.ok, data: data };
+            });
+        });
+    }
+
     // Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
     // görüntülenir. Kullanıcı verisi (chip.text) yalnızca textContent ile
     // yazılır, innerHTML string birleştirme YOK — sunucudan gelen zaten
@@ -30,6 +46,79 @@
             span.style.background = chip.color;
             span.textContent = chip.text;
             view.appendChild(span);
+        });
+    }
+
+    // Ek dosya listesini (küçük resim ya da rozet+ad "chip"leri, hepsi kendi
+    // dosyasına indirme linki) çizer — sunucu tarafındaki bcc_render_grid_data_row()
+    // ile AYNI DOM yapısı (aynı sınıf adları, style.css/grid-shell.css'teki
+    // .attachment-* kuralları ikisinde de geçerli olsun diye). Kullanıcı verisi
+    // (dosya adı) yalnızca title/textContent ile yazılır, innerHTML YOK.
+    function renderAttachmentChips(view, files) {
+        view.textContent = '';
+        files.forEach(function (file) {
+            var isImage = file.mime.indexOf('image/') === 0;
+            var a = document.createElement('a');
+            a.className = 'attachment-chip';
+            a.href = '/api/attachment_download.php?id=' + file.id;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = file.name;
+
+            if (isImage) {
+                var img = document.createElement('img');
+                img.className = 'attachment-thumb';
+                img.src = '/api/attachment_download.php?id=' + file.id;
+                img.alt = '';
+                a.appendChild(img);
+            } else {
+                var badge = document.createElement('span');
+                badge.className = 'attachment-badge';
+                badge.textContent = fileTypeBadge(file.mime);
+                var name = document.createElement('span');
+                name.className = 'attachment-name';
+                name.textContent = file.name;
+                a.appendChild(badge);
+                a.appendChild(name);
+            }
+
+            view.appendChild(a);
+        });
+    }
+
+    // bcc_attachment_type_badge() (src/schema.php) ile AYNI harita — yalnızca
+    // görüntü DIŞI dosya tiplerinde kullanılır (resimler zaten küçük resim olarak basılır).
+    function fileTypeBadge(mime) {
+        var map = {
+            'application/pdf': 'PDF',
+            'application/msword': 'DOC',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOC',
+            'application/vnd.ms-excel': 'XLS',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLS',
+            'application/vnd.ms-powerpoint': 'PPT',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPT',
+        };
+        return map[mime] || 'DOSYA';
+    }
+
+    // uploadAttachment/deleteAttachment: grid.js (hücre popover'ı) VE
+    // grid-row-detail.js (satır genişletme paneli) window.BCC_GRID üzerinden AYNI
+    // iki fonksiyonu paylaşır — attachment_upload/delete.php'yi ikinci kez
+    // çağıran/yazan bir kod YOK.
+    function uploadAttachment(recordId, fieldId, file) {
+        var formData = new FormData();
+        formData.append('csrf_token', CSRF);
+        formData.append('record_id', recordId);
+        formData.append('field_id', fieldId);
+        formData.append('file', file);
+
+        return postFile('/api/attachment_upload.php', formData);
+    }
+
+    function deleteAttachment(attachmentId) {
+        return post('/api/attachment_delete.php', {
+            csrf_token: CSRF,
+            attachment_id: attachmentId,
         });
     }
 
@@ -575,6 +664,191 @@
         }, 0);
     }
 
+    // Dosya listesi + "dosya seç" girişini içeren, tek başına kullanılabilir
+    // widget — grid.js'nin hücre popover'ı (startAttachmentEdit, aşağıda) VE
+    // grid-row-detail.js'nin genişletme paneli AYNI bu fonksiyonu window.BCC_GRID
+    // üzerinden çağırır, liste/yükle/sil mantığı iki yerde ayrı ayrı yazılmaz.
+    // Her yükleme/silme KENDİ AJAX isteğiyle ANINDA etkili (kayıt ekleme/silmeyle
+    // AYNI felsefe) — ayrı bir "Kaydet" adımı yok. onChange(files), çağıran
+    // tarafın kendi görünümünü (canlı <td> ise data-attachments + .cell-view,
+    // panelde ise yalnızca liveTd varsa) senkron tutması için her değişiklikte çağrılır.
+    function buildAttachmentManager(recordId, fieldId, initialFiles, onChange) {
+        var files = (initialFiles || []).slice();
+        var container = document.createElement('div');
+        container.className = 'attachment-manager';
+
+        var list = document.createElement('div');
+        list.className = 'attachment-popover-list';
+
+        function renderList() {
+            list.textContent = '';
+            files.forEach(function (file) {
+                var row = document.createElement('div');
+                row.className = 'attachment-popover-row';
+
+                var isImage = file.mime.indexOf('image/') === 0;
+                var link = document.createElement('a');
+                link.className = 'attachment-chip';
+                link.href = '/api/attachment_download.php?id=' + file.id;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.title = file.name;
+
+                if (isImage) {
+                    var img = document.createElement('img');
+                    img.className = 'attachment-thumb';
+                    img.src = '/api/attachment_download.php?id=' + file.id;
+                    img.alt = '';
+                    link.appendChild(img);
+                } else {
+                    var badge = document.createElement('span');
+                    badge.className = 'attachment-badge';
+                    badge.textContent = fileTypeBadge(file.mime);
+                    var name = document.createElement('span');
+                    name.className = 'attachment-name';
+                    name.textContent = file.name;
+                    link.appendChild(badge);
+                    link.appendChild(name);
+                }
+                row.appendChild(link);
+
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'attachment-remove-btn';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Sil';
+                removeBtn.addEventListener('click', function () {
+                    removeBtn.disabled = true;
+                    deleteAttachment(file.id).then(function (result) {
+                        if (result.httpOk && result.data && result.data.ok) {
+                            files = files.filter(function (f) { return f.id !== file.id; });
+                            renderList();
+                            onChange(files);
+                        } else {
+                            removeBtn.disabled = false;
+                            window.alert((result.data && result.data.error) || 'Silinemedi.');
+                        }
+                    });
+                });
+                row.appendChild(removeBtn);
+
+                list.appendChild(row);
+            });
+        }
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
+        fileInput.className = 'attachment-file-input';
+        fileInput.addEventListener('change', function () {
+            var file = fileInput.files[0];
+            if (!file) {
+                return;
+            }
+            fileInput.disabled = true;
+            uploadAttachment(recordId, fieldId, file).then(function (result) {
+                fileInput.disabled = false;
+                fileInput.value = '';
+                if (result.httpOk && result.data && result.data.ok) {
+                    files.push(result.data.file);
+                    renderList();
+                    onChange(files);
+                } else {
+                    window.alert((result.data && result.data.error) || 'Yüklenemedi.');
+                }
+            });
+        });
+
+        container.appendChild(list);
+        container.appendChild(fileInput);
+        renderList();
+
+        return container;
+    }
+
+    // Hücreye tıklayınca açılan popover — buildAttachmentManager()'ı kapatma
+    // çerçevesiyle (dışarı tık/Escape/Kapat butonu) sarar, td'nin
+    // data-attachments'ını VE görünür .cell-view'ını senkron tutar.
+    function startAttachmentEdit(td) {
+        if (td.classList.contains('editing')) {
+            return;
+        }
+
+        var tr = td.closest('tr');
+        var recordId = tr ? tr.getAttribute('data-record-id') : '';
+        var fieldId = td.getAttribute('data-field-id');
+        var view = td.querySelector('.cell-view');
+
+        var initialFiles = [];
+        try {
+            initialFiles = JSON.parse(td.getAttribute('data-attachments') || '[]');
+        } catch (e) {
+            initialFiles = [];
+        }
+
+        td.classList.add('editing', 'attachment-editing');
+
+        var manager = buildAttachmentManager(recordId, fieldId, initialFiles, function (files) {
+            td.setAttribute('data-attachments', JSON.stringify(files));
+            if (view) {
+                renderAttachmentChips(view, files);
+            }
+        });
+
+        var popover = document.createElement('div');
+        popover.className = 'attachment-popover';
+        popover.appendChild(manager);
+
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-sm attachment-popover-close';
+        closeBtn.textContent = 'Kapat';
+        popover.appendChild(closeBtn);
+
+        if (view) {
+            view.style.display = 'none';
+        }
+        td.appendChild(popover);
+
+        var done = false;
+
+        function endEdit() {
+            td.classList.remove('editing', 'attachment-editing');
+            if (popover.parentNode === td) {
+                td.removeChild(popover);
+            }
+            if (view) {
+                view.style.display = '';
+            }
+            document.removeEventListener('mousedown', outsideClickHandler, true);
+        }
+
+        function close() {
+            if (done) {
+                return;
+            }
+            done = true;
+            endEdit();
+        }
+
+        closeBtn.addEventListener('click', close);
+        popover.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                close();
+            }
+        });
+
+        function outsideClickHandler(e) {
+            if (!popover.contains(e.target)) {
+                close();
+            }
+        }
+        setTimeout(function () {
+            document.addEventListener('mousedown', outsideClickHandler, true);
+        }, 0);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('.grid');
         if (!grid) {
@@ -589,8 +863,11 @@
             if (!td) {
                 return;
             }
-            if (td.getAttribute('data-field-type') === 'long_text') {
+            var fieldType = td.getAttribute('data-field-type');
+            if (fieldType === 'long_text') {
                 startRichTextEdit(td);
+            } else if (fieldType === 'attachment') {
+                startAttachmentEdit(td);
             } else {
                 startEdit(td);
             }
@@ -680,5 +957,9 @@
         applyCellResultToTd: applyCellResultToTd,
         buildInput: buildInput,
         getChoices: getChoices,
+        uploadAttachment: uploadAttachment,
+        deleteAttachment: deleteAttachment,
+        renderAttachmentChips: renderAttachmentChips,
+        buildAttachmentManager: buildAttachmentManager,
     };
 })();

@@ -114,6 +114,36 @@
                 return wrap;
             }
 
+            // Dosya eki: cell_update.php'ye hiç gitmez (attachment_upload/delete.php
+            // üzerinden kendi AJAX'ı) — liste/yükle/sil arayüzü grid.js'nin
+            // window.BCC_GRID.buildAttachmentManager() ile PAYLAŞILIR, ikinci bir
+            // kopya yazılmaz. Görünür alan ise canlı <td>'nin data-attachments'ı da
+            // (grid'deki hücreyle senkron kalsın diye) güncellenir.
+            if (field.field_type === 'attachment') {
+                var recordId = tr.getAttribute('data-record-id');
+                var initialFiles = liveTd
+                    ? (function () {
+                        try {
+                            return JSON.parse(liveTd.getAttribute('data-attachments') || '[]');
+                        } catch (e) {
+                            return [];
+                        }
+                    })()
+                    : (field.files || []);
+
+                var manager = window.BCC_GRID.buildAttachmentManager(recordId, field.id, initialFiles, function (files) {
+                    if (liveTd) {
+                        liveTd.setAttribute('data-attachments', JSON.stringify(files));
+                        var liveView = liveTd.querySelector('.cell-view');
+                        if (liveView) {
+                            window.BCC_GRID.renderAttachmentChips(liveView, files);
+                        }
+                    }
+                });
+                wrap.appendChild(manager);
+                return wrap;
+            }
+
             var choices = liveTd ? window.BCC_GRID.getChoices(liveTd) : (field.options || []);
             var raw = liveTd ? liveTd.getAttribute('data-value') : field.raw;
             var input = window.BCC_GRID.buildInput(field.field_type, choices, raw || '');

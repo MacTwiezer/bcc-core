@@ -6,6 +6,9 @@
 # Yerel gizli yapılandırma
 config/database.local.php
 
+# Kullanıcı tarafından yüklenen dosya ekleri (public/ dışında, DB'de referanslı)
+/storage/
+
 # Windows
 Thumbs.db
 desktop.ini

@@ -1,6 +1,55 @@
 (function () {
     'use strict';
 
+    // grid.js'deki fileTypeBadge/renderAttachmentChips ile AYNI harita/DOM yapısı
+    // (.attachment-chip/.attachment-thumb/.attachment-badge/.attachment-name,
+    // style.css'teki AYNI kurallar) — burada window.BCC_GRID yok (grid.js hiç
+    // yüklenmiyor), bu yüzden küçük bir kopya, ama salt-okunur (yükleme/silme YOK).
+    function fileTypeBadge(mime) {
+        var map = {
+            'application/pdf': 'PDF',
+            'application/msword': 'DOC',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOC',
+            'application/vnd.ms-excel': 'XLS',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLS',
+            'application/vnd.ms-powerpoint': 'PPT',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPT',
+        };
+        return map[mime] || 'DOSYA';
+    }
+
+    function renderAttachmentFiles(container, files) {
+        container.textContent = '';
+        files.forEach(function (file) {
+            var isImage = file.mime.indexOf('image/') === 0;
+            var a = document.createElement('a');
+            a.className = 'attachment-chip';
+            a.href = '/api/attachment_download.php?id=' + file.id;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = file.name;
+
+            if (isImage) {
+                var img = document.createElement('img');
+                img.className = 'attachment-thumb';
+                img.src = '/api/attachment_download.php?id=' + file.id;
+                img.alt = '';
+                a.appendChild(img);
+            } else {
+                var badge = document.createElement('span');
+                badge.className = 'attachment-badge';
+                badge.textContent = fileTypeBadge(file.mime);
+                var name = document.createElement('span');
+                name.className = 'attachment-name';
+                name.textContent = file.name;
+                a.appendChild(badge);
+                a.appendChild(name);
+            }
+
+            container.appendChild(a);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         // Sol nav daralt/genişlet (« / ») — dashboard.php'nin #home-sidebar-toggle
         // deseniyle AYNI fikir (class toggle), burada yalnızca iki ayrı buton
@@ -61,7 +110,13 @@
 
                 var value = document.createElement('div');
                 value.className = 'if-detail-field-value';
-                if (f.is_rich) {
+                if (f.field_type === 'attachment') {
+                    // Salt-okunur: küçük resim/rozet + indirme linki — grid.php'nin
+                    // AYNI .attachment-* sınıflarıyla (style.css, burada da yüklü),
+                    // yükleme/silme YOK (Duyuru ekranı hiçbir mutasyon çağırmaz).
+                    value.className = 'if-detail-field-value attachment-cell-view';
+                    renderAttachmentFiles(value, f.files || []);
+                } else if (f.is_rich) {
                     // GÜVENLİ: f.value sunucuda bcc_sanitize_rich_text() ile
                     // temizlenmiş HTML (cell_display_text long_text çıktısı) —
                     // JSON.parse zaten HTML-entity çözümünü yapmış hâliyle

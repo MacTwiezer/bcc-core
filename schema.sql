@@ -235,6 +235,35 @@ CREATE TABLE IF NOT EXISTS slack_webhooks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- slack_routing_rules — alan DEĞERİNE göre farklı webhook'a yönlendirme (ör.
+-- "Marka" tekli seçim alanı "Trendyol" ise X kanalı, "Yves Rocher" ise Y kanalı).
+-- İlk eşleşen kural (position sırasına göre) kazanır — Airtable'ın "Conditional
+-- groups" modeliyle aynı ilke. Hiç kural yoksa/eşleşme olmazsa bcc_find_slack_webhook()
+-- mevcut tablo-özel/ekip-geneli davranışına aynen düşer (geriye dönük uyumlu).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS slack_routing_rules (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    team_id     INT UNSIGNED NOT NULL,
+    table_id    INT UNSIGNED NOT NULL,
+    field_id    INT UNSIGNED NOT NULL,
+    operator    VARCHAR(20) NOT NULL DEFAULT 'equals',
+    value       VARCHAR(255) NOT NULL,
+    webhook_id  INT UNSIGNED NOT NULL,
+    position    INT NOT NULL DEFAULT 0,
+    is_active   TINYINT(1) NOT NULL DEFAULT 1,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_slack_routing_rules_team (team_id),
+    KEY idx_slack_routing_rules_table (table_id),
+    KEY idx_slack_routing_rules_field (field_id),
+    KEY idx_slack_routing_rules_webhook (webhook_id),
+    CONSTRAINT fk_slack_routing_rules_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    CONSTRAINT fk_slack_routing_rules_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
+    CONSTRAINT fk_slack_routing_rules_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE,
+    CONSTRAINT fk_slack_routing_rules_webhook FOREIGN KEY (webhook_id) REFERENCES slack_webhooks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- audit_log — kim neyi ne zaman değiştirdi (KVKK için de faydalı)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_log (

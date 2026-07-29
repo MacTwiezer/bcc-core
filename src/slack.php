@@ -6,13 +6,50 @@
 // bcc_notify_slack_new_record() hiçbir zaman istisna fırlatmaz, çağıran tarafın
 // (record_add.php / grid.php) kayıt ekleme akışını ASLA engellemez.
 
-// Bir tablo için geçerli, aktif TEK webhook'u döndürür. table_id NULL olan
-// satırlar takım-geneli webhook'u temsil eder (o takımın TÜM tablolarında
-// tetiklenir) — DDL gerekmedi, table_id zaten nullable'dı. Tablo-özel bir
-// webhook varsa takım-geneli olana ÖNCELİKLİDİR (ORDER BY table_id IS NULL:
-// NULL olmayan, yani tablo-özel satır önce gelir). Yoksa null.
-function bcc_find_slack_webhook($tableId, $teamId)
+// Bir tablo için geçerli, aktif webhook'u döndürür. Öncelik sırası:
+// (1) $recordId verilmişse — slack_routing_rules'ta bu tabloya ait, aktif
+//     kuralları position sırasına göre dener; kaydın kuralın alanındaki
+//     DEĞERİ (cell_values.value_text) kuralın beklediği değerle eşleşirse
+//     (operator'e göre) o kuralın webhook'u döner. İLK EŞLEŞEN kazanır
+//     (Airtable'ın "Conditional groups" modeliyle aynı ilke) — sonraki
+//     kurallar hiç değerlendirilmez.
+// (2) Hiçbir kural yoksa/eşleşmezse (ya da $recordId hiç verilmemişse) —
+//     ESKİ davranışa aynen düşülür: tablo-özel bir webhook varsa o, yoksa
+//     takım-geneli (table_id NULL) webhook. table_id NULL olan satırlar
+//     takım-geneli webhook'u temsil eder (o takımın TÜM tablolarında
+//     tetiklenir) — DDL gerekmedi, table_id zaten nullable'dı.
+// $recordId opsiyonel (varsayılan null) — geriye dönük uyumlu, tek çağıran
+// yer (bcc_notify_slack_new_record) zaten kendi record id'sini biliyor.
+function bcc_find_slack_webhook($tableId, $teamId, $recordId = null)
 {
+    if ($recordId !== null) {
+        $rules = bcc_fetch_all(
+            'SELECT r.operator, r.value AS rule_value, cv.value_text AS actual_value,
+                    sw.id, sw.webhook_url, sw.channel_name, sw.table_id
+             FROM slack_routing_rules r
+             INNER JOIN slack_webhooks sw ON sw.id = r.webhook_id AND sw.is_active = 1
+             LEFT JOIN cell_values cv ON cv.record_id = :record_id AND cv.field_id = r.field_id
+             WHERE r.table_id = :table_id AND r.is_active = 1
+             ORDER BY r.position ASC, r.id ASC',
+            array('record_id' => $recordId, 'table_id' => $tableId)
+        );
+
+        foreach ($rules as $rule) {
+            $matches = ($rule['operator'] === 'not_equals')
+                ? ((string) $rule['actual_value'] !== (string) $rule['rule_value'])
+                : ((string) $rule['actual_value'] === (string) $rule['rule_value']);
+
+            if ($matches) {
+                return array(
+                    'id' => $rule['id'],
+                    'webhook_url' => $rule['webhook_url'],
+                    'channel_name' => $rule['channel_name'],
+                    'table_id' => $rule['table_id'],
+                );
+            }
+        }
+    }
+
     $row = bcc_fetch_one(
         'SELECT id, webhook_url, channel_name, table_id FROM slack_webhooks
          WHERE is_active = 1 AND (table_id = :table_id OR (table_id IS NULL AND team_id = :team_id))
@@ -79,7 +116,7 @@ function bcc_notify_slack_new_record($tableId, $recordId)
             return;
         }
 
-        $webhook = bcc_find_slack_webhook($tableId, $tableRow['team_id']);
+        $webhook = bcc_find_slack_webhook($tableId, $tableRow['team_id'], $recordId);
         if (!$webhook) {
             return;
         }

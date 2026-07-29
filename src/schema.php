@@ -100,6 +100,15 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
 // Değer girdisi gerektirmeyen operatörler (input UI'da gizlenir).
 $GLOBALS['BCC_FILTER_NO_VALUE_OPS'] = array('empty', 'not_empty', 'checked', 'unchecked');
 
+// Slack koşullu yönlendirme kuralları (slack_routing_rules.operator) — yalnızca
+// single_select alanları için anlamlı olduğundan BCC_FILTER_OPERATORS'ın o alt
+// kümesiyle aynı ruhta, kasıtlı olarak küçük tutuldu. Kod-taraflı bir whitelist
+// olduğu için yeni operatör eklemek DDL gerektirmez.
+$GLOBALS['BCC_SLACK_ROUTING_OPERATORS'] = array(
+    'equals' => 'eşittir',
+    'not_equals' => 'eşit değil',
+);
+
 // Grid gruplama (Grid araçları Adım 2a): alan tipine göre yön dropdown etiketleri
 // (mantık her zaman artan/azalan — yalnızca metin değişir, Airtable'daki gibi).
 $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
@@ -897,6 +906,7 @@ function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $dir
         'tables_meta' => 'base_id',
         'fields' => 'table_id',
         'views' => 'table_id',
+        'slack_routing_rules' => 'table_id',
     );
 
     if (!isset($allowedParents[$tableName]) || $allowedParents[$tableName] !== $parentColumn) {

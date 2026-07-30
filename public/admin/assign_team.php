@@ -9,7 +9,9 @@ $teams = bcc_fetch_all('SELECT id, name FROM teams ORDER BY name');
 
 $error = null;
 $success = null;
-$roles = array('viewer', 'commenter', 'editor', 'owner');
+// Canonical rol listesi BCC_ROLE_RANK'ten (src/auth.php) — burada elle tekrar
+// yazılmaz, yeni bir rol eklenirse otomatik yansır.
+$roles = array_keys($GLOBALS['BCC_ROLE_RANK']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
@@ -20,13 +22,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($userId <= 0 || $teamId <= 0 || !in_array($role, $roles, true)) {
         $error = 'Geçersiz seçim.';
+    } elseif (!bcc_fetch_one('SELECT id FROM users WHERE id = :id AND is_active = 1', array('id' => $userId))) {
+        $error = 'Kullanıcı bulunamadı.';
+    } elseif (!bcc_fetch_one('SELECT id FROM teams WHERE id = :id', array('id' => $teamId))) {
+        $error = 'Ekip bulunamadı.';
     } else {
         bcc_execute(
             'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
              ON DUPLICATE KEY UPDATE role = VALUES(role)',
             array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role)
         );
-        log_audit('team_member.assign', 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role));
+        // $teamId 5. parametre olarak GEÇİLMELİ — audit_log.team_id kolonu bu
+        // olmadan NULL kalır (bulunan gerçek bug: team_member.assign zaten
+        // bildirim beyaz listesinde ama team_id NULL olduğu için `WHERE team_id
+        // IN (...)` filtresine hiçbir zaman uymuyordu, bildirim hiç görünmüyordu).
+        log_audit('team_member.assign', 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role), $teamId);
         $success = 'Atama kaydedildi.';
     }
 }

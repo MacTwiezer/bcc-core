@@ -16,8 +16,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
+    } elseif (mb_strlen($email, 'UTF-8') > 190) {
+        // users.email VARCHAR(190) — bu kontrol olmadan uzun bir e-posta hatasız
+        // sessizce kırpılıyordu (sql_mode'da STRICT_TRANS_TABLES yok, doğrulandı).
+        // account_update_email.php ile AYNI sınır/mesaj.
+        $error = 'E-posta en fazla 190 karakter olabilir.';
     } elseif ($fullName === '') {
         $error = 'Ad Soyad boş olamaz.';
+    } elseif (mb_strlen($fullName, 'UTF-8') > 150) {
+        // users.full_name VARCHAR(150) — account_update_name.php ile AYNI sınır/mesaj.
+        $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } elseif (!bcc_is_valid_password($password)) {
         $error = 'Şifre en az 8 karakter olmalı.';
     } else {
@@ -57,8 +65,8 @@ require __DIR__ . '/../../src/partials/top_nav.php';
             </label>
             <label>Şifre (en az 8 karakter)
                 <div class="input-with-toggle">
-                    <input type="password" name="password" id="create-user-password" required minlength="8">
-                    <button type="button" class="input-toggle-btn" id="create-user-password-toggle" aria-label="Şifreyi göster">
+                    <input type="password" name="password" required minlength="8">
+                    <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
                     </button>
                 </div>
@@ -70,16 +78,5 @@ require __DIR__ . '/../../src/partials/top_nav.php';
         </form>
     </div>
 </div>
-<script>
-(function () {
-    var toggle = document.getElementById('create-user-password-toggle');
-    var input = document.getElementById('create-user-password');
-    if (!toggle || !input) { return; }
-    toggle.addEventListener('click', function () {
-        var showing = input.type === 'text';
-        input.type = showing ? 'password' : 'text';
-        toggle.setAttribute('aria-label', showing ? 'Şifreyi göster' : 'Şifreyi gizle');
-    });
-})();
-</script>
+<script src="/assets/password-toggle.js" defer></script>
 <?php require __DIR__ . '/../../src/partials/footer.php'; ?>

@@ -76,7 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="login-field">
                 <label for="register-password">Şifre</label>
-                <input type="password" id="register-password" name="password" minlength="8" required>
+                <div class="input-with-toggle">
+                    <input type="password" id="register-password" name="password" minlength="8" required>
+                    <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="login-submit">Kayıt ol</button>
         </form>
@@ -96,5 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+<script src="/assets/password-toggle.js" defer></script>
 </body>
 </html>

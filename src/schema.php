@@ -158,10 +158,14 @@ $GLOBALS['BCC_ROW_HEIGHT_LABELS'] = array(
 );
 
 // team_id, bases üzerinden gelir; bir base'in verisine erişen her sayfa bunu kullanmalı.
+// deleted_at IS NULL koşulu — Trash'e taşınmış (soft-delete) bir base'e link
+// paylaşılmışsa/yer imi varsa doğrudan girmeye çalışan biri 404 alır. Bu TEK
+// fonksiyon base.php/grid.php/interface.php/table_fields.php dahil HER
+// sayfa tarafından çağrıldığı için koruma tek yerden sağlanır.
 function find_base_or_404($baseId)
 {
     $base = bcc_fetch_one(
-        'SELECT id, team_id, name, description FROM bases WHERE id = :id LIMIT 1',
+        'SELECT id, team_id, name, description FROM bases WHERE id = :id AND deleted_at IS NULL LIMIT 1',
         array('id' => $baseId)
     );
 
@@ -174,13 +178,15 @@ function find_base_or_404($baseId)
 }
 
 // team_id, tables_meta -> bases üzerinden gelir; bir tablonun verisine erişen her sayfa bunu kullanmalı.
+// find_base_or_404() ile AYNI koruma — base silinmişse (Trash) tablosuna
+// doğrudan table_id ile de erişilemez.
 function find_table_or_404($tableId)
 {
     $table = bcc_fetch_one(
         'SELECT tm.id, tm.base_id, tm.name, tm.description, tm.position, b.team_id, b.name AS base_name
          FROM tables_meta tm
          INNER JOIN bases b ON b.id = tm.base_id
-         WHERE tm.id = :id LIMIT 1',
+         WHERE tm.id = :id AND b.deleted_at IS NULL LIMIT 1',
         array('id' => $tableId)
     );
 
@@ -1750,7 +1756,10 @@ function bcc_home_relative_date($datetimeStr)
 // Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
 // şekilde kullanılır). $isStarred true ise yıldız butonu hover'dan bağımsız
 // hep görünür kalır (CSS: .home-base-star-btn[aria-pressed="true"]).
-function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName)
+// $canDelete: bu base'in takımında 'owner' rolündeyse true — Trash özelliği
+// (Airtable referansı: yalnızca Owner silebilir/geri yükleyebilir), "⋯"
+// menüsündeki "Sil" öğesi buna göre gösterilir/gizlenir.
+function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false)
 {
     // $workspaceName artık BASILMIYOR (kasıtlı) — Airtable referansı Workspace
     // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
@@ -1768,7 +1777,18 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
                 <span class="home-base-meta-star" aria-hidden="true">
                     <svg width="11" height="11" viewBox="0 0 20 20"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="#f5b400"/></svg>
                 </span>
-                Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($base['created_at']), ENT_QUOTES, 'UTF-8'); ?>
+                <?php
+                // "Açıldı" — base.open audit_log kayıtlarından gelen GERÇEK son
+                // açılma zamanı (bkz. dashboard.php/starred.php'nin al.last_opened
+                // LEFT JOIN'i) — hiç açılmamışsa (NULL, kimse log_base_open()
+                // tetiklememiş) tek geriye düşüş b.created_at'tir. Önceden burada
+                // her zaman created_at kullanılıyordu — bu yüzden bugün açılan bir
+                // base bile eski oluşturulma tarihini gösteriyordu, filtre
+                // (üstteki Bugün/7 gün/30 gün) doğru veriyi kullandığı için o
+                // taraf hep doğruydu, yalnızca bu metin yanlıştı.
+                $lastOpenedDisplay = !empty($base['last_opened']) ? $base['last_opened'] : $base['created_at'];
+                ?>
+                Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($lastOpenedDisplay), ENT_QUOTES, 'UTF-8'); ?>
             </div>
         </div>
         <div class="home-base-workspace"></div>
@@ -1791,6 +1811,10 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
                         </div>
                     </details>
                     <button type="button" class="home-base-more-item" disabled>Çoğalt</button>
+                    <?php if ($canDelete): ?>
+                    <div class="home-base-more-divider"></div>
+                    <button type="button" class="home-base-more-item home-base-more-item-danger" data-base-delete="<?php echo (int) $base['id']; ?>">Sil</button>
+                    <?php endif; ?>
                 </div>
             </details>
         </div>
@@ -1802,7 +1826,7 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
 // Starred sayfaları AYNI fonksiyonu çağırır, yalnızca $bases/$emptyMessage
 // farklıdır. $teamNamesById: team_id => takım adı (liste modu "Workspace"
 // kolonu için).
-function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage)
+function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array())
 {
     $iconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
 
@@ -1828,7 +1852,8 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $isStarred = isset($starredBaseIds[(int) $b['id']]);
             $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
             $iconColor = $iconColors[$i % count($iconColors)];
-            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName);
+            $canDelete = isset($roleByTeamId[(int) $b['team_id']]) && $roleByTeamId[(int) $b['team_id']] === 'owner';
+            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete);
         endforeach; ?>
     </div>
     <?php

@@ -313,6 +313,46 @@
             });
         }
 
+        // Trash — "⋯" menüsündeki "Sil" (yalnızca owner rolünde render edilir,
+        // bkz. schema.php $canDelete). Soft-delete olduğu için (geri alınabilir,
+        // bkz. api/base_delete.php + hesap menüsündeki Çöp kutusu) kart burada
+        // sayfa yenilenmeden DOM'dan kaldırılır — sunucudaki tek doğruluk
+        // kaynağı (deleted_at) zaten bir sonraki sayfa yüklemesinde aynı sonucu verir.
+        document.querySelectorAll('[data-base-delete]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (!window.confirm('Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.')) {
+                    return;
+                }
+
+                var card = btn.closest('.home-base-card');
+                var baseId = btn.getAttribute('data-base-delete');
+                btn.disabled = true;
+
+                fetch('/api/base_delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ csrf_token: CSRF_TOKEN, base_id: baseId }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () { return { ok: false }; });
+                }).then(function (data) {
+                    if (data && data.ok) {
+                        if (card) {
+                            card.remove();
+                        }
+                    } else {
+                        btn.disabled = false;
+                        window.alert((data && data.error) || 'Silinemedi.');
+                    }
+                }).catch(function () {
+                    btn.disabled = false;
+                    window.alert('Silinemedi (bağlantı hatası).');
+                });
+            });
+        });
+
         // Bildirim paneli (zil ikonu) — #home-filter ile AYNI <details>+dışarı-tık
         // deseni. Tab (Unread/Read) + arama TAMAMEN client-side (veri zaten DOM'da,
         // Ctrl+K aramasıyla aynı gerekçe — network isteği yok, debounce gerekmiyor).

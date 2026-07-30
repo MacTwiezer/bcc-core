@@ -37,7 +37,7 @@ if (!empty($teamIds)) {
     $starredBases = bcc_fetch_all(
         "SELECT b.id, b.name
          FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders)
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
          WHERE usb.user_id = ?
          ORDER BY b.name",
         array_merge($teamIds, array((int) $user['id']))

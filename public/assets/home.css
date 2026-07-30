@@ -307,6 +307,115 @@ a { text-decoration: none; color: inherit; }
 
 .bcc-account-menu-check.is-active { display: block; }
 
+/* Trash modalı — Airtable workspace trash referansı, home/gs/if 3
+   prefix'inde de AYNI görünüm (sayfa-geneli overlay, tema/renk farkı
+   gerekmiyor), bu yüzden tek yerde (home.css) tanımlı. */
+.bcc-trash-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 20, 0.35);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+.bcc-trash-overlay:not([hidden]) { display: flex; }
+
+.bcc-trash-modal {
+    background: var(--bcc-surface);
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    width: 480px;
+    max-width: 92vw;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 1.25rem 1rem;
+}
+
+.bcc-trash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bcc-trash-title { font-size: 1.1rem; margin: 0; }
+
+.bcc-trash-close {
+    background: none;
+    border: none;
+    padding: 0.35rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--bcc-text-muted);
+    display: flex;
+}
+
+.bcc-trash-close:hover { background: var(--bcc-surface-hover); }
+
+.bcc-trash-desc {
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+    margin: 0.35rem 0 0.75rem;
+}
+
+.bcc-trash-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.bcc-trash-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.55rem 0.4rem;
+    border-radius: 8px;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.bcc-trash-item-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
+    font-weight: 700;
+    font-size: 0.76rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bcc-trash-item-body { flex: 1; min-width: 0; }
+
+.bcc-trash-item-message { font-size: 0.85rem; color: var(--bcc-text); line-height: 1.35; }
+
+.bcc-trash-item-time { font-size: 0.76rem; color: var(--bcc-text-muted); margin-top: 0.15rem; }
+
+.bcc-trash-restore-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--bcc-accent-strong);
+    font-weight: 600;
+    font-size: 0.83rem;
+    cursor: pointer;
+    padding: 0.3rem 0.2rem;
+}
+
+.bcc-trash-restore-btn:hover { text-decoration: underline; }
+
+.bcc-trash-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--bcc-text-muted);
+    font-size: 0.85rem;
+}
+
 .home-account-badge {
     margin-left: auto;
     font-size: 0.68rem;
@@ -376,13 +485,11 @@ a { text-decoration: none; color: inherit; }
     display: none;
 }
 
-/* Hover-peek: daraltılmışken üzerine gelince ana içeriği itmeden geçici
-   olarak tam genişliğe döner (overlay), mouse çekilince akışa geri döner. */
+/* Hover-peek: daraltılmışken üzerine gelince normal akışta genişler — ana
+   içerik (.home-body { display:flex } sayesinde) sağa kayar, overlay OLARAK
+   üstüne binmez (önceki position:absolute hâli içeriği kaydırmıyordu, altta
+   kalan kartların üzerine biniyordu). */
 .home-sidebar.is-collapsed:hover {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
     width: 240px;
     overflow: visible;
     z-index: 20;
@@ -728,6 +835,16 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 }
 
 .home-base-more-item:disabled:hover { background: none; }
+
+/* Trash — "Sil" (yalnızca owner rolünde render edilir, bkz. schema.php
+   $canDelete), gs-table-tab-menu-divider/-item-danger ile AYNI görsel dil. */
+.home-base-more-divider {
+    height: 1px;
+    background: var(--bcc-border);
+    margin: 0.3rem 0.2rem;
+}
+
+.home-base-more-item-danger { color: var(--bcc-danger); }
 
 .home-base-more-submenu { position: relative; }
 

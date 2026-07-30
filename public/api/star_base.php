@@ -15,7 +15,7 @@ $baseId = isset($_POST['base_id']) ? (int) $_POST['base_id'] : 0;
 $user = current_user();
 
 try {
-    $base = bcc_fetch_one('SELECT id, team_id FROM bases WHERE id = :id LIMIT 1', array(':id' => $baseId));
+    $base = bcc_fetch_one('SELECT id, team_id FROM bases WHERE id = :id AND deleted_at IS NULL LIMIT 1', array(':id' => $baseId));
 
     if (!$base) {
         json_fail(404, 'Base bulunamadı.');

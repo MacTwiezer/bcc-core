@@ -29,7 +29,7 @@ foreach ($teams as $t) {
 $baseCounts = array();
 if (!empty($teamIds)) {
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $countRows = bcc_fetch_all("SELECT team_id, COUNT(*) AS cnt FROM bases WHERE team_id IN ($placeholders) GROUP BY team_id", $teamIds);
+    $countRows = bcc_fetch_all("SELECT team_id, COUNT(*) AS cnt FROM bases WHERE team_id IN ($placeholders) AND deleted_at IS NULL GROUP BY team_id", $teamIds);
     foreach ($countRows as $row) {
         $baseCounts[(int) $row['team_id']] = (int) $row['cnt'];
     }
@@ -76,7 +76,7 @@ if (!empty($teamIds)) {
     $starredBases = bcc_fetch_all(
         "SELECT b.id, b.name
          FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders)
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
          WHERE usb.user_id = ?
          ORDER BY b.name",
         array_merge($teamIds, array((int) $user['id']))

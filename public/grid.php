@@ -481,7 +481,7 @@ $gridUser = current_user();
 <meta charset="utf-8">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <title>BCC-Core — <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/png" href="/assets/logo.png">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <script src="/assets/theme-init.js"></script>
 <link rel="stylesheet" href="/assets/theme.css">
 <link rel="stylesheet" href="/assets/style.css">

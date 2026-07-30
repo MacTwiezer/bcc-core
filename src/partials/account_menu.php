@@ -52,7 +52,7 @@ $p = $accountMenuPrefix;
             <div class="<?php echo $p; ?>-account-divider"></div>
 
             <div class="<?php echo $p; ?>-account-section">
-                <button type="button" class="<?php echo $p; ?>-account-item">Çöp kutusu</button>
+                <button type="button" class="<?php echo $p; ?>-account-item" data-account-trash-open>Çöp kutusu</button>
             </div>
 
             <!-- Trash/Log out arasında bilinçli ikinci ayırıcı: ikisi yan yana/bitişik
@@ -85,6 +85,27 @@ $p = $accountMenuPrefix;
                     <svg class="bcc-account-menu-check" data-theme-check width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trash — Airtable'ın workspace trash referansı (bkz. api/trash_list.php
+     yorumu). Sayfa-geneli bir overlay olduğu için .X-account'ın dışında,
+     tek kopya (bu partial sayfa başına zaten tek kez require ediliyor).
+     Jenerik (prefix'siz) .bcc-trash-* sınıflar — home.css'te TEK yerde
+     tanımlı, 3 CSS dosyasında kopya YOK (Görünüm alt-panelindeki
+     .bcc-account-menu-* ile AYNI gerekçe). -->
+<div class="bcc-trash-overlay" id="<?php echo $p; ?>-trash-overlay" hidden>
+    <div class="bcc-trash-modal">
+        <div class="bcc-trash-header">
+            <h2 class="bcc-trash-title">Çöp kutusu</h2>
+            <button type="button" class="bcc-trash-close" data-account-trash-close aria-label="Kapat">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <p class="bcc-trash-desc">Takımlarınızda silinen base'ler burada listelenir.</p>
+        <div class="bcc-trash-list" data-trash-list>
+            <div class="bcc-trash-empty" data-trash-empty hidden>Çöp kutusu boş.</div>
         </div>
     </div>
 </div>

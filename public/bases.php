@@ -55,7 +55,7 @@ if (!empty($teams)) {
 
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
     $baseRows = bcc_fetch_all(
-        "SELECT id, team_id, name, description FROM bases WHERE team_id IN ($placeholders) ORDER BY name",
+        "SELECT id, team_id, name, description FROM bases WHERE team_id IN ($placeholders) AND deleted_at IS NULL ORDER BY name",
         $teamIds
     );
 

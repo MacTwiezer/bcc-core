@@ -65,6 +65,117 @@
         });
     });
 
+    // Trash — Airtable workspace trash referansı. Overlay .X-account'ın
+    // DIŞINDA (sayfa-geneli), bu yüzden document üzerinden aranıyor; tek
+    // sayfada en fazla bir tane olur (account_menu.php sayfa başına tek kez
+    // require ediliyor).
+    var trashOpenBtn = menu.querySelector('[data-account-trash-open]');
+    var trashOverlay = document.querySelector('.bcc-trash-overlay');
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var CSRF = csrfMeta ? csrfMeta.content : '';
+
+    if (trashOpenBtn && trashOverlay) {
+        var trashList = trashOverlay.querySelector('[data-trash-list]');
+        var trashEmpty = trashOverlay.querySelector('[data-trash-empty]');
+        var trashCloseBtn = trashOverlay.querySelector('[data-account-trash-close]');
+
+        function closeTrash() {
+            trashOverlay.hidden = true;
+        }
+
+        function renderTrashItems(items) {
+            Array.prototype.forEach.call(trashList.querySelectorAll('.bcc-trash-item'), function (el) {
+                el.remove();
+            });
+
+            trashEmpty.hidden = items.length > 0;
+
+            items.forEach(function (item) {
+                var row = document.createElement('div');
+                row.className = 'bcc-trash-item';
+                row.setAttribute('data-trash-base-id', item.id);
+
+                var avatar = document.createElement('div');
+                avatar.className = 'bcc-trash-item-avatar';
+                avatar.textContent = item.actor_initial;
+                row.appendChild(avatar);
+
+                var body = document.createElement('div');
+                body.className = 'bcc-trash-item-body';
+
+                var message = document.createElement('div');
+                message.className = 'bcc-trash-item-message';
+                message.textContent = item.message;
+                body.appendChild(message);
+
+                var time = document.createElement('div');
+                time.className = 'bcc-trash-item-time';
+                time.textContent = item.relative_date;
+                body.appendChild(time);
+
+                row.appendChild(body);
+
+                if (item.can_restore) {
+                    var restoreBtn = document.createElement('button');
+                    restoreBtn.type = 'button';
+                    restoreBtn.className = 'bcc-trash-restore-btn';
+                    restoreBtn.textContent = 'Geri Yükle';
+                    restoreBtn.addEventListener('click', function () {
+                        restoreBtn.disabled = true;
+                        fetch('/api/base_restore.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({ csrf_token: CSRF, base_id: item.id }).toString(),
+                        }).then(function (res) {
+                            return res.json().catch(function () { return { ok: false }; });
+                        }).then(function (data) {
+                            if (data && data.ok) {
+                                row.remove();
+                                if (!trashList.querySelector('.bcc-trash-item')) {
+                                    trashEmpty.hidden = false;
+                                }
+                            } else {
+                                restoreBtn.disabled = false;
+                                window.alert((data && data.error) || 'Geri yüklenemedi.');
+                            }
+                        }).catch(function () {
+                            restoreBtn.disabled = false;
+                            window.alert('Geri yüklenemedi (bağlantı hatası).');
+                        });
+                    });
+                    row.appendChild(restoreBtn);
+                }
+
+                trashList.appendChild(row);
+            });
+        }
+
+        trashOpenBtn.addEventListener('click', function () {
+            menu.classList.remove('is-open');
+            showAccountPage('main');
+            trashOverlay.hidden = false;
+
+            fetch('/api/trash_list.php')
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data && data.ok) {
+                        renderTrashItems(data.items);
+                    }
+                })
+                .catch(function () {});
+        });
+
+        if (trashCloseBtn) {
+            trashCloseBtn.addEventListener('click', closeTrash);
+        }
+
+        window.bcc_bindDismissable(trashOverlay, {
+            isOpen: function () { return !trashOverlay.hidden; },
+            close: closeTrash,
+            isClickOutside: function (target) { return target === trashOverlay; },
+        });
+    }
+
     toggle.addEventListener('click', function (e) {
         e.stopPropagation();
         menu.classList.toggle('is-open');

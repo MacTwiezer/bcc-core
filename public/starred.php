@@ -8,7 +8,7 @@ $user = current_user();
 
 // KVKK izolasyonu: dashboard.php ile AYNI desen (bkz. orada).
 $teams = bcc_fetch_all(
-    'SELECT t.id, t.name
+    'SELECT t.id, t.name, m.role
      FROM team_members m
      INNER JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = :uid
@@ -22,8 +22,10 @@ foreach ($teams as $t) {
 }
 
 $teamNamesById = array();
+$roleByTeamId = array();
 foreach ($teams as $t) {
     $teamNamesById[(int) $t['id']] = $t['name'];
+    $roleByTeamId[(int) $t['id']] = $t['role'];
 }
 
 // Bu sayfanın TAMAMI zaten "kullanıcının yıldızladığı base'ler" — sol
@@ -36,9 +38,15 @@ $starredBaseIds = array();
 if (!empty($teamIds)) {
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
     $bases = bcc_fetch_all(
-        "SELECT b.id, b.team_id, b.name, b.created_at
+        "SELECT b.id, b.team_id, b.name, b.created_at, al.last_opened
          FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders)
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
+         LEFT JOIN (
+             SELECT entity_id, MAX(created_at) AS last_opened
+             FROM audit_log
+             WHERE action = 'base.open' AND entity_type = 'base'
+             GROUP BY entity_id
+         ) al ON al.entity_id = b.id
          WHERE usb.user_id = ?
          ORDER BY b.name",
         array_merge($teamIds, array((int) $user['id']))
@@ -69,5 +77,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </div>
         </div>
 
-        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz yıldızladığınız bir base yok.'); ?>
+        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz yıldızladığınız bir base yok.', $roleByTeamId); ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

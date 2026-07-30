@@ -10,13 +10,21 @@ $user = current_user();
 // Sorgu deseni bases.php / eski dashboard.php ile aynıdır, sadece görünüm için
 // tek düz bir listeye indirgenir.
 $teams = bcc_fetch_all(
-    'SELECT t.id, t.name
+    'SELECT t.id, t.name, m.role
      FROM team_members m
      INNER JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = :uid
      ORDER BY t.name',
     array('uid' => $user['id'])
 );
+
+// Trash: yalnızca 'owner' rolündeki kullanıcı bir base'i silebilir/geri
+// yükleyebilir (Airtable referansı) — kart "⋯" menüsündeki "Sil" öğesi bu
+// haritaya bakarak gösterilir/gizlenir.
+$roleByTeamId = array();
+foreach ($teams as $t) {
+    $roleByTeamId[(int) $t['id']] = $t['role'];
+}
 
 // Tarih filtresi: timeframe GET parametresi ASLA doğrudan SQL'e girmez —
 // yalnızca aşağıdaki sabit dizinin anahtarı olarak kullanılır (whitelist);
@@ -64,7 +72,7 @@ if (!empty($teams)) {
                 WHERE action = 'base.open' AND entity_type = 'base'
                 GROUP BY entity_id
             ) al ON al.entity_id = b.id
-            WHERE b.team_id IN ($placeholders)";
+            WHERE b.team_id IN ($placeholders) AND b.deleted_at IS NULL";
 
     if ($timeframeConditions[$timeframe] !== null) {
         $sql .= ' AND ' . $timeframeConditions[$timeframe];
@@ -87,7 +95,7 @@ if (!empty($teamIds)) {
     $starredBases = bcc_fetch_all(
         "SELECT b.id, b.name
          FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders)
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
          WHERE usb.user_id = ?
          ORDER BY b.name",
         array_merge($teamIds, array((int) $user['id']))
@@ -147,5 +155,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </div>
         </div>
 
-        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz erişebileceğiniz bir base yok.'); ?>
+        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz erişebileceğiniz bir base yok.', $roleByTeamId); ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

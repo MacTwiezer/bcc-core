@@ -63,10 +63,14 @@ CREATE TABLE IF NOT EXISTS bases (
     description  VARCHAR(500) DEFAULT NULL,
     created_by   INT UNSIGNED DEFAULT NULL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at   DATETIME NULL,
+    deleted_by   INT UNSIGNED NULL,
     PRIMARY KEY (id),
     KEY idx_bases_team (team_id),
+    KEY idx_bases_deleted_at (deleted_at),
     CONSTRAINT fk_bases_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    CONSTRAINT fk_bases_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_bases_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_bases_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

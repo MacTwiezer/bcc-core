@@ -50,7 +50,7 @@ header('Content-Type: text/html; charset=utf-8');
 <head>
 <meta charset="utf-8">
 <title>BCC-Core — Tanı Sayfası</title>
-<link rel="icon" type="image/png" href="/assets/logo.png">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <style>
     body { font-family: Segoe UI, Arial, sans-serif; margin: 2rem; background: #f5f5f7; color: #1d1d1f; }
     h1 { font-size: 1.4rem; }

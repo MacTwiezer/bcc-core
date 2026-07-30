@@ -40,6 +40,16 @@ try {
         json_fail(422, $result['error']);
     }
 
+    // "Zorunlu" (is_required) rozeti şimdiye kadar yalnızca kozmetikti (grid.php'de
+    // bir "*" işareti dışında hiçbir yerde kontrol edilmiyordu) — burada gerçekten
+    // uygulanıyor: normalize_cell_value() bu alan tipi için "boş" (null) sayıyorsa
+    // ve alan zorunluysa kayıt reddedilir. Yeni (henüz hiç hücresi olmayan) bir
+    // satırı boş bırakmayı ENGELLEMEZ (record_add.php hiç cell_values yazmıyor) —
+    // yalnızca zorunlu bir hücreyi elle boşaltmayı engeller.
+    if ((int) $field['is_required'] === 1 && $result['value'] === null) {
+        json_fail(422, 'Bu alan zorunludur, boş bırakılamaz.');
+    }
+
     $column = $result['column'];
     $value = $result['value'];
 

@@ -1,6 +1,8 @@
 <?php
 // Her public/ sayfasının başında dahil edilir: oturum + ortak yardımcılar.
 
+require_once __DIR__ . '/error_handler.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(array(
         'lifetime' => 0,

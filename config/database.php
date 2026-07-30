@@ -1,6 +1,10 @@
 <?php
 // BCC-Core — mysqli veritabanı bağlantısı
 // Ortam: MariaDB 10.4 (XAMPP MySQL), 127.0.0.1:3306, DB: bcc_core, user: root, şifre: yok.
+// Bu varsayılanlar YALNIZCA bu makine içindir — farklı bir MySQL/MariaDB kurulumu
+// (başka kullanıcı/şifre/port) kullanan geliştiriciler bunları DEĞİŞTİRMEK yerine
+// config/database.local.php dosyası oluşturup (git'e girmez, bkz. .gitignore)
+// içinde ihtiyaç duydukları $DB_* değişkenlerini yeniden atayabilir.
 
 $DB_HOST = '127.0.0.1';
 $DB_PORT = '3306';
@@ -8,6 +12,12 @@ $DB_NAME = 'bcc_core';
 $DB_USER = 'root';
 $DB_PASS = '';
 $DB_CHARSET = 'utf8mb4';
+
+$bcc_localConfigPath = __DIR__ . '/database.local.php';
+if (is_file($bcc_localConfigPath)) {
+    require $bcc_localConfigPath;
+}
+unset($bcc_localConfigPath);
 
 function bcc_get_mysqli()
 {
@@ -41,9 +51,18 @@ function bcc_prepare_positional($sql, array $params)
 
     $bound = array();
 
+    // Tek tırnaklı string literal'ler ('...') İLK alternatif olarak eşleşip
+    // OLDUĞU GİBİ bırakılır — SQL metninin içinde (bağlı parametre değil,
+    // doğrudan yazılmış) "'ratio:total'" gibi bir değer varsa, ":total" bir
+    // named parametre sanılıp yanlışlıkla ? ile değiştirilmez.
     $converted = preg_replace_callback(
-        '/:([a-zA-Z_][a-zA-Z0-9_]*)/',
+        "/'(?:[^'\\\\]|\\\\.)*'|:([a-zA-Z_][a-zA-Z0-9_]*)/",
         function ($m) use ($params, &$bound) {
+            // Grup 1 yoksa/boşsa bu bir string literal eşleşmesidir, dokunma.
+            if (!isset($m[1]) || $m[1] === '') {
+                return $m[0];
+            }
+
             $name = $m[1];
 
             if (array_key_exists($name, $params)) {
@@ -64,7 +83,9 @@ function bcc_prepare_positional($sql, array $params)
 
 function bcc_bind_type($value)
 {
-    if (is_int($value)) {
+    // bool: is_int() false döner ama mysqli bind_param 'i' tipinde true/false'u
+    // otomatik 1/0'a çevirir — ayrı bir dönüşüm gerekmez, yalnızca doğru tip harfi.
+    if (is_int($value) || is_bool($value)) {
         return 'i';
     }
 

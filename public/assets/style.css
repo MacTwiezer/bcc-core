@@ -1,25 +1,25 @@
 body {
     font-family: Segoe UI, Arial, sans-serif;
     margin: 0;
-    background: #f5f5f7;
-    color: #1d1d1f;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
 }
 
-a { color: #1a56db; text-decoration: none; }
+a { color: var(--bcc-accent-strong); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .topnav {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    background: #fff;
-    color: #1d1d1f;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
     padding: 0.6rem 1.25rem;
-    border-bottom: 1px solid #e6e6e9;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .topnav a {
-    color: #1d1d1f;
+    color: var(--bcc-text);
     text-decoration: none;
     font-weight: 600;
     font-size: 0.88rem;
@@ -27,7 +27,7 @@ a:hover { text-decoration: underline; }
     border-radius: 8px;
 }
 
-.topnav a:hover { background: #f2f2f4; }
+.topnav a:hover { background: var(--bcc-surface-hover); }
 
 .topnav a:first-child { margin-right: 0.5rem; }
 
@@ -37,15 +37,15 @@ a:hover { text-decoration: underline; }
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
 }
 
 .topnav .navuser-avatar {
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     font-weight: 700;
     font-size: 0.75rem;
     display: flex;
@@ -60,15 +60,15 @@ a:hover { text-decoration: underline; }
 
 .navlogout button {
     background: none;
-    border: 1px solid #d8d8dc;
-    color: #5f6368;
+    border: 1px solid var(--bcc-border-strong);
+    color: var(--bcc-text-muted);
     padding: 0.35rem 0.75rem;
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.85rem;
 }
 
-.navlogout button:hover { background: #f2f2f4; border-color: #c8c8cc; }
+.navlogout button:hover { background: var(--bcc-surface-hover); border-color: var(--bcc-border-strong); }
 
 /* ---------- Admin paneli (Airtable benzeri liste/pill görünümü) ---------- */
 
@@ -81,7 +81,7 @@ a:hover { text-decoration: underline; }
 
 .admin-section-header h2 { margin: 0; }
 
-.admin-section-count { color: #8a8a8e; font-size: 0.85rem; font-weight: 500; }
+.admin-section-count { color: var(--bcc-text-muted); font-size: 0.85rem; font-weight: 500; }
 
 table.admin-table { border-collapse: collapse; width: 100%; }
 
@@ -91,20 +91,20 @@ table.admin-table thead th {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid #e6e6e9;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 table.admin-table tbody td {
     padding: 0.55rem 0.6rem;
-    border-bottom: 1px solid #f0f0f2;
+    border-bottom: 1px solid var(--bcc-border);
     vertical-align: middle;
 }
 
 table.admin-table tbody tr:last-child td { border-bottom: none; }
 
-table.admin-table tbody tr:hover td { background: #f7f8fa; }
+table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
 
 .admin-user-cell { display: flex; align-items: center; gap: 0.65rem; }
 
@@ -112,8 +112,8 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     font-weight: 700;
     font-size: 0.8rem;
     display: flex;
@@ -123,8 +123,8 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
 }
 
 .admin-user-name { font-weight: 600; font-size: 0.9rem; }
-.admin-user-email { font-size: 0.8rem; color: #8a8a8e; }
-.admin-muted { color: #8a8a8e; font-size: 0.85rem; }
+.admin-user-email { font-size: 0.8rem; color: var(--bcc-text-muted); }
+.admin-muted { color: var(--bcc-text-muted); font-size: 0.85rem; }
 
 .admin-pill {
     display: inline-block;
@@ -135,9 +135,9 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
     white-space: nowrap;
 }
 
-.admin-pill-blue   { background: #e8f0fe; color: #1a56db; }
+.admin-pill-blue   { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
 .admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
-.admin-pill-gray   { background: #eceef1; color: #5f6368; }
+.admin-pill-gray   { background: #eceef1; color: var(--bcc-text-muted); }
 .admin-pill-amber  { background: #fef3e2; color: #b45309; }
 .admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
 
@@ -147,13 +147,13 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
 .admin-team-header { margin-bottom: 0.5rem; }
 .admin-team-header h3 { margin: 0; font-size: 0.95rem; }
 
-.admin-empty { color: #8a8a8e; font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
+.admin-empty { color: var(--bcc-text-muted); font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
 
 .admin-add-link {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: #1a56db;
+    color: var(--bcc-accent-strong);
     font-weight: 600;
     font-size: 0.85rem;
     text-decoration: none;
@@ -167,7 +167,7 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
     gap: 1.25rem;
     margin-top: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #f0f0f2;
+    border-top: 1px solid var(--bcc-border);
 }
 
 .admin-toolbar {
@@ -184,14 +184,14 @@ table.admin-table tbody tr:hover td { background: #f7f8fa; }
     flex: 1;
     max-width: 280px;
     padding: 0.4rem 0.65rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     font-family: inherit;
     font-size: 0.85rem;
 }
 
 .admin-csv-link {
-    color: #1a56db;
+    color: var(--bcc-accent-strong);
     font-weight: 600;
     font-size: 0.82rem;
     text-decoration: none;
@@ -222,21 +222,21 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
     cursor: pointer;
     font-size: 1rem;
     line-height: 1;
 }
 
-.admin-row-menu-btn:hover { background: #f2f2f4; }
+.admin-row-menu-btn:hover { background: var(--bcc-surface-hover); }
 
 .admin-menu-panel {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
     min-width: 190px;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 8px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
     padding: 0.35rem;
@@ -255,14 +255,14 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
     border-radius: 6px;
     font-size: 0.85rem;
     font-family: inherit;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     cursor: pointer;
 }
 
-.admin-menu-item:hover { background: #f2f2f4; }
+.admin-menu-item:hover { background: var(--bcc-surface-hover); }
 .admin-menu-item:disabled { color: #b8b8bc; cursor: not-allowed; }
 .admin-menu-item:disabled:hover { background: none; }
-.admin-menu-item-danger { color: #c62828; }
+.admin-menu-item-danger { color: var(--bcc-danger); }
 
 .admin-bulk-bar {
     display: flex;
@@ -272,8 +272,8 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
 }
 
 .admin-bulk-trigger {
-    background: #1a56db;
-    color: #fff;
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-surface);
     border: none;
     padding: 0.45rem 0.9rem;
     border-radius: 8px;
@@ -283,14 +283,14 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
     font-family: inherit;
 }
 
-.admin-bulk-trigger:hover { background: #1746b3; }
+.admin-bulk-trigger:hover { background: var(--bcc-accent-strong); }
 
 .admin-bulk-trigger-muted {
     background: #eceef1;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
-.admin-bulk-trigger-muted:hover { background: #dfe1e5; }
+.admin-bulk-trigger-muted:hover { background: var(--bcc-surface-hover); }
 
 details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none; }
 
@@ -301,8 +301,8 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 }
 
 .card {
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.5rem;
@@ -320,11 +320,11 @@ table {
 td, th {
     text-align: left;
     padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .ok { color: #1a7f37; font-weight: 600; }
-.error { color: #c62828; font-weight: 600; }
+.error { color: var(--bcc-danger); font-weight: 600; }
 
 form.stacked label {
     display: block;
@@ -347,10 +347,10 @@ form.stacked textarea {
     font-family: inherit;
     font-size: 0.9rem;
     font-weight: 400;
-    color: #1d1d1f;
-    border: 1px solid #d8d8dc;
+    color: var(--bcc-text);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
-    background: #fff;
+    background: var(--bcc-surface);
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -358,7 +358,7 @@ form.stacked input:focus,
 form.stacked select:focus,
 form.stacked textarea:focus {
     outline: none;
-    border-color: #1a56db;
+    border-color: var(--bcc-accent-strong);
     box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14);
 }
 
@@ -377,7 +377,7 @@ form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; pa
     height: 28px;
     border: none;
     background: none;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -385,7 +385,7 @@ form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; pa
     justify-content: center;
 }
 
-.input-toggle-btn:hover { background: #f2f2f4; color: #5f6368; }
+.input-toggle-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text-muted); }
 
 .form-actions {
     display: flex;
@@ -395,8 +395,8 @@ form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; pa
 }
 
 form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn) {
-    background: #1a56db;
-    color: #fff;
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-surface);
     border: none;
     padding: 0.55rem 1.4rem;
     border-radius: 8px;
@@ -405,18 +405,18 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     cursor: pointer;
 }
 
-form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn):hover { background: #1746b3; }
+form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn):hover { background: var(--bcc-accent-strong); }
 
 .form-cancel-link {
-    color: #5f6368;
+    color: var(--bcc-text-muted);
     font-weight: 600;
     font-size: 0.88rem;
 }
 
-.form-cancel-link:hover { color: #1d1d1f; }
+.form-cancel-link:hover { color: var(--bcc-text); }
 
 .hint {
-    color: #6e6e73;
+    color: var(--bcc-text-muted);
     font-size: 0.9rem;
 }
 
@@ -431,8 +431,8 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     padding: 0.5rem 0.7rem;
     cursor: pointer;
@@ -442,7 +442,7 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 }
 
 .field-type-option:hover {
-    border-color: #1a73e8;
+    border-color: var(--bcc-accent-strong);
     background: #f2f6fe;
 }
 
@@ -451,13 +451,13 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     align-items: center;
     justify-content: center;
     min-width: 1.4rem;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
 }
 
 .link-btn {
     background: none;
     border: none;
-    color: #1a73e8;
+    color: var(--bcc-accent-strong);
     cursor: pointer;
     font-size: inherit;
     font-family: inherit;
@@ -475,9 +475,9 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 }
 
 .btn-sm {
-    background: #eee;
-    color: #1d1d1f;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-border);
+    color: var(--bcc-text);
+    border: 1px solid var(--bcc-border-strong);
     padding: 0.2rem 0.55rem;
     border-radius: 4px;
     cursor: pointer;
@@ -492,14 +492,14 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 }
 
 .btn-danger {
-    background: #fdecea;
+    background: var(--bcc-danger-soft);
     border-color: #f3c1bc;
-    color: #c62828;
+    color: var(--bcc-danger);
 }
 
 .pill {
     display: inline-block;
-    background: #eee;
+    background: var(--bcc-border);
     border-radius: 999px;
     padding: 0.1rem 0.6rem;
     font-size: 0.85rem;
@@ -508,8 +508,8 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 /* ---- Grid (Faz 3) ---------------------------------------------------- */
 
 .grid-wrap {
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     overflow: auto;
     max-width: 100%;
@@ -528,9 +528,9 @@ table.grid thead th {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #fff;
-    border-bottom: 2px solid #d8d8dc;
-    border-right: 1px solid #eee;
+    background: var(--bcc-surface);
+    border-bottom: 2px solid var(--bcc-border-strong);
+    border-right: 1px solid var(--bcc-border);
     white-space: nowrap;
     padding: 0.5rem 0.75rem;
     font-weight: 600;
@@ -538,19 +538,67 @@ table.grid thead th {
 
 .field-badge {
     display: inline-block;
-    color: #6e6e73;
+    color: var(--bcc-text-muted);
     font-weight: 600;
     margin-right: 0.3rem;
 }
 
 .req-mark {
-    color: #c62828;
+    color: var(--bcc-danger);
     margin-left: 0.15rem;
 }
 
+/* D4 — sütun başlığı "▾" menüsü: grid-add-field-panel/gs-view-row-menu ile
+   AYNI "position:fixed + JS'de açılışta konum hesapla" tekniği (.grid-wrap
+   overflow:auto olduğu için position:absolute kırpılırdı). Öğeler
+   .gs-table-tab-menu-item/.gs-table-tab-menu-divider — ikinci bir kopya
+   YOK, mevcut sınıflar tekrar kullanılıyor. */
+.grid-th-menu {
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+    margin-left: 0.25rem;
+}
+
+.grid-th-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    list-style: none;
+}
+
+.grid-th-menu-btn::-webkit-details-marker { display: none; }
+
+table.grid thead th:hover .grid-th-menu-btn,
+.grid-th-menu[open] .grid-th-menu-btn {
+    opacity: 1;
+    background: var(--bcc-surface-hover);
+}
+
+.grid-th-menu-panel {
+    position: fixed;
+    z-index: 30;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.4rem;
+    min-width: 210px;
+    /* <th>'den miras kalan font-weight:600/white-space:nowrap sıfırlanır —
+       .gs-table-tab-menu-item'ın "font: inherit" ile aldığı değer bu olsun. */
+    font-weight: 400;
+    white-space: normal;
+    text-align: left;
+}
+
 table.grid td {
-    border-right: 1px solid #eee;
-    border-bottom: 1px solid #eee;
+    border-right: 1px solid var(--bcc-border);
+    border-bottom: 1px solid var(--bcc-border);
     padding: 0;
     vertical-align: middle;
     height: 2rem;
@@ -560,8 +608,8 @@ table.grid .grid-rownum {
     position: sticky;
     left: 0;
     z-index: 1;
-    background: #fff;
-    color: #86868b;
+    background: var(--bcc-surface);
+    color: var(--bcc-text-muted);
     text-align: left;
     padding: 0.4rem 0.5rem;
     border-right: none;
@@ -577,7 +625,7 @@ table.grid thead .grid-rownum {
 table.grid thead .grid-rownum-selectall { vertical-align: middle; }
 
 table.grid tbody tr:hover td {
-    background: #fafafa;
+    background: var(--bcc-surface-sunken);
 }
 
 /* Satır seçim checkbox'ı + genişlet ikonu: sayı üzerine gelen hover'da yer
@@ -623,7 +671,7 @@ table.grid tbody tr.is-row-selected .grid-rownum-number { display: none; }
 
 table.grid tbody tr:hover .grid-row-expand { opacity: 1; }
 
-.grid-row-expand:hover { background: #e2e2e5; }
+.grid-row-expand:hover { background: var(--bcc-surface-hover); }
 
 table.grid tbody tr.is-row-selected td { background: #eef4fe; }
 table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
@@ -651,7 +699,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
     max-width: 92vw;
     height: 620px;
     max-height: 88vh;
-    background: #fff;
+    background: var(--bcc-surface);
     border-radius: 12px;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
     display: flex;
@@ -664,7 +712,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
     align-items: center;
     gap: 0.75rem;
     padding: 0.7rem 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
 
@@ -688,7 +736,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
 }
 
 .grid-detail-nav-btn:hover,
-.grid-detail-close:hover { background: #f2f2f4; }
+.grid-detail-close:hover { background: var(--bcc-surface-hover); }
 
 .grid-detail-nav-btn:disabled { opacity: 0.35; cursor: default; }
 .grid-detail-nav-btn:disabled:hover { background: none; }
@@ -724,7 +772,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
     display: block;
     font-size: 0.76rem;
     font-weight: 600;
-    color: #86868b;
+    color: var(--bcc-text-muted);
     margin-bottom: 0.3rem;
 }
 
@@ -736,7 +784,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
 .grid-detail-field-value input[type="time"] {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     padding: 0.4rem 0.5rem;
     font: inherit;
@@ -751,8 +799,8 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
 .grid-detail-comments {
     width: 260px;
     flex-shrink: 0;
-    border-left: 1px solid #eee;
-    background: #fafafb;
+    border-left: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
     display: flex;
     flex-direction: column;
     padding: 1rem;
@@ -766,20 +814,20 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
 
 .grid-detail-comments-empty {
     flex: 1;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
     font-size: 0.82rem;
 }
 
 .grid-detail-comments-input input {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #e6e6e9;
+    border: 1px solid var(--bcc-border);
     border-radius: 6px;
     padding: 0.5rem 0.6rem;
     font: inherit;
     font-size: 0.85rem;
-    background: #fff;
-    color: #9a9aa0;
+    background: var(--bcc-surface);
+    color: var(--bcc-text-muted);
 }
 
 /* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
@@ -791,19 +839,19 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
 .grid-frozen-cell {
     position: sticky;
     z-index: 1;
-    background: #fff;
+    background: var(--bcc-surface);
 }
 
 table.grid thead th.grid-frozen-cell {
     z-index: 2;
-    background: #fff;
+    background: var(--bcc-surface);
 }
 
 table.grid tbody tr:hover td.grid-frozen-cell {
-    background: #fafafa;
+    background: var(--bcc-surface-sunken);
 }
 
-.grid-frozen-edge { border-right: 2px solid #d8d8dc; }
+.grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }
 
 .grid-freeze-handle {
     position: absolute;
@@ -822,7 +870,7 @@ table.grid tbody tr:hover td.grid-frozen-cell {
     bottom: 0;
     left: 5px;
     width: 2px;
-    background: #2d7ff9;
+    background: var(--bcc-accent);
     opacity: 0;
 }
 
@@ -834,7 +882,7 @@ table.grid tbody tr:hover td.grid-frozen-cell {
 .grid-freeze-handle.is-dragging { cursor: grabbing; }
 
 .grid-empty {
-    color: #86868b;
+    color: var(--bcc-text-muted);
     padding: 1rem !important;
     text-align: center;
 }
@@ -860,7 +908,7 @@ td.editable {
     padding: 0.1rem 0.55rem;
     border-radius: 999px;
     font-size: 0.85rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     margin: 0 0.25rem 0.15rem 0;
     white-space: nowrap;
 }
@@ -871,7 +919,7 @@ td.editable .cell-view:hover {
 
 td.editable.editing {
     padding: 0;
-    box-shadow: inset 0 0 0 2px #1a73e8;
+    box-shadow: inset 0 0 0 2px var(--bcc-accent-strong);
 }
 
 /* Zengin metin (long_text — F6, "ilk aşama") düzenleme popover'ı. Mevcut
@@ -887,8 +935,8 @@ td.editable.richtext-editing {
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 15;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     width: 320px;
@@ -903,27 +951,27 @@ td.editable.richtext-editing {
     gap: 0.3rem;
     margin-bottom: 0.4rem;
     padding-bottom: 0.4rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .richtext-toolbar-btn {
     width: 26px;
     height: 26px;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
-    background: #fff;
+    background: var(--bcc-surface);
     cursor: pointer;
     font-size: 0.9rem;
     font-family: inherit;
 }
 
 .richtext-toolbar-btn:hover {
-    background: #f2f2f4;
+    background: var(--bcc-surface-hover);
 }
 
 .richtext-size-select {
     height: 26px;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     font: inherit;
     font-size: 0.8rem;
@@ -933,7 +981,7 @@ td.editable.richtext-editing {
     min-height: 4.5rem;
     max-height: 12rem;
     overflow-y: auto;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     padding: 0.4rem 0.5rem;
     font: inherit;
@@ -941,7 +989,7 @@ td.editable.richtext-editing {
 }
 
 .richtext-editable:focus {
-    border-color: #1a73e8;
+    border-color: var(--bcc-accent-strong);
 }
 
 .richtext-actions {
@@ -952,7 +1000,7 @@ td.editable.richtext-editing {
 }
 
 .rich-text-view a {
-    color: #1a73e8;
+    color: var(--bcc-accent-strong);
 }
 
 /* Dosya eki (attachment) hücresi: küçük resim (image/*) ya da rozet+ad "chip"i,
@@ -973,8 +1021,8 @@ td.editable.richtext-editing {
     gap: 0.25rem;
     padding: 0.1rem 0.4rem;
     border-radius: 6px;
-    background: #f2f2f4;
-    color: #1d1d1f;
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
     text-decoration: none;
     font-size: 0.8rem;
     flex-shrink: 0;
@@ -996,8 +1044,8 @@ td.editable.richtext-editing {
     display: inline-block;
     padding: 0.05rem 0.35rem;
     border-radius: 4px;
-    background: #1a73e8;
-    color: #fff;
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-surface);
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1021,8 +1069,8 @@ td.editable.attachment-editing {
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 15;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     width: 260px;
@@ -1059,7 +1107,7 @@ td.editable.attachment-editing {
 .attachment-remove-btn {
     border: none;
     background: none;
-    color: #c62828;
+    color: var(--bcc-danger);
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
@@ -1095,7 +1143,7 @@ td.editable.attachment-editing {
     border: none;
     padding: 0.35rem 0.7rem;
     font: inherit;
-    background: #fff;
+    background: var(--bcc-surface);
 }
 
 .cell-input:focus {
@@ -1143,7 +1191,7 @@ td.cell-flash-error {
 
 .grid-search {
     padding: 0.4rem 0.6rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     min-width: 220px;
     font: inherit;
@@ -1168,7 +1216,7 @@ td.cell-flash-error {
 
 .sort-panel[open] summary,
 .filter-panel[open] summary {
-    background: #e6e6e8;
+    background: var(--bcc-surface-hover);
 }
 
 .sort-form {
@@ -1176,8 +1224,8 @@ td.cell-flash-error {
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 5;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     padding: 0.85rem;
@@ -1192,7 +1240,7 @@ td.cell-flash-error {
 
 .sort-row select {
     padding: 0.3rem 0.4rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     font: inherit;
 }
@@ -1211,7 +1259,7 @@ td.cell-flash-error {
 
 .grid-row-count {
     align-self: center;
-    color: #6e6e73;
+    color: var(--bcc-text-muted);
     font-size: 0.85rem;
     margin-left: auto;
 }
@@ -1221,8 +1269,8 @@ td.cell-flash-error {
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 5;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     padding: 0.85rem;
@@ -1238,7 +1286,7 @@ td.cell-flash-error {
 .filter-row select,
 .filter-row input {
     padding: 0.3rem 0.4rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     font: inherit;
     box-sizing: border-box;
@@ -1263,7 +1311,7 @@ td.cell-flash-error {
     display: flex;
     gap: 1rem;
     font-size: 0.85rem;
-    color: #444;
+    color: var(--bcc-text-muted);
     margin: 0.5rem 0 0.25rem;
 }
 
@@ -1302,7 +1350,7 @@ td.cell-flash-error {
 .hide-fields-panel[open] summary,
 .group-panel[open] summary,
 .row-height-panel[open] summary {
-    background: #e6e6e8;
+    background: var(--bcc-surface-hover);
 }
 
 .hide-fields-panel summary.hide-fields-btn-active,
@@ -1311,25 +1359,67 @@ td.cell-flash-error {
 .group-panel summary.hide-fields-btn-active:hover,
 .row-height-panel summary.hide-fields-btn-active,
 .row-height-panel summary.hide-fields-btn-active:hover {
-    background: #e8f0fe;
-    color: #1a56db;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
 }
 
 .hide-fields-form,
 .group-form,
-.row-height-form {
+.row-height-form,
+.share-popover-form {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 5;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     padding: 0.85rem;
     min-width: 240px;
     max-height: 360px;
     overflow-y: auto;
+}
+
+/* Share popover'ları (D2 "Share", D3 "Share and Sync") — sağ tarafta oturan
+   tetikleyicilerden açıldığı için (topbar sağı / araç çubuğu sağı) sola doğru
+   taşmasın diye sağa hizalı; grid.php'nin sağ-üst köşesindeki "Share" için
+   ayrıca overflow olmaması adına daha geniş min-width. */
+.share-popover-trigger .share-popover-form {
+    left: auto;
+    right: 0;
+    min-width: 320px;
+    overflow: visible;
+}
+
+.share-popover-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.share-popover-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.share-popover-input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+}
+
+.share-popover-note {
+    font-size: 0.76rem;
+    color: var(--bcc-text-muted);
+    margin: 0.5rem 0 0;
 }
 
 /* Grid'in en sağındaki "+" (yeni sütun) başlık hücresi — Bölüm A'daki
@@ -1351,14 +1441,14 @@ td.cell-flash-error {
     width: 100%;
     height: 2.1rem;
     cursor: pointer;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
     font-size: 1.1rem;
     list-style: none;
 }
 
 .grid-add-field-btn::-webkit-details-marker { display: none; }
 
-.grid-add-field-btn:hover { background: #eaeaec; }
+.grid-add-field-btn:hover { background: var(--bcc-surface-hover); }
 
 /* .grid-wrap { overflow: auto } sütun başlığının torunu olan absolute bir
    paneli kırpardı (bkz. .home-base-more-panel/.gs-view-row-menu-panel'deki AYNI
@@ -1367,8 +1457,8 @@ td.cell-flash-error {
 .grid-add-field-panel {
     position: fixed;
     z-index: 30;
-    background: #fff;
-    border: 1px solid #d8d8dc;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     padding: 0.85rem;
@@ -1386,7 +1476,7 @@ td.cell-flash-error {
     width: 100%;
     box-sizing: border-box;
     padding: 0.35rem 0.5rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     font: inherit;
     margin-bottom: 0.5rem;
@@ -1414,7 +1504,7 @@ td.cell-flash-error {
     width: 32px;
     height: 18px;
     flex-shrink: 0;
-    background: #d0d0d5;
+    background: var(--bcc-border-strong);
     border-radius: 999px;
     transition: background 0.15s ease;
 }
@@ -1426,14 +1516,14 @@ td.cell-flash-error {
     left: 2px;
     width: 14px;
     height: 14px;
-    background: #fff;
+    background: var(--bcc-surface);
     border-radius: 50%;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     transition: transform 0.15s ease;
 }
 
 .hide-field-toggle-input:checked + .hide-field-toggle {
-    background: #2D7FF9;
+    background: var(--bcc-accent);
 }
 
 .hide-field-toggle-input:checked + .hide-field-toggle::before {
@@ -1441,7 +1531,7 @@ td.cell-flash-error {
 }
 
 .hide-field-toggle-input:focus-visible + .hide-field-toggle {
-    outline: 2px solid #2D7FF9;
+    outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
 
@@ -1487,11 +1577,11 @@ td.cell-flash-error {
 }
 
 .choice-color-input:checked + .choice-color-swatch {
-    border-color: #1d1d1f;
+    border-color: var(--bcc-text);
 }
 
 .choice-color-input:focus-visible + .choice-color-swatch {
-    outline: 2px solid #2D7FF9;
+    outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
 
@@ -1501,7 +1591,7 @@ td.cell-flash-error {
     gap: 0.75rem;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--bcc-border);
 }
 
 .group-field-list {
@@ -1521,7 +1611,7 @@ td.cell-flash-error {
 }
 
 .group-field-option:hover {
-    background: #f2f2f4;
+    background: var(--bcc-surface-hover);
 }
 
 .group-panel-header {
@@ -1530,7 +1620,7 @@ td.cell-flash-error {
     gap: 0.75rem;
     margin-bottom: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .group-level-rows {
@@ -1547,7 +1637,7 @@ td.cell-flash-error {
 
 .group-level-row select {
     padding: 0.3rem 0.4rem;
-    border: 1px solid #d8d8dc;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     font: inherit;
 }
@@ -1568,7 +1658,7 @@ td.cell-flash-error {
 }
 
 .group-remove-btn:hover {
-    background: #fdecea;
+    background: var(--bcc-danger-soft);
 }
 
 .group-form .link-btn {
@@ -1597,7 +1687,7 @@ td.cell-flash-error {
 }
 
 .row-height-option:hover {
-    background: #f2f2f4;
+    background: var(--bcc-surface-hover);
 }
 
 .row-height-check {
@@ -1606,7 +1696,7 @@ td.cell-flash-error {
 
 .row-height-divider {
     height: 1px;
-    background: #eee;
+    background: var(--bcc-border);
     margin: 0.35rem 0.2rem;
 }
 
@@ -1655,12 +1745,12 @@ table.grid.wrap-headers thead th {
 /* Grid içindeki grup başlığı satırı (Grid araçları Adım 2a). */
 
 .group-header-row {
-    background: #f5f5f7;
+    background: var(--bcc-surface-sunken);
 }
 
 .group-header-row td {
     padding: 0;
-    border-bottom: 1px solid #e6e6e9;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .group-header-toggle {
@@ -1694,7 +1784,7 @@ table.grid.wrap-headers thead th {
 .group-header-field-name {
     font-size: 0.7rem;
     font-weight: 600;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -1702,7 +1792,7 @@ table.grid.wrap-headers thead th {
 .group-header-value {
     font-size: 0.9rem;
     font-weight: 700;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .group-header-count {
@@ -1710,5 +1800,5 @@ table.grid.wrap-headers thead th {
     flex-shrink: 0;
     font-size: 0.8rem;
     font-weight: 500;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
 }

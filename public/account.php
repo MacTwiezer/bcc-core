@@ -138,5 +138,24 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </div>
             <?php endif; ?>
         </div>
+
+        <div class="account-card account-card-danger">
+            <h3 class="account-section-heading account-section-heading-danger">Tehlikeli Bölge</h3>
+            <div class="account-row-display" data-account-display>
+                <span class="account-row-value">Hesabınızı kalıcı olarak silin.</span>
+                <button type="button" class="account-btn-danger-link" id="account-delete-trigger">Hesabımı Sil</button>
+            </div>
+            <form class="account-row-form" id="account-delete-form" hidden>
+                <p class="account-danger-warning">Bu işlem geri alınamaz. Hesabınız kalıcı olarak silinir; oluşturduğunuz base/kayıt/görünümler silinmez ama artık sizinle ilişkilendirilmez.</p>
+                <label class="account-field-label">Mevcut şifre
+                    <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                </label>
+                <div class="account-row-actions">
+                    <button type="submit" class="account-btn-danger">Hesabımı kalıcı olarak sil</button>
+                    <button type="button" class="account-btn-secondary" id="account-delete-cancel">İptal</button>
+                </div>
+                <div class="account-row-error" id="account-delete-error" hidden></div>
+            </form>
+        </div>
 <script src="/assets/account-page.js" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

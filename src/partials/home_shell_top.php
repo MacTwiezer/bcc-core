@@ -20,7 +20,10 @@ if (!isset($homeActiveNav)) {
 <head>
 <meta charset="utf-8">
 <title><?php echo htmlspecialchars($homePageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/png" href="/assets/logo.png">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+<script src="/assets/theme-init.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
 <link rel="stylesheet" href="/assets/home.css?v=<?php echo (int) @filemtime(__DIR__ . '/../../public/assets/home.css'); ?>">
 <script>
 // Sayfa boyanmadan ÖNCE çalışır (senkron, defer değil) — localStorage'daki

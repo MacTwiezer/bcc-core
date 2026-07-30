@@ -33,6 +33,18 @@ if (!$view) {
 // paralel bir "view listesi" mantığı yazılmadı.
 $allViews = bcc_list_table_views($table['id'], $user ? $user['id'] : null);
 
+// D2/D3 "Share" / "Share and Sync" popover'ları için mutlak linkler —
+// src/slack.php'deki bcc_slack_send_webhook() ÇAĞIRAN kodun AYNI scheme+HTTP_HOST
+// deseni (ikinci bir URL-inşa yardımcı fonksiyonu yazılmadı, yalnızca 2 kullanım
+// yeri var). Bilinçli olarak GÜVENLİ: bu linkler yalnızca normal sayfa URL'leri
+// (view_id/base_id taşıyan) — oturumsuz erişim YOK, tıklayan kişi zaten
+// oturum açmış + takım üyesi değilse login'e düşer (KVKK izolasyonuna dokunulmadı).
+$bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+$bccShareOrigin = $bccShareScheme . '://' . $bccShareHost;
+$interfaceShareUrl = $bccShareOrigin . '/interface.php?base_id=' . (int) $table['base_id'];
+$gridViewShareUrl = $bccShareOrigin . '/grid.php?table_id=' . (int) $table['id'] . '&view_id=' . (int) $view['id'];
+
 // Kaydedilebilir görünümler (docs/PROJE-DURUM.md #8): URL'de HİÇ grid state
 // parametresi yoksa (yalnızca table_id ile açılmış "çıplak" istek) ve view'ın
 // kayıtlı bir grid_state'i varsa, o state'e yönlendirilir — URL kayıtlı görünümü
@@ -217,6 +229,59 @@ foreach ($fields as $f) {
     }
 }
 $hideAllFieldsQueryString = http_build_query($baseState + $sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState + array('hidden_fields' => implode(',', $nonPrimaryFieldIds)));
+
+// D4 — sütun başlığı "▾" menüsü: her alan için Sort/Filter/Group/Hide
+// linkleri, MEVCUT panel state helper'ları ÜZERİNE inşa edilir (yeni bir
+// state mantığı YOK). Sort/Group tek tıkla UYGULANIR ve slot 1'e YAZILIR —
+// diğer sort/group kurallarının YERİNİ alır (Airtable'ın tek-tık kısayolu
+// gibi hızlı/şaşırtıcı-olmayan davranış, onaylandı). Filter ise değer
+// gerektirdiği için yalnızca panelde bu alanı ÖN SEÇİLİ+AÇIK gösterir,
+// mevcut filtre kurallarına dokunmaz (bkz. aşağıdaki $openFilterFieldId).
+function bcc_grid_th_menu_links($f, $baseState, $filterState, $groupState, $hiddenFieldsState, $rowHeightState, $wrapHeadersState, $sortState, $filterRules, $hiddenFieldIds)
+{
+    $fieldId = (int) $f['id'];
+
+    $sortAscQuery = http_build_query($baseState + array('sort_field_1' => $fieldId, 'sort_dir_1' => 'asc') + $filterState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState);
+    $sortDescQuery = http_build_query($baseState + array('sort_field_1' => $fieldId, 'sort_dir_1' => 'desc') + $filterState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState);
+    $groupQuery = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState + array('group_field_1' => $fieldId, 'group_dir_1' => 'asc') + $rowHeightState + $wrapHeadersState);
+    $filterQuery = http_build_query($baseState + $sortState + $filterState + $hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState + array('open_filter_field' => $fieldId));
+
+    $newHiddenIds = array_values(array_unique(array_merge($hiddenFieldIds, array($fieldId))));
+    $hideQuery = http_build_query($baseState + $sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState + array('hidden_fields' => implode(',', $newHiddenIds)));
+
+    return array(
+        'sort_asc' => $sortAscQuery,
+        'sort_desc' => $sortDescQuery,
+        'group' => $groupQuery,
+        'filter' => $filterQuery,
+        'hide' => $hideQuery,
+    );
+}
+
+// Filtre panelini "bu alana göre filtrele" ile açan geçici (kalıcı state'e
+// karışmayan) işaret — ilk BOŞ slotu bulur, mevcut filtre kurallarının
+// hiçbirinin yerini almaz (parse_grid_filter_rules zaten cond/value'suz
+// satırları sessizce eler, bu yüzden $filterState'e YAZILMAZ).
+$openFilterFieldId = isset($_GET['open_filter_field']) ? (int) $_GET['open_filter_field'] : 0;
+if ($openFilterFieldId !== 0 && !isset($fieldsById[$openFilterFieldId])) {
+    $openFilterFieldId = 0;
+}
+$openFilterSlot = 0;
+if ($openFilterFieldId !== 0) {
+    for ($s = 1; $s <= 5; $s++) {
+        $slotTaken = false;
+        foreach ($filterRules as $rule) {
+            if ($rule['slot'] === $s) {
+                $slotTaken = true;
+                break;
+            }
+        }
+        if (!$slotTaken) {
+            $openFilterSlot = $s;
+            break;
+        }
+    }
+}
 
 // Group panelinin boş alan listesi (henüz gruplama yokken) her alan için hazır bir
 // bağlantı üretir — mevcut sort/filter/hidden_fields durumu korunur.
@@ -416,6 +481,9 @@ $gridUser = current_user();
 <meta charset="utf-8">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <title>BCC-Core — <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/png" href="/assets/logo.png">
+<script src="/assets/theme-init.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
 <link rel="stylesheet" href="/assets/style.css">
 <link rel="stylesheet" href="/assets/grid-shell.css">
 <link rel="stylesheet" href="/assets/home.css">
@@ -453,6 +521,17 @@ $gridUser = current_user();
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <div class="gs-topbar-right">
+            <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
+                <summary class="gs-btn-ghost">Share</summary>
+                <div class="share-popover-form">
+                    <div class="share-popover-label">Bağlantıyı paylaş</div>
+                    <div class="share-popover-row">
+                        <input type="text" class="share-popover-input" data-share-url-input readonly value="<?php echo htmlspecialchars($interfaceShareUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select()">
+                        <button type="button" class="btn-sm" data-share-copy-btn>Kopyala</button>
+                    </div>
+                    <p class="share-popover-note">Bu bağlantı yalnızca oturum açmış takım üyeleri için çalışır.</p>
+                </div>
+            </details>
             <a href="/interface.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-btn-ghost">Launch</a>
         </div>
     </header>
@@ -526,11 +605,12 @@ $gridUser = current_user();
                     <span
                         class="gs-view-name"
                         data-view-name
+                        data-view-sync-id="<?php echo (int) $view['id']; ?>"
                         <?php if ($canEdit): ?>data-view-id="<?php echo (int) $view['id']; ?>"<?php endif; ?>
                     ><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                 </span>
                 <div class="gs-view-info-popover">
-                    <div class="gs-view-info-title"><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="gs-view-info-title" data-view-sync-id="<?php echo (int) $view['id']; ?>"><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></div>
                     <div class="gs-view-info-row">
                         <span class="gs-view-info-label">Düzenleme</span>
                         <span class="gs-view-info-value">Herkes görünüm yapılandırmasını düzenleyebilir.</span>
@@ -656,7 +736,7 @@ $gridUser = current_user();
             <?php endif; ?>
 
             <?php if (!empty($fields)): ?>
-            <details class="filter-panel gs-tool-details" name="gs-table-tab-menu">
+            <details class="filter-panel gs-tool-details" name="gs-table-tab-menu" <?php echo $openFilterSlot !== 0 ? 'open' : ''; ?>>
                 <summary class="gs-tool-btn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4z" stroke="#5f6368" stroke-width="1.4" stroke-linejoin="round"/></svg>
                     Filtrele<?php echo !empty($filterRules) ? ' (' . count($filterRules) . ')' : ''; ?>
@@ -676,6 +756,14 @@ $gridUser = current_user();
                         $currentFieldType = $currentRule ? $currentRule['field_type'] : null;
                         $currentOp = $currentRule ? $currentRule['operator'] : '';
                         $currentValue = $currentRule ? $currentRule['raw_value'] : '';
+                        // Sütun başlığı "Bu alana göre filtrele" ile gelindiyse (bkz.
+                        // $openFilterFieldId/$openFilterSlot yukarıda) — bu, ilk boş
+                        // slotu bu alanla ön-seçili gösterir (henüz operatör/değer yok,
+                        // kullanıcı seçecek), gerçek bir filtre kuralı OLUŞTURMAZ.
+                        if ($currentRule === null && $slot === $openFilterSlot) {
+                            $currentFieldId = $openFilterFieldId;
+                            $currentFieldType = $fieldsById[$openFilterFieldId]['field_type'];
+                        }
                         $opsForField = $currentFieldType ? $GLOBALS['BCC_FILTER_OPERATORS'][$currentFieldType] : array();
                         $valueHidden = in_array($currentOp, $GLOBALS['BCC_FILTER_NO_VALUE_OPS'], true);
                         $valueInputType = 'text';
@@ -927,6 +1015,21 @@ $gridUser = current_user();
             </details>
             <?php endif; ?>
 
+            <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
+                <summary class="gs-tool-btn">
+                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M14 6.5a2 2 0 100-4 2 2 0 000 4zM6 11.5a2 2 0 100-4 2 2 0 000 4zM14 16.5a2 2 0 100-4 2 2 0 000 4z" stroke="#5f6368" stroke-width="1.3"/><path d="M7.7 10.3l4.6-2.6M7.7 9.7l4.6 2.6" stroke="#5f6368" stroke-width="1.3"/></svg>
+                    Share and Sync
+                </summary>
+                <div class="share-popover-form">
+                    <div class="share-popover-label">Şu görünüme bağlantı paylaş</div>
+                    <div class="share-popover-row">
+                        <input type="text" class="share-popover-input" data-share-url-input readonly value="<?php echo htmlspecialchars($gridViewShareUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select()">
+                        <button type="button" class="btn-sm" data-share-copy-btn>Kopyala</button>
+                    </div>
+                    <p class="share-popover-note">Bu bağlantı yalnızca oturum açmış takım üyeleri için çalışır.</p>
+                </div>
+            </details>
+
             <?php if (!empty($fields)): ?>
             <div class="gs-search">
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#5f6368" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -965,6 +1068,11 @@ $gridUser = current_user();
                         data-view-row-name="<?php echo htmlspecialchars(mb_strtolower($v['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
                         <?php echo $tooltip !== '' ? 'title="' . htmlspecialchars($tooltip, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>
                     >
+                        <?php if ($canEdit): ?>
+                        <span class="gs-view-drag-handle" data-view-drag-handle title="Sürükleyerek sırala">
+                            <svg width="10" height="14" viewBox="0 0 10 14" fill="none"><circle cx="2.5" cy="2.5" r="1.2" fill="#9a9aa0"/><circle cx="7.5" cy="2.5" r="1.2" fill="#9a9aa0"/><circle cx="2.5" cy="7" r="1.2" fill="#9a9aa0"/><circle cx="7.5" cy="7" r="1.2" fill="#9a9aa0"/><circle cx="2.5" cy="11.5" r="1.2" fill="#9a9aa0"/><circle cx="7.5" cy="11.5" r="1.2" fill="#9a9aa0"/></svg>
+                        </span>
+                        <?php endif; ?>
                         <!-- Favori: kullanıcı tercihi, içerik değişikliği DEĞİL — view_rename.php'nin
                              aksine viewer'a da açık (bkz. star_base.php'deki AYNI karar, önceki iş). -->
                         <button
@@ -978,7 +1086,7 @@ $gridUser = current_user();
                         </button>
                         <a class="gs-view-drawer-view" href="/grid.php?table_id=<?php echo (int) $table['id']; ?>&amp;view_id=<?php echo (int) $v['id']; ?>">
                             <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#1a73e8" stroke-width="1.4"/><path d="M3 8h14M8 3v14" stroke="#1a73e8" stroke-width="1.2"/></svg>
-                            <span <?php echo $isActiveView ? 'data-view-name-mirror' : ''; ?>><?php echo htmlspecialchars($v['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span data-view-sync-id="<?php echo (int) $v['id']; ?>"><?php echo htmlspecialchars($v['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </a>
                         <?php if ($canEdit): ?>
                         <details class="gs-table-tab-menu gs-view-row-menu" name="gs-table-tab-menu">
@@ -986,8 +1094,9 @@ $gridUser = current_user();
                                 <svg width="13" height="13" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
                             </summary>
                             <div class="gs-table-tab-menu-panel gs-view-row-menu-panel">
-                                <button type="button" class="gs-table-tab-menu-item" data-view-move="up" data-view-id="<?php echo (int) $v['id']; ?>">Yukarı taşı</button>
-                                <button type="button" class="gs-table-tab-menu-item" data-view-move="down" data-view-id="<?php echo (int) $v['id']; ?>">Aşağı taşı</button>
+                                <button type="button" class="gs-table-tab-menu-item" data-view-rename data-view-id="<?php echo (int) $v['id']; ?>">Yeniden adlandır</button>
+                                <div class="gs-table-tab-menu-divider"></div>
+                                <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" data-view-delete data-view-id="<?php echo (int) $v['id']; ?>">Sil</button>
                             </div>
                         </details>
                         <?php endif; ?>
@@ -1016,11 +1125,35 @@ $gridUser = current_user();
                             <th class="grid-rownum">
                                 <?php if ($canEdit): ?><input type="checkbox" class="grid-rownum-selectall" id="grid-rownum-selectall" aria-label="Tüm satırları seç"><?php else: ?>#<?php endif; ?>
                             </th>
-                            <?php foreach ($visibleFields as $f): ?>
+                            <?php foreach ($visibleFields as $f):
+                                $thLinks = bcc_grid_th_menu_links($f, $baseState, $filterState, $groupState, $hiddenFieldsState, $rowHeightState, $wrapHeadersState, $sortState, $filterRules, $hiddenFieldIds);
+                                $thSortable = $f['field_type'] !== 'attachment';
+                                $thCanHide = (int) $f['id'] !== $primaryFieldId;
+                            ?>
                                 <th>
                                     <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
+                                    <?php if ($thSortable || $thCanHide): ?>
+                                    <details class="grid-th-menu" name="gs-table-tab-menu">
+                                        <summary class="grid-th-menu-btn" aria-label="Alan seçenekleri">
+                                            <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="#5f6368" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </summary>
+                                        <div class="grid-th-menu-panel">
+                                            <?php if ($thSortable): ?>
+                                            <a class="gs-table-tab-menu-item" href="/grid.php?<?php echo htmlspecialchars($thLinks['sort_asc'], ENT_QUOTES, 'UTF-8'); ?>">Sırala A → Z</a>
+                                            <a class="gs-table-tab-menu-item" href="/grid.php?<?php echo htmlspecialchars($thLinks['sort_desc'], ENT_QUOTES, 'UTF-8'); ?>">Sırala Z → A</a>
+                                            <div class="gs-table-tab-menu-divider"></div>
+                                            <a class="gs-table-tab-menu-item" href="/grid.php?<?php echo htmlspecialchars($thLinks['filter'], ENT_QUOTES, 'UTF-8'); ?>">Bu alana göre filtrele</a>
+                                            <a class="gs-table-tab-menu-item" href="/grid.php?<?php echo htmlspecialchars($thLinks['group'], ENT_QUOTES, 'UTF-8'); ?>">Bu alana göre grupla</a>
+                                            <div class="gs-table-tab-menu-divider"></div>
+                                            <?php endif; ?>
+                                            <?php if ($thCanHide): ?>
+                                            <a class="gs-table-tab-menu-item" href="/grid.php?<?php echo htmlspecialchars($thLinks['hide'], ENT_QUOTES, 'UTF-8'); ?>">Alanı gizle</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </details>
+                                    <?php endif; ?>
                                 </th>
                             <?php endforeach; ?>
                             <?php if ($canEdit): ?>
@@ -1128,6 +1261,7 @@ $gridUser = current_user();
 <script src="/assets/grid-hide-fields.js" defer></script>
 <script src="/assets/grid-group.js" defer></script>
 <script src="/assets/grid-column-drag.js" defer></script>
+<script src="/assets/grid-column-menu.js" defer></script>
 <script src="/assets/grid-freeze-columns.js" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
@@ -1172,6 +1306,7 @@ $gridUser = current_user();
 <script src="/assets/account-menu.js" defer></script>
 <script src="/assets/grid-table-tabs.js" defer></script>
 <script src="/assets/grid-view-manage.js" defer></script>
+<script src="/assets/share-popover.js" defer></script>
 <!-- Bildirim paneli JS'i home.js'de yaşıyor (#home-notif elemanına bağlanır) —
      dosyadaki diğer bloklar (arama, yıldız, sidebar) kendi elemanları burada
      bulunmadığı için no-op kalır, ikinci bir bildirim mekanizması YAZILMADI. -->

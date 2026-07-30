@@ -8,8 +8,8 @@
 body.if-page {
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
-    color: #1d1d1f;
-    background: #fff;
+    color: var(--bcc-text);
+    background: var(--bcc-surface);
 }
 
 body.if-page a { text-decoration: none; color: inherit; }
@@ -47,6 +47,11 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin-bottom: 1rem;
 }
 
+/* E3 — "Bcc-Core ▾" menüsü: .if-nav-back artık bir <a> değil, <details>
+   içindeki <summary> (bkz. .gs-table-tab-menu-panel'in varsayılan
+   position:absolute;top:100%;left:0'ı için position:relative burada). */
+.if-nav-menu { position: relative; }
+
 .if-nav-back {
     display: flex;
     align-items: center;
@@ -58,7 +63,11 @@ body.if-page a { text-decoration: none; color: inherit; }
     border-radius: 6px;
     flex: 1;
     min-width: 0;
+    cursor: pointer;
+    list-style: none;
 }
+
+.if-nav-back::-webkit-details-marker { display: none; }
 
 .if-nav-back span {
     white-space: nowrap;
@@ -67,18 +76,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
-
-.if-nav-collapse-btn {
-    background: none;
-    border: none;
-    padding: 0.4rem;
-    border-radius: 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-    display: flex;
-}
-
-.if-nav-collapse-btn:hover { background: rgba(255, 255, 255, 0.3); }
 
 /* Daraltılmış durumda tablo listesi yerine gösterilen dekoratif klasör ikonu —
    genişken gizli, .if-nav.is-collapsed'de görünür (aşağıda). */
@@ -109,15 +106,18 @@ body.if-page a { text-decoration: none; color: inherit; }
 .if-nav-item:hover { background: rgba(255, 255, 255, 0.35); }
 
 /* Airtable referansı: seçili öğe kutucuk DEĞİL, aynı sarı zemin üzerinde
-   hafif koyu (yarı saydam amber) bir vurgu — önceki hâli (background:#fff)
-   düz beyaz bir kutucuk gibi göründüğü için değiştirildi. */
+   hafif koyu (yarı saydam amber) bir vurgu — önceki hâli (background: beyaz)
+   düz bir kutucuk gibi göründüğü için değiştirildi. */
 .if-nav-item.is-active {
     background: rgba(74, 59, 0, 0.14);
     color: #4a3b00;
 }
 
-/* ---------- Sol nav alt satırı: paylaş/bildirim/hesap ---------- */
-
+/* ---------- Sol nav alt satırı: profil/boşluk/paylaş/bildirim/daralt ----------
+   E2: sıralama DOM'a değil `order`e dayanır — açıkken Share, Bildirim'den
+   ÖNCE; kapalıyken (aşağıda .is-collapsed override'ı) Bildirim, Share'den
+   ÖNCE — DOM sırası tek başına bunu karşılayamaz (satır sırası ikisi
+   arasında YER DEĞİŞTİRİYOR). */
 .if-nav-bottom {
     margin-top: auto;
     padding-top: 0.75rem;
@@ -125,6 +125,13 @@ body.if-page a { text-decoration: none; color: inherit; }
     align-items: center;
     gap: 0.35rem;
 }
+
+.if-account { order: 1; }
+.if-nav-spacer { order: 2; flex: 1; }
+.if-nav-share { order: 3; }
+.if-nav-bottom .home-notif { order: 4; }
+.if-nav-collapse-btn { order: 5; }
+.if-nav-expand-btn { order: 6; }
 
 .if-nav-icon-btn {
     background: none;
@@ -137,14 +144,14 @@ body.if-page a { text-decoration: none; color: inherit; }
     gap: 0.4rem;
     color: #5a4a00;
     flex-shrink: 0;
+    list-style: none;
 }
+
+.if-nav-icon-btn::-webkit-details-marker { display: none; }
 
 .if-nav-icon-btn:hover { background: rgba(255, 255, 255, 0.3); }
 
-.if-nav-share-btn {
-    flex: 1;
-    min-width: 0;
-}
+.if-nav-share-btn { width: 100%; }
 
 .if-nav-bottom-label {
     font-size: 0.82rem;
@@ -166,7 +173,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-nav.is-collapsed .if-nav-top { justify-content: center; }
 .if-nav.is-collapsed .if-nav-back span,
-.if-nav.is-collapsed .if-nav-collapse-btn,
 .if-nav.is-collapsed .if-nav-list,
 .if-nav.is-collapsed .if-nav-bottom-label {
     display: none;
@@ -174,6 +180,17 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-nav.is-collapsed .if-nav-back { flex: none; padding: 0.5rem; }
 .if-nav.is-collapsed .if-nav-list-icon { display: flex; }
+
+/* Kapalıyken Bildirim, Share'den ÖNCE gelir (açıkken tam tersi) + boşluk
+   (spacer) sütun modunda anlamsız fazladan yer açmasın diye gizlenir +
+   daralt (≪) gizlenip genişlet (≫) görünür — TEK toggle yuvası, artık
+   ikisi de aynı satırda/sütunda yaşıyor (önceki karışıklığın kök nedeni
+   buydu: ≪ .if-nav-top'ta, ≫ .if-nav-bottom'daydı). */
+.if-nav.is-collapsed .if-nav-spacer { display: none; }
+.if-nav.is-collapsed .if-nav-share { order: 4; flex: none; }
+.if-nav.is-collapsed .if-nav-bottom .home-notif { order: 3; }
+.if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
+.if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }
 
 .if-nav.is-collapsed .if-nav-bottom {
     flex-direction: column;
@@ -200,8 +217,8 @@ body.if-page a { text-decoration: none; color: inherit; }
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     border: none;
     font-weight: 700;
     font-size: 0.78rem;
@@ -217,8 +234,8 @@ body.if-page a { text-decoration: none; color: inherit; }
     position: absolute;
     left: calc(100% + 10px);
     bottom: 0;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     min-width: 220px;
@@ -232,11 +249,11 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-account-info {
     padding: 0.85rem 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .if-account-name { font-weight: 600; font-size: 0.9rem; }
-.if-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+.if-account-email { font-size: 0.8rem; color: var(--bcc-text-muted); margin-top: 0.15rem; }
 
 .if-account-section { padding: 0.3rem; }
 
@@ -253,12 +270,12 @@ body.if-page a { text-decoration: none; color: inherit; }
     padding: 0.5rem 0.6rem;
     border-radius: 6px;
     cursor: pointer;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
-.if-account-item:hover { background: #f2f2f4; }
+.if-account-item:hover { background: var(--bcc-surface-hover); }
 
-.if-account-divider { height: 1px; background: #eee; margin: 0.3rem 0; }
+.if-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
 
 .if-account-logout { padding: 0.4rem; }
 
@@ -272,17 +289,17 @@ body.if-page a { text-decoration: none; color: inherit; }
     padding: 0.5rem 0.6rem;
     border-radius: 6px;
     cursor: pointer;
-    color: #c62828;
+    color: var(--bcc-danger);
 }
 
-.if-account-logout button:hover { background: #fdecea; }
+.if-account-logout button:hover { background: var(--bcc-danger-soft); }
 
 /* ---------- Orta: kayıt listesi + arama ---------- */
 
 .if-list-panel {
     width: 340px;
     flex-shrink: 0;
-    border-right: 1px solid #e6e6e9;
+    border-right: 1px solid var(--bcc-border);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -294,7 +311,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     gap: 0.5rem;
     margin: 0.85rem;
     padding: 0.45rem 0.7rem;
-    background: #f2f2f4;
+    background: var(--bcc-surface-hover);
     border-radius: 8px;
     flex-shrink: 0;
 }
@@ -306,7 +323,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-size: 0.88rem;
     flex: 1;
     font-family: inherit;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .if-record-list {
@@ -321,7 +338,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-align: left;
     background: none;
     border: none;
-    border-bottom: 1px solid #f0f0f2;
+    border-bottom: 1px solid var(--bcc-border);
     padding: 0.75rem 0.6rem;
     cursor: pointer;
     font: inherit;
@@ -333,20 +350,20 @@ body.if-page a { text-decoration: none; color: inherit; }
    kazanılıyor. Arama eşleşmeyen satırları bununla gizler. */
 .if-record-row[hidden] { display: none; }
 
-.if-record-row:hover { background: #fafafa; }
+.if-record-row:hover { background: var(--bcc-surface-sunken); }
 
 .if-record-row.is-selected { background: #fff8e1; }
 
 .if-record-title {
     font-weight: 700;
     font-size: 0.92rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     margin-bottom: 0.2rem;
 }
 
 .if-record-summary {
     font-size: 0.82rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -355,14 +372,14 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-record-date {
     font-size: 0.74rem;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
 }
 
 .if-empty,
 .if-no-results {
     padding: 2rem 1rem;
     text-align: center;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
     font-size: 0.88rem;
 }
 
@@ -376,13 +393,21 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-detail-placeholder {
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
     font-size: 0.95rem;
     padding-top: 2rem;
     text-align: center;
 }
 
+.if-detail-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
 .if-detail-title {
+    flex: 1;
+    min-width: 0;
     font-size: 1.6rem;
     margin: 0 0 1rem;
     word-break: break-word;
@@ -392,10 +417,10 @@ body.if-page a { text-decoration: none; color: inherit; }
     display: flex;
     gap: 0.4rem;
     font-size: 0.85rem;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
     margin-bottom: 1.5rem;
     padding-bottom: 1.2rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .if-detail-meta-label { font-weight: 600; }
@@ -406,13 +431,13 @@ body.if-page a { text-decoration: none; color: inherit; }
     display: block;
     font-size: 0.76rem;
     font-weight: 600;
-    color: #86868b;
+    color: var(--bcc-text-muted);
     margin-bottom: 0.3rem;
 }
 
 .if-detail-field-value {
     font-size: 0.92rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     white-space: pre-wrap;
     word-break: break-word;
 }

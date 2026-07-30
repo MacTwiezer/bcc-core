@@ -1,0 +1,56 @@
+/* Paylaşılan tema değişkenleri — Açık/Koyu/Sistem (bkz. account.php "Görünüm"
+   satırı + assets/theme-init.js). TEK doğruluk kaynağı burası; home.css,
+   grid-shell.css, interface.css, login.css, style.css bu değişkenleri
+   kullanır, kendi kopyalarını TUTMAZ. Yıldız sarısı (#f5b400), seçim chip
+   renkleri (PHP BCC_CHOICE_COLORS) gibi marka/semantik renkler buraya
+   alınmadı — yalnızca UI kroması (yüzey/kenarlık/metin/vurgu) temalanır. */
+
+:root {
+    --bcc-surface: #fff;
+    --bcc-surface-sunken: #fafafb;
+    --bcc-surface-hover: #f2f2f4;
+    --bcc-border: #e6e6e9;
+    --bcc-border-strong: #d8d8dc;
+    --bcc-text: #1d1d1f;
+    --bcc-text-muted: #6b6b70;
+    --bcc-accent: #2d7ff9;
+    --bcc-accent-strong: #1a56db;
+    --bcc-accent-soft: #e8f0fe;
+    --bcc-danger: #c62828;
+    --bcc-danger-soft: #fdecea;
+}
+
+/* Kullanıcı "Koyu" seçtiğinde (theme-init.js <html data-theme="dark"> yazar). */
+:root[data-theme="dark"] {
+    --bcc-surface: #1e1e21;
+    --bcc-surface-sunken: #17171a;
+    --bcc-surface-hover: #2a2a2e;
+    --bcc-border: #3a3a3f;
+    --bcc-border-strong: #48484d;
+    --bcc-text: #f0f0f2;
+    --bcc-text-muted: #9a9aa0;
+    --bcc-accent: #4c94fb;
+    --bcc-accent-strong: #6ea3ff;
+    --bcc-accent-soft: #1c2b4d;
+    --bcc-danger: #e57373;
+    --bcc-danger-soft: #3a1f1f;
+}
+
+/* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
+   istiyorsa — data-theme="light" açıkça seçiliyse bu bloğu ATLAR. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) {
+        --bcc-surface: #1e1e21;
+        --bcc-surface-sunken: #17171a;
+        --bcc-surface-hover: #2a2a2e;
+        --bcc-border: #3a3a3f;
+        --bcc-border-strong: #48484d;
+        --bcc-text: #f0f0f2;
+        --bcc-text-muted: #9a9aa0;
+        --bcc-accent: #4c94fb;
+        --bcc-accent-strong: #6ea3ff;
+        --bcc-accent-soft: #1c2b4d;
+        --bcc-danger: #e57373;
+        --bcc-danger-soft: #3a1f1f;
+    }
+}

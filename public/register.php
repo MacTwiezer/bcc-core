@@ -47,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="utf-8">
 <title>BCC-Core — Kayıt ol</title>
+<link rel="icon" type="image/png" href="/assets/logo.png">
+<script src="/assets/theme-init.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
 <link rel="stylesheet" href="/assets/login.css">
 </head>
 <body class="login-page">

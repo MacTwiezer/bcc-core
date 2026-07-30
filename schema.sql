@@ -82,8 +82,10 @@ CREATE TABLE IF NOT EXISTS user_starred_bases (
     base_id     INT UNSIGNED NOT NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- Not: ayrı bir user_id index'i YOK — uq_user_starred_bases(user_id, base_id)
+    -- zaten user_id ile başladığı için tekil user_id sorguları bu bileşik anahtarın
+    -- soldan önekini kullanır, ayrı bir index gereksiz (kaldırıldı, bkz. migrations/009).
     UNIQUE KEY uq_user_starred_bases (user_id, base_id),
-    KEY idx_user_starred_bases_user (user_id),
     CONSTRAINT fk_user_starred_bases_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_starred_bases_base FOREIGN KEY (base_id) REFERENCES bases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -134,6 +136,12 @@ CREATE TABLE IF NOT EXISTS records (
     position    INT NOT NULL DEFAULT 0,
     created_by  INT UNSIGNED DEFAULT NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Not: "Son güncelleme" sıralaması BUNU değil, MAX(cell_values.updated_at)'i
+    -- kullanır (bkz. src/schema.php'deki bcc_build_grid_records_query yorumu) —
+    -- bir kaydın hücre içeriği DEĞİL, satır düzeyi (ör. yeniden sıralama) meta
+    -- bilgisinin ne zaman değiştiğini tutan standart bookkeeping kolonu; şu an
+    -- hiçbir sorgu bunu doğrudan OKUMUYOR, ama tables_meta/views/cell_values ile
+    -- AYNI desen (silinmesi tutarsızlık yaratır, tutulması bedelsiz).
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_records_table (table_id),
@@ -192,11 +200,14 @@ CREATE TABLE IF NOT EXISTS views (
     table_id       INT UNSIGNED NOT NULL,
     name           VARCHAR(150) NOT NULL,
     description    VARCHAR(500) DEFAULT NULL,
+    -- Şu an SADECE 'grid' yazılıyor/okunuyor (Airtable'daki Calendar/Gallery/Kanban/
+    -- Form gibi diğer görünüm tiplerinin karşılığı henüz YAZILMADI) — bilerek
+    -- bırakılmış ileriye dönük kolon, kaldırılırsa o özellikler yazılınca yeniden
+    -- eklenip tüm mevcut satırlara varsayılan değer taşınması gerekirdi.
     view_type      VARCHAR(30) NOT NULL DEFAULT 'grid',
     position       INT NOT NULL DEFAULT 0,
     config         JSON DEFAULT NULL,
     created_by     INT UNSIGNED DEFAULT NULL,
-    is_published   TINYINT(1) NOT NULL DEFAULT 0,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -214,8 +225,8 @@ CREATE TABLE IF NOT EXISTS user_favorite_views (
     view_id     INT UNSIGNED NOT NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- Not: ayrı bir user_id index'i YOK — aynı gerekçe (bkz. user_starred_bases yorumu).
     UNIQUE KEY uq_user_favorite_views (user_id, view_id),
-    KEY idx_user_favorite_views_user (user_id),
     CONSTRAINT fk_user_favorite_views_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_favorite_views_view FOREIGN KEY (view_id) REFERENCES views(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -282,6 +293,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
     PRIMARY KEY (id),
     KEY idx_audit_log_team (team_id),
     KEY idx_audit_log_user (user_id),
+    -- dashboard.php'nin "Açıldı" tarih filtresi (log_base_open()) her açılışta
+    -- action='base.open' AND entity_type='base' AND entity_id=:id ile tarar
+    -- (bkz. migrations/002_audit_log_entity_index.sql).
+    KEY idx_audit_log_entity (entity_type, entity_id, action),
     CONSTRAINT fk_audit_log_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
     CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

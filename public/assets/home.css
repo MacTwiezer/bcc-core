@@ -1309,15 +1309,15 @@ html.home-view-list .home-list-header,
 .account-card {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
-    border-radius: 10px;
-    padding: 1.5rem;
-    max-width: 640px;
-    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    padding: 1.25rem;
+    max-width: 560px;
+    margin-bottom: 1.25rem;
 }
 
 .account-card-profile {
     display: flex;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 .account-avatar-lg {
@@ -1339,7 +1339,7 @@ html.home-view-list .home-list-header,
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: 0.85rem;
 }
 
 .account-row-label {
@@ -1382,13 +1382,27 @@ html.home-view-list .home-list-header,
     flex-shrink: 0;
 }
 
-.account-row-form { display: flex; flex-direction: column; gap: 0.6rem; }
+.account-row-form { display: flex; flex-direction: column; gap: 0.5rem; }
 .account-row-form[hidden] { display: none; }
+
+/* Ad Soyad/E-posta gibi TEK alanlı formlar — Airtable referansı: input +
+   Kaydet/İptal AYNI satırda, tek input veya alt alta 3 alanlı Şifre
+   formunun (.account-row-form, DEĞİŞMEDİ) aksine ayrı bir "form" hissi
+   vermez. Şifre/Hesap Sil formları bu class'ı KULLANMAZ, sütun kalır. */
+.account-row-form-inline {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.account-row-form-inline .account-input { width: auto; max-width: 220px; }
+.account-row-form-inline .account-row-actions { margin: 0; }
+.account-row-form-inline .account-row-error { flex-basis: 100%; }
 
 .account-field-label {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.2rem;
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
@@ -1396,9 +1410,9 @@ html.home-view-list .home-list-header,
 
 .account-input {
     font: inherit;
-    font-size: 0.9rem;
-    padding: 0.5rem 0.65rem;
-    border: 1px solid var(--bcc-border-strong);
+    font-size: 0.88rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--bcc-border);
     border-radius: 6px;
     color: var(--bcc-text);
     width: 100%;
@@ -1407,15 +1421,15 @@ html.home-view-list .home-list-header,
 
 .account-input:focus { outline: none; border-color: var(--bcc-accent-strong); }
 
-.account-row-actions { display: flex; gap: 0.5rem; }
+.account-row-actions { display: flex; gap: 0.4rem; }
 
 .account-btn-primary {
     background: var(--bcc-accent);
     color: var(--bcc-surface);
     border: none;
     border-radius: 6px;
-    padding: 0.45rem 0.9rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
 }
@@ -1426,8 +1440,8 @@ html.home-view-list .home-list-header,
     background: var(--bcc-surface-hover);
     border: 1px solid var(--bcc-border);
     border-radius: 6px;
-    padding: 0.45rem 0.9rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
     cursor: pointer;

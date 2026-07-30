@@ -291,10 +291,16 @@
         // ---- D1: Sürükle-bırak sıralama — bcc_bindColumnDrag() (mevcut
         // mousedown/mousemove(rAF)/mouseup iskeleti, clientY de iletecek şekilde
         // genişletildi) ÜZERİNE inşa edildi, paralel bir sürükleme mekanizması
-        // YOK. Sürüklerken satırlar DOM'da canlı yer değiştirir (görsel önizleme);
-        // bırakınca yeni sıra MEVCUT view_reorder.php'ye (bcc_reorder_sibling())
-        // ardışık up/down çağrılarıyla kaydedilir — yeni bir "toplu sırala"
-        // uç noktası YAZILMADI.
+        // YOK. Sürüklenen satırın KENDİSİ yerinde durur (soluklaştırılır,
+        // .is-drag-source) — konum önizlemesi için ayrı, dış görünüşü boş bir
+        // "hologram" (.gs-view-drag-placeholder, bkz. grid-shell.css) fareyi
+        // takip eder. Önceki sürüm satırı canlı taşıyordu; bu, taşınan satırın
+        // kendi index'ini her onMove'da yeniden hesaplaması gerektirdiği için
+        // ardışık karelerde salınım/thrashing riski taşıyordu — placeholder
+        // satırdan TAMAMEN bağımsız olduğu için bu sorun yok. Bırakınca placeholder
+        // satırın yeni konumuna dönüşür (replaceChild benzeri), yeni sıra MEVCUT
+        // view_reorder.php'ye (bcc_reorder_sibling()) ardışık up/down çağrılarıyla
+        // kaydedilir — yeni bir "toplu sırala" uç noktası YAZILMADI.
         var viewList = document.getElementById('gs-view-drawer-list');
         if (viewList && window.bcc_bindColumnDrag) {
             Array.prototype.forEach.call(document.querySelectorAll('[data-view-drag-handle]'), function (handle) {
@@ -303,38 +309,58 @@
                     return;
                 }
 
+                var placeholder = null;
                 var startIndex = -1;
 
-                function currentRows() {
+                function allRows() {
                     return Array.prototype.slice.call(viewList.querySelectorAll('.gs-view-drawer-row'));
+                }
+
+                // Arama filtresiyle gizlenmiş (hidden) satırlar konum hesabına
+                // katılmaz — gs-view-search-input ile AYNI "hidden = gizli" kuralı.
+                function otherVisibleRows() {
+                    return allRows().filter(function (r) {
+                        return r !== row && !r.hidden;
+                    });
                 }
 
                 window.bcc_bindColumnDrag(handle, {
                     onStart: function () {
-                        startIndex = currentRows().indexOf(row);
+                        startIndex = allRows().indexOf(row);
+
+                        placeholder = document.createElement('div');
+                        placeholder.className = 'gs-view-drag-placeholder';
+                        placeholder.style.height = row.getBoundingClientRect().height + 'px';
+                        viewList.insertBefore(placeholder, row.nextSibling);
+                        row.classList.add('is-drag-source');
                     },
                     onMove: function (clientX, clientY) {
-                        var rows = currentRows();
+                        if (!placeholder) {
+                            return;
+                        }
+                        var rows = otherVisibleRows();
                         for (var i = 0; i < rows.length; i++) {
-                            if (rows[i] === row) {
-                                continue;
-                            }
                             var rect = rows[i].getBoundingClientRect();
                             var midpoint = rect.top + rect.height / 2;
-
-                            if (clientY < midpoint && i < rows.indexOf(row)) {
-                                viewList.insertBefore(row, rows[i]);
-                                return;
-                            }
-                            if (clientY > midpoint && i > rows.indexOf(row)) {
-                                viewList.insertBefore(row, rows[i].nextSibling);
+                            if (clientY < midpoint) {
+                                viewList.insertBefore(placeholder, rows[i]);
                                 return;
                             }
                         }
+                        // Fare tüm satırların altında — en sona (boş sonuç mesajından ÖNCE) bırak.
+                        var emptyMsg = document.getElementById('gs-view-drawer-empty');
+                        viewList.insertBefore(placeholder, emptyMsg || null);
                     },
                     onEnd: function () {
-                        var rows = currentRows();
-                        var endIndex = rows.indexOf(row);
+                        if (!placeholder) {
+                            return;
+                        }
+                        viewList.insertBefore(row, placeholder);
+                        placeholder.parentNode.removeChild(placeholder);
+                        placeholder = null;
+                        row.classList.remove('is-drag-source');
+
+                        var endIndex = allRows().indexOf(row);
                         if (endIndex === startIndex || startIndex === -1) {
                             return;
                         }

@@ -99,6 +99,10 @@ $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.p
                  gs-table-tab-menu panelleriyle AYNI <details> deseni. -->
             <details class="if-nav-menu gs-table-tab-menu" name="if-nav-menu">
                 <summary class="if-nav-back" title="Menü">
+                    <!-- Dashboard/Starred kartındaki AYNI ikon (bcc_base_icon_svg) +
+                         AYNI base_id-tabanlı renk (bcc_base_icon_color) — ikinci bir
+                         kopya YAZILMADI, src/schema.php'deki paylaşılan fonksiyonlar. -->
+                    <span class="home-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($baseId), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14); ?></span>
                     <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </summary>

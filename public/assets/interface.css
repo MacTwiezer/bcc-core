@@ -75,6 +75,19 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-overflow: ellipsis;
 }
 
+/* Base ikonu (bcc_base_icon_svg/bcc_base_icon_color) — dashboard'daki
+   .home-base-icon'un (42px) burada küçültülmüş hâli, .home-search-result
+   .home-base-icon (30px) ile AYNI "scoped override" deseni, ikinci bir
+   bileşen YOK. flex-shrink:0 — .if-nav-back span'ın nowrap/ellipsis'i
+   metne (isim) özel, ikonu etkilemesin diye ayrıca belirtildi. */
+.if-nav-back .home-base-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    white-space: normal;
+}
+
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
 
 /* Daraltılmış durumda tablo listesi yerine gösterilen dekoratif klasör ikonu —

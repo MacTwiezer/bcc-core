@@ -468,13 +468,11 @@
         });
     }
 
-    // Zengin metin (long_text — F6, "ilk aşama"): kalın/italik/font
-    // büyüklüğü/link. Diğer tiplerin startEdit()/buildInput() akışını
-    // KULLANMAZ — araç çubuğu düğmeleri contenteditable'ın blur'unu
-    // tetikleyeceğinden ("blur = kaydet" deseni burada işe yaramaz),
-    // ayrı bir popover + açık Kaydet/İptal butonlarıyla çalışır.
-    var BCC_RICH_TEXT_FONT_SIZES = [10, 12, 14, 16, 18, 24, 32];
-
+    // Zengin metin (long_text — F6, "ilk aşama"): kalın/italik/link. Diğer
+    // tiplerin startEdit()/buildInput() akışını KULLANMAZ — araç çubuğu
+    // düğmeleri contenteditable'ın blur'unu tetikleyeceğinden ("blur = kaydet"
+    // deseni burada işe yaramaz), ayrı bir popover + açık Kaydet/İptal
+    // butonlarıyla çalışır.
     function startRichTextEdit(td) {
         if (td.classList.contains('editing')) {
             return;
@@ -528,45 +526,6 @@
         });
         italicBtn.style.fontStyle = 'italic';
 
-        var sizeSelect = document.createElement('select');
-        sizeSelect.className = 'richtext-size-select';
-        var defaultSizeOpt = document.createElement('option');
-        defaultSizeOpt.value = '';
-        defaultSizeOpt.textContent = 'Boyut';
-        sizeSelect.appendChild(defaultSizeOpt);
-        BCC_RICH_TEXT_FONT_SIZES.forEach(function (size) {
-            var opt = document.createElement('option');
-            opt.value = String(size);
-            opt.textContent = size + 'px';
-            sizeSelect.appendChild(opt);
-        });
-        sizeSelect.addEventListener('mousedown', function (e) {
-            e.stopPropagation();
-        });
-        sizeSelect.addEventListener('change', function () {
-            var px = sizeSelect.value;
-            sizeSelect.value = '';
-            if (!px) {
-                return;
-            }
-            editable.focus();
-            // execCommand('fontSize') yalnızca eski 1-7 ölçeğini kabul eder;
-            // sabit "7" işaretleyicisiyle çağırıp hemen ardından üretilen
-            // <font size="7"> etiketlerini gerçek px değerli
-            // <span style="font-size:Npx">'e çeviriyoruz — sunucudaki
-            // whitelist tek desende kalsın diye (bkz. bcc_sanitize_rich_text).
-            document.execCommand('fontSize', false, '7');
-            var fonts = editable.querySelectorAll('font[size="7"]');
-            fonts.forEach(function (font) {
-                var span = document.createElement('span');
-                span.style.fontSize = px + 'px';
-                while (font.firstChild) {
-                    span.appendChild(font.firstChild);
-                }
-                font.parentNode.replaceChild(span, font);
-            });
-        });
-
         var linkBtn = makeToolbarButton('🔗', 'Link ekle', function () {
             var url = window.prompt('Link URL:', 'https://');
             if (!url) {
@@ -582,7 +541,6 @@
 
         toolbar.appendChild(boldBtn);
         toolbar.appendChild(italicBtn);
-        toolbar.appendChild(sizeSelect);
         toolbar.appendChild(linkBtn);
 
         var actions = document.createElement('div');
@@ -606,6 +564,15 @@
             view.style.display = 'none';
         }
         td.appendChild(popover);
+
+        // .grid-wrap overflow:auto taşıyor — position:absolute popover satır
+        // tablonun alt/sağ kenarına yakınsa KIRPILIRDI (bkz. grid-shell.css'teki
+        // .gs-view-row-menu-panel / .grid-add-field-panel'de uygulanan AYNI ders).
+        // position:fixed + burada hesaplanan konum bunu atlıyor.
+        var tdRect = td.getBoundingClientRect();
+        popover.style.top = (tdRect.bottom + 4) + 'px';
+        popover.style.left = tdRect.left + 'px';
+
         editable.focus();
 
         var done = false;

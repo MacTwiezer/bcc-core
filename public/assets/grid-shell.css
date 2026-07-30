@@ -226,12 +226,10 @@ body.gs-body a { text-decoration: none; color: inherit; }
     width: 26px;
     height: 26px;
     border-radius: 6px;
-    background: var(--bcc-accent);
-    color: var(--bcc-surface);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
 .gs-base-name {
@@ -920,6 +918,20 @@ html.is-mac .gs-kbd-other { display: none; }
     opacity: 1;
 }
 
+/* Sürüklenen satırın kendisi yerinde durur, soluklaşır — konum önizlemesi
+   ayrı bir "hologram" (.gs-view-drag-placeholder) ile fareyi takip eder. */
+.gs-view-drawer-row.is-drag-source {
+    opacity: 0.35;
+}
+
+.gs-view-drag-placeholder {
+    border: 1.5px dashed var(--bcc-accent);
+    border-radius: 6px;
+    background: var(--bcc-accent-soft);
+    box-sizing: border-box;
+    margin: 1px 0;
+}
+
 .gs-view-drawer-view {
     flex: 1;
     min-width: 0;
@@ -970,6 +982,19 @@ html.is-mac .gs-kbd-other { display: none; }
    listenin altındaysa KIRPILIRDI — aynı ders, bkz. home.css .home-base-more-panel
    (Starred işi). position:fixed + JS'de hesaplanan konum bunu atlıyor. */
 .gs-view-row-menu-panel {
+    position: fixed;
+    top: auto;
+    left: auto;
+}
+
+/* Aynı ders burada da geçerli: .gs-table-tabs-scroll'a yalnızca overflow-x:auto
+   verilmiş olsa da CSS spec'i overflow-y'yi de "visible" yerine "auto" hesaplar
+   (overflow-x != visible olduğunda) — bu yüzden sekme sekmesi içindeki bu TEK
+   .gs-table-tab-menu-panel (diğer ikisi — gs-all-tables-menu/gs-view-options-menu
+   — bu sarmalayıcının İÇİNDE değil, onlara dokunulmadı) position:absolute ile
+   satır şeridinin altında KIRPILIYORDU. position:fixed + JS'de hesaplanan konum
+   (bkz. grid-table-data.js) bunu atlıyor. */
+.gs-table-tab-import-menu-panel {
     position: fixed;
     top: auto;
     left: auto;
@@ -1028,6 +1053,32 @@ html.is-mac .gs-kbd-other { display: none; }
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.7rem;
+}
+
+.gs-import-help {
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+    line-height: 1.4;
+    margin: 0 0 0.7rem;
+}
+
+.gs-import-file-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.82rem;
+}
+
+.gs-import-result {
+    margin-top: 0.7rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    background: var(--bcc-surface-sunken);
+}
+
+.gs-import-result-error {
+    color: #c62828;
 }
 
 /* ---------- Yazdırma ---------- */

@@ -637,6 +637,23 @@ function bcc_delete_attachment_files_by_field($fieldId)
     }
 }
 
+// "Verileri temizle" (Clear data) için: bir tablonun TÜM kayıtlarındaki dosya
+// eklerini tek sorguda toplayıp siler — bcc_delete_attachment_files_by_record()'ı
+// kayıt sayısı kadar çağırmak yerine (records join attachments) tek seferde.
+function bcc_delete_attachment_files_by_table($tableId)
+{
+    $rows = bcc_fetch_all(
+        'SELECT a.stored_name FROM attachments a INNER JOIN records r ON r.id = a.record_id WHERE r.table_id = :id',
+        array('id' => $tableId)
+    );
+    foreach ($rows as $row) {
+        $path = bcc_attachment_storage_path($row['stored_name']);
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
 // Dosya adı/boyutu kısaltılmış küçük rozet metni (mime türüne göre) — grid,
 // satır genişletme paneli VE interface.php (Duyuru) AYNI fonksiyonu paylaşır.
 // Resimler zaten <img> ile küçük resim olarak gösterildiği için buraya hiç
@@ -1753,6 +1770,26 @@ function bcc_home_relative_date($datetimeStr)
     return intdiv($months, 12) . ' yıl önce';
 }
 
+$GLOBALS['BCC_BASE_ICON_COLORS'] = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
+
+// Base ikonunun rengi — base'in KENDİ id'sinden deterministik türetilir, bu
+// yüzden AYNI base dashboard/starred/interface.php dahil HER YERDE HER ZAMAN
+// aynı renkte görünür. Önceki hâl (listedeki sıraya göre $i % count(...))
+// kaldırıldı — o yöntemde aynı base, listede farklı bir sırada göründüğünde
+// (ör. farklı kullanıcı, farklı sıralama) FARKLI renk gösterebiliyordu.
+function bcc_base_icon_color($baseId)
+{
+    $palette = $GLOBALS['BCC_BASE_ICON_COLORS'];
+    return $palette[(int) $baseId % count($palette)];
+}
+
+// Dashboard/Starred kartındaki KÜP ikonunun SVG'si — interface.php'nin
+// "Bcc-Core ▾" menüsünde de AYNEN kullanılır, ikinci bir kopya YOK.
+function bcc_base_icon_svg($size = 20)
+{
+    return '<svg width="' . (int) $size . '" height="' . (int) $size . '" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>';
+}
+
 // Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
 // şekilde kullanılır). $isStarred true ise yıldız butonu hover'dan bağımsız
 // hep görünür kalır (CSS: .home-base-star-btn[aria-pressed="true"]).
@@ -1769,7 +1806,7 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
     ?>
     <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>">
         <div class="home-base-icon" style="background: <?php echo htmlspecialchars($iconColor, ENT_QUOTES, 'UTF-8'); ?>;">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>
+            <?php echo bcc_base_icon_svg(20); ?>
         </div>
         <div class="home-base-info">
             <div class="home-base-name"><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -1828,8 +1865,6 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
 // kolonu için).
 function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array())
 {
-    $iconColors = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
-
     if (empty($bases)) {
         ?>
         <div class="home-empty">
@@ -1848,10 +1883,10 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             </div>
             <div class="home-list-header-workspace">Çalışma alanı</div>
         </div>
-        <?php foreach ($bases as $i => $b):
+        <?php foreach ($bases as $b):
             $isStarred = isset($starredBaseIds[(int) $b['id']]);
             $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
-            $iconColor = $iconColors[$i % count($iconColors)];
+            $iconColor = bcc_base_icon_color($b['id']);
             $canDelete = isset($roleByTeamId[(int) $b['team_id']]) && $roleByTeamId[(int) $b['team_id']] === 'owner';
             bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete);
         endforeach; ?>

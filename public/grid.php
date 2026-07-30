@@ -517,7 +517,7 @@ $gridUser = current_user();
 <div class="gs-main-col">
     <header class="gs-topbar">
         <div class="gs-topbar-left">
-            <span class="gs-base-icon">▤</span>
+            <span class="gs-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($table['base_id']), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14); ?></span>
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <div class="gs-topbar-right">
@@ -546,16 +546,18 @@ $gridUser = current_user();
                         href="/grid.php?table_id=<?php echo (int) $st['id']; ?>"
                         class="gs-table-tab <?php echo $isActiveTab ? 'is-active' : ''; ?>"
                     ><?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?></a>
-                    <details class="gs-table-tab-menu" name="gs-table-tab-menu">
+                    <?php if ($canEdit): ?>
+                    <details class="gs-table-tab-menu gs-table-tab-import-menu" name="gs-table-tab-menu">
                         <summary class="gs-table-tab-caret" aria-label="Sekme seçenekleri">
                             <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </summary>
-                        <div class="gs-table-tab-menu-panel">
-                            <button type="button" class="gs-table-tab-menu-item">Veri içe aktar</button>
+                        <div class="gs-table-tab-menu-panel gs-table-tab-import-menu-panel">
+                            <button type="button" class="gs-table-tab-menu-item" data-table-import="<?php echo (int) $st['id']; ?>">Veri içe aktar</button>
                             <div class="gs-table-tab-menu-divider"></div>
-                            <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger">Verileri temizle</button>
+                            <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" data-table-clear="<?php echo (int) $st['id']; ?>">Verileri temizle</button>
                         </div>
                     </details>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -687,6 +689,28 @@ $gridUser = current_user();
             </div>
         </div>
         <?php endif; ?>
+
+        <?php if ($canEdit): ?>
+        <div class="gs-view-desc-overlay" id="gs-table-import-overlay" hidden>
+            <div class="gs-view-desc-modal">
+                <div class="gs-view-desc-title">Veri içe aktar (CSV)</div>
+                <p class="gs-import-help">
+                    Dosyadaki ilk satır alan adları olmalı. Yalnızca tablodaki
+                    alan adlarıyla BİREBİR eşleşen sütunlar aktarılır, eşleşmeyenler
+                    atlanır. Ayırıcı <strong>noktalı virgül (;)</strong> olmalı
+                    (Excel'den "Download CSV" ile aldığınız dosyayla aynı format).
+                    Dosya eki (attachment) alanları içe aktarılamaz.
+                </p>
+                <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".csv,text/csv">
+                <div class="gs-import-result" id="gs-table-import-result" hidden></div>
+                <div class="gs-view-desc-actions">
+                    <button type="button" class="gs-table-tab-menu-item" id="gs-table-import-cancel">İptal</button>
+                    <button type="button" class="gs-btn-primary" id="gs-table-import-submit">İçe Aktar</button>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="gs-view-toolbar-right">
             <?php if (!empty($fields)): ?>
             <details class="hide-fields-panel gs-tool-details" name="gs-table-tab-menu">
@@ -1306,6 +1330,7 @@ $gridUser = current_user();
 <script src="/assets/account-menu.js" defer></script>
 <script src="/assets/grid-table-tabs.js" defer></script>
 <script src="/assets/grid-view-manage.js" defer></script>
+<script src="/assets/grid-table-data.js" defer></script>
 <script src="/assets/share-popover.js" defer></script>
 <!-- Bildirim paneli JS'i home.js'de yaşıyor (#home-notif elemanına bağlanır) —
      dosyadaki diğer bloklar (arama, yıldız, sidebar) kendi elemanları burada

@@ -888,6 +888,8 @@ table.grid tbody tr:hover td.grid-frozen-cell {
 }
 
 .cell-view {
+    box-sizing: border-box;
+    height: 100%;
     padding: 0.4rem 0.75rem;
     min-height: 1.2rem;
     white-space: nowrap;
@@ -931,9 +933,7 @@ td.editable.richtext-editing {
 }
 
 .richtext-popover {
-    position: absolute;
-    top: calc(100% + 0.35rem);
-    left: 0;
+    position: fixed;
     z-index: 15;
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border-strong);
@@ -967,14 +967,6 @@ td.editable.richtext-editing {
 
 .richtext-toolbar-btn:hover {
     background: var(--bcc-surface-hover);
-}
-
-.richtext-size-select {
-    height: 26px;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 4px;
-    font: inherit;
-    font-size: 0.8rem;
 }
 
 .richtext-editable {

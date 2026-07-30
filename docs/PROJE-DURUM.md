@@ -71,41 +71,58 @@ BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
 
 ## 4. Mimari
 
-**EAV (Entity-Attribute-Value)** — 13 tablo, hepsi InnoDB + utf8mb4:
+> **[2026-07-30 denetimi]** Bu bölüm uzun süredir güncellenmemiş, aşağıdaki sayılar/
+> liste artık gerçek durumu yansıtıyor (canlı DB + dosya sistemi karşılaştırılarak
+> doğrulandı). Eskiden "13 tablo"/"7 alan tipi" yazıyordu ve `record_links` (artık
+> yok) listede, `user_starred_bases`/`user_favorite_views`/`slack_routing_rules`
+> (gerçekten var) listede DEĞİLDİ — düzeltildi.
 
-`teams`, `users`, `team_members`, `bases`, `tables_meta`, `fields`, `records`,
-`cell_values`, `record_links`, `views`, `attachments`, `slack_webhooks`, `audit_log`
+**EAV (Entity-Attribute-Value)** — 15 tablo, hepsi InnoDB + utf8mb4:
+
+`teams`, `users`, `team_members`, `bases`, `user_starred_bases`, `tables_meta`,
+`fields`, `records`, `cell_values`, `attachments`, `views`, `user_favorite_views`,
+`slack_webhooks`, `slack_routing_rules`, `audit_log`
 
 - `cell_values`: `value_text` / `value_number` / `value_date` / `value_json`
 - Ekipler: TY, GULF, ATP
 - Roller: owner / editor / commenter / viewer
-- Alan tipleri (7): `single_line_text`, `long_text`, `number`, `checkbox`, `date`, `single_select`, `multiple_select`
+- Alan tipleri (10): `single_line_text`, `long_text`, `number`, `checkbox`, `date`,
+  `single_select`, `multiple_select`, `time`, `user`, `attachment`
 
-**Dosya haritası:**
+**Dosya haritası** (2026-07-30 itibarıyla, yine de tam bir manifest değil — yalnızca
+yönelim için; kesin liste her zaman `ls`/`Glob`):
 ```
-config/database.php        mysqli bağlantısı + yardımcılar
+config/database.php        mysqli bağlantısı + yardımcılar + config/database.local.php override
 src/
-  bootstrap.php            csrf → auth → audit → schema yükler
+  bootstrap.php            error_handler → csrf → auth → audit → schema → slack → validation yükler
+  error_handler.php         genel uncaught-exception yakalayıcı (sade hata sayfası/JSON)
   auth.php                 current_user, require_login, require_team_access,
                            require_role, attempt_login, bcc_user_initial
   schema.php               find_base/table/field_or_404, bcc_find_field,
                            parse_grid_* (sort/filter/hidden/group/row_height),
                            filter_condition_sql, bcc_reorder_sibling,
                            normalize_cell_value, cell_display_text
-  csrf.php  audit.php
-  partials/                header.php, top_nav.php, footer.php,
-                           flash.php, account_menu.php
+  api_bootstrap.php        public/api/*.php ortak önyükleyici (json_fail, api_require_*)
+  validation.php           bcc_is_valid_email / bcc_is_valid_password
+  slack.php  xlsx_writer.php  csrf.php  audit.php
+  partials/                header.php, top_nav.php, footer.php, flash.php,
+                           account_menu.php, home_shell_top.php, home_shell_bottom.php,
+                           notifications_panel.php, field_type_wizard_fields.php
 public/
-  login.php register.php terms.php privacy.php
-  dashboard.php            Airtable Home ekranı
-  bases.php base_tables.php table_fields.php
+  login.php register.php logout.php terms.php privacy.php index.php diag.php
+  dashboard.php starred.php workspaces.php account.php    Airtable Home ailesi (paylaşılan kabuk)
+  bases.php base.php base_tables.php table_fields.php slack_settings.php
   grid.php                 Airtable Data ekranı (en büyük dosya)
-  api/cell_update.php      AJAX hücre kaydetme
+  interface.php            Duyuru (Interface / yayınlanmış görünüm)
+  api/                     28 uç nokta (cell_update, record_add, view_*,
+                           table_import_csv, table_clear_data, star_base,
+                           attachment_*, account_*, base_delete/restore, ...)
   admin/                   index, create_user, create_team, assign_team
-  assets/                  style.css, login.css, home.css, grid-shell.css,
-                           grid.js, grid-toolbar.js, grid-filter.js,
-                           grid-hide-fields.js, grid-group.js,
-                           account-menu.js, bcc-logo.svg
+  assets/                  32 dosya — style.css, login.css, home.css, theme.css,
+                           grid-shell.css, interface.css, grid.js + ~14 grid-*.js,
+                           account-menu.js, home.js, interface.js, admin.js,
+                           dismissable-panel.js, share-popover.js, theme-init.js,
+                           logo.png, favicon.svg
 scripts/                   create_admin, test_isolation, _isolation_case,
                            _verify_phase4_*
 ```
@@ -228,6 +245,17 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 
   `/browse` ile 2 ve 3. maddeler özellikle test edildi (davranış değişmemeli talimatı gereği): hesap güncelleme (ad/e-posta) `api_bootstrap.php` üzerinden uçtan uca doğrulandı (DB'de kalıcı), `view_rename.php` doğrudan fetch ile doğrulandı, hesap menüsü dışarı-tık-kapatma davranışı `dashboard.php`/`grid.php`/`interface.php`'nin ÜÇÜNDE de ayrı ayrı doğrulandı (konsol hatası yok, Escape ile kapanma da çalışıyor), `register.php`/`admin/create_user.php` yeni `bcc_is_valid_email()`/`bcc_is_valid_password()` ile doğru mesajları veriyor. 6/6+8/8+19/19 regresyon her madde sonrası yeşil.
 
+- **2026-07-30 turu (birden fazla iş, tek günde).**
+  - `grid.php` sol üst ikonu artık dashboard'daki AYNI base-renkli ikonu gösteriyor (`bcc_base_icon_color`/`bcc_base_icon_svg`, interface.php'deki desenin aynısı).
+  - Sekme dropdown'ındaki inert "Veri içe aktar"/"Verileri temizle" butonları gerçek işlev kazandı: `table_import_csv.php` (mevcut alan adlarıyla eşleşen CSV sütunlarını `normalize_cell_value()` ile doğrulayıp ekler, eşleşmeyen/geçersiz hücreler sessizce atlanır) ve `table_clear_data.php` (kayıtları + dosya eki fiziksel dosyalarını temizler, alan yapısı kalır). Yol boyunca bulunan bug: bu dropdown `.gs-table-tabs-scroll`'un `overflow-x:auto`'su yüzünden (spec gereği overflow-y'yi de auto yapıyor) hiç görünmüyordu — `position:fixed` + JS konumlamayla düzeltildi (projede DAHA ÖNCE birkaç kez yaşanan aynı ders).
+  - Görünüm sürükle-bırak sıralaması: satırın kendisini canlı taşıyan (ardışık karede thrashing'e açık) eski mantık, fareyi takip eden ayrı bir "hologram" yer tutucuyla (`.gs-view-drag-placeholder`) yeniden yazıldı.
+  - Uzun metin zengin editörü: `.grid-wrap` kırpması yüzünden yarıda kesilen popover `position:fixed`'e taşındı; kullanılmayan "Boyut" (font boyutu) kontrolü kullanıcı kararıyla kaldırıldı.
+  - Hücre hover rengi `.cell-view`'ın `td`'yi tam doldurmaması yüzünden kenarlarda boşluk bırakıyordu — `height:100%; box-sizing:border-box` ile düzeltildi.
+  - **Veritabanı denetimi**: `migrations/002`'deki `idx_audit_log_entity` hiç uygulanmamıştı (canlı DB'de yoktu) — uygulandı + `schema.sql`'e yansıtıldı. `views.is_published` (hiç okunmayan/yazılmayan ölü kolon) ve `idx_user_starred_bases_user`/`idx_user_favorite_views_user` (ilgili UNIQUE anahtarların soldan öneki zaten kapsadığı için gereksiz) kaldırıldı (`migrations/009`). `fields.is_required` artık `cell_update.php`'de gerçekten uygulanıyor (önceden yalnızca kozmetik bir "*" rozetiydi).
+  - **`config/database.php` denetimi**: `config/database.local.php` (adı `.gitignore`'da geçip hiç `require` edilmiyordu) artık gerçekten yükleniyor. Yeni `src/error_handler.php` — yakalanmamış hatalar artık kullanıcıya ham stack trace/SQL sızdırmıyor (sayfa isteğinde sade mesaj, API isteğinde JSON, teknik detay yalnızca `error_log()`'a). `bcc_prepare_positional()`'ın regex'i string literal içindeki `:kelime` desenini artık named parametre sanmıyor; `bcc_bind_type()` bool değerleri doğru bağlıyor.
+  - **Dokümantasyon denetimi**: `GEREKSINIMLER.md`'ye gerçek durumla çelişen/eksik kalan yerlere (F2 alan tipleri, F6 font boyutu kararı, veri modeli — `record_links`/`tables_meta`/`slack_routing_rules`, roadmap'in donduğu, açık soruların fiilen cevaplandığı) **[GÜNCEL DURUM]** notları eklendi, orijinal metin silinmedi. Bu dosyanın (`PROJE-DURUM.md`) kendisi de denetlendi: Bölüm 4'teki "13 tablo"/"7 alan tipi" yanlış sayıları ve eski dosya haritası güncellendi, kullanılmayan `public/assets/bcc-logo.svg` (kod tabanında sıfır referans, `logo.png`'ye geçişten kalma) silindi.
+  - Tüm değişiklikler `/browse` ile canlı Apache üzerinden test edildi (import/clear-data uçtan uca bir CSV ile, sürükle-bırak gerçek mouse event simülasyonuyla, hata yakalayıcı gerçek bir DB hatası tetiklenerek); 6/6+8/8+19/19 regresyon bu turun SONUNDA da yeşil.
+
 ---
 
 ## 6. Kalan İşler
@@ -260,10 +288,13 @@ C:/php73/php.exe scripts/_verify_phase4_filter.php      → 19/19
 **Git akışı** (her özellik sonunda, ayrı cmd'den):
 ```
 cd C:\xampp\htdocs\bcc-core
-git add .
+git add <değişen dosyaları tek tek say>
 git commit -m "kisa aciklama"
 git push
 ```
+`git add .`/`git add -A` KULLANILMAZ (2026-07-30'da düzeltildi) — istemeden ilgisiz/
+gizli bir dosyayı (ör. yanlışlıkla oluşan bir `config/database.local.php`) commit'e
+eklemeyi önler, `git status` ile ne eklendiği her zaman gözle görülür.
 Geri alma: `git checkout .` (son commit'e döner)
 
 ### Yeni sohbet akışı (token tasarrufu)

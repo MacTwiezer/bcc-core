@@ -105,13 +105,28 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     </div>
                     <form class="account-row-form" id="account-password-form" hidden>
                         <label class="account-field-label">Mevcut şifre
-                            <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                            <div class="input-with-toggle">
+                                <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                                <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </button>
+                            </div>
                         </label>
                         <label class="account-field-label">Yeni şifre (en az 8 karakter)
-                            <input type="password" name="new_password" class="account-input" autocomplete="new-password" minlength="8" required>
+                            <div class="input-with-toggle">
+                                <input type="password" name="new_password" class="account-input" autocomplete="new-password" minlength="8" required>
+                                <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </button>
+                            </div>
                         </label>
                         <label class="account-field-label">Yeni şifre (tekrar)
-                            <input type="password" name="confirm_password" class="account-input" autocomplete="new-password" required>
+                            <div class="input-with-toggle">
+                                <input type="password" name="confirm_password" class="account-input" autocomplete="new-password" required>
+                                <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </button>
+                            </div>
                         </label>
                         <div class="account-row-actions">
                             <button type="submit" class="account-btn-primary">Kaydet</button>
@@ -148,7 +163,12 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             <form class="account-row-form" id="account-delete-form" hidden>
                 <p class="account-danger-warning">Bu işlem geri alınamaz. Hesabınız kalıcı olarak silinir; oluşturduğunuz base/kayıt/görünümler silinmez ama artık sizinle ilişkilendirilmez.</p>
                 <label class="account-field-label">Mevcut şifre
-                    <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                    <div class="input-with-toggle">
+                        <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                        <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                        </button>
+                    </div>
                 </label>
                 <div class="account-row-actions">
                     <button type="submit" class="account-btn-danger">Hesabımı kalıcı olarak sil</button>
@@ -158,4 +178,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </form>
         </div>
 <script src="/assets/account-page.js" defer></script>
+<script src="/assets/password-toggle.js" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

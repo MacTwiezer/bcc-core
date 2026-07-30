@@ -90,6 +90,30 @@
     font-family: inherit;
 }
 
+.input-with-toggle {
+    position: relative;
+}
+
+.input-with-toggle input { padding-right: 2.4rem; }
+
+.input-toggle-btn {
+    position: absolute;
+    right: 0.4rem;
+    bottom: 0.32rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    color: var(--bcc-text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-toggle-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text-muted); }
+
 .login-field input:focus {
     outline: none;
     border-color: var(--bcc-accent);

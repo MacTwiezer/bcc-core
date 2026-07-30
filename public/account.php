@@ -65,7 +65,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             Düzenle
                         </button>
                     </div>
-                    <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
+                    <form class="account-row-form account-row-form-inline" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
                         <input type="text" name="full_name" class="account-input" data-account-input maxlength="150" required value="<?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="account-row-actions">
                             <button type="submit" class="account-btn-primary">Kaydet</button>
@@ -84,7 +84,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             E-postayı düzenle
                         </button>
                     </div>
-                    <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_email.php" hidden>
+                    <form class="account-row-form account-row-form-inline" data-account-edit-form data-account-endpoint="/api/account_update_email.php" hidden>
                         <input type="email" name="email" class="account-input" data-account-input maxlength="190" required value="<?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="account-row-actions">
                             <button type="submit" class="account-btn-primary">Kaydet</button>

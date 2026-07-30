@@ -53,17 +53,33 @@ if ($tableId) {
     $attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 }
 
+// E1 — grid.php'deki D2/D3 "Share" popover'ıyla AYNI mekanizma/URL deseni
+// (src/slack.php'nin scheme+HTTP_HOST kullanımıyla da tutarlı) — bu sayfanın
+// kendi linkini gösterir, DDL/oturumsuz erişim YOK.
+$bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+$interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.php?base_id=' . (int) $baseId . '&table_id=' . (int) $tableId;
+
 ?>
 <!doctype html>
 <html lang="tr">
 <head>
 <meta charset="utf-8">
 <title>BCC-Core — <?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/png" href="/assets/logo.png">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+<script src="/assets/theme-init.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
 <!-- Dosya eki (attachment) rozet/küçük resim stilleri (.attachment-*) style.css'te
      tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
      kopya YAZILMADI. -->
 <link rel="stylesheet" href="/assets/style.css">
+<!-- E3/E1: "Bcc-Core ▾" menüsü + Share popover, grid.php'nin .gs-table-tab-menu-*/
+     .share-popover-* sınıflarını kullanıyor — ikinci bir kopya YAZILMADI,
+     grid-shell.css bu yüzden burada da yüklü (yalnızca .gs-*/.share-popover-*
+     kapsamlı kurallar geçerli olur, grid.php'ye özgü .gs-body/.gs-rail vb.
+     bu sayfada hiç eşleşmez). -->
+<link rel="stylesheet" href="/assets/grid-shell.css">
 <link rel="stylesheet" href="/assets/interface.css?v=<?php echo (int) @filemtime(__DIR__ . '/assets/interface.css'); ?>">
 <!-- Bildirim paneli + hesap menüsü partial'ları home.css'teki .home-notif-*/
      paylaşılan sınıfları kullanıyor (bkz. src/partials/notifications_panel.php
@@ -76,13 +92,21 @@ if ($tableId) {
 <div class="if-shell">
     <nav class="if-nav" id="if-nav">
         <div class="if-nav-top">
-            <a href="/base.php?base_id=<?php echo (int) $baseId; ?>" class="if-nav-back" title="Base'e dön">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12.5 4.5L6 10l6.5 5.5" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
-            </a>
-            <button type="button" class="if-nav-collapse-btn" id="if-nav-collapse" aria-label="Daralt" title="Daralt">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M12.5 4.5L6 10l6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 4.5L1 10l6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+            <!-- E3 — Airtable referansı (support.airtable.com/docs/getting-started-with-airtable-interface-designer,
+                 "Interface dropdown menu"): base adının yanındaki ok, "View data"
+                 (temel base/grid'e döner) ve "Back to home" (hesap ana ekranı)
+                 sunar. Bizde "Edit" YOK (interface builder'ımız yok). Diğer
+                 gs-table-tab-menu panelleriyle AYNI <details> deseni. -->
+            <details class="if-nav-menu gs-table-tab-menu" name="if-nav-menu">
+                <summary class="if-nav-back" title="Menü">
+                    <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </summary>
+                <div class="gs-table-tab-menu-panel">
+                    <a class="gs-table-tab-menu-item" href="/base.php?base_id=<?php echo (int) $baseId; ?>">Tabloları görüntüle</a>
+                    <a class="gs-table-tab-menu-item" href="/dashboard.php">Ana sayfaya dön</a>
+                </div>
+            </details>
         </div>
 
         <!-- Kaydırma yalnızca BU sarmalayıcıda — .if-nav'ın kendisinde overflow
@@ -108,14 +132,38 @@ if ($tableId) {
             </div>
         </div>
 
-        <!-- Profil/bildirim: mevcut ortak partial'lar require edilir, ikinci bir
-             kopya YAZILMAZ — yalnızca bu sayfaya özgü "if" öneki + koyu zemin
-             tetikleyici stiliyle (bkz. interface.css .if-account/.if-avatar). -->
+        <!-- E2 — sıralama tamamen CSS `order` ile sürülüyor (interface.css):
+             açıkken soldan sağa Avatar—boşluk—Share—Bildirim—≪, kapalıyken
+             yukarıdan aşağı Avatar—≫—Bildirim—Share (Share/Bildirim sırası
+             İKİ HÂLDE FARKLI olduğu için DOM sırası değil `order` kullanılır).
+             Daralt (≪) artık BURADA — önceki hâlde .if-nav-top'taydı, genişlet
+             (≫) ile aynı yuvada olmadığı için "karışık" hissi veriyordu.
+             Profil/bildirim: mevcut ortak partial'lar require edilir, ikinci
+             bir kopya YAZILMAZ. -->
         <div class="if-nav-bottom">
-            <button type="button" class="if-nav-icon-btn if-nav-share-btn" aria-label="Paylaş" title="Paylaş">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="5" cy="10" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="15" cy="15" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><path d="M6.9 8.8l6.2-2.6M6.9 11.2l6.2 2.6" stroke="#5a4a00" stroke-width="1.4"/></svg>
-                <span class="if-nav-bottom-label">Paylaş</span>
-            </button>
+            <?php
+            $accountMenuPrefix = 'if';
+            $accountMenuUser = $user;
+            require __DIR__ . '/../src/partials/account_menu.php';
+            ?>
+            <div class="if-nav-spacer" aria-hidden="true"></div>
+
+            <!-- E1 — grid.php'deki D2/D3 "Share" popover'ıyla AYNI mekanizma
+                 (share-popover.js + .share-popover-form), ikinci bir kopya YOK. -->
+            <details class="if-nav-share gs-tool-details share-popover-trigger" name="if-nav-share">
+                <summary class="if-nav-icon-btn if-nav-share-btn" aria-label="Paylaş" title="Paylaş">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="5" cy="10" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="15" cy="15" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><path d="M6.9 8.8l6.2-2.6M6.9 11.2l6.2 2.6" stroke="#5a4a00" stroke-width="1.4"/></svg>
+                    <span class="if-nav-bottom-label">Paylaş</span>
+                </summary>
+                <div class="share-popover-form">
+                    <div class="share-popover-label">Bağlantıyı paylaş</div>
+                    <div class="share-popover-row">
+                        <input type="text" class="share-popover-input" data-share-url-input readonly value="<?php echo htmlspecialchars($interfaceSelfShareUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select()">
+                        <button type="button" class="btn-sm" data-share-copy-btn>Kopyala</button>
+                    </div>
+                    <p class="share-popover-note">Bu bağlantı yalnızca oturum açmış takım üyeleri için çalışır.</p>
+                </div>
+            </details>
             <?php
             $notifUser = $user;
             $notifTriggerClass = 'if-nav-icon-btn';
@@ -123,14 +171,12 @@ if ($tableId) {
             $notifIconStroke = '#5a4a00';
             require __DIR__ . '/../src/partials/notifications_panel.php';
             ?>
+            <button type="button" class="if-nav-icon-btn if-nav-collapse-btn" id="if-nav-collapse" aria-label="Daralt" title="Daralt">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M12.5 4.5L6 10l6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 4.5L1 10l6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <button type="button" class="if-nav-icon-btn if-nav-expand-btn" id="if-nav-expand" aria-label="Genişlet" title="Genişlet" hidden>
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M7.5 4.5L14 10l-6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <?php
-            $accountMenuPrefix = 'if';
-            $accountMenuUser = $user;
-            require __DIR__ . '/../src/partials/account_menu.php';
-            ?>
         </div>
     </nav>
 
@@ -217,7 +263,22 @@ if ($tableId) {
     <aside class="if-detail-panel" id="if-detail-panel">
         <div class="if-detail-placeholder" id="if-detail-placeholder">Bir kayıt seçin</div>
         <div class="if-detail-content" id="if-detail-content" hidden>
-            <h1 class="if-detail-title" id="if-detail-title"></h1>
+            <!-- E4 — grid.php'nin satır detay panelindeki ▲▼ (grid-row-detail.js)
+                 ile AYNI mantık/SVG'ler (style.css'teki .grid-detail-nav*
+                 sınıfları burada da yüklü, ikinci bir kopya YAZILMADI) — yalnızca
+                 arama gerçekten satır gizlediği için (grid.php'de gizlemiyor)
+                 interface.js kendi "görünür satırlar" listesini kullanır. -->
+            <div class="if-detail-header">
+                <div class="grid-detail-nav">
+                    <button type="button" class="grid-detail-nav-btn" id="if-detail-prev" aria-label="Önceki kayıt">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 7.2L6 3.8l3.5 3.4" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <button type="button" class="grid-detail-nav-btn" id="if-detail-next" aria-label="Sonraki kayıt">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.8L6 8.2l3.5-3.4" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+                <h1 class="if-detail-title" id="if-detail-title"></h1>
+            </div>
             <div class="if-detail-meta">
                 <span class="if-detail-meta-label">Son Güncelleme</span>
                 <span id="if-detail-last-update"></span>
@@ -234,6 +295,7 @@ if ($tableId) {
 <script src="/assets/dismissable-panel.js" defer></script>
 <script src="/assets/account-menu.js" defer></script>
 <script src="/assets/home.js" defer></script>
+<script src="/assets/share-popover.js" defer></script>
 <script src="/assets/interface.js?v=<?php echo (int) @filemtime(__DIR__ . '/assets/interface.js'); ?>" defer></script>
 </body>
 </html>

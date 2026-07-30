@@ -112,107 +112,115 @@
             });
         }
 
-        // Görünüm adını satır içi düzenleme: data-view-id yalnızca editor+ rolünde
-        // grid.php tarafından basılır (bkz. $canEdit) — viewer'da bu eleman hiç
-        // bulunmaz, dblclick dinleyicisi hiç bağlanmaz. Sunucu tarafında da
-        // /api/view_rename.php require_role('editor') ile ayrıca reddeder;
-        // istemci kontrolü tek başına yeterli sayılmaz.
-        var viewNameEl = document.querySelector('[data-view-id]');
-        var viewMirrorEl = document.querySelector('[data-view-name-mirror]');
-        var viewInfoTitleEl = document.querySelector('.gs-view-info-title');
+        // Görünüm adını satır içi düzenleme — PAYLAŞILAN fonksiyon
+        // (window.bcc_startViewRename, bcc_bindColumnDrag/bcc_bindDismissable
+        // ile AYNI "global yardımcı" deseni): hem araç çubuğundaki dblclick
+        // (aşağıda) HEM sol paneldeki her satırın "Yeniden adlandır" menü
+        // öğesi (grid-view-manage.js) AYNI fonksiyonu çağırır — ikinci bir
+        // düzenleme akışı YOK. Bir view'ın adı değiştiğinde, o view_id'yi
+        // taşıyan TÜM elemanlar (data-view-sync-id — araç çubuğu etiketi,
+        // bilgi popover başlığı, sol paneldeki satır) senkron güncellenir;
+        // önceki "tek mirror" hardcode'u yerine evrensel bir eşleşme.
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var CSRF = csrfMeta ? csrfMeta.content : '';
 
-        if (viewNameEl) {
-            var viewId = viewNameEl.getAttribute('data-view-id');
+        window.bcc_startViewRename = function (nameEl, viewId) {
             var editing = false;
             var cancelled = false;
 
-            viewNameEl.addEventListener('dblclick', function () {
-                if (editing) {
+            if (nameEl.getAttribute('data-view-renaming') === '1') {
+                return; // zaten düzenleniyor
+            }
+            nameEl.setAttribute('data-view-renaming', '1');
+            editing = true;
+
+            var originalName = nameEl.textContent;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'gs-view-name-input';
+            input.value = originalName;
+
+            nameEl.replaceWith(input);
+            input.focus();
+            input.select();
+
+            function applyName(name) {
+                nameEl.textContent = name;
+                Array.prototype.forEach.call(document.querySelectorAll('[data-view-sync-id="' + viewId + '"]'), function (el) {
+                    el.textContent = name;
+                });
+            }
+
+            function finishEditing(save) {
+                if (!editing) {
                     return;
                 }
-                editing = true;
-                cancelled = false;
+                editing = false;
+                nameEl.removeAttribute('data-view-renaming');
 
-                var originalName = viewNameEl.textContent;
-                var input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'gs-view-name-input';
-                input.value = originalName;
+                var newValue = input.value.trim();
+                input.replaceWith(nameEl);
 
-                viewNameEl.replaceWith(input);
-                input.focus();
-                input.select();
-
-                function applyName(name) {
-                    viewNameEl.textContent = name;
-                    if (viewMirrorEl) {
-                        viewMirrorEl.textContent = name;
-                    }
-                    if (viewInfoTitleEl) {
-                        viewInfoTitleEl.textContent = name;
-                    }
+                if (!save || newValue === '' || newValue === originalName) {
+                    nameEl.textContent = originalName;
+                    return;
                 }
 
-                function finishEditing(save) {
-                    if (!editing) {
-                        return;
-                    }
-                    editing = false;
+                nameEl.textContent = newValue; // iyimser güncelleme
 
-                    var newValue = input.value.trim();
-                    input.replaceWith(viewNameEl);
-
-                    if (!save || newValue === '' || newValue === originalName) {
-                        viewNameEl.textContent = originalName;
-                        return;
-                    }
-
-                    viewNameEl.textContent = newValue; // iyimser güncelleme
-
-                    fetch('/api/view_rename.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ csrf_token: CSRF, view_id: viewId, name: newValue }).toString(),
-                    }).then(function (res) {
-                        return res.json().catch(function () {
-                            return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
-                        }).then(function (data) {
-                            return { httpOk: res.ok, data: data };
-                        });
-                    }).then(function (result) {
-                        if (result.httpOk && result.data && result.data.ok) {
-                            applyName(result.data.name);
-                        } else {
-                            viewNameEl.textContent = originalName;
-                            window.alert((result.data && result.data.error) || 'Görünüm adı kaydedilemedi.');
-                        }
-                    }).catch(function () {
-                        viewNameEl.textContent = originalName;
-                        window.alert('Görünüm adı kaydedilemedi (bağlantı hatası).');
+                fetch('/api/view_rename.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ csrf_token: CSRF, view_id: viewId, name: newValue }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () {
+                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                    }).then(function (data) {
+                        return { httpOk: res.ok, data: data };
                     });
-                }
-
-                input.addEventListener('keydown', function (ke) {
-                    if (ke.key === 'Enter') {
-                        ke.preventDefault();
-                        finishEditing(true);
-                    } else if (ke.key === 'Escape') {
-                        // Escape'te ÖNCE bayrak koy: replaceWith input'u DOM'dan
-                        // kaldırırken tetiklediği blur, kaydetmeyi tekrar denememeli.
-                        ke.preventDefault();
-                        cancelled = true;
-                        finishEditing(false);
+                }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok) {
+                        applyName(result.data.name);
+                    } else {
+                        nameEl.textContent = originalName;
+                        window.alert((result.data && result.data.error) || 'Görünüm adı kaydedilemedi.');
                     }
+                }).catch(function () {
+                    nameEl.textContent = originalName;
+                    window.alert('Görünüm adı kaydedilemedi (bağlantı hatası).');
                 });
+            }
 
-                input.addEventListener('blur', function () {
-                    if (cancelled) {
-                        return;
-                    }
+            input.addEventListener('keydown', function (ke) {
+                if (ke.key === 'Enter') {
+                    ke.preventDefault();
                     finishEditing(true);
-                });
+                } else if (ke.key === 'Escape') {
+                    // Escape'te ÖNCE bayrak koy: replaceWith input'u DOM'dan
+                    // kaldırırken tetiklediği blur, kaydetmeyi tekrar denememeli.
+                    ke.preventDefault();
+                    cancelled = true;
+                    finishEditing(false);
+                }
+            });
+
+            input.addEventListener('blur', function () {
+                if (cancelled) {
+                    return;
+                }
+                finishEditing(true);
+            });
+        };
+
+        // data-view-id yalnızca editor+ rolünde grid.php tarafından basılır
+        // (bkz. $canEdit) — viewer'da bu eleman hiç bulunmaz, dblclick
+        // dinleyicisi hiç bağlanmaz. Sunucu tarafında da /api/view_rename.php
+        // require_role('editor') ile ayrıca reddeder.
+        var viewNameEl = document.querySelector('[data-view-id]');
+        if (viewNameEl) {
+            var toolbarViewId = viewNameEl.getAttribute('data-view-id');
+            viewNameEl.addEventListener('dblclick', function () {
+                window.bcc_startViewRename(viewNameEl, toolbarViewId);
             });
         }
     });

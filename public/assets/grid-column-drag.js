@@ -9,8 +9,10 @@
     // handle: mousedown ile sürüklemeyi başlatan element (bir tutamaç <div>'i).
     // options.onStart(mousedownEvent) - (opsiyonel) sürükleme başlarken bir kez çağrılır
     //     (başlangıç genişliği/pozisyonu gibi durumu yakalamak için)
-    // options.onMove(clientX)         - (zorunlu) fare hareket ederken rAF ile
-    //     throttle edilerek çağrılır
+    // options.onMove(clientX, clientY) - (zorunlu) fare hareket ederken rAF ile
+    //     throttle edilerek çağrılır. clientY, D1 (views panelinde dikey
+    //     sürükle-bırak sıralama) için eklendi — yatay kullanan mevcut
+    //     çağıranlar (sütun dondurma) onu yok sayar, geriye dönük uyumlu.
     // options.onEnd()                 - (opsiyonel) sürükleme bırakılınca (mouseup veya
     //     pencere dışına çıkma) bir kez çağrılır — genelde sunucuya kalıcı kaydetmek için
     window.bcc_bindColumnDrag = function (handle, options) {
@@ -22,6 +24,7 @@
         var dragging = false;
         var rafPending = false;
         var pendingClientX = null;
+        var pendingClientY = null;
 
         function endDrag() {
             if (!dragging) {
@@ -54,6 +57,7 @@
             }
 
             pendingClientX = e.clientX;
+            pendingClientY = e.clientY;
             if (rafPending) {
                 return;
             }
@@ -63,7 +67,7 @@
                 if (!dragging) {
                     return;
                 }
-                onMove(pendingClientX);
+                onMove(pendingClientX, pendingClientY);
             });
         });
 

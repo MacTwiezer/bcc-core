@@ -75,16 +75,58 @@
         var detailTitle = document.getElementById('if-detail-title');
         var detailLastUpdate = document.getElementById('if-detail-last-update');
         var detailFields = document.getElementById('if-detail-fields');
+        var prevBtn = document.getElementById('if-detail-prev');
+        var nextBtn = document.getElementById('if-detail-next');
 
         if (!recordList) {
             return;
         }
 
         var rows = Array.prototype.slice.call(recordList.querySelectorAll('.if-record-row'));
+        var currentDetailRow = null;
+
+        // E4 — grid.php'nin getAllDataRows() ile AYNI fikir, ama yalnızca GÖRÜNÜR
+        // satırlar (grid.php arama sırasında satır GİZLEMEZ, sadece <mark> ekler —
+        // burada arama gerçekten row.hidden yaptığı için (aşağıda applyVisibility)
+        // gizli satırlar arasında ▲▼ atlama yapmamalı).
+        function getVisibleRows() {
+            return rows.filter(function (r) { return !r.hidden; });
+        }
+
+        function updateDetailNavState() {
+            var visible = getVisibleRows();
+            var idx = visible.indexOf(currentDetailRow);
+            if (prevBtn) {
+                prevBtn.disabled = idx <= 0;
+            }
+            if (nextBtn) {
+                nextBtn.disabled = idx === -1 || idx >= visible.length - 1;
+            }
+        }
+
+        function navigateDetail(delta) {
+            if (!currentDetailRow) {
+                return;
+            }
+            var visible = getVisibleRows();
+            var idx = visible.indexOf(currentDetailRow);
+            var next = visible[idx + delta];
+            if (next) {
+                selectRow(next);
+            }
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () { navigateDetail(-1); });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () { navigateDetail(1); });
+        }
 
         // Satır tıklama: sağ detay paneli, satırın data-detail-fields JSON'undan
         // (sunucu tarafında bir kez gömülmüş) kurulur — ikinci bir AJAX/sorgu YOK.
         function selectRow(row) {
+            currentDetailRow = row;
             rows.forEach(function (r) { r.classList.remove('is-selected'); });
             row.classList.add('is-selected');
 
@@ -133,6 +175,7 @@
 
             detailPlaceholder.hidden = true;
             detailContent.hidden = false;
+            updateDetailNavState();
         }
 
         rows.forEach(function (row) {
@@ -165,6 +208,7 @@
                 if (noResults) {
                     noResults.hidden = !(matchIds !== null && visibleCount === 0);
                 }
+                updateDetailNavState();
             }
 
             function runSearch() {

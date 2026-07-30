@@ -138,5 +138,57 @@
                 });
             });
         }
+
+        // ---- Hesabı sil — şifre güncelleme bloğuyla AYNI aç/kapa deseni,
+        // başarıda ise form sıfırlanmaz (sayfa zaten redirect ile terk edilir).
+        var delTrigger = document.getElementById('account-delete-trigger');
+        var delForm = document.getElementById('account-delete-form');
+        var delCancel = document.getElementById('account-delete-cancel');
+        var delError = document.getElementById('account-delete-error');
+
+        if (delTrigger && delForm) {
+            var delDisplay = delTrigger.closest('[data-account-display]');
+
+            function openDelForm() {
+                delDisplay.hidden = true;
+                delForm.hidden = false;
+                delError.hidden = true;
+                delForm.querySelector('input[name="current_password"]').focus();
+            }
+
+            function closeDelForm() {
+                delForm.reset();
+                delForm.hidden = true;
+                delDisplay.hidden = false;
+                delError.hidden = true;
+            }
+
+            delTrigger.addEventListener('click', openDelForm);
+            delCancel.addEventListener('click', closeDelForm);
+
+            delForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var submitBtn = delForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                delError.hidden = true;
+
+                post('/api/account_delete.php', {
+                    csrf_token: CSRF,
+                    current_password: delForm.querySelector('input[name="current_password"]').value,
+                }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok) {
+                        window.location.href = result.data.redirect;
+                        return;
+                    }
+                    submitBtn.disabled = false;
+                    delError.textContent = (result.data && result.data.error) || 'Hesap silinemedi.';
+                    delError.hidden = false;
+                }).catch(function () {
+                    submitBtn.disabled = false;
+                    delError.textContent = 'Hesap silinemedi (bağlantı hatası).';
+                    delError.hidden = false;
+                });
+            });
+        }
     });
 })();

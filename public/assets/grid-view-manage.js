@@ -246,27 +246,124 @@
             });
         });
 
-        // ---- Sol panel: yukarı/aşağı taşı — bcc_reorder_sibling() (mevcut,
-        // 'views' eklenerek genişletildi) çağıran view_reorder.php.
-        Array.prototype.forEach.call(document.querySelectorAll('[data-view-move]'), function (btn) {
+        // ---- D1: Sol panel satır menüsü — "Yeniden adlandır" (window.bcc_startViewRename,
+        // grid-table-tabs.js'te tanımlı — ikinci bir düzenleme akışı YOK) + "Sil"
+        // (view_delete.php, zaten HERHANGİ bir view_id'yi kabul ediyor, "son view
+        // silinemez" kuralı sunucuda zaten var).
+        Array.prototype.forEach.call(document.querySelectorAll('[data-view-rename]'), function (btn) {
             btn.addEventListener('click', function () {
-                post('/api/view_reorder.php', {
-                    csrf_token: CSRF,
-                    view_id: btn.getAttribute('data-view-id'),
-                    direction: btn.getAttribute('data-view-move'),
-                }).then(function (result) {
-                    if (result.httpOk && result.data && result.data.ok && result.data.moved) {
-                        window.location.reload();
-                    } else if (result.httpOk && result.data && result.data.ok) {
-                        // moved:false — sınırdaki view (en üst/en alt), sessizce yok say.
-                        return;
+                closeOptionsMenu();
+                var row = btn.closest('.gs-view-drawer-row');
+                var nameEl = row ? row.querySelector('[data-view-sync-id="' + btn.getAttribute('data-view-id') + '"]') : null;
+                if (nameEl && window.bcc_startViewRename) {
+                    window.bcc_startViewRename(nameEl, btn.getAttribute('data-view-id'));
+                }
+            });
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-view-delete]'), function (btn) {
+            btn.addEventListener('click', function () {
+                closeOptionsMenu();
+                if (!window.confirm('Bu görünümü silmek istediğinize emin misiniz?')) {
+                    return;
+                }
+                var viewId = btn.getAttribute('data-view-id');
+                var row = btn.closest('.gs-view-drawer-row');
+                var tableId = new URLSearchParams(window.location.search).get('table_id');
+                var wasActive = row && row.classList.contains('is-selected');
+
+                post('/api/view_delete.php', { csrf_token: CSRF, view_id: viewId }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok) {
+                        if (wasActive) {
+                            window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.fallback_view_id);
+                        } else {
+                            window.location.reload();
+                        }
                     } else {
-                        window.alert((result.data && result.data.error) || 'Taşınamadı.');
+                        window.alert((result.data && result.data.error) || 'Görünüm silinemedi.');
                     }
                 }).catch(function () {
-                    window.alert('Taşınamadı (bağlantı hatası).');
+                    window.alert('Görünüm silinemedi (bağlantı hatası).');
                 });
             });
         });
+
+        // ---- D1: Sürükle-bırak sıralama — bcc_bindColumnDrag() (mevcut
+        // mousedown/mousemove(rAF)/mouseup iskeleti, clientY de iletecek şekilde
+        // genişletildi) ÜZERİNE inşa edildi, paralel bir sürükleme mekanizması
+        // YOK. Sürüklerken satırlar DOM'da canlı yer değiştirir (görsel önizleme);
+        // bırakınca yeni sıra MEVCUT view_reorder.php'ye (bcc_reorder_sibling())
+        // ardışık up/down çağrılarıyla kaydedilir — yeni bir "toplu sırala"
+        // uç noktası YAZILMADI.
+        var viewList = document.getElementById('gs-view-drawer-list');
+        if (viewList && window.bcc_bindColumnDrag) {
+            Array.prototype.forEach.call(document.querySelectorAll('[data-view-drag-handle]'), function (handle) {
+                var row = handle.closest('.gs-view-drawer-row');
+                if (!row) {
+                    return;
+                }
+
+                var startIndex = -1;
+
+                function currentRows() {
+                    return Array.prototype.slice.call(viewList.querySelectorAll('.gs-view-drawer-row'));
+                }
+
+                window.bcc_bindColumnDrag(handle, {
+                    onStart: function () {
+                        startIndex = currentRows().indexOf(row);
+                    },
+                    onMove: function (clientX, clientY) {
+                        var rows = currentRows();
+                        for (var i = 0; i < rows.length; i++) {
+                            if (rows[i] === row) {
+                                continue;
+                            }
+                            var rect = rows[i].getBoundingClientRect();
+                            var midpoint = rect.top + rect.height / 2;
+
+                            if (clientY < midpoint && i < rows.indexOf(row)) {
+                                viewList.insertBefore(row, rows[i]);
+                                return;
+                            }
+                            if (clientY > midpoint && i > rows.indexOf(row)) {
+                                viewList.insertBefore(row, rows[i].nextSibling);
+                                return;
+                            }
+                        }
+                    },
+                    onEnd: function () {
+                        var rows = currentRows();
+                        var endIndex = rows.indexOf(row);
+                        if (endIndex === startIndex || startIndex === -1) {
+                            return;
+                        }
+
+                        var viewId = row.getAttribute('data-view-row-id');
+                        var steps = endIndex - startIndex;
+                        var direction = steps > 0 ? 'down' : 'up';
+                        var remaining = Math.abs(steps);
+
+                        function stepOnce() {
+                            if (remaining <= 0) {
+                                return;
+                            }
+                            remaining--;
+                            post('/api/view_reorder.php', { csrf_token: CSRF, view_id: viewId, direction: direction }).then(function (result) {
+                                if (result.httpOk && result.data && result.data.ok) {
+                                    stepOnce();
+                                } else {
+                                    window.alert((result.data && result.data.error) || 'Taşınamadı.');
+                                }
+                            }).catch(function () {
+                                window.alert('Taşınamadı (bağlantı hatası).');
+                            });
+                        }
+
+                        stepOnce();
+                    },
+                });
+            });
+        }
     });
 })();

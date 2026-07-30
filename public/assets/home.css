@@ -5,8 +5,8 @@
 body.home-page {
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
-    background: #f7f8fa;
-    color: #1d1d1f;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
 }
 
 a { text-decoration: none; color: inherit; }
@@ -18,8 +18,8 @@ a { text-decoration: none; color: inherit; }
     align-items: center;
     height: 56px;
     padding: 0 1rem;
-    background: #fff;
-    border-bottom: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border-bottom: 1px solid var(--bcc-border);
     position: sticky;
     top: 0;
     z-index: 20;
@@ -52,8 +52,8 @@ a { text-decoration: none; color: inherit; }
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    background: #f2f2f4;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface-hover);
+    border: 1px solid var(--bcc-border);
     border-radius: 8px;
     padding: 0.4rem 0.7rem;
     cursor: pointer;
@@ -62,22 +62,22 @@ a { text-decoration: none; color: inherit; }
 
 .home-search-trigger::-webkit-details-marker { display: none; }
 
-.home-search-trigger:hover { background: #ececef; }
+.home-search-trigger:hover { background: var(--bcc-surface-hover); }
 
 .home-search-trigger-label {
     flex: 1;
     text-align: left;
     font-size: 0.9rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
 }
 
 .home-search-kbd {
     font-size: 0.72rem;
-    color: #9a9aa0;
-    border: 1px solid #d8d8dc;
+    color: var(--bcc-text-muted);
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 4px;
     padding: 0.05rem 0.35rem;
-    background: #fff;
+    background: var(--bcc-surface);
     flex-shrink: 0;
 }
 
@@ -101,7 +101,7 @@ a { text-decoration: none; color: inherit; }
     max-height: 70vh;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: var(--bcc-surface);
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
     z-index: 91;
@@ -113,7 +113,7 @@ a { text-decoration: none; color: inherit; }
     align-items: center;
     gap: 0.6rem;
     padding: 0.9rem 1.1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
 
@@ -126,7 +126,7 @@ a { text-decoration: none; color: inherit; }
     font-size: 1.05rem;
     flex: 1;
     font-family: inherit;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .home-search-results {
@@ -148,7 +148,7 @@ a { text-decoration: none; color: inherit; }
    (aynı özgüllük ama author > UA) — bu yüzden burada açıkça geri kazanılıyor. */
 .home-search-result[hidden] { display: none; }
 
-.home-search-result:hover { background: #f2f2f4; }
+.home-search-result:hover { background: var(--bcc-surface-hover); }
 
 .home-search-result .home-base-icon {
     width: 30px;
@@ -171,8 +171,8 @@ a { text-decoration: none; color: inherit; }
 .home-search-result-type {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #5f6368;
-    background: #f2f2f4;
+    color: var(--bcc-text-muted);
+    background: var(--bcc-surface-hover);
     border-radius: 999px;
     padding: 0.1rem 0.55rem;
     flex-shrink: 0;
@@ -180,7 +180,7 @@ a { text-decoration: none; color: inherit; }
 
 .home-search-result-meta {
     font-size: 0.78rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     flex-shrink: 0;
     min-width: 100px;
     text-align: right;
@@ -189,17 +189,17 @@ a { text-decoration: none; color: inherit; }
 .home-search-empty {
     padding: 1.5rem 1.1rem;
     text-align: center;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     font-size: 0.85rem;
 }
 
 .home-search-hint {
     flex-shrink: 0;
     padding: 0.55rem 1.1rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--bcc-border);
     font-size: 0.72rem;
-    color: #9a9aa0;
-    background: #fafafb;
+    color: var(--bcc-text-muted);
+    background: var(--bcc-surface-sunken);
 }
 
 .home-topbar-right {
@@ -222,7 +222,7 @@ a { text-decoration: none; color: inherit; }
     cursor: pointer;
 }
 
-.home-icon-btn:hover { background: #f2f2f4; }
+.home-icon-btn:hover { background: var(--bcc-surface-hover); }
 
 .home-account { position: relative; }
 
@@ -230,8 +230,8 @@ a { text-decoration: none; color: inherit; }
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     border: none;
     font-weight: 700;
     font-size: 0.85rem;
@@ -246,8 +246,8 @@ a { text-decoration: none; color: inherit; }
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
     min-width: 220px;
@@ -260,11 +260,11 @@ a { text-decoration: none; color: inherit; }
 
 .home-account-info {
     padding: 0.85rem 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .home-account-name { font-weight: 600; font-size: 0.9rem; }
-.home-account-email { font-size: 0.8rem; color: #86868b; margin-top: 0.15rem; }
+.home-account-email { font-size: 0.8rem; color: var(--bcc-text-muted); margin-top: 0.15rem; }
 
 .home-account-section { padding: 0.3rem; }
 
@@ -281,13 +281,31 @@ a { text-decoration: none; color: inherit; }
     padding: 0.5rem 0.6rem;
     border-radius: 6px;
     cursor: pointer;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
-.home-account-item:hover { background: #f2f2f4; }
+.home-account-item:hover { background: var(--bcc-surface-hover); }
 
 .home-account-item-arrow, .home-account-item-icon { flex-shrink: 0; }
 .home-account-item-arrow { margin-left: auto; }
+
+/* "Görünüm" alt-paneli (Light/Dark) — src/partials/account_menu.php'nin
+   HER prefix'te (home/gs/if) paylaştığı jenerik (prefix'siz) sınıflar; renk
+   currentColor'dan geliyor (.X-account-item zaten prefix'e göre renkli),
+   bu yüzden burada TEK yerde tanımlanması yeterli — 3 CSS dosyasında ayrı
+   ayrı kopya YOK. */
+.bcc-account-menu-arrow { flex-shrink: 0; margin-left: auto; }
+.bcc-account-menu-arrow-back { margin-left: 0; margin-right: 0.1rem; }
+/* [hidden] tek başına güvenilir değil (bkz. home-search-result[hidden] notu —
+   burada farklı kökten: SVG'lerde bu tarayıcıda [hidden] UA kuralı hiç
+   uygulanmıyor), bu yüzden açık bir class ile kontrol ediliyor. */
+.bcc-account-menu-check {
+    display: none;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.bcc-account-menu-check.is-active { display: block; }
 
 .home-account-badge {
     margin-left: auto;
@@ -298,10 +316,10 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
 }
 
-.home-account-badge-blue { background: #e8f0fe; color: #1a56db; }
+.home-account-badge-blue { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
 .home-account-badge-orange { background: #fff1e0; color: #b5610a; }
 
-.home-account-divider { height: 1px; background: #eee; margin: 0.3rem 0; }
+.home-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
 
 .home-account-logout { padding: 0.4rem; }
 
@@ -314,11 +332,11 @@ a { text-decoration: none; color: inherit; }
     border-radius: 6px;
     font-size: 0.88rem;
     cursor: pointer;
-    color: #c62828;
+    color: var(--bcc-danger);
     font-family: inherit;
 }
 
-.home-account-logout button:hover { background: #fdecea; }
+.home-account-logout button:hover { background: var(--bcc-danger-soft); }
 
 /* ---------- Body layout ---------- */
 
@@ -326,6 +344,7 @@ a { text-decoration: none; color: inherit; }
     display: flex;
     align-items: stretch;
     min-height: calc(100vh - 56px);
+    position: relative;
 }
 
 /* ---------- Sidebar ---------- */
@@ -333,18 +352,54 @@ a { text-decoration: none; color: inherit; }
 .home-sidebar {
     width: 240px;
     flex-shrink: 0;
-    background: #fafafb;
-    border-right: 1px solid #e6e6e9;
+    background: var(--bcc-surface-sunken);
+    border-right: 1px solid var(--bcc-border);
     padding: 1rem 0.75rem;
-    transition: margin-left 0.15s ease, width 0.15s ease;
+    transition: width 0.15s ease;
 }
 
+/* Daraltılmış hal: tamamen kaybolmak yerine ikon şeridi (Airtable referansı).
+   Menü yazıları ve yıldızlı base alt listesi gizlenir, yalnızca ikonlar kalır. */
 .home-sidebar.is-collapsed {
-    width: 0;
-    padding-left: 0;
-    padding-right: 0;
+    width: 56px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     overflow: hidden;
-    border-right: none;
+}
+
+.home-sidebar.is-collapsed .home-sidenav-item {
+    justify-content: center;
+}
+
+.home-sidebar.is-collapsed .home-sidenav-item span,
+.home-sidebar.is-collapsed .home-starred-list {
+    display: none;
+}
+
+/* Hover-peek: daraltılmışken üzerine gelince ana içeriği itmeden geçici
+   olarak tam genişliğe döner (overlay), mouse çekilince akışa geri döner. */
+.home-sidebar.is-collapsed:hover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    overflow: visible;
+    z-index: 20;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.12);
+}
+
+.home-sidebar.is-collapsed:hover .home-sidenav-item {
+    justify-content: flex-start;
+}
+
+.home-sidebar.is-collapsed:hover .home-sidenav-item span,
+.home-sidebar.is-collapsed:hover .home-starred-list {
+    display: block;
+}
+
+.home-sidebar.is-collapsed:hover .home-starred-list {
+    display: flex;
 }
 
 .home-sidenav {
@@ -360,21 +415,21 @@ a { text-decoration: none; color: inherit; }
     padding: 0.55rem 0.7rem;
     border-radius: 8px;
     font-size: 0.9rem;
-    color: #444;
+    color: var(--bcc-text-muted);
     white-space: nowrap;
 }
 
-.home-sidenav-item svg { flex-shrink: 0; color: #6b6b70; }
+.home-sidenav-item svg { flex-shrink: 0; color: var(--bcc-text-muted); }
 
-.home-sidenav-item:hover { background: #eef0f2; }
+.home-sidenav-item:hover { background: var(--bcc-surface-hover); }
 
 .home-sidenav-item.is-active {
-    background: #e8f0fe;
-    color: #1a56db;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
     font-weight: 600;
 }
 
-.home-sidenav-item.is-active svg { color: #1a56db; }
+.home-sidenav-item.is-active svg { color: var(--bcc-accent-strong); }
 
 .home-starred-list {
     display: flex;
@@ -391,7 +446,7 @@ a { text-decoration: none; color: inherit; }
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #9a9aa0;
+    background: var(--bcc-text-muted);
     flex-shrink: 0;
 }
 
@@ -437,7 +492,7 @@ a { text-decoration: none; color: inherit; }
     padding: 0.4rem 0.5rem;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #444;
+    color: var(--bcc-text-muted);
     cursor: pointer;
     list-style: none;
     font-family: inherit;
@@ -445,15 +500,15 @@ a { text-decoration: none; color: inherit; }
 
 .home-filter-btn::-webkit-details-marker { display: none; }
 
-.home-filter-btn:hover { background: #f2f2f4; }
+.home-filter-btn:hover { background: var(--bcc-surface-hover); }
 
 .home-filter-menu {
     display: none;
     position: absolute;
     left: 0;
     top: calc(100% + 6px);
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
     list-style: none;
@@ -477,11 +532,11 @@ a { text-decoration: none; color: inherit; }
     cursor: pointer;
 }
 
-.home-filter-menu li a:hover { background: #f2f2f4; }
+.home-filter-menu li a:hover { background: var(--bcc-surface-hover); }
 
 .home-filter-menu li a.is-selected {
-    background: #e8f0fe;
-    color: #1a56db;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
     font-weight: 600;
 }
 
@@ -497,12 +552,12 @@ a { text-decoration: none; color: inherit; }
 }
 
 .home-empty {
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 2.5rem 1.5rem;
     text-align: center;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
     font-size: 0.95rem;
 }
 
@@ -517,8 +572,8 @@ a { text-decoration: none; color: inherit; }
     display: flex;
     align-items: center;
     gap: 0.85rem;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 1rem 1.1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -536,13 +591,37 @@ a { text-decoration: none; color: inherit; }
     gap: 0.25rem;
 }
 
-.home-base-star-btn,
+/* Yıldız butonu — Airtable referansı çıplak ikon (kutu/arka plan/gölge YOK),
+   ⋯ butonundan (aşağıda) kasıtlı olarak ayrı tutulur. Akıştan çıkarılıp
+   (position:absolute) varsayılan olarak ⋯ ile AYNI konuma (actions
+   kutusunun sağ üst köşesi) oturtulur — hover olmadan görünürken (starred)
+   ⋯'nin yerinde durur; kart hover'landığında sola kayıp ikisi yan yana
+   görünür (bkz. .home-base-card:hover .home-base-star-btn altta). */
+.home-base-star-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.1s ease, transform 0.12s ease;
+}
+
 .home-base-more-btn {
     width: 26px;
     height: 26px;
     border: none;
     border-radius: 6px;
-    background: #fff;
+    background: var(--bcc-surface);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
@@ -555,6 +634,9 @@ a { text-decoration: none; color: inherit; }
 
 .home-base-card:hover .home-base-star-btn,
 .home-base-card:hover .home-base-more-btn { opacity: 1; }
+
+/* Hover'da ⋯'nin üstünden ayrılıp soluna kayar (26px buton + 0.25rem boşluk). */
+.home-base-card:hover .home-base-star-btn { transform: translateX(-30px); }
 
 .home-base-star-btn[aria-pressed="true"] { opacity: 1; }
 
@@ -575,10 +657,11 @@ html.home-view-list .home-base-card:hover .home-base-star-btn,
 
 .home-base-more-btn::-webkit-details-marker { display: none; }
 
-.home-base-star-btn:hover,
-.home-base-more-btn:hover { background: #f2f2f4; }
+.home-base-more-btn:hover { background: var(--bcc-surface-hover); }
 
-.home-base-star-icon { fill: none; stroke: #5f6368; }
+.home-base-star-btn:hover .home-base-star-icon { stroke: var(--bcc-text); }
+
+.home-base-star-icon { fill: none; stroke: var(--bcc-text-muted); }
 
 .home-base-star-btn[aria-pressed="true"] .home-base-star-icon {
     fill: #f5b400;
@@ -609,8 +692,8 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 .home-base-more-panel {
     position: fixed;
     z-index: 40;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     padding: 0.35rem;
@@ -628,7 +711,7 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
     border: none;
     font: inherit;
     font-size: 0.85rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     padding: 0.5rem 0.6rem;
     border-radius: 6px;
     cursor: pointer;
@@ -637,10 +720,10 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 
 .home-base-more-item::-webkit-details-marker { display: none; }
 
-.home-base-more-item:hover { background: #f2f2f4; }
+.home-base-more-item:hover { background: var(--bcc-surface-hover); }
 
 .home-base-more-item:disabled {
-    color: #b5b5ba;
+    color: var(--bcc-border-strong);
     cursor: default;
 }
 
@@ -651,8 +734,8 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 .home-base-more-submenu-panel {
     position: fixed;
     z-index: 41;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     padding: 0.35rem;
@@ -686,7 +769,7 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 
 .home-base-meta {
     font-size: 0.78rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     margin-top: 0.2rem;
 }
 
@@ -701,7 +784,7 @@ html.home-view-list .home-base-grid,
     display: flex;
     flex-direction: column;
     gap: 0;
-    border: 1px solid #e6e6e9;
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     overflow: hidden;
 }
@@ -709,7 +792,7 @@ html.home-view-list .home-base-grid,
 html.home-view-list .home-base-card,
 .view-mode-list .home-base-card {
     border: none;
-    border-bottom: 1px solid #e6e6e9;
+    border-bottom: 1px solid var(--bcc-border);
     border-radius: 0;
     box-shadow: none;
 }
@@ -719,7 +802,7 @@ html.home-view-list .home-base-card:last-child,
 
 html.home-view-list .home-base-card:hover,
 .view-mode-list .home-base-card:hover {
-    background: #f7f8fa;
+    background: var(--bcc-surface-sunken);
     box-shadow: none;
     transform: none;
 }
@@ -745,7 +828,7 @@ html.home-view-list .home-base-workspace,
     flex: 1;
     min-width: 0;
     font-size: 0.82rem;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -760,13 +843,13 @@ html.home-view-list .home-base-workspace,
     align-items: center;
     gap: 0.85rem;
     padding: 0.55rem 1.1rem;
-    border-bottom: 1px solid #e6e6e9;
-    background: #fafafb;
+    border-bottom: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
 }
 
 html.home-view-list .home-list-header,
@@ -790,9 +873,9 @@ html.home-view-list .home-list-header,
     min-width: 0;
 }
 
-.view-btn-active { background: #e8f0fe; }
-.view-btn-active svg path { stroke: #1a56db; }
-.view-btn-active svg rect { stroke: #1a56db; }
+.view-btn-active { background: var(--bcc-accent-soft); }
+.view-btn-active svg path { stroke: var(--bcc-accent-strong); }
+.view-btn-active svg rect { stroke: var(--bcc-accent-strong); }
 
 /* ---------- Workspaces sayfası ---------- */
 
@@ -808,8 +891,8 @@ html.home-view-list .home-list-header,
     flex-direction: column;
     align-items: flex-start;
     gap: 0.6rem;
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 1.1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -819,15 +902,15 @@ html.home-view-list .home-list-header,
 .ws-card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
 
 .ws-card.is-active {
-    border-color: #1a56db;
-    box-shadow: 0 0 0 1px #1a56db;
+    border-color: var(--bcc-accent-strong);
+    box-shadow: 0 0 0 1px var(--bcc-accent-strong);
 }
 
 .ws-card-icon {
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: #2d7ff9;
+    background: var(--bcc-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -836,17 +919,17 @@ html.home-view-list .home-list-header,
 .ws-card-name {
     font-weight: 600;
     font-size: 0.92rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .ws-card-meta {
     font-size: 0.78rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
 }
 
 .ws-detail {
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 1.5rem;
     max-width: 640px;
@@ -859,7 +942,7 @@ html.home-view-list .home-list-header,
     gap: 1rem;
     margin-bottom: 1.5rem;
     padding-bottom: 1.25rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--bcc-border);
 }
 
 .ws-detail-title {
@@ -874,20 +957,20 @@ html.home-view-list .home-list-header,
 }
 
 .ws-detail-btn {
-    background: #f2f2f4;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface-hover);
+    border: 1px solid var(--bcc-border);
     border-radius: 6px;
     padding: 0.4rem 0.85rem;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #b5b5ba;
+    color: var(--bcc-border-strong);
     cursor: default;
 }
 
 .ws-collab-heading {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     margin: 0 0 0.85rem;
@@ -904,7 +987,7 @@ html.home-view-list .home-list-header,
     align-items: center;
     gap: 0.75rem;
     padding: 0.55rem 0.3rem;
-    border-bottom: 1px solid #f4f4f5;
+    border-bottom: 1px solid var(--bcc-surface-hover);
 }
 
 .ws-collab-row:last-child { border-bottom: none; }
@@ -913,8 +996,8 @@ html.home-view-list .home-list-header,
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     font-weight: 700;
     font-size: 0.82rem;
     flex-shrink: 0;
@@ -928,12 +1011,12 @@ html.home-view-list .home-list-header,
 .ws-collab-name {
     font-weight: 600;
     font-size: 0.88rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .ws-collab-email {
     font-size: 0.78rem;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -941,8 +1024,8 @@ html.home-view-list .home-list-header,
 
 .ws-collab-role {
     font-size: 0.78rem;
-    color: #5f6368;
-    background: #f2f2f4;
+    color: var(--bcc-text-muted);
+    background: var(--bcc-surface-hover);
     border-radius: 999px;
     padding: 0.15rem 0.65rem;
     flex-shrink: 0;
@@ -967,8 +1050,8 @@ html.home-view-list .home-list-header,
     height: 15px;
     padding: 0 3px;
     border-radius: 999px;
-    background: #d93636;
-    color: #fff;
+    background: var(--bcc-danger);
+    color: var(--bcc-surface);
     font-size: 0.62rem;
     font-weight: 700;
     line-height: 15px;
@@ -981,8 +1064,8 @@ html.home-view-list .home-list-header,
     top: calc(100% + 8px);
     width: 340px;
     max-height: min(75vh, 480px);
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
     display: flex;
@@ -1006,15 +1089,15 @@ html.home-view-list .home-list-header,
     font: inherit;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #8a8a8e;
+    color: var(--bcc-text-muted);
     padding: 0.4rem 0.2rem;
     cursor: pointer;
     border-bottom: 2px solid transparent;
 }
 
 .home-notif-tab.is-active {
-    color: #1d1d1f;
-    border-bottom-color: #1a56db;
+    color: var(--bcc-text);
+    border-bottom-color: var(--bcc-accent-strong);
 }
 
 .home-notif-mark-all {
@@ -1023,12 +1106,12 @@ html.home-view-list .home-list-header,
     font: inherit;
     font-size: 0.76rem;
     font-weight: 600;
-    color: #1a56db;
+    color: var(--bcc-accent-strong);
     cursor: pointer;
     padding: 0.3rem 0;
 }
 
-.home-notif-mark-all:disabled { color: #b5b5ba; cursor: default; }
+.home-notif-mark-all:disabled { color: var(--bcc-border-strong); cursor: default; }
 
 .home-notif-search {
     display: flex;
@@ -1036,7 +1119,7 @@ html.home-view-list .home-list-header,
     gap: 0.45rem;
     margin: 0.6rem 0.85rem;
     padding: 0.35rem 0.6rem;
-    background: #f2f2f4;
+    background: var(--bcc-surface-hover);
     border-radius: 7px;
     flex-shrink: 0;
 }
@@ -1048,7 +1131,7 @@ html.home-view-list .home-list-header,
     font-size: 0.83rem;
     flex: 1;
     font-family: inherit;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }
 
 .home-notif-list {
@@ -1066,14 +1149,14 @@ html.home-view-list .home-list-header,
 
 .home-notif-item[hidden] { display: none; }
 
-.home-notif-item.is-unread { background: #f2f7ff; }
+.home-notif-item.is-unread { background: var(--bcc-accent-soft); }
 
 .home-notif-avatar {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     font-weight: 700;
     font-size: 0.76rem;
     flex-shrink: 0;
@@ -1086,13 +1169,13 @@ html.home-view-list .home-list-header,
 
 .home-notif-message {
     font-size: 0.83rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     line-height: 1.35;
 }
 
 .home-notif-time {
     font-size: 0.72rem;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
     margin-top: 0.15rem;
 }
 
@@ -1100,15 +1183,15 @@ html.home-view-list .home-list-header,
 .home-notif-no-match {
     padding: 1.5rem 1rem;
     text-align: center;
-    color: #9a9aa0;
+    color: var(--bcc-text-muted);
     font-size: 0.85rem;
 }
 
 /* ---------- Hesap Özeti sayfası ---------- */
 
 .account-card {
-    background: #fff;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
     border-radius: 10px;
     padding: 1.5rem;
     max-width: 640px;
@@ -1124,8 +1207,8 @@ html.home-view-list .home-list-header,
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     font-weight: 700;
     font-size: 1.6rem;
     flex-shrink: 0;
@@ -1145,7 +1228,7 @@ html.home-view-list .home-list-header,
 .account-row-label {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     margin-bottom: 0.25rem;
@@ -1161,7 +1244,7 @@ html.home-view-list .home-list-header,
 
 .account-row-value {
     font-size: 0.94rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1176,7 +1259,7 @@ html.home-view-list .home-list-header,
     font: inherit;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #1a56db;
+    color: var(--bcc-accent-strong);
     cursor: pointer;
     padding: 0.15rem 0;
     flex-shrink: 0;
@@ -1191,27 +1274,27 @@ html.home-view-list .home-list-header,
     gap: 0.3rem;
     font-size: 0.78rem;
     font-weight: 600;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
 }
 
 .account-input {
     font: inherit;
     font-size: 0.9rem;
     padding: 0.5rem 0.65rem;
-    border: 1px solid #d5d5d9;
+    border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
-    color: #1d1d1f;
+    color: var(--bcc-text);
     width: 100%;
     max-width: 320px;
 }
 
-.account-input:focus { outline: none; border-color: #1a56db; }
+.account-input:focus { outline: none; border-color: var(--bcc-accent-strong); }
 
 .account-row-actions { display: flex; gap: 0.5rem; }
 
 .account-btn-primary {
-    background: #2d7ff9;
-    color: #fff;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
     border: none;
     border-radius: 6px;
     padding: 0.45rem 0.9rem;
@@ -1223,31 +1306,68 @@ html.home-view-list .home-list-header,
 .account-btn-primary:disabled { opacity: 0.6; cursor: default; }
 
 .account-btn-secondary {
-    background: #f2f2f4;
-    border: 1px solid #e6e6e9;
+    background: var(--bcc-surface-hover);
+    border: 1px solid var(--bcc-border);
     border-radius: 6px;
     padding: 0.45rem 0.9rem;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #5f6368;
+    color: var(--bcc-text-muted);
     cursor: pointer;
 }
 
 .account-row-error {
     font-size: 0.8rem;
-    color: #c62828;
+    color: var(--bcc-danger);
 }
 
 .account-section-heading {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #6b6b70;
+    color: var(--bcc-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     margin: 0 0 0.9rem;
 }
 
-.account-teams-empty { color: #86868b; font-size: 0.88rem; }
+/* ---------- Tehlikeli Bölge (hesap silme) ---------- */
+
+.account-card-danger { border-color: #f3c6c6; }
+
+.account-section-heading-danger { color: var(--bcc-danger); }
+
+.account-btn-danger-link {
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bcc-danger);
+    cursor: pointer;
+    padding: 0.15rem 0;
+    flex-shrink: 0;
+}
+
+.account-danger-warning {
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+    margin: 0;
+}
+
+.account-btn-danger {
+    background: var(--bcc-danger);
+    color: var(--bcc-surface);
+    border: none;
+    border-radius: 6px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.account-btn-danger:disabled { opacity: 0.6; cursor: default; }
+
+.account-teams-empty { color: var(--bcc-text-muted); font-size: 0.88rem; }
 
 .account-team-list {
     display: flex;
@@ -1261,7 +1381,7 @@ html.home-view-list .home-list-header,
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.55rem 0.3rem;
-    border-bottom: 1px solid #f4f4f5;
+    border-bottom: 1px solid var(--bcc-surface-hover);
 }
 
 .account-team-row:last-child { border-bottom: none; }
@@ -1269,5 +1389,5 @@ html.home-view-list .home-list-header,
 .account-team-name {
     font-weight: 600;
     font-size: 0.88rem;
-    color: #1d1d1f;
+    color: var(--bcc-text);
 }

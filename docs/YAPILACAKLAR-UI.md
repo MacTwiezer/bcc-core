@@ -1,10 +1,15 @@
 # BCC-Core — UI & Navigasyon Yapılacaklar Planı
 
-> `PROJE-DURUM.md` ve `YAPILACAKLAR.md` ile birlikte kullanılır.
+> `PROJE-DURUM.md` ile birlikte kullanılır.
 > Her iş için: hedef → mevcut durum → teknik → dikkat → test.
 > Bir iş bitince buradan sil, `PROJE-DURUM.md`'nin "Biten İşler" bölümüne ekle.
 > Bu belge Claude Code'a doğrudan prompt olarak verilebilir: bir maddeyi kopyala,
 > başına "Aşağıdaki işi uygula" yaz, yeterli.
+>
+> **[2026-07-30 temizliği]** Bu dosyada daha önce planlanmış 15 iş vardı, hepsi
+> bitip `PROJE-DURUM.md`'ye işlendi (kod ile tek tek doğrulandı) — dosya bu yüzden
+> şu an boş. Aşağıdaki "Genel Kurallar" hâlâ geçerli/yeniden kullanılabilir;
+> yeni bir UI işi planlanınca buraya `# Başlık` + iş detayları eklenir.
 
 ---
 
@@ -20,52 +25,17 @@
   olarak durur; tıklanınca sayfayı bozmaz, sessizce hiçbir şey yapmaz
 - Yeni panel eklerken **eski işlevsiz butonu SİLMEK ilk adım**
 - Aç/kapa panellerde ortak desen: `<details>` + dışarı tıklayınca kapanma
-- Bitince: `php -l` lint + üç regresyon betiği
+- Bitince: `php -l` lint + üç regresyon betiği (`scripts/test_isolation.php`,
+  `scripts/_verify_phase4_sort_search.php`, `scripts/_verify_phase4_filter.php`)
 
-**Mevcut kuralla çelişki — karar gerekiyor:**
-`YAPILACAKLAR.md`'deki "JS'siz de çalışsın" ilkesi bu belgedeki işlerin çoğuyla
-(popover, dropdown, `localStorage`, sürükle-bırak) örtüşmüyor. Öneri: bu kural
-**veri katmanı** için geçerli sayılsın (filtre/sort/group URL'de kalmaya devam etsin),
-salt görsel kabuk özellikleri JS'e bağlı olabilsin. Başlamadan netleştir.
-
----
-
-# A. Dashboard (Home) Ekranı
-
-# B. Yönlendirme ve Tablo Gezinimi
-
-# C. Grid Kabuğu (Shell)
+**[2026-07-30] Çözülmüş çelişki (bilgi amaçlı):** Eskiden burada "JS'siz de
+çalışsın" ilkesinin popover/dropdown/`localStorage`/sürükle-bırak ile çelişip
+çelişmediği "başlamadan netleşmeli" diye not düşülmüştü. Fiiliyatta şu şekilde
+çözüldü: **veri katmanı** (filtre/sort/group/hidden_fields/row_height) URL'de
+kalmaya devam ediyor, **salt görsel kabuk özellikleri** (popover, dropdown,
+sürükle-bırak, `localStorage` tema tercihi vb.) JS'e bağlı olabiliyor — proje
+genelinde bu ayrım tutarlı şekilde uygulanmış durumda.
 
 ---
 
----
-
-# D. Grid Tablosu
-
----
-
-**Test:**
-1. (a) butonuna bas → satır ekleniyor, sayaç artıyor mu
-2. (b) satır içi `+` → aynı sonuç, tooltip metni doğru mu
-3. (c) ortadaki bir kayıtta `Shift + Enter` → hemen altına ekleniyor mu
-4. Yeni satırın ilk hücresi odaklanıyor mu
-5. F5 → eklenen kayıtlar duruyor mu
-6. Butona hızlıca beş kez bas → beş kayıt mı, daha fazla mı
-7. Sort / group / filter aktifken üç yoldan da ekle
-8. Viewer rolünde `+` görünmüyor, kısayol çalışmıyor mu
-9. `textarea` içinde `Shift + Enter` → satır atlıyor, kayıt eklemiyor mu
-
----
-
-## Sıra Önerisi
-
-1. **İş 9** (sidebar hatası) — mevcut bir hata, en önce
-2. **İş 3 → 4** (yönlendirme → sekmeler) — diğer gezinme işlerinin temeli
-3. **İş 8** (logo/Base adı) — 3 ve 4 ile aynı header'a dokunuyor
-4. **İş 5, 6, 7** (sekme menüleri, arama, kısayol) — sırayla, birbirine bağlı
-5. **İş 10 → 11 → 12** (görünüm popover/dropdown/rename) — üçü aynı butonda,
-   tetikleyici ayrımı 10'da kararlaştırılıp diğerlerinde korunur
-6. **İş 1, 2** (dashboard) — bağımsız, araya girebilir
-7. **İş 13** (profil menüsü) — bağımsız
-8. **İş 15** (kayıt ekleme) — grid davranışı
-9. **İş 14** (sütun dondurma) — en riskli düzen değişikliği, en sona
+*(Şu an planlanmış bir UI işi yok — yeni bir madde geldiğinde buraya eklenir.)*

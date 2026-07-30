@@ -4,7 +4,13 @@
 > derli toplu halidir. Emre / Öykü hanım ile üzerinden geçilip onaylanması önerilir.
 > Sonundaki "Açık Sorular" kısmı, başlamadan netleşmesi gereken maddeleri içerir.
 
-Son güncelleme: 2026-07-13
+Son güncelleme: 2026-07-30
+
+> **Not:** Bu doküman projenin İLK isteklerinin dondurulmuş hâlidir — Bölüm 3, 5, 6, 7
+> baştaki halleriyle bilerek korunuyor (hangi maddenin sonradan yapılıp yapılmadığını
+> görebilmek için). **Projenin GÜNCEL/canlı durumu için `docs/PROJE-DURUM.md`'ye
+> bakın** — her özellik bittiğinde orası güncellenir, burası güncellenmez. Aşağıdaki
+> maddelerin yanına, gerçekte ne olduğunu gösteren **[GÜNCEL DURUM]** notları eklendi.
 
 ---
 
@@ -49,6 +55,13 @@ Single line text, Long text (zengin metin), Attachment (dosya eki), Checkbox,
 Multiple select, Single select, User (kullanıcı), Date, Phone number, Email, URL,
 Number, Currency, Percent, Link (tablolar arası bağlantı), Created/Last modified time.
 
+> **[GÜNCEL DURUM — 2026-07-30]** Yapılan (10 tip): Single line text, Long text,
+> Number, Checkbox, Date, Single select, Multiple select, User, Attachment, ve
+> listede hiç olmayan yeni bir tip: **Saat (Time)**. **Hiç yapılmayan** (6 tip):
+> Phone number, Email, URL, Currency, Percent, Link (tablolar arası bağlantı —
+> bunun için açılmış `record_links` tablosu da hiç kullanılmadığı için kaldırıldı,
+> bkz. Bölüm 5 notu). Created/Last modified time de yapılmadı.
+
 ### F3 — Duyuru (Interface / yayınlanmış görünüm)
 Airtable "Interfaces" özelliğinin karşılığı. Ekranlardan çıkan davranış:
 - Solda **navigasyon** (SÜREÇ, DUYURU, ITSM, ITSM-GULF, EMTİA BİLGİLERİ).
@@ -72,6 +85,11 @@ yapılamayan, özellikle istenen bir özellik. Teknik olarak Slack Incoming Webh
 Şu an Airtable uzun metinde punto/font büyütme yok, link gömülemiyor (sadece emoji
 eklenebiliyor). İstenen: **kalın/italik**, **font büyüklüğü**, **link gömme** ve
 temel biçimlendirme. (Teknik: alanda sınırlı/temizlenmiş HTML saklanır.)
+
+> **[GÜNCEL DURUM — 2026-07-30]** Kalın/italik/link gömme yapıldı. **Font büyüklüğü
+> SONRADAN KALDIRILDI** — kullanıcının açık kararıyla ("boyut ayarına gerek yok"),
+> bu artık bir eksik değil, bilinçli bir kapsam daraltması. Bu madde artık şu
+> haliyle geçerli: **kalın/italik/link**, font büyüklüğü YOK.
 
 ### F7 — Türkçe karakter
 ş, ç, ğ, ı, İ, ö, ü her yerde düzgün çalışmalı (giriş, kayıt, arama, gösterim).
@@ -115,15 +133,22 @@ gerçek bir MySQL tablosu yapmak yerine **meta-şema** kullanıyoruz:
 - `teams` → KVKK izolasyonu (TY / GULF / ATP …)
 - `users`, `team_members` → kullanıcılar ve ekip+rol üyelikleri
 - `bases` → çalışma alanı (ekibe bağlı)
-- `tables` → sekmeler (DUYURU, ITSM …)
+- `tables_meta` → sekmeler (DUYURU, ITSM …) — ("tables" DEĞİL, MySQL'in ayrılmış
+  kelime çakışmasını önlemek için bu adla açıldı)
 - `fields` → alanlar (tip + seçenekler)
 - `records` → satırlar
 - `cell_values` → hücreler (tipe göre value_text / value_number / value_date / value_json)
-- `record_links` → tablolar arası bağlantı (link alanı)
 - `views` → görünümler (grid ve "interface"/duyuru arayüzü ayarları)
 - `attachments` → dosya ekleri
 - `slack_webhooks` → duyuru → Slack gönderimi ayarı
+- `slack_routing_rules` → alan DEĞERİNE göre farklı Slack kanalına yönlendirme
+  (F5'in genişletilmiş hâli, ilk istekte yoktu)
 - `audit_log` → kim neyi ne zaman değiştirdi (KVKK için de faydalı)
+
+> **[GÜNCEL DURUM — 2026-07-30]** `record_links` (tablolar arası bağlantı/Link alanı
+> için açılmıştı) **hiç kullanılmadığı için 2026-07-29'da kaldırıldı** — Link alan
+> tipi (F2) hiç yazılmadığından karşılığı da hiç oluşmadı. Yukarıdaki liste artık
+> ŞU AN gerçekten var olan 12 tabloyu yansıtıyor.
 
 Ayrıntı: `schema.sql`.
 
@@ -145,16 +170,39 @@ Ayrıntı: `schema.sql`.
 
 **MVP = Faz 0–3.**
 
+> **[GÜNCEL DURUM — 2026-07-30]** Bu faz listesi İLK plandır, güncellenmiyor —
+> proje bunun ÇOK ötesinde (Faz 7'nin bir kısmı dahil dokunulan neredeyse her
+> özellik tamam, artı bu listede hiç olmayan onlarca özellik: Trash, koyu/açık
+> tema, sürükle-bırak sıralama, CSV içe/dışa aktarma, bildirim paneli, hesap
+> yönetimi, favicon...). **Gerçek/canlı ilerleme takibi için `docs/PROJE-DURUM.md`
+> → "Biten İşler" bölümüne bakın.**
+
 ---
 
 ## 7. Açık Sorular (başlamadan netleşmeli)
 
+> **[GÜNCEL DURUM — 2026-07-30]** Bu sorular projeye BAŞLAMADAN ÖNCE sorulmuştu.
+> Aşağıdaki notlar, gerçekte YAPILAN şeyin bu soruları fiilen nasıl cevapladığını
+> gösteriyor (resmi/ayrı bir onay toplantısı değil — davranış/koddan çıkarım).
+
 1. **Kapsam:** Sadece sana özel mi, yoksa tüm ekiplerin kullanacağı genel sistem mi?
    (Genel ise F8 — KVKK ekip ayrımı — baştan tasarlanmalı.)
+   *[Fiilen cevaplandı: genel sistem — F8 (KVKK ekip izolasyonu) baştan tasarlanıp
+   uygulandı, TY/GULF/ATP ekipleri + rol bazlı admin paneli var.]*
 2. **Yayın sunucusu:** Proje nerede yayına alınacak, PHP sürümü kaç? (Şu an yerelde
    7.3 kullanılıyor; sunucu farklıysa uyum planlanmalı.)
+   *[Hâlâ açık — proje şu an yalnızca yerel XAMPP'te çalışıyor, gerçek yayın
+   sunucusu/HTTPS kararı verilmedi (bkz. `PROJE-DURUM.md` §9 "Devir/Deploy Notları").]*
 3. **Slack:** Hangi kanal(lar)a gidecek? Incoming Webhook URL'i alınabiliyor mu?
    Her ekibin ayrı kanalı mı olacak?
+   *[Fiilen cevaplandı: sabit bir kanal listesi yerine esnek çözüm yapıldı —
+   `slack_settings.php` üzerinden hem tablo-özel hem takım-geneli webhook
+   tanımlanabiliyor, ayrıca alan değerine göre koşullu yönlendirme (F5'in ötesinde).]*
 4. **ATP:** Tam olarak nedir, hangi verileri kapsar, kimler erişecek?
+   *[Kod bunu cevaplayamaz — iş/organizasyon sorusu, hâlâ açık.]*
 5. **Ekipler/roller:** Kesin ekip listesi ve kimin hangi ekipte/rolde olduğu.
+   *[Fiilen esnek çözüldü: sabit bir liste yerine admin panelinden dinamik
+   ekip/rol ataması yapılabiliyor (owner/editor/commenter/viewer).]*
 6. **Alan doğrulaması:** Bölüm 2'deki tablo/alan listesi birebir doğru mu?
+   *[Hiç doğrulanmadığı görülüyor — ama sistem zaten kullanıcı tanımlı tablo/alan
+   desteklediği için (Bölüm 2'nin kendi notu) bu doğrulama artık gerekli değil.]*

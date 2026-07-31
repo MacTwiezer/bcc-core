@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($name === '') {
         $error = 'Ekip adı boş olamaz.';
+    } elseif (mb_strlen($name, 'UTF-8') > 150) {
+        // teams.name VARCHAR(150) — bu kontrol olmadan uzun bir ekip adı hatasız
+        // sessizce kırpılıyordu (create_user.php'deki email/full_name kontrolüyle
+        // AYNI gerekçe, bkz. o dosyadaki yorum).
+        $error = 'Ekip adı en fazla 150 karakter olabilir.';
     } else {
         $existing = bcc_fetch_one('SELECT id FROM teams WHERE name = :name', array('name' => $name));
 
@@ -24,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newId = bcc_last_insert_id();
             log_audit('team.create', 'team', $newId, array('name' => $name));
             $success = 'Ekip oluşturuldu: ' . $name;
+            // Bir sonraki ekip için formu temizle.
+            $name = '';
         }
     }
 }
@@ -40,7 +47,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
         <form class="stacked" method="post" action="/admin/create_team.php">
             <?php echo csrf_field(); ?>
             <label>Ekip adı
-                <input type="text" name="name" required>
+                <input type="text" name="name" value="<?php echo htmlspecialchars(isset($name) ? $name : '', ENT_QUOTES, 'UTF-8'); ?>" required>
             </label>
             <div class="form-actions">
                 <button type="submit">Oluştur</button>

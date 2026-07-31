@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // users.full_name VARCHAR(150) — account_update_name.php ile AYNI sınır/mesaj.
         $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } elseif (!bcc_is_valid_password($password)) {
-        $error = 'Şifre en az 8 karakter olmalı.';
+        $error = 'Şifre 8-72 karakter arasında olmalı.';
     } else {
         $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email', array('email' => $email));
 
@@ -68,7 +68,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
             </label>
             <label>Şifre (en az 8 karakter)
                 <div class="input-with-toggle">
-                    <input type="password" name="password" required minlength="8">
+                    <input type="password" name="password" required minlength="8" maxlength="72">
                     <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
                     </button>

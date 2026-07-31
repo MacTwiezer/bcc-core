@@ -124,7 +124,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </label>
                         <label class="account-field-label">Yeni şifre (en az 8 karakter)
                             <div class="input-with-toggle">
-                                <input type="password" name="new_password" class="account-input" autocomplete="new-password" minlength="8" required>
+                                <input type="password" name="new_password" class="account-input" autocomplete="new-password" minlength="8" maxlength="72" required>
                                 <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
                                     <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
                                 </button>
@@ -132,7 +132,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </label>
                         <label class="account-field-label">Yeni şifre (tekrar)
                             <div class="input-with-toggle">
-                                <input type="password" name="confirm_password" class="account-input" autocomplete="new-password" required>
+                                <input type="password" name="confirm_password" class="account-input" autocomplete="new-password" maxlength="72" required>
                                 <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
                                     <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
                                 </button>

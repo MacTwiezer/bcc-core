@@ -18,6 +18,8 @@ if (!isset($pageCssFiles) || !is_array($pageCssFiles)) {
 <meta charset="utf-8">
 <title>BCC-Core<?php echo $pageTitle !== '' ? ' — ' . htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : ''; ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<script src="/assets/theme-init.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
 <?php foreach ($pageCssFiles as $pageCssFile): ?>
 <link rel="stylesheet" href="<?php echo htmlspecialchars($pageCssFile, ENT_QUOTES, 'UTF-8'); ?>">
 <?php endforeach; ?>

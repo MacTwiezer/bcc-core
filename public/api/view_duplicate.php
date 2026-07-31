@@ -28,11 +28,29 @@ try {
 
     require_role($view['team_id'], 'editor');
 
-    $newName = mb_substr($view['name'] . ' copy', 0, 150, 'UTF-8');
+    // Aynı view art arda birden çok kez çoğaltılırsa (bulunan gerçek bug: gayet
+    // olağan bir kullanım — "Duplicate view"e iki kez tıklamak) hepsi AYNI
+    // "X copy" adını alıyordu. Çakışma varsa "X copy 2", "X copy 3" ... şeklinde
+    // ilk boş numaraya düşülür.
+    $baseName = mb_substr($view['name'] . ' copy', 0, 150, 'UTF-8');
+    $newName = $baseName;
+    $suffix = 2;
+    while (bcc_fetch_one('SELECT id FROM views WHERE table_id = :table_id AND name = :name', array(':table_id' => $view['table_id'], ':name' => $newName))) {
+        $newName = mb_substr($baseName . ' ' . $suffix, 0, 150, 'UTF-8');
+        $suffix++;
+    }
+
     $nextPosition = (int) bcc_fetch_column(
         'SELECT COALESCE(MAX(position), -1) + 1 FROM views WHERE table_id = :table_id',
         array(':table_id' => $view['table_id'])
     );
+
+    // INSERT + log_audit AYNI transaction'da — record_add.php/table_clear_data.php/
+    // view_create.php/view_delete.php/view_description_update.php'de bulunan
+    // AYNI sınıf bug: ikisi ayrı olsaydı, log_audit() istisna atarsa (nadir ama
+    // mümkün) INSERT zaten commit edilmiş olurdu, istemci yine de "Veritabanı
+    // hatası" görürdü.
+    bcc_begin_transaction();
 
     bcc_execute(
         'INSERT INTO views (table_id, name, description, view_type, position, config, created_by)
@@ -51,7 +69,10 @@ try {
     $newViewId = bcc_last_insert_id();
 
     log_audit('view.duplicate', 'view', $newViewId, array('source_view_id' => $view['id'], 'name' => $newName), $view['team_id']);
+
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

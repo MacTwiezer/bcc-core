@@ -84,8 +84,18 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             E-postayı düzenle
                         </button>
                     </div>
-                    <form class="account-row-form account-row-form-inline" data-account-edit-form data-account-endpoint="/api/account_update_email.php" hidden>
-                        <input type="email" name="email" class="account-input" data-account-input maxlength="190" required value="<?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_email.php" hidden>
+                        <label class="account-field-label">E-posta
+                            <input type="email" name="email" class="account-input" data-account-input maxlength="190" required value="<?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?>">
+                        </label>
+                        <label class="account-field-label">Mevcut şifre
+                            <div class="input-with-toggle">
+                                <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
+                                <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </button>
+                            </div>
+                        </label>
                         <div class="account-row-actions">
                             <button type="submit" class="account-btn-primary">Kaydet</button>
                             <button type="button" class="account-btn-secondary" data-account-edit-cancel>İptal</button>

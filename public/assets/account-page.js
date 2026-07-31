@@ -24,6 +24,11 @@
         // form hem Kaydet hem İptal'i yönetir. İkisi de AYNI genel davranışı
         // paylaşır (data-account-field/data-account-endpoint) — ikinci bir kopya
         // yazılmadı, yalnızca sunucu tarafı doğrulaması alan başına farklı.
+        // E-posta formunda AYRICA bir "current_password" alanı var (giriş
+        // kimliğini değiştirdiği için şifre/hesap-sil akışlarıyla AYNI mevcut-
+        // şifre doğrulaması gerekir) — Ad Soyad'da yok, bu yüzden formda
+        // input[name="current_password"] var mı diye bakılıp varsa gönderiliyor,
+        // genel döngü yine de tek kopya kalıyor.
         Array.prototype.forEach.call(document.querySelectorAll('.account-row[data-account-field]'), function (row) {
             var field = row.getAttribute('data-account-field');
             var display = row.querySelector('[data-account-display]');
@@ -34,6 +39,7 @@
             var cancelBtn = row.querySelector('[data-account-edit-cancel]');
             var errorEl = row.querySelector('[data-account-error]');
             var endpoint = form.getAttribute('data-account-endpoint');
+            var currentPasswordInput = form.querySelector('input[name="current_password"]');
 
             function openForm() {
                 display.hidden = true;
@@ -48,6 +54,9 @@
                 form.hidden = true;
                 display.hidden = false;
                 errorEl.hidden = true;
+                if (currentPasswordInput) {
+                    currentPasswordInput.value = '';
+                }
             }
 
             trigger.addEventListener('click', openForm);
@@ -67,6 +76,9 @@
 
                 var params = { csrf_token: CSRF };
                 params[field] = input.value;
+                if (currentPasswordInput) {
+                    params.current_password = currentPasswordInput.value;
+                }
 
                 post(endpoint, params).then(function (result) {
                     submitBtn.disabled = false;

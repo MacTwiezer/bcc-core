@@ -470,6 +470,10 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.85rem;
     font-family: inherit;
     width: 100%;
+    /* Bulunan gerçek bug: .gs-search input'taki AYNI sorun — color hiç
+       belirtilmemişti, koyu temada arkadaki koyu .gs-all-tables-search
+       zemininde siyah metin neredeyse görünmezdi. */
+    color: var(--bcc-text);
 }
 
 .gs-all-tables-list {
@@ -707,6 +711,12 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.85rem;
     font-family: inherit;
     width: 110px;
+    /* Bulunan gerçek bug: color hiç belirtilmemişti — form kontrolleri
+       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
+       kullanılır. background:transparent koyu temada arkadaki koyu araç
+       çubuğunu gösterirken metin siyah kalıyordu (grid'in arama kutusu —
+       neredeyse görünmezdi). */
+    color: var(--bcc-text);
 }
 
 .gs-search-nav {
@@ -817,6 +827,10 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.83rem;
     font-family: inherit;
     width: 100%;
+    /* Bulunan gerçek bug: .gs-search input'taki AYNI sorun — color hiç
+       belirtilmemişti, koyu temada arkadaki koyu .gs-view-drawer-search
+       zemininde siyah metin neredeyse görünmezdi. */
+    color: var(--bcc-text);
 }
 
 .gs-view-drawer-view {

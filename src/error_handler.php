@@ -6,6 +6,18 @@
 // sade bir mesaj döner. public/api/*.php uç noktaları zaten kendi try/catch'leriyle
 // json_fail() kullanıyor — bu yakalayıcı yalnızca ONLARIN DIŞINDA kalan, hiçbir
 // yerde yakalanmamış hatalar için son güvenlik ağı.
+//
+// Bulunan gerçek bug: bu dosya yalnızca YAKALANMAMIŞ EXCEPTION'LARI ele alıyordu
+// — PHP'nin klasik notice/warning/deprecated mesajları (ör. "Undefined variable",
+// "Undefined array key") bambaşka bir mekanizma ve hiç yakalanmıyordu. Canlı
+// test ile doğrulandı: php.ini'de display_errors etkin olduğu için basit bir
+// notice bile tarayıcıya DOĞRUDAN "Notice: ... in C:\xampp\htdocs\bcc-core\...
+// on line N" biçiminde, TAM SUNUCU DOSYA YOLUYLA birlikte basılıyordu — tam da bu
+// dosyanın önlemeyi amaçladığı bilgi sızıntısının (dosya yolu + iç kod yapısı)
+// aynısı, farklı bir hata sınıfından. log_errors zaten açık (hatalar sunucu
+// log'una yine düşüyor), yalnızca TARAYICIYA basılması kapatılıyor.
+ini_set('display_errors', '0');
+
 set_exception_handler(function (Throwable $e) {
     error_log('Yakalanmamış hata: ' . $e->getMessage() . ' (' . $e->getFile() . ':' . $e->getLine() . ")\n" . $e->getTraceAsString());
 

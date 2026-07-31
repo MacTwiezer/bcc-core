@@ -42,6 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newId = bcc_last_insert_id();
             log_audit('user.create', 'user', $newId, array('email' => $email));
             $success = 'Kullanıcı oluşturuldu: ' . $email;
+            // Bir sonraki kullanıcı için formu temizle.
+            $email = '';
+            $fullName = '';
         }
     }
 }
@@ -58,10 +61,10 @@ require __DIR__ . '/../../src/partials/top_nav.php';
         <form class="stacked" method="post" action="/admin/create_user.php">
             <?php echo csrf_field(); ?>
             <label>E-posta
-                <input type="email" name="email" required>
+                <input type="email" name="email" value="<?php echo htmlspecialchars(isset($email) ? $email : '', ENT_QUOTES, 'UTF-8'); ?>" required>
             </label>
             <label>Ad Soyad
-                <input type="text" name="full_name" required>
+                <input type="text" name="full_name" value="<?php echo htmlspecialchars(isset($fullName) ? $fullName : '', ENT_QUOTES, 'UTF-8'); ?>" required>
             </label>
             <label>Şifre (en az 8 karakter)
                 <div class="input-with-toggle">

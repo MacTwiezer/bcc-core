@@ -12,9 +12,11 @@
 (function () {
     var sidebar = document.getElementById('home-sidebar');
     var sidebarToggle = document.getElementById('home-sidebar-toggle');
-    sidebarToggle.addEventListener('click', function () {
-        sidebar.classList.toggle('is-collapsed');
-    });
+    if (sidebar && sidebarToggle) {
+        sidebarToggle.addEventListener('click', function () {
+            sidebar.classList.toggle('is-collapsed');
+        });
+    }
 })();
 </script>
 </body>

@@ -82,9 +82,16 @@ try {
     );
     $newRecordId = (int) bcc_last_insert_id();
 
+    // log_audit() commit'TEN ÖNCE, AYNI transaction içinde — bulunan gerçek bug:
+    // burada bir istisna atarsa (nadir ama mümkün) ve bcc_commit() ÖNCE
+    // çağrılmış olsaydı, bcc_rollback() artık geri alacak bir şey bulamaz;
+    // istemciye "kaydedilemedi" dönerken kayıt aslında DB'de kalırdı (tekrar
+    // denenirse sessizce fazladan boş satır birikir). Slack bildirimi (DB
+    // mutasyonu değil, kendi try/catch'i zaten var) commit'ten SONRA kalıyor.
+    log_audit('record.create', 'record', $newRecordId, array('table_id' => $table['id'], 'after_record_id' => $afterRecordId ?: null), $table['team_id']);
+
     bcc_commit();
 
-    log_audit('record.create', 'record', $newRecordId, array('table_id' => $table['id'], 'after_record_id' => $afterRecordId ?: null), $table['team_id']);
     bcc_notify_slack_new_record($table['id'], $newRecordId);
 } catch (Throwable $e) {
     bcc_rollback();

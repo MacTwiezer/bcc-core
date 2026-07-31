@@ -57,6 +57,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 http_response_code(403);
                 die('Bu webhook bu tabloya/ekibe ait değil.');
             }
+        } elseif ($scope === 'team') {
+            // Bulunan gerçek bug: webhook_id boş/0 gönderilirse (form state'i bayatlamış
+            // ya da elle POST edilmiş — normal UI akışı zaten var olan satırın id'sini
+            // her zaman gönderir) ve bu ekip için ZATEN bir takım-geneli webhook
+            // (table_id IS NULL) varsa, aşağıdaki "yeni ekle" dalı DB'de bunu engelleyen
+            // bir UNIQUE kısıt olmadığı için ikinci bir takım-geneli satır oluşturuyordu
+            // (canlı test ile doğrulandı). Sonuç: hangisinin "asıl" olduğu belirsizleşir
+            // — ayarlar sayfası LIMIT 1 ile arbitrer birini gösterir, bildirim gönderen
+            // bcc_find_slack_webhook() farklı birini seçebilir. "Ekip-geneli için her
+            // zaman tek satır" invariant'ı burada da (yalnızca UI'da değil) uygulanır:
+            // var olan satır varsa INSERT yerine ONA güncelleme uygulanır.
+            $existing = bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE team_id = :team_id AND table_id IS NULL LIMIT 1', array('team_id' => $table['team_id']));
+            $existing = $existing !== false ? $existing : null;
         }
 
         if ($webhookUrlRaw === '' && !$existing) {

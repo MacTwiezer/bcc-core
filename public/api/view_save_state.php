@@ -33,7 +33,12 @@ try {
 
     require_role($view['team_id'], 'editor');
 
-    $fields = bcc_fetch_all('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id', array(':table_id' => $view['table_id']));
+    // ORDER BY position, id — view_config_update.php'de bulunan AYNI bug: bu
+    // yoktu, MySQL'in ORDER BY'sız sıralaması id sırasına göre gelebiliyor;
+    // alanlar yeniden sıralandıysa (move_field) $fields[0]/$primaryFieldId
+    // POSITION 0'daki gerçek birincil alan değil, en önce OLUŞTURULMUŞ alan
+    // olurdu (parse_grid_hidden_fields() bu alanı yanlış "hiç gizlenemez" sayar).
+    $fields = bcc_fetch_all('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id', array(':table_id' => $view['table_id']));
     $fieldsById = array();
     foreach ($fields as $f) {
         $fieldsById[(int) $f['id']] = $f;
@@ -62,13 +67,19 @@ try {
     }
     $config['grid_state'] = $gridState;
 
+    // UPDATE + log_audit AYNI transaction'da — diğer view_*.php dosyalarında
+    // bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit() istisna atarsa
+    // (nadir ama mümkün) UPDATE zaten commit edilmiş olurdu, istemci yine de
+    // "Veritabanı hatası" görürdü.
+    bcc_begin_transaction();
     bcc_execute(
         'UPDATE views SET config = :config WHERE id = :id',
         array(':config' => json_encode($config, JSON_UNESCAPED_UNICODE), ':id' => $view['id'])
     );
-
     log_audit('view.save_state', 'view', $view['id'], array('grid_state' => $gridState), $view['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

@@ -160,7 +160,19 @@ function attempt_login($email, $password)
         array('email' => $email)
     );
 
-    if (!$row || !password_verify($password, $row['password_hash'])) {
+    // Bulunan gerçek bug: yukarıdaki yorum "parola önce doğrulanır" diyordu ama
+    // `!$row || !password_verify(...)` kısa devre yaptığı için $row yoksa
+    // password_verify() HİÇ ÇAĞRILMIYORDU — bcrypt hesaplaması atlanan bu istekler
+    // ölçülebilir şekilde daha hızlı dönüyordu (canlı ölçüm: ~6ms vs ~141ms, var
+    // olmayan e-posta / var olan e-posta + yanlış şifre). Hata mesajı ikisinde de
+    // aynı olsa bile, bu zamanlama farkı bir saldırganın yanıt sürelerini ölçerek
+    // hangi e-postaların kayıtlı olduğunu tespit etmesine (user enumeration) izin
+    // veriyordu. Düzeltme: $row yoksa da GERÇEK bir bcrypt hash'ine karşı
+    // password_verify() çağrılır (sahte parola her zaman reddedilir), süre sabit kalır.
+    $hashToCheck = $row ? $row['password_hash'] : '$2y$10$kS.GapggyqU6tsmsQyBFjOLHiSr9yvm8s7BTkPere9dlqXWf3MAoa';
+    $passwordOk = password_verify($password, $hashToCheck);
+
+    if (!$row || !$passwordOk) {
         return 'invalid';
     }
 

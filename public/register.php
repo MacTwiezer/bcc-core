@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ile AYNI sınır/mesaj.
         $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } elseif (!bcc_is_valid_password($password)) {
-        $error = 'Şifre en az 8 karakter olmalı.';
+        $error = 'Şifre 8-72 karakter arasında olmalı.';
     } else {
         $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email LIMIT 1', array('email' => $email));
 
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="login-field">
                 <label for="register-password">Şifre</label>
                 <div class="input-with-toggle">
-                    <input type="password" id="register-password" name="password" minlength="8" required>
+                    <input type="password" id="register-password" name="password" minlength="8" maxlength="72" required>
                     <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
                     </button>

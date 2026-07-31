@@ -25,7 +25,7 @@ if (!$row || !password_verify($currentPassword, $row['password_hash'])) {
     json_fail(422, 'Mevcut şifre yanlış.');
 }
 if (!bcc_is_valid_password($newPassword)) {
-    json_fail(422, 'Yeni şifre en az 8 karakter olmalı.');
+    json_fail(422, 'Yeni şifre 8-72 karakter arasında olmalı.');
 }
 if ($newPassword !== $confirmPassword) {
     json_fail(422, 'Yeni şifre ve tekrarı eşleşmiyor.');

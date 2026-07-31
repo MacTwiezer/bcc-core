@@ -55,7 +55,7 @@ if (mb_strlen($fullName, 'UTF-8') > 150) {
 }
 
 if (!bcc_is_valid_password($password)) {
-    fwrite(STDERR, "HATA: Şifre en az 8 karakter olmalı.\n");
+    fwrite(STDERR, "HATA: Şifre 8-72 karakter arasında olmalı.\n");
     exit(1);
 }
 

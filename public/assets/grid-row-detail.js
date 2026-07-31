@@ -106,8 +106,17 @@
                 var rawHtml = liveTd ? liveTd.getAttribute('data-value') : field.raw;
                 var ta = document.createElement('textarea');
                 ta.className = 'cell-input grid-detail-textarea';
-                ta.value = htmlToPlainText(rawHtml || '');
+                var initialPlainText = htmlToPlainText(rawHtml || '');
+                ta.value = initialPlainText;
+                // Bulunan gerçek bug: panelde zengin metin (kalın/link) araç çubuğu
+                // YOK, bu yüzden düzenleme alanı yalnızca DÜZ METİN gösteriyor —
+                // dokunulmadan panel kapatılsa bile blur, bu düz metni sunucuya
+                // geri gönderip mevcut biçimlendirmeyi sessizce siliyordu. Artık
+                // yalnızca kullanıcı gerçekten metni değiştirdiyse kaydediliyor.
                 ta.addEventListener('blur', function () {
+                    if (ta.value === initialPlainText) {
+                        return;
+                    }
                     commitFieldValue(tr, field, liveTd, ta.value);
                 });
                 wrap.appendChild(ta);

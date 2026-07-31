@@ -149,6 +149,9 @@
                         if (data.skipped_cells) {
                             msg += ' ' + data.skipped_cells + ' hücre geçersiz değer nedeniyle boş bırakıldı.';
                         }
+                        if (data.skipped_rows) {
+                            msg += ' ' + data.skipped_rows + ' satır zorunlu bir alanı boş bıraktığı için atlandı.';
+                        }
                         resultBox.hidden = false;
                         resultBox.textContent = msg;
                         submitBtn.textContent = 'Tamamlandı';

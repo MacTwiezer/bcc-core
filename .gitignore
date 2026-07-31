@@ -1,5 +1,6 @@
 # Araç artıkları
 .gstack/
+.claude/
 *.log
 /tmp/
 

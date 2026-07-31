@@ -367,6 +367,17 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-record-row.is-selected { background: #fff8e1; }
 
+/* Bulunan gerçek bug: seçili satırın metni .if-record-title/-summary/-date
+   üzerinden var(--bcc-text)/--bcc-text-muted) alıyordu — koyu temada bu
+   neredeyse-beyaz olur, sabit açık krem arka planla (#fff8e1) neredeyse
+   görünmez olurdu (bkz. grid-shell.css .grid-search-mark'taki AYNI ders).
+   Sabit koyu (nav'ın kendi amber-metin tonu) renk her iki temada da okunur. */
+.if-record-row.is-selected .if-record-title,
+.if-record-row.is-selected .if-record-summary,
+.if-record-row.is-selected .if-record-date {
+    color: #4a3b00;
+}
+
 .if-record-title {
     font-weight: 700;
     font-size: 0.92rem;

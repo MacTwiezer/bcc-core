@@ -46,6 +46,17 @@ try {
     bcc_execute('UPDATE users SET email = :email WHERE id = :id', array(':email' => $email, ':id' => $user['id']));
 
     log_audit('user.account_updated', 'user', $user['id'], array('field' => 'email', 'old_email' => $user['email'], 'new_email' => $email));
+} catch (mysqli_sql_exception $e) {
+    // uq_users_email UNIQUE kısıtı — yukarıdaki $existing kontrolü ile bu INSERT
+    // arasında yarış durumunda (iki eşzamanlı istek aynı e-postayı seçerse) DB
+    // burada devreye girer. Bulunan gerçek bug: errno fark etmeksizin genel
+    // "Veritabanı hatası" (500) dönüyordu; kullanıcı gördüğü asıl nedeni
+    // (e-posta zaten kayıtlı) anlayamıyordu. errno 1062 (duplicate entry) için
+    // $existing kontrolüyle AYNI kullanıcı dostu 422 mesajı döndürülür.
+    if ($e->getCode() === 1062) {
+        json_fail(422, 'Bu e-posta zaten başka bir hesapta kayıtlı.');
+    }
+    json_fail(500, 'Veritabanı hatası.');
 } catch (Throwable $e) {
     json_fail(500, 'Veritabanı hatası.');
 }

@@ -216,7 +216,13 @@
         // (bkz. $canEdit) — viewer'da bu eleman hiç bulunmaz, dblclick
         // dinleyicisi hiç bağlanmaz. Sunucu tarafında da /api/view_rename.php
         // require_role('editor') ile ayrıca reddeder.
-        var viewNameEl = document.querySelector('[data-view-id]');
+        // Bulunan kırılgan kod: seçici yalnızca "[data-view-id]" olduğunda
+        // sol paneldeki her satırın yıldız/yeniden adlandır/sil butunları da
+        // AYNI özniteliği taşıdığından (bkz. grid.php ~1103/1119/1121) yanlışlıkla
+        // BUNLARDAN birini seçebilirdi — şu an yalnızca DOM sırası (araç çubuğu
+        // etiketi dosyada önce geliyor) sayesinde doğru çalışıyor. .gs-view-name
+        // ile daraltılarak bu kırılganlık ortadan kaldırıldı.
+        var viewNameEl = document.querySelector('.gs-view-name[data-view-id]');
         if (viewNameEl) {
             var toolbarViewId = viewNameEl.getAttribute('data-view-id');
             viewNameEl.addEventListener('dblclick', function () {

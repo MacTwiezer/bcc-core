@@ -118,12 +118,16 @@ try {
         )
     );
     $newId = (int) bcc_last_insert_id();
+
+    // record_add.php ile AYNI desen: log_audit() try/catch İÇİNDE — dışarıda
+    // olursa (bulunan gerçek bug) burada atılan bir istisna yakalanmaz, ham PHP
+    // hata çıktısı (display_errors=On, bkz. C:\xampp\php\php.ini) doğrudan
+    // istemciye sızar; dosya aslında başarıyla yüklenmiş olsa bile.
+    log_audit('attachment.upload', 'record', $recordId, array('field_id' => $fieldId, 'file_name' => $originalName), $field['team_id']);
 } catch (Throwable $e) {
     unlink($destPath);
     json_fail(500, 'Veritabanı hatası.');
 }
-
-log_audit('attachment.upload', 'record', $recordId, array('field_id' => $fieldId, 'file_name' => $originalName), $field['team_id']);
 
 echo json_encode(array(
     'ok' => true,

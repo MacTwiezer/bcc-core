@@ -13,6 +13,22 @@
 
 require __DIR__ . '/../../src/bootstrap.php';
 
+// CSV enjeksiyonuna (Excel/Sheets formül yorumlaması) karşı — bulunan gerçek
+// güvenlik açığı: xlsx_writer.php'nin AKSİNE (orada inlineStr XLSX hücreleri
+// Excel tarafından hiç formül olarak taranmaz) bu dosya GERÇEK düz metin CSV
+// üretiyor. Bir hücre '=', '+', '-', '@' ile BAŞLIYORSA Excel/Sheets bunu
+// açılışta formül sanıp çalıştırır (ör. bir kullanıcı bir metin alanına
+// "=WEBSERVICE(...)" yazıp exportu açan bir admin'in Excel'inde veri
+// sızdırabilirdi). OWASP'ın önerdiği standart savunma: bu karakterlerle
+// başlayan değerlerin başına tek tırnak eklenir, Excel'de literal metin
+// olarak kalır.
+function bcc_csv_injection_guard($value)
+{
+    $value = (string) $value;
+
+    return ($value !== '' && preg_match('/^[=+\-@]/', $value) === 1) ? ("'" . $value) : $value;
+}
+
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : 0;
 $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
@@ -59,7 +75,7 @@ fwrite($out, "\xEF\xBB\xBF");
 
 $headerRow = array();
 foreach ($visibleFields as $f) {
-    $headerRow[] = $f['name'];
+    $headerRow[] = bcc_csv_injection_guard($f['name']);
 }
 // Ayırıcı noktalı virgül (;) — Türkçe Windows/Excel'de virgül ondalık
 // ayracı olduğu için varsayılan CSV ayırıcısı olarak "," değil ";" bekleniyor;
@@ -74,7 +90,7 @@ foreach ($records as $rec) {
         // birleştirilir (multiple_select'in zaten yaptığı implode(', ', ...) ile AYNI).
         if ($f['field_type'] === 'attachment') {
             $files = isset($attachmentsByRecord[$rec['id']][$f['id']]) ? $attachmentsByRecord[$rec['id']][$f['id']] : array();
-            $row[] = implode(', ', array_column($files, 'name'));
+            $row[] = bcc_csv_injection_guard(implode(', ', array_column($files, 'name')));
             continue;
         }
 
@@ -86,7 +102,7 @@ foreach ($records as $rec) {
         if ($f['field_type'] === 'long_text') {
             $displayText = strip_tags($displayText);
         }
-        $row[] = $displayText;
+        $row[] = bcc_csv_injection_guard($displayText);
     }
     fputcsv($out, $row, ';');
 }

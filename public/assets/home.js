@@ -25,9 +25,11 @@
         var searchEmpty = document.getElementById('home-search-empty');
         var searchGrid = document.getElementById('home-base-grid');
 
-        if (searchDetails && searchInput && searchResults && searchGrid) {
-            var resultItems = [];
+        // Aşağıdaki [data-base-delete] silme işleyicisinin de erişebilmesi için
+        // if bloğunun DIŞINDA (arama UI'sı olmayan bir sayfada da boş dizi olarak var).
+        var resultItems = [];
 
+        if (searchDetails && searchInput && searchResults && searchGrid) {
             Array.prototype.forEach.call(searchGrid.querySelectorAll('.home-base-card'), function (card) {
                 var nameEl = card.querySelector('.home-base-name');
                 var metaEl = card.querySelector('.home-base-meta');
@@ -37,6 +39,7 @@
                 var row = document.createElement('a');
                 row.className = 'home-search-result';
                 row.href = card.getAttribute('href');
+                row.setAttribute('data-base-id', card.getAttribute('data-base-id') || '');
 
                 if (iconEl) {
                     row.appendChild(iconEl.cloneNode(true));
@@ -359,6 +362,18 @@
                     if (data && data.ok) {
                         if (card) {
                             card.remove();
+                        }
+
+                        // Bulunan gerçek bug: Ctrl+K arama popover'ı kartlardan
+                        // KLONLANMIŞ ayrı bir kopya listesi (resultItems) — kart
+                        // silinince bu klon silinmiyordu, artık var olmayan bir
+                        // base'e giden tıklanabilir bir sonuç sayfa yenilenene
+                        // kadar aramada kalıyordu. DOM'dan ve diziden kaldırılır.
+                        for (var i = resultItems.length - 1; i >= 0; i--) {
+                            if (resultItems[i].el.getAttribute('data-base-id') === baseId) {
+                                resultItems[i].el.remove();
+                                resultItems.splice(i, 1);
+                            }
                         }
                     } else {
                         btn.disabled = false;

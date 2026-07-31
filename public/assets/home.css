@@ -416,18 +416,6 @@ a { text-decoration: none; color: inherit; }
     font-size: 0.85rem;
 }
 
-.home-account-badge {
-    margin-left: auto;
-    font-size: 0.68rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-    flex-shrink: 0;
-}
-
-.home-account-badge-blue { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
-.home-account-badge-orange { background: #fff1e0; color: #b5610a; }
-
 .home-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
 
 .home-account-logout { padding: 0.4rem; }

@@ -36,13 +36,23 @@ if ((int) $user['is_admin'] === 1) {
 }
 
 try {
+    bcc_begin_transaction();
+
     // details'e ad/e-posta anlık görüntüsü — satır silinince user_id NULL'lanacağı
     // için (audit_log FK) denetim kaydının kendisi anonim aktörle kalacak, ama
     // details JSON (FK'sız) kimin silindiğini adli/denetim amaçlı saklar.
+    // log_audit() DELETE'DEN ÖNCE çağrılmalı: audit_log.user_id FK'ı INSERT anında
+    // kullanıcının hâlâ var olmasını gerektirir (bkz. fk_audit_log_user), tersi
+    // sırada FK ihlali olur. İkisi tek transaction'da: DELETE herhangi bir
+    // nedenle başarısız olursa (bulunan gerçek risk) audit_log'a "silindi" kaydı
+    // düşüp kullanıcı aslında silinmemiş gibi yanıltıcı bir durum kalmasın diye.
     log_audit('user.self_delete', 'user', $user['id'], array('email' => $user['email'], 'full_name' => $user['full_name']));
 
     bcc_execute('DELETE FROM users WHERE id = :id', array(':id' => $user['id']));
+
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

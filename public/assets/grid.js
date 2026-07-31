@@ -569,9 +569,19 @@
         // tablonun alt/sağ kenarına yakınsa KIRPILIRDI (bkz. grid-shell.css'teki
         // .gs-view-row-menu-panel / .grid-add-field-panel'de uygulanan AYNI ders).
         // position:fixed + burada hesaplanan konum bunu atlıyor.
-        var tdRect = td.getBoundingClientRect();
-        popover.style.top = (tdRect.bottom + 4) + 'px';
-        popover.style.left = tdRect.left + 'px';
+        function positionPopover() {
+            var tdRect = td.getBoundingClientRect();
+            popover.style.top = (tdRect.bottom + 4) + 'px';
+            popover.style.left = tdRect.left + 'px';
+        }
+        positionPopover();
+
+        // Bulunan gerçek bug: position:fixed konumu yalnızca AÇILIŞTA
+        // hesaplanıyordu — popover açıkken sayfa kaydırılırsa (grid uzun bir
+        // tabloda çok olağan) hücre kayarken popover ekranda SABİT kalıp
+        // hücresinden tamamen kopuyordu. Scroll'da yeniden konumlandırılır
+        // (capture: true — iç içe kaydırılabilir bir üst öğeden de yakalar).
+        window.addEventListener('scroll', positionPopover, true);
 
         editable.focus();
 
@@ -585,6 +595,7 @@
             if (view) {
                 view.style.display = '';
             }
+            window.removeEventListener('scroll', positionPopover, true);
             document.removeEventListener('mousedown', outsideClickHandler, true);
         }
 

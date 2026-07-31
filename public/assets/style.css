@@ -1136,6 +1136,11 @@ td.editable.attachment-editing {
     padding: 0.35rem 0.7rem;
     font: inherit;
     background: var(--bcc-surface);
+    /* Bulunan gerçek bug: color hiç belirtilmemişti — form kontrolleri
+       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
+       kullanılır. Koyu temada background koyulaşıyor ama metin siyah
+       kalıyordu (grid'in ANA hücre düzenleyicisi — neredeyse görünmezdi). */
+    color: var(--bcc-text);
 }
 
 .cell-input:focus {

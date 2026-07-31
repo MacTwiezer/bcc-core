@@ -50,10 +50,19 @@ function bcc_find_slack_webhook($tableId, $teamId, $recordId = null)
         }
     }
 
+    // Bulunan gerçek bug: bir tabloda BİRDEN FAZLA tablo-özel webhook varken
+    // (slack_settings.php artık bunu bir liste olarak destekliyor, ör. marka
+    // başına bir kanal) bu sorgu, aralarından hangisinin seçileceğini belirleyen
+    // bir ikincil ORDER BY'a sahip DEĞİLDİ — yalnızca "(table_id IS NULL) ASC" ile
+    // tablo-özel/ekip-geneli ayrımı yapılıyordu, aynı tabloya ait birden fazla satır
+    // arasında MySQL'in garantisiz satır sırasına güveniliyordu. slack_settings.php'nin
+    // kendi metni "hiç kural yoksa listedeki İLK aktif webhook kullanılır" diyor
+    // (o liste id ASC ile gösteriliyor) — "sw.id ASC" eklenerek bu garanti SQL'de
+    // AÇIKÇA sağlanıyor, önceden yalnızca tesadüfen (satır ekleme sırasıyla) tutarlıydı.
     $row = bcc_fetch_one(
         'SELECT id, webhook_url, channel_name, table_id FROM slack_webhooks
          WHERE is_active = 1 AND (table_id = :table_id OR (table_id IS NULL AND team_id = :team_id))
-         ORDER BY (table_id IS NULL) ASC
+         ORDER BY (table_id IS NULL) ASC, id ASC
          LIMIT 1',
         array('table_id' => $tableId, 'team_id' => $teamId)
     );

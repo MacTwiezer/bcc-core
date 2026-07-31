@@ -21,6 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($name === '') {
         $error = 'Base adı boş olamaz.';
+    } elseif (mb_strlen($name, 'UTF-8') > 150) {
+        // bases.name VARCHAR(150) — base_tables.php'deki AYNI gerekçe: bu kontrol
+        // olmadan uzun bir base adı sql_mode'da STRICT_TRANS_TABLES kapalı olduğu
+        // için hatasız sessizce kırpılıyordu.
+        $error = 'Base adı en fazla 150 karakter olabilir.';
+    } elseif (mb_strlen($description, 'UTF-8') > 500) {
+        // bases.description VARCHAR(500) — aynı sessiz kırpılma riski.
+        $error = 'Açıklama en fazla 500 karakter olabilir.';
     } else {
         bcc_execute(
             'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)',

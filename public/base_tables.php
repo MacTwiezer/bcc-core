@@ -29,6 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($name === '') {
             $error = 'Tablo adı boş olamaz.';
+        } elseif (mb_strlen($name, 'UTF-8') > 150) {
+            // tables_meta.name VARCHAR(150) — bu kontrol olmadan uzun bir tablo adı
+            // hatasız sessizce kırpılıyordu (create_team.php/create_user.php'deki
+            // AYNI gerekçe, sql_mode'da STRICT_TRANS_TABLES kapalı olduğu için
+            // MySQL hata vermeden kesiyor).
+            $error = 'Tablo adı en fazla 150 karakter olabilir.';
+        } elseif (mb_strlen($description, 'UTF-8') > 500) {
+            // tables_meta.description VARCHAR(500) — aynı sessiz kırpılma riski.
+            $error = 'Açıklama en fazla 500 karakter olabilir.';
         } else {
             $nextPos = (int) bcc_fetch_column(
                 'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM tables_meta WHERE base_id = :base_id',
@@ -63,6 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($name === '') {
                 $error = 'Tablo adı boş olamaz.';
+            } elseif (mb_strlen($name, 'UTF-8') > 150) {
+                $error = 'Tablo adı en fazla 150 karakter olabilir.';
+            } elseif (mb_strlen($description, 'UTF-8') > 500) {
+                $error = 'Açıklama en fazla 500 karakter olabilir.';
             } else {
                 bcc_execute(
                     'UPDATE tables_meta SET name = :name, description = :description WHERE id = :id',

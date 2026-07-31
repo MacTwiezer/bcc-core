@@ -1,6 +1,14 @@
 <?php
 
-require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../src/bootstrap.php';
+
+// Bulunan gerçek bug: bu dosya yalnızca config/database.php'yi dahil ediyordu,
+// src/bootstrap.php'yi DEĞİL — require_login()/require_admin() HİÇ
+// çağrılmıyordu. Sonuç: kimlik doğrulaması olmayan herkes DB sunucu sürümünü,
+// PHP sürümünü, aktif veritabanı adını ve TÜM tablo listesini (SHOW TABLES)
+// görebiliyordu. Diğer admin/*.php sayfalarıyla AYNI desen: yalnızca platform
+// admini erişebilir.
+require_admin();
 
 $dbError = null;
 $serverVersion = null;

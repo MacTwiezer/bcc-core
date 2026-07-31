@@ -59,8 +59,15 @@ if ($selectedTeamId) {
     // aynı fonksiyon.
     require_team_access($selectedTeamId);
 
+    // u.is_active AYRICA çekilir (bulunan gerçek bug: bu sorgu hiç seçmiyordu) —
+    // admin bir kullanıcıyı pasif yaptığında team_members satırı SİLİNMEZ (bkz.
+    // admin/index.php "Pasif yap"), bu yüzden pasif bir kullanıcı burada aktif bir
+    // katılımcıdan (isim/e-posta/rol) AYIRT EDİLEMEZ görünüyordu — oysa
+    // bcc_team_users_by_id() ('user' alan tipi seçenekleri) ve admin/assign_team.php
+    // ('kullanılabilir kullanıcılar' listesi) zaten yalnızca aktif kullanıcıları
+    // gösteriyor, aynı prensip burada da uygulanmalı.
     $collaborators = bcc_fetch_all(
-        'SELECT u.id, u.full_name, u.email, tm.role
+        'SELECT u.id, u.full_name, u.email, u.is_active, tm.role
          FROM team_members tm
          INNER JOIN users u ON u.id = tm.user_id
          WHERE tm.team_id = :team_id
@@ -131,6 +138,9 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <div class="ws-collab-name"><?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <div class="ws-collab-email"><?php echo htmlspecialchars($c['email'], ENT_QUOTES, 'UTF-8'); ?></div>
                             </div>
+                            <?php if ((int) $c['is_active'] !== 1): ?>
+                            <div class="ws-collab-role">Pasif</div>
+                            <?php endif; ?>
                             <div class="ws-collab-role"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     <?php endforeach; ?>

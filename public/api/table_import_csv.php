@@ -65,9 +65,21 @@ if (isset($headerRow[0]) && substr($headerRow[0], 0, 3) === "\xEF\xBB\xBF") {
 }
 
 $fields = bcc_fetch_all(
-    'SELECT id, name, field_type, options FROM fields WHERE table_id = :tid ORDER BY position, id',
+    'SELECT id, name, field_type, options, is_required FROM fields WHERE table_id = :tid ORDER BY position, id',
     array(':tid' => $table['id'])
 );
+
+// Zorunlu alanlar — cell_update.php'nin uyguladığı AYNI kural (bulunan gerçek
+// bug: import bunu hiç kontrol etmiyordu, cell_update.php'de reddedilen boş bir
+// zorunlu değer CSV'den sessizce geçiyordu). 'attachment' hiçbir zaman CSV'den
+// doldurulamayacağı için (zaten $fieldByName'e hiç girmiyor) buradan da hariç —
+// yoksa alakasız bir zorunlu dosya-eki alanı TÜM satırları eler.
+$requiredFieldIds = array();
+foreach ($fields as $f) {
+    if ($f['field_type'] !== 'attachment' && (int) $f['is_required'] === 1) {
+        $requiredFieldIds[] = (int) $f['id'];
+    }
+}
 
 // Sütun adı → alan eşlemesi, harf büyüklüğünden bağımsız tam eşleşme.
 // 'attachment' BİLEREK haritaya girmiyor (yorum: CSV hücresinde dosya verisi olamaz).
@@ -130,6 +142,7 @@ if (empty($rows)) {
 $user = current_user();
 $imported = 0;
 $skippedCells = 0;
+$skippedRows = 0;
 
 try {
     bcc_begin_transaction();
@@ -140,12 +153,14 @@ try {
     );
 
     foreach ($rows as $row) {
-        bcc_execute(
-            'INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)',
-            array(':tid' => $table['id'], ':pos' => $nextPos, ':uid' => $user['id'])
-        );
-        $recordId = (int) bcc_last_insert_id();
-        $nextPos++;
+        // Kaydı DB'ye yazmadan ÖNCE tüm hücreleri normalize edip zorunlu alan
+        // kapsamını kontrol ediyoruz (bulunan gerçek bug: import hiçbir zorunlu
+        // alan kontrolü yapmıyordu, cell_update.php'de reddedilen boş bir zorunlu
+        // değer buradan sessizce geçiyordu) — satır zorunlu bir alanı boş
+        // bırakıyorsa hiç INSERT yapılmadan atlanır, "yarım" kayıt oluşmaz.
+        $cellsToInsert = array();
+        $filledFieldIds = array();
+        $rowSkippedCells = 0;
 
         foreach ($columnFields as $colIndex => $field) {
             if ($field === null || !array_key_exists($colIndex, $row)) {
@@ -175,18 +190,45 @@ try {
 
             if (!$result['ok'] || $result['value'] === null) {
                 if (!$result['ok']) {
-                    $skippedCells++;
+                    $rowSkippedCells++;
                 }
                 continue;
             }
 
-            $column = $result['column'];
+            $fieldId = (int) $field['id'];
+            $cellsToInsert[] = array('field_id' => $fieldId, 'column' => $result['column'], 'value' => $result['value']);
+            $filledFieldIds[$fieldId] = true;
+        }
+
+        $missingRequired = false;
+        foreach ($requiredFieldIds as $reqId) {
+            if (!isset($filledFieldIds[$reqId])) {
+                $missingRequired = true;
+                break;
+            }
+        }
+
+        if ($missingRequired) {
+            $skippedRows++;
+            continue;
+        }
+
+        bcc_execute(
+            'INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)',
+            array(':tid' => $table['id'], ':pos' => $nextPos, ':uid' => $user['id'])
+        );
+        $recordId = (int) bcc_last_insert_id();
+        $nextPos++;
+
+        foreach ($cellsToInsert as $cell) {
+            $column = $cell['column'];
             bcc_execute(
                 "INSERT INTO cell_values (record_id, field_id, {$column}) VALUES (:record_id, :field_id, :value)",
-                array(':record_id' => $recordId, ':field_id' => (int) $field['id'], ':value' => $result['value'])
+                array(':record_id' => $recordId, ':field_id' => $cell['field_id'], ':value' => $cell['value'])
             );
         }
 
+        $skippedCells += $rowSkippedCells;
         $imported++;
     }
 
@@ -195,6 +237,7 @@ try {
     log_audit('table.import_csv', 'table', $table['id'], array(
         'imported' => $imported,
         'skipped_cells' => $skippedCells,
+        'skipped_rows' => $skippedRows,
         'unmatched_columns' => $unmatchedColumns,
     ), $table['team_id']);
 } catch (Throwable $e) {
@@ -206,5 +249,6 @@ echo json_encode(array(
     'ok' => true,
     'imported' => $imported,
     'skipped_cells' => $skippedCells,
+    'skipped_rows' => $skippedRows,
     'unmatched_columns' => $unmatchedColumns,
 ), JSON_UNESCAPED_UNICODE);

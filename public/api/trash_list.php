@@ -27,6 +27,19 @@ if (!empty($teamIds)) {
         $teamIds
     );
 
+    // can_restore için kullanıcının bu takımlardaki rolü TEK sorguda toplu
+    // çekilir (bulunan gerçek fazlalık: eskiden her satır için ayrı ayrı
+    // current_user_role_in_team() çağrılıyordu — N silinmiş base için N ekstra
+    // sorgu; codebase'in başka her yerde kaçındığı N+1 deseni).
+    $roleByTeamId = array();
+    $roleRows = bcc_fetch_all(
+        "SELECT team_id, role FROM team_members WHERE user_id = ? AND team_id IN ($placeholders)",
+        array_merge(array($user['id']), $teamIds)
+    );
+    foreach ($roleRows as $r) {
+        $roleByTeamId[(int) $r['team_id']] = $r['role'];
+    }
+
     foreach ($rows as $row) {
         $isSelf = $row['deleted_by'] !== null && (int) $row['deleted_by'] === (int) $user['id'];
         $actorName = $row['deleted_by_name'] !== null ? $row['deleted_by_name'] : 'Bir kullanıcı';
@@ -40,7 +53,7 @@ if (!empty($teamIds)) {
             'message' => $message,
             'relative_date' => bcc_home_relative_date($row['deleted_at']),
             'actor_initial' => $row['deleted_by_name'] !== null ? mb_strtoupper(mb_substr($row['deleted_by_name'], 0, 1, 'UTF-8'), 'UTF-8') : '?',
-            'can_restore' => current_user_role_in_team($row['team_id']) === 'owner',
+            'can_restore' => isset($roleByTeamId[(int) $row['team_id']]) && $roleByTeamId[(int) $row['team_id']] === 'owner',
         );
     }
 }

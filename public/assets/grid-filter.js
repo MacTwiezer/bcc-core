@@ -33,6 +33,7 @@
                     condSelect.appendChild(placeholder);
                     condSelect.disabled = true;
                     valueInput.style.display = 'none';
+                    valueInput.value = '';
                     return;
                 }
 
@@ -47,6 +48,14 @@
                 });
 
                 updateValueInput();
+                // Bulunan gerçek bug: alan değişince önceki alan için girilmiş
+                // değer temizlenmiyordu — ör. "Durum contains Tamamlandi" filtresi
+                // alanı "Açıklama"ya değiştirince "Açıklama contains Tamamlandi"
+                // olarak kalıyordu, kullanıcı fark etmeden Uygula'ya basabilirdi.
+                // updateValueInput() gerekirse input/select'i zaten doğru tipe
+                // çevirdiği için (bkz. ensureValueInputKind) .value burada güvenle
+                // sıfırlanır.
+                valueInput.value = '';
             }
 
             // 'user' değeri serbest metin değil, takım üyelerinden bir <select> ile

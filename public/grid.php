@@ -337,10 +337,10 @@ $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 // VE ondan sonraki (daha iç) tüm seviyeler için yeni segment açılır — iç
 // sayaçlar bu noktada sıfırlanır (bkz. $counters), böylece dıştaki bir grup
 // değişince içteki "0-1" gibi bir path yanlışlıkla eski sayaçtan devam etmez.
-// checkbox için ayrı İngilizce etiket kullanılır (cell_display_text() checkbox'ı
-// desteklemez, hücre normalde bir input olarak render edilir); diğer tipler
-// cell_display_text() ile (tarih formatı, seçim etiketleri vb. doğru çıksın
-// diye) biçimlendirilir. (Empty) davranışı: tek seviyeli gruplamadaki gibi.
+// Tüm tipler (checkbox dahil — cell_display_text() artık 'İşaretli'/'İşaretsiz'
+// döndürüyor) cell_display_text() ile (tarih formatı, seçim etiketleri vb.
+// doğru çıksın diye) biçimlendirilir. (Empty) davranışı: tek seviyeli
+// gruplamadaki gibi.
 //
 // Dönüş: düğüm dizisi. Her düğüm:
 //   'level'    => 0 tabanlı seviye
@@ -389,8 +389,6 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
 
             if ($rawValue === null) {
                 $display = '(Boş)';
-            } elseif ($rule['field_type'] === 'checkbox') {
-                $display = ((int) $rawValue === 1) ? 'İşaretli' : 'İşaretsiz';
             } else {
                 $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById);
             }

@@ -41,10 +41,16 @@ try {
         array(':table_id' => $view['table_id'], ':id' => $view['id'])
     );
 
+    // DELETE + log_audit AYNI transaction'da — record_add.php/table_clear_data.php/
+    // view_create.php'de bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit()
+    // istisna atarsa (nadir ama mümkün) DELETE zaten commit edilmiş olurdu,
+    // istemci yine de "Veritabanı hatası" görürdü.
+    bcc_begin_transaction();
     bcc_execute('DELETE FROM views WHERE id = :id', array(':id' => $view['id']));
-
     log_audit('view.delete', 'view', $view['id'], array('table_id' => $view['table_id']), $view['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

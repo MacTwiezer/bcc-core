@@ -1402,6 +1402,11 @@ html.home-view-list .home-list-header,
     padding: 0.4rem 0.6rem;
     border: 1px solid var(--bcc-border);
     border-radius: 6px;
+    /* Bulunan gerçek bug: background hiç belirtilmemişti — tarayıcı
+       varsayılanı (her zaman beyaz) kullanılıyordu. color: var(--bcc-text)
+       koyu temada neredeyse beyaz olduğundan, isim/e-posta/şifre değiştirme
+       formlarına yazarken metin beyaz zemin üzerinde neredeyse görünmezdi. */
+    background: var(--bcc-surface);
     color: var(--bcc-text);
     width: 100%;
     max-width: 320px;

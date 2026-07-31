@@ -34,7 +34,12 @@ try {
     // Üst sınır: gerçek GÖRÜNÜR alan sayısına göre (hidden_fields state'i
     // record_add.php'deki AYNI whitelist fonksiyonuyla çözülür) — istemci de aynı
     // kuralı uygular, sunucu burada ayrıca kırpar.
-    $fields = bcc_fetch_all('SELECT id FROM fields WHERE table_id = :table_id', array(':table_id' => $view['table_id']));
+    // ORDER BY position, id — record_add.php/view_export_csv.php/table_import_csv.php
+    // ile AYNI sıralama (bulunan gerçek bug: bu yoktu, MySQL'in ORDER BY'sız
+    // sıralaması id sırasına göre gelebiliyor; alanlar yeniden sıralandıysa
+    // (move_field) $fields[0]/$primaryFieldId POSITION 0'daki gerçek birincil
+    // alan değil, en önce OLUŞTURULMUŞ alan olurdu).
+    $fields = bcc_fetch_all('SELECT id FROM fields WHERE table_id = :table_id ORDER BY position, id', array(':table_id' => $view['table_id']));
     $fieldsById = array();
     foreach ($fields as $f) {
         $fieldsById[(int) $f['id']] = $f;

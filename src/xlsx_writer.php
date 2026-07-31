@@ -23,9 +23,21 @@ function bcc_xlsx_col_letter($index)
     return $letter;
 }
 
+// Bulunan gerçek bug: yalnızca &<>'" escape ediliyordu — XML 1.0'da GEÇERSİZ
+// olan kontrol karakterleri (tab/LF/CR hariç, ör. \x0B dikey sekme) hiç
+// temizlenmiyordu. Canlı test ile doğrulandı: full_name/email gibi alanlarda
+// gömülü bir kontrol karakteri varsa (trim() yalnızca baş/son karakterleri
+// kırpar, ARADAKİ bir kontrol karakterini asla temizlemez) üretilen sheet1.xml
+// gerçekten bozuk oluyordu (DOMDocument::loadXML() "PCDATA invalid Char value
+// 11" hatasıyla reddediyordu) — Excel'in "dosya bozuk, onarılsın mı?" diyaloğu
+// göstermesine ya da .xlsx'in hiç açılamamasına yol açardı. Bu karakterler
+// şimdi escape'ten ÖNCE kaldırılıyor (XML 1.0 Char üretim kuralı: yalnızca
+// #x9/#xA/#xD ve #x20 üzeri C0 kontrolleri geçerli).
 function bcc_xlsx_escape($text)
 {
-    return htmlspecialchars((string) $text, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string) $text);
+
+    return htmlspecialchars($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
 function bcc_xlsx_sheet_xml(array $headers, array $rows)

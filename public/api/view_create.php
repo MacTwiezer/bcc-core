@@ -24,6 +24,12 @@ try {
         array(':table_id' => $table['id'])
     );
 
+    // INSERT + log_audit AYNI transaction'da — record_add.php/table_clear_data.php'de
+    // bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit() istisna atarsa
+    // (nadir ama mümkün) INSERT zaten commit edilmiş olurdu, istemci yine de
+    // "Veritabanı hatası" görürdü.
+    bcc_begin_transaction();
+
     bcc_execute(
         'INSERT INTO views (table_id, name, view_type, position, created_by)
          VALUES (:table_id, :name, :view_type, :position, :created_by)',
@@ -39,7 +45,10 @@ try {
     $newViewId = bcc_last_insert_id();
 
     log_audit('view.create', 'view', $newViewId, array('table_id' => $table['id'], 'name' => $newName), $table['team_id']);
+
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

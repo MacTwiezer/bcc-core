@@ -720,6 +720,14 @@ function cell_display_text($fieldType, $cellRow, $usersById = array())
             return (string) $cellRow['value_text'];
         case 'number':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
+        case 'checkbox':
+            // grid.php'nin bcc_build_grouped_tree()'sindeki AYNI etiketler —
+            // eskiden bu case burada yoktu (bulunan gerçek bug), grid.php grup
+            // başlıkları için yerel bir workaround yazmıştı ama slack.php/
+            // interface.php/view_export_csv.php gibi bu fonksiyonu DOĞRUDAN
+            // çağıran diğer yerlerde checkbox hücreleri sessizce boş görünüyordu
+            // (ör. CSV export'ta checkbox verisi kayboluyordu).
+            return ((int) $cellRow['value_number'] === 1) ? 'İşaretli' : 'İşaretsiz';
         case 'date':
             return $cellRow['value_date'] !== null ? date('d.m.Y', strtotime($cellRow['value_date'])) : '';
         case 'multiple_select':

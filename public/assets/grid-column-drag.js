@@ -18,7 +18,11 @@
     window.bcc_bindColumnDrag = function (handle, options) {
         options = options || {};
         var onStart = options.onStart || function () {};
-        var onMove = options.onMove;
+        // Bulunan kırılgan kod: onStart/onEnd'in aksine onMove'un varsayılanı
+        // yoktu — "zorunlu" olduğu belgelense de, ileride bunu unutan bir
+        // çağıran, açık bir hata yerine requestAnimationFrame içinde belirsiz
+        // bir TypeError alırdı. Kardeşleriyle AYNI güvenli varsayılan deseni.
+        var onMove = options.onMove || function () {};
         var onEnd = options.onEnd || function () {};
 
         var dragging = false;

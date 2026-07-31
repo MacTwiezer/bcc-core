@@ -15,22 +15,35 @@
         var prevBtn = document.getElementById('grid-search-prev');
         var nextBtn = document.getElementById('grid-search-next');
 
-        var rows = Array.prototype.filter.call(tbody.querySelectorAll('tr'), function (tr) {
-            return tr.hasAttribute('data-record-id');
-        });
-        var total = rows.length;
-
-        // Aranabilir hücreler: yalnızca veri hücrelerinin metni (.cell-view) —
-        // satır no ve işlemler (Sil butonu) sütunu hariç. Checkbox hücrelerinde
-        // .cell-view yok, doğal olarak elenir. Satırlar artık GİZLENMEZ (yalnızca
-        // vurgulanır) — bu yüzden bir grubun tüm satırları elense bile grup
-        // başlığı zaten hep görünür kalır (bilinen kusur bu tasarımda oluşmaz).
+        var total = 0;
         var cellViews = [];
-        rows.forEach(function (tr) {
-            Array.prototype.forEach.call(tr.querySelectorAll('td.grid-cell .cell-view'), function (view) {
-                cellViews.push(view);
+
+        // Bulunan gerçek bug: satır/hücre listesi eskiden yalnızca SAYFA
+        // YÜKLENİRKEN bir kez taranıyordu. grid.js'nin addRecord() fonksiyonu
+        // yeni satırı sayfa yenilenmeden doğrudan DOM'a ekliyor (bkz. grid.js
+        // insertAdjacentElement) — bu yüzden yeni eklenen bir kayıt, sayfa
+        // yenilenene kadar arama ile HİÇ bulunamıyor ve toplam kayıt sayısı
+        // yanlış kalıyordu. Artık her aramada DOM'dan TAZE okunuyor.
+        function refreshCellViews() {
+            var rows = Array.prototype.filter.call(tbody.querySelectorAll('tr'), function (tr) {
+                return tr.hasAttribute('data-record-id');
             });
-        });
+            total = rows.length;
+
+            // Aranabilir hücreler: yalnızca veri hücrelerinin metni (.cell-view) —
+            // satır no ve işlemler (Sil butonu) sütunu hariç. Checkbox hücrelerinde
+            // .cell-view yok, doğal olarak elenir. Satırlar artık GİZLENMEZ (yalnızca
+            // vurgulanır) — bu yüzden bir grubun tüm satırları elense bile grup
+            // başlığı zaten hep görünür kalır (bilinen kusur bu tasarımda oluşmaz).
+            cellViews = [];
+            rows.forEach(function (tr) {
+                Array.prototype.forEach.call(tr.querySelectorAll('td.grid-cell .cell-view'), function (view) {
+                    cellViews.push(view);
+                });
+            });
+        }
+
+        refreshCellViews();
 
         var matches = []; // <mark> elemanları, DOM sırasına göre
         var activeIndex = -1;
@@ -112,6 +125,8 @@
         }
 
         function runSearch() {
+            refreshCellViews();
+
             var q = input.value.trim().toLowerCase();
 
             matches = [];

@@ -480,6 +480,12 @@ function bcc_create_field($tableId, $teamId, $postData)
     if ($name === '') {
         return array('ok' => false, 'error' => 'Alan adı boş olamaz.');
     }
+    if (mb_strlen($name, 'UTF-8') > 150) {
+        // fields.name VARCHAR(150) — bu kontrol olmadan uzun bir alan adı
+        // hatasız sessizce kırpılıyordu (create_user.php/create_team.php'deki
+        // AYNI kontrolle aynı gerekçe).
+        return array('ok' => false, 'error' => 'Alan adı en fazla 150 karakter olabilir.');
+    }
     if (!isset($fieldTypes[$fieldType])) {
         return array('ok' => false, 'error' => 'Geçersiz alan tipi.');
     }

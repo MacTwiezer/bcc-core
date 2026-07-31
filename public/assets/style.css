@@ -137,7 +137,10 @@ table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
 
 .admin-pill-blue   { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
 .admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
-.admin-pill-gray   { background: #eceef1; color: var(--bcc-text-muted); }
+/* Bulunan gerçek bug: kardeşleri (blue hariç) sabit renk ÇİFTİ kullanırken bu
+   sabit zemin + tema-duyarlı metin (var(--bcc-text-muted)) karışımıydı —
+   koyu temada metin açılıp sabit açık zeminle düşük kontrasta düşüyordu. */
+.admin-pill-gray   { background: #eceef1; color: #5f6368; }
 .admin-pill-amber  { background: #fef3e2; color: #b45309; }
 .admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
 
@@ -432,6 +435,12 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     align-items: center;
     gap: 0.5rem;
     background: var(--bcc-surface);
+    /* Bulunan gerçek bug: color hiç belirtilmemişti — bu bir <button>,
+       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
+       kullanılır. Koyu temada background koyulaşıyor ama metin siyah
+       kalıyordu (alan tipi sihirbazı düğmeleri — neredeyse görünmezdi,
+       piksel örneklemesiyle doğrulandı). */
+    color: var(--bcc-text);
     border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     padding: 0.5rem 0.7rem;
@@ -443,7 +452,7 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 
 .field-type-option:hover {
     border-color: var(--bcc-accent-strong);
-    background: #f2f6fe;
+    background: var(--bcc-surface-hover);
 }
 
 .field-type-badge {
@@ -673,8 +682,13 @@ table.grid tbody tr:hover .grid-row-expand { opacity: 1; }
 
 .grid-row-expand:hover { background: var(--bcc-surface-hover); }
 
-table.grid tbody tr.is-row-selected td { background: #eef4fe; }
-table.grid tbody tr.is-row-selected .grid-rownum { background: #e3ecfc; }
+/* Bulunan gerçek bug: sabit açık mavi (#eef4fe/#e3ecfc) kullanılıyordu —
+   koyu temada hücre metni (var(--bcc-text)) neredeyse beyaz olduğundan bu
+   sabit açık zeminle neredeyse görünmez oluyordu. Uygulamanın "seçili/aktif"
+   durumlar için zaten kullandığı tema-duyarlı vurgu rengiyle (bkz.
+   .hide-fields-btn-active, .gs-view-drawer-row.is-selected) değiştirildi. */
+table.grid tbody tr.is-row-selected td { background: var(--bcc-accent-soft); }
+table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-soft); }
 
 /* ---------- Satır genişletme paneli (detail modal) ---------- */
 
@@ -915,8 +929,11 @@ td.editable {
     white-space: nowrap;
 }
 
+/* Bulunan gerçek bug: sabit açık mavi (#f0f7ff) — koyu temada hücre metni
+   neredeyse beyaz olduğundan neredeyse görünmez oluyordu (gerçek CDP hover
+   ile canlı doğrulandı). Diğer hover'larla AYNI tema-duyarlı zemin. */
 td.editable .cell-view:hover {
-    background: #f0f7ff;
+    background: var(--bcc-surface-hover);
 }
 
 td.editable.editing {
@@ -1020,8 +1037,11 @@ td.editable.richtext-editing {
     flex-shrink: 0;
 }
 
+/* Bulunan gerçek bug: sabit açık gri (#e6e6ea) — koyu temada .attachment-chip
+   metni (var(--bcc-text)) neredeyse görünmez oluyordu. Diğer hover'larla
+   AYNI tema-duyarlı zemin. */
 .attachment-chip:hover {
-    background: #e6e6ea;
+    background: var(--bcc-surface-hover);
 }
 
 .attachment-thumb {
@@ -1107,8 +1127,12 @@ td.editable.attachment-editing {
     flex-shrink: 0;
 }
 
+/* Bulunan gerçek bug: sabit açık pembe (#fbdbd7) — kardeşi .group-remove-btn:hover
+   zaten var(--bcc-danger-soft) kullanıyordu, burası gözden kaçmıştı. Koyu
+   temada .attachment-remove-btn'in rengi (var(--bcc-danger)) bu sabit açık
+   zeminle düşük kontrastlıydı. */
 .attachment-remove-btn:hover {
-    background: #fbdbd7;
+    background: var(--bcc-danger-soft);
     border-radius: 4px;
 }
 

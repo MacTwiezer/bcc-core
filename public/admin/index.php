@@ -36,14 +36,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $skippedSelf = true;
         }
 
-        if (!empty($applyIds)) {
+        if (empty($applyIds)) {
+            // Yalnızca kendi hesabı seçilmişti, kendi kendini çıkarınca uygulanacak
+            // kimse kalmadı — hiçbir UPDATE/log_audit çalışmadı (bulunan gerçek bug:
+            // bu durumda bile "Güncellendi" mesajı gösteriliyordu, hiçbir şey
+            // değişmediği halde bir işlem olmuş gibi görünüyordu).
+            $success = 'Hiçbir şey güncellenmedi (kendi admin yetkinizi kendiniz kaldıramazsınız).';
+        } else {
             $placeholders = implode(',', array_fill(0, count($applyIds), '?'));
             $newValue = $action === 'grant_admin' ? 1 : 0;
             bcc_execute("UPDATE users SET is_admin = ? WHERE id IN ($placeholders)", array_merge(array($newValue), $applyIds));
             log_audit($action === 'grant_admin' ? 'user.grant_admin' : 'user.revoke_admin', 'user', null, array('user_ids' => $applyIds));
+            $success = $skippedSelf ? 'Güncellendi (kendi admin yetkinizi kaldıramazsınız, atlandı).' : 'Güncellendi.';
         }
-
-        $success = $skippedSelf ? 'Güncellendi (kendi admin yetkinizi kaldıramazsınız, atlandı).' : 'Güncellendi.';
     } elseif ($action === 'activate' || $action === 'deactivate') {
         $applyIds = $userIds;
         $skippedSelf = false;
@@ -53,14 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $skippedSelf = true;
         }
 
-        if (!empty($applyIds)) {
+        if (empty($applyIds)) {
+            // Aynı gerekçe: yukarıdaki grant_admin/revoke_admin bloğuyla AYNI bug.
+            $success = 'Hiçbir şey güncellenmedi (kendi hesabınızı kendiniz pasif yapamazsınız).';
+        } else {
             $placeholders = implode(',', array_fill(0, count($applyIds), '?'));
             $newValue = $action === 'activate' ? 1 : 0;
             bcc_execute("UPDATE users SET is_active = ? WHERE id IN ($placeholders)", array_merge(array($newValue), $applyIds));
             log_audit($action === 'activate' ? 'user.activate' : 'user.deactivate', 'user', null, array('user_ids' => $applyIds));
+            $success = $skippedSelf ? 'Güncellendi (kendi hesabınızı pasif yapamazsınız, atlandı).' : 'Güncellendi.';
         }
-
-        $success = $skippedSelf ? 'Güncellendi (kendi hesabınızı pasif yapamazsınız, atlandı).' : 'Güncellendi.';
     } elseif ($action === 'remove_from_team') {
         $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
 

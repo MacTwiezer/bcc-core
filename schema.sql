@@ -109,9 +109,12 @@ CREATE TABLE IF NOT EXISTS tables_meta (
 
 -- ---------------------------------------------------------------------------
 -- fields — tablo alanları (tip + seçenekler)
--- field_type: single_line_text, long_text, number, checkbox, date, single_select,
---             multiple_select, attachment, user, phone_number, email, url,
---             currency, percent, link, created_time, last_modified_time
+-- field_type: ENUM DEĞİL, kasıtlı olarak serbest VARCHAR — geçerli değerler
+-- kod tarafında (src/schema.php, $GLOBALS['BCC_FIELD_TYPES']) whitelist'lenir,
+-- yeni bir tip eklemek DDL gerektirmez (slack_routing_rules.operator ile AYNI
+-- ilke). Şu an gerçekten uygulanan 10 tip: single_line_text, long_text, number,
+-- checkbox, date, single_select, multiple_select, time, user, attachment —
+-- güncel liste her zaman $GLOBALS['BCC_FIELD_TYPES']'tadır, burada YİNELENMEZ.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fields (
     id           INT UNSIGNED NOT NULL AUTO_INCREMENT,

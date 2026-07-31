@@ -242,6 +242,18 @@
                 });
             }
 
+            function repositionPanel() {
+                if (panel && summary) {
+                    positionPanelBelow(panel, summary);
+                }
+            }
+
+            function repositionSubPanel() {
+                if (subPanel && subSummary) {
+                    positionPanelRight(subPanel, subSummary);
+                }
+            }
+
             menu.addEventListener('toggle', function () {
                 if (!menu.open) {
                     // Kapanınca kendi alt menüsünü de sıfırla — tekrar açılışta
@@ -253,6 +265,7 @@
                     if (panel && panel.parentNode === document.body) {
                         menu.appendChild(panel);
                     }
+                    window.removeEventListener('scroll', repositionPanel, true);
                     return;
                 }
 
@@ -271,18 +284,23 @@
                     // BİRLİKTE — appendChild tüm alt ağacı taşır), kapanışta
                     // menünün içine geri döner.
                     document.body.appendChild(panel);
-                    positionPanelBelow(panel, summary);
+                    repositionPanel();
+                    // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —
+                    // grid-column-menu.js/grid-table-data.js/grid-view-manage.js'de
+                    // bulunan AYNI sorun. Sayfa kaydırılırsa kart kayarken panel
+                    // ekranda sabit kalıp kopuyordu. Scroll'da yeniden konumlandırılır.
+                    window.addEventListener('scroll', repositionPanel, true);
                 }
             });
 
             if (subMenu) {
                 subMenu.addEventListener('toggle', function () {
                     if (!subMenu.open) {
+                        window.removeEventListener('scroll', repositionSubPanel, true);
                         return;
                     }
-                    if (subPanel && subSummary) {
-                        positionPanelRight(subPanel, subSummary);
-                    }
+                    repositionSubPanel();
+                    window.addEventListener('scroll', repositionSubPanel, true);
                 });
             }
         });

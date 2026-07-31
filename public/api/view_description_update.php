@@ -34,13 +34,19 @@ try {
         json_fail(422, 'Açıklama en fazla 500 karakter olabilir.');
     }
 
+    // UPDATE + log_audit AYNI transaction'da — record_add.php/table_clear_data.php/
+    // view_create.php/view_delete.php'de bulunan AYNI sınıf bug: ikisi ayrı
+    // olsaydı, log_audit() istisna atarsa (nadir ama mümkün) UPDATE zaten
+    // commit edilmiş olurdu, istemci yine de "Veritabanı hatası" görürdü.
+    bcc_begin_transaction();
     bcc_execute(
         'UPDATE views SET description = :description WHERE id = :id',
         array(':description' => $description === '' ? null : $description, ':id' => $view['id'])
     );
-
     log_audit('view.description_update', 'view', $view['id'], array('description' => $description), $view['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

@@ -191,7 +191,13 @@ $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.p
         </div>
 
         <div class="if-record-list" id="if-record-list" data-table-id="<?php echo (int) $tableId; ?>">
-            <?php if (empty($records)): ?>
+            <?php if (empty($tables)): ?>
+                <!-- Bulunan gerçek bug: base'de HİÇ tablo yokken (henüz yeni oluşturulmuş,
+                     bkz. bases.php) bu sayfa "Bu tabloda henüz kayıt yok." diyordu —
+                     yanıltıcı, çünkü ortada bakılacak bir tablo bile yok. base_tables.php'nin
+                     AYNI durum için kullandığı mesajla tutarlı hale getirildi. -->
+                <div class="if-empty">Bu base'de henüz tablo yok.</div>
+            <?php elseif (empty($records)): ?>
                 <div class="if-empty">Bu tabloda henüz kayıt yok.</div>
             <?php else: ?>
                 <?php foreach ($records as $rec):

@@ -133,12 +133,14 @@ gerçek bir MySQL tablosu yapmak yerine **meta-şema** kullanıyoruz:
 - `teams` → KVKK izolasyonu (TY / GULF / ATP …)
 - `users`, `team_members` → kullanıcılar ve ekip+rol üyelikleri
 - `bases` → çalışma alanı (ekibe bağlı)
+- `user_starred_bases` → kullanıcı bazlı favori/yıldızlı base'ler
 - `tables_meta` → sekmeler (DUYURU, ITSM …) — ("tables" DEĞİL, MySQL'in ayrılmış
   kelime çakışmasını önlemek için bu adla açıldı)
 - `fields` → alanlar (tip + seçenekler)
 - `records` → satırlar
 - `cell_values` → hücreler (tipe göre value_text / value_number / value_date / value_json)
 - `views` → görünümler (grid ve "interface"/duyuru arayüzü ayarları)
+- `user_favorite_views` → kullanıcı bazlı favori/yıldızlı görünümler
 - `attachments` → dosya ekleri
 - `slack_webhooks` → duyuru → Slack gönderimi ayarı
 - `slack_routing_rules` → alan DEĞERİNE göre farklı Slack kanalına yönlendirme
@@ -147,8 +149,13 @@ gerçek bir MySQL tablosu yapmak yerine **meta-şema** kullanıyoruz:
 
 > **[GÜNCEL DURUM — 2026-07-30]** `record_links` (tablolar arası bağlantı/Link alanı
 > için açılmıştı) **hiç kullanılmadığı için 2026-07-29'da kaldırıldı** — Link alan
-> tipi (F2) hiç yazılmadığından karşılığı da hiç oluşmadı. Yukarıdaki liste artık
-> ŞU AN gerçekten var olan 12 tabloyu yansıtıyor.
+> tipi (F2) hiç yazılmadığından karşılığı da hiç oluşmadı.
+>
+> **[DÜZELTME]** Bu not önceden "yukarıdaki liste artık ŞU AN gerçekten var olan
+> 12 tabloyu yansıtıyor" diyordu — yanlıştı: `schema.sql`'de tam olarak **15**
+> `CREATE TABLE` var, liste `user_starred_bases` ve `user_favorite_views`'ı hiç
+> saymıyordu (ikisi de yukarıya eklendi). Güncel/otoriter liste her zaman
+> `schema.sql`'in kendisidir, burası yalnızca özet.
 
 Ayrıntı: `schema.sql`.
 

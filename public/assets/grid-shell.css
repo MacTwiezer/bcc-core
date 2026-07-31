@@ -157,18 +157,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
 .gs-account-item-arrow, .gs-account-item-icon { flex-shrink: 0; }
 .gs-account-item-arrow { margin-left: auto; }
 
-.gs-account-badge {
-    margin-left: auto;
-    font-size: 0.68rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-    flex-shrink: 0;
-}
-
-.gs-account-badge-blue { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
-.gs-account-badge-orange { background: #fff1e0; color: #b5610a; }
-
 .gs-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
 
 .gs-account-logout { padding: 0.4rem; }
@@ -758,7 +746,11 @@ html.is-mac .gs-kbd-other { display: none; }
 
 .grid-search-mark {
     background: #fff2a8;
-    color: inherit;
+    /* Sabit (tema bağımsız) açık sarı arka plan — "inherit" koyu temada
+       neredeyse-beyaz metin rengini alıp vurguyu okunaksız yapıyordu
+       (kontrast ~1:1). Metin rengi de sabitlenerek her iki temada da
+       yüksek kontrast garanti edilir. */
+    color: #1d1d1f;
     border-radius: 2px;
     padding: 0 1px;
 }

@@ -2003,13 +2003,19 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId,
             return array();
         }
         $fieldPlaceholders = implode(',', array_fill(0, count($fieldIds), '?'));
+        // LIKE'ın kendi joker karakterleri (%, _) ve kaçış karakteri (\)
+        // kullanıcı arama metninde LİTERAL kabul edilmeli — bulunan gerçek bug:
+        // bu escape olmadan "50%off" araması, o metni hiç içermeyen ama "50" ve
+        // "off"u ayrı yerlerde geçiren kayıtları da (% joker karakteri araya
+        // her şeyi kabul ettiği için) yanlışlıkla eşleştiriyordu.
+        $escapedTerm = str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $searchTerm);
         $sql .= " AND EXISTS (
                 SELECT 1 FROM cell_values cv
                 WHERE cv.record_id = r.id
                   AND cv.field_id IN ($fieldPlaceholders)
-                  AND cv.value_text LIKE ?
+                  AND cv.value_text LIKE ? ESCAPE '\\\\'
             )";
-        $params = array_merge($params, $fieldIds, array('%' . $searchTerm . '%'));
+        $params = array_merge($params, $fieldIds, array('%' . $escapedTerm . '%'));
     }
 
     $sql .= ' ORDER BY last_update DESC, r.id DESC';

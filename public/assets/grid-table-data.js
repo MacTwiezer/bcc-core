@@ -25,13 +25,25 @@
                 return;
             }
 
-            menu.addEventListener('toggle', function () {
-                if (!menu.open) {
-                    return;
-                }
+            function positionPanel() {
                 var rect = summary.getBoundingClientRect();
                 panel.style.top = (rect.bottom + 4) + 'px';
                 panel.style.left = rect.left + 'px';
+            }
+
+            // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —
+            // grid-column-menu.js/grid-add-field.js'de bulunan AYNI sorun.
+            // .gs-table-tabs-scroll yatayda kaydırılabilir; menü açıkken
+            // sekme şeridi kaydırılırsa özet (caret) kayarken panel ekranda
+            // sabit kalıp tamamen kopuyordu. Scroll'da yeniden konumlandırılır,
+            // menü kapanınca listener kaldırılır.
+            menu.addEventListener('toggle', function () {
+                if (!menu.open) {
+                    window.removeEventListener('scroll', positionPanel, true);
+                    return;
+                }
+                positionPanel();
+                window.addEventListener('scroll', positionPanel, true);
             });
         });
 

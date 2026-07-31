@@ -27,10 +27,16 @@ try {
     // attachments DB satırları records'un ON DELETE CASCADE'i ile otomatik gider.
     bcc_delete_attachment_files_by_table($table['id']);
 
+    // DELETE + log_audit AYNI transaction'da — bulunan gerçek bug: log_audit()
+    // burada bir istisna atarsa (nadir ama mümkün) ve ikisi ayrı olsaydı, DELETE
+    // zaten commit edilmiş olur, istemci yine de "Veritabanı hatası" görürdü
+    // (record_add.php'de bulunan AYNI sınıf sorun).
+    bcc_begin_transaction();
     bcc_execute('DELETE FROM records WHERE table_id = :tid', array(':tid' => $table['id']));
-
     log_audit('table.clear_data', 'table', $table['id'], array('record_count' => $recordCount), $table['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

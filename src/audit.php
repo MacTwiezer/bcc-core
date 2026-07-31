@@ -64,6 +64,7 @@ $GLOBALS['BCC_NOTIFICATION_ACTIONS'] = array(
     'slack.notify_sent',
     'slack.notify_failed',
     'team_member.assign',
+    'team_member.role_change',
 );
 
 // current_user_team_ids() (src/auth.php) ile AYNI kaynaktan — ikinci bir
@@ -116,6 +117,8 @@ function bcc_notification_message($row)
             return $actor . '\'in eklediği kayıt için Slack bildirimi gönderilemedi.';
         case 'team_member.assign':
             return $actor . ' ekibe yeni bir üye ekledi.';
+        case 'team_member.role_change':
+            return $actor . ' bir ekip üyesinin rolünü güncelledi.';
         default:
             return $actor . ' bir işlem yaptı.';
     }

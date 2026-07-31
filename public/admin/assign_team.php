@@ -27,6 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!bcc_fetch_one('SELECT id FROM teams WHERE id = :id', array('id' => $teamId))) {
         $error = 'Ekip bulunamadı.';
     } else {
+        // INSERT ... ON DUPLICATE KEY UPDATE hem yeni üyeliği hem de mevcut bir
+        // üyenin rol değişikliğini AYNI sorguyla yapar — hangisi olduğunu ancak
+        // önceden bakarak biliriz (bulunan gerçek bug: bu ayrım yapılmadığı için
+        // salt rol değişikliğinde bile bildirim "ekibe yeni bir üye ekledi"
+        // diyordu, bkz. src/audit.php'deki team_member.role_change case'i).
+        $existingMember = bcc_fetch_one(
+            'SELECT id FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
+            array('team_id' => $teamId, 'user_id' => $userId)
+        );
+
         bcc_execute(
             'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
              ON DUPLICATE KEY UPDATE role = VALUES(role)',
@@ -36,7 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // olmadan NULL kalır (bulunan gerçek bug: team_member.assign zaten
         // bildirim beyaz listesinde ama team_id NULL olduğu için `WHERE team_id
         // IN (...)` filtresine hiçbir zaman uymuyordu, bildirim hiç görünmüyordu).
-        log_audit('team_member.assign', 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role), $teamId);
+        $auditAction = $existingMember ? 'team_member.role_change' : 'team_member.assign';
+        log_audit($auditAction, 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role), $teamId);
         $success = 'Atama kaydedildi.';
     }
 }

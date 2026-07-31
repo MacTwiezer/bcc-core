@@ -1076,15 +1076,17 @@ td.editable.attachment-editing {
     box-shadow: none;
 }
 
+/* Beyaz arka plan + zayıf kenarlık/gölge grid zeminiyle neredeyse ayırt
+   edilemiyordu, kullanıcıya "CSS'siz" bir ekran gibi görünüyordu. */
 .attachment-popover {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
     z-index: 15;
     background: var(--bcc-surface);
-    border: 1px solid var(--bcc-border-strong);
+    border: 2px solid var(--bcc-accent);
     border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
     width: 260px;
     padding: 0.6rem;
     cursor: default;

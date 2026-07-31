@@ -30,7 +30,19 @@
     function syncThemeChecks() {
         var stored = null;
         try { stored = window.localStorage.getItem(THEME_STORAGE_KEY); } catch (e) {}
-        var active = stored === 'dark' ? 'dark' : 'light';
+
+        var active;
+        if (stored === 'dark' || stored === 'light') {
+            active = stored;
+        } else {
+            // Bulunan gerçek bug: kullanıcı hiç tema seçmemişse (localStorage boş)
+            // burada her zaman 'light' varsayılıyordu. theme-init.js bu durumda
+            // data-theme'i HİÇ yazmıyor, theme.css'in prefers-color-scheme:dark
+            // kuralı (bkz. :root:not([data-theme]) seçicisi) sayfayı işletim
+            // sistemi koyu istiyorsa GERÇEKTEN koyu render ediyor — menüdeki
+            // işaretli seçenek sayfanın fiilen gösterdiği temeyle çelişiyordu.
+            active = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
 
         themeButtons.forEach(function (btn) {
             var check = btn.querySelector('[data-theme-check]');

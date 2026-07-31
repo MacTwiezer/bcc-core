@@ -20,6 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Tüm alanları doldurun.';
     } elseif (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
+    } elseif (mb_strlen($email, 'UTF-8') > 190) {
+        // users.email VARCHAR(190) — bu kontrol olmadan uzun bir e-posta hatasız
+        // sessizce kırpılıyordu (sql_mode'da STRICT_TRANS_TABLES yok). admin/create_user.php/
+        // account_update_email.php ile AYNI sınır/mesaj — bu dosya (kendi kendine kayıt
+        // formu) atlanmıştı.
+        $error = 'E-posta en fazla 190 karakter olabilir.';
+    } elseif (mb_strlen($fullName, 'UTF-8') > 150) {
+        // users.full_name VARCHAR(150) — admin/create_user.php/account_update_name.php
+        // ile AYNI sınır/mesaj.
+        $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } elseif (!bcc_is_valid_password($password)) {
         $error = 'Şifre en az 8 karakter olmalı.';
     } else {

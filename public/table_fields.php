@@ -41,6 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($name === '') {
             $error = 'Alan adı boş olamaz.';
+        } elseif (mb_strlen($name, 'UTF-8') > 150) {
+            // fields.name VARCHAR(150) — bcc_create_field()'ın (create_field aksiyonu)
+            // ZATEN yaptığı AYNI kontrol; bu dosyanın update_field aksiyonu atlanmıştı
+            // (sql_mode'da STRICT_TRANS_TABLES yok, uzun isim hatasız sessizce kırpılıyordu).
+            $error = 'Alan adı en fazla 150 karakter olabilir.';
         } elseif (!isset($fieldTypes[$fieldType])) {
             $error = 'Geçersiz alan tipi.';
         } else {

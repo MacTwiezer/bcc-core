@@ -40,10 +40,16 @@ try {
         json_fail(422, 'Görünüm adı en fazla 150 karakter olabilir.');
     }
 
+    // UPDATE + log_audit AYNI transaction'da — record_add.php ve diğer view_*.php
+    // dosyalarında bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit()
+    // istisna atarsa (nadir ama mümkün) UPDATE zaten commit edilmiş olurdu,
+    // istemci yine de "Veritabanı hatası" görürdü.
+    bcc_begin_transaction();
     bcc_execute('UPDATE views SET name = :name WHERE id = :id', array(':name' => $name, ':id' => $view['id']));
-
     log_audit('view.rename', 'view', $view['id'], array('name' => $name), $view['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

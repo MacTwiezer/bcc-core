@@ -5,6 +5,11 @@
 // kullanıcıda kayıtlıysa reddedilir: register.php ile AYNI uygulama-katmanı
 // kontrolü (kullanıcı dostu mesaj için), ayrıca DB'de zaten uq_users_email
 // UNIQUE kısıtı var (son savunma hattı).
+//
+// E-posta giriş kimliğidir — account_update_password.php/account_delete.php
+// ile AYNI gerekçeyle mevcut şifre password_verify() ile doğrulanmadan
+// değiştirilmez (bulunan gerçek bug: bu kontrol yoktu, ele geçirilmiş bir
+// oturum şifre bilinmeden hesabın giriş e-postasını sessizce değiştirebilirdi).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -13,9 +18,15 @@ api_require_login();
 api_require_csrf();
 
 $user = current_user();
+$currentPassword = isset($_POST['current_password']) ? (string) $_POST['current_password'] : '';
 $rawEmail = isset($_POST['email']) ? $_POST['email'] : '';
 $email = trim((string) $rawEmail);
 
+$row = bcc_fetch_one('SELECT password_hash FROM users WHERE id = :id LIMIT 1', array(':id' => $user['id']));
+
+if (!$row || !password_verify($currentPassword, $row['password_hash'])) {
+    json_fail(422, 'Mevcut şifre yanlış.');
+}
 if (!bcc_is_valid_email($email)) {
     json_fail(422, 'Geçersiz e-posta adresi.');
 }

@@ -92,7 +92,7 @@ try {
 
     bcc_commit();
 
-    bcc_notify_slack_new_record($table['id'], $newRecordId);
+    bcc_notify_slack_new_record($table['id'], $newRecordId, $user['full_name']);
 } catch (Throwable $e) {
     bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');

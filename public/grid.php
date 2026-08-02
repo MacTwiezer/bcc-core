@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:table_id, :position, :created_by)', array(':table_id' => $table['id'], ':position' => $nextPos, ':created_by' => $user['id']));
         $newId = bcc_last_insert_id();
         log_audit('record.create', 'record', $newId, array('table_id' => $table['id']), $table['team_id']);
-        bcc_notify_slack_new_record($table['id'], $newId);
+        bcc_notify_slack_new_record($table['id'], $newId, $user['full_name']);
         $success = 'Kayıt eklendi.';
     } elseif ($action === 'delete_record') {
         $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;

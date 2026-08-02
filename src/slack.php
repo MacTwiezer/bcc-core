@@ -111,11 +111,11 @@ function bcc_slack_send_webhook($webhookUrl, $text)
 // tablo/alan bulunamazsa ya da gönderim başarısız olursa bu fonksiyon SESSİZCE
 // döner; hiçbir durumda kayıt ekleme akışını etkilemez (çağıran taraf dönüş
 // değerini kontrol etmek zorunda değildir).
-function bcc_notify_slack_new_record($tableId, $recordId)
+function bcc_notify_slack_new_record($tableId, $recordId, $userFullName = null)
 {
     try {
         $tableRow = bcc_fetch_one(
-            'SELECT t.name AS table_name, b.team_id
+            'SELECT t.name AS table_name, b.id AS base_id, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
              WHERE t.id = :table_id LIMIT 1',
@@ -155,12 +155,19 @@ function bcc_notify_slack_new_record($tableId, $recordId)
             }
         }
 
+        // interface.php'ye (grid.php'ye DEĞİL) bağlanır — MADDE 1'de doğrulandığı
+        // gibi bu sayfa rolden bağımsız salt-okunur, viewer da açabilir; grid.php
+        // require_role('editor') istediği için viewer bu linkte 403 alırdı.
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-        $link = $scheme . '://' . $host . '/grid.php?table_id=' . (int) $tableId;
+        $link = $scheme . '://' . $host . '/interface.php?base_id=' . (int) $tableRow['base_id'] . '&table_id=' . (int) $tableId;
 
-        $text = "📢 *" . bcc_slack_escape($tableRow['table_name']) . "* tablosuna yeni kayıt eklendi\n*"
-            . bcc_slack_escape($primaryDisplay) . "*\n" . $link;
+        $text = "📢 *" . bcc_slack_escape($tableRow['table_name']) . "* tablosuna yeni bir duyuru eklendi\n*"
+            . bcc_slack_escape($primaryDisplay) . "*\n";
+        if ($userFullName !== null && $userFullName !== '') {
+            $text .= 'Ekleyen: ' . bcc_slack_escape($userFullName) . "\n";
+        }
+        $text .= '<' . $link . '|Duyuruyu görüntüle>';
 
         $ok = bcc_slack_send_webhook($webhook['webhook_url'], $text);
 

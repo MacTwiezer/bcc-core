@@ -26,14 +26,14 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = in_array($role, array('editor', 'owner'), true);
+$canEdit = ($role === 'owner');
 
 $error = null;
 $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
-    require_role($table['team_id'], 'editor');
+    require_role($table['team_id'], 'owner');
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
@@ -295,7 +295,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
     <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
     <?php if (!$canEdit): ?>
-        <p class="hint">Slack bildirimlerini ayarlamak için editor veya owner rolü gerekir.</p>
+        <p class="hint">Slack bildirimlerini ayarlamak için owner rolü gerekir.</p>
     <?php endif; ?>
 
     <div class="card">

@@ -1,10 +1,15 @@
 (function () {
     'use strict';
 
-    // Satır seçimi (checkbox) + satır genişletme paneli. cell_update.php'yi
-    // KENDİSİ çağırmaz — window.BCC_GRID (grid.js) üzerinden postCellValue/
-    // applyCellResultToTd/buildInput/getChoices yeniden kullanılır, bu dosya
-    // yalnızca grid.js'DEN SONRA yüklenir (bkz. grid.php script sırası).
+    // Satır seçimi (checkbox) + satır genişletme paneli. Panel artık TÜM takım
+    // rollerine açık (Airtable paritesi: kayıt görüntüleme herkese açık, yorum
+    // commenter+, hücre düzenleme editor+) — bu yüzden window.BCC_GRID (grid.js)
+    // varlığına SERTÇE bağımlı değil: grid.js yalnızca editor/owner'da yüklenir
+    // (bkz. grid.php script sırası), viewer/commenter'da hiç yoktur. Düzenleme
+    // yolları (commitFieldValue, buildEditableFieldWidget) window.BCC_CAN_EDIT
+    // true olduğunda (dolayısıyla window.BCC_GRID de var olduğunda) çalışır;
+    // aksi hâlde buildReadOnlyFieldWidget kullanılır (yeniden yazma YOK, canlı
+    // <td>'nin zaten sunucuda render edilmiş içeriği kopyalanır).
     //
     // Görünür alanlar: gerçek <td data-field-id> DOM'da var — widget ondan
     // (data-value/data-options) kurulur, kaydedince applyCellResultToTd o
@@ -12,6 +17,10 @@
     // Gizli alanlar: <td> yok — satırın data-fields JSON'undaki
     // {id, name, field_type, options, raw} kullanılır, kaydetme doğrudan
     // postCellValue(recordId, fieldId, value) ile (senkronlanacak <td> yok).
+    //
+    // Yorumlar (comment_list/add/update/delete.php): window.BCC_GRID'den TAMAMEN
+    // bağımsız, kendi küçük fetch sarmalayıcısını kullanır (grid.js'deki post()
+    // dışa açılmıyor, ve bu dosya grid.js YOKKEN de çalışmalı) — bkz. commentPost().
 
     function getRowFields(tr) {
         var raw = tr.getAttribute('data-fields');
@@ -30,6 +39,26 @@
         return tr.querySelector('td.grid-cell[data-field-id="' + fieldId + '"]');
     }
 
+    // grid.js'deki post()'un küçük bir kopyası — BİLEREK: window.BCC_GRID'i
+    // (dolayısıyla grid.js'i) hiç yüklemeyen viewer/commenter'da da yorum
+    // gönderebilmek için bu dosyanın grid.js'e bağımlı OLMAMASI gerekiyor.
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var CSRF = csrfMeta ? csrfMeta.content : '';
+
+    function commentPost(url, params) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(params).toString(),
+        }).then(function (res) {
+            return res.json().catch(function () {
+                return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+            }).then(function (data) {
+                return { httpOk: res.ok, data: data };
+            });
+        });
+    }
+
     // long_text'in ham değeri (raw) sunucuda zaten temizlenmiş (whitelist)
     // HTML — burada yalnızca DÜZ METNİ okumak için DOM'a hiç eklenmeyen bir
     // <div>'e yazılıp .textContent okunuyor (script YÜRÜTÜLMEZ, hiçbir zaman
@@ -44,9 +73,15 @@
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('table.grid');
         var overlay = document.getElementById('grid-detail-overlay');
-        if (!grid || !overlay || !window.BCC_GRID) {
+        // window.BCC_GRID artık ZORUNLU değil (bkz. dosya başındaki not) —
+        // yalnızca editor/owner'da yüklenir, viewer/commenter'da panel yine
+        // açılır ama salt-okunur render'a düşer.
+        if (!grid || !overlay) {
             return;
         }
+
+        var canEditFields = window.BCC_CAN_EDIT === true;
+        var canComment = window.BCC_CAN_COMMENT === true;
 
         var fieldsContainer = document.getElementById('grid-detail-fields');
         var titleEl = document.getElementById('grid-detail-title');
@@ -54,6 +89,9 @@
         var prevBtn = document.getElementById('grid-detail-prev');
         var nextBtn = document.getElementById('grid-detail-next');
         var selectAll = document.getElementById('grid-rownum-selectall');
+        var commentsList = document.getElementById('grid-detail-comments-list');
+        var commentsForm = document.getElementById('grid-detail-comments-form');
+        var commentsInput = document.getElementById('grid-detail-comments-input');
 
         var currentDetailRow = null;
 
@@ -85,7 +123,52 @@
             });
         }
 
+        // Salt-okunur (viewer/commenter): canlı <td> varsa (görünür alan) sunucuda
+        // zaten doğru biçimde render edilmiş içeriği (chip/checkbox/rich-text/ek
+        // dosyası) AYNEN kopyalar — ikinci bir render fonksiyonu YAZILMAZ. Canlı
+        // <td> yoksa (gizli alan, panel TÜM alanları gösterir) düz metne düşülür;
+        // bu nadir bir durumdur (görünümde gizlenmiş bir alanı genişletme
+        // panelinde okumak), chip/ek dosyası biçimlendirmesi olmadan kabul edildi.
+        function buildReadOnlyFieldWidget(tr, field) {
+            var liveTd = findLiveTd(tr, field.id);
+            var wrap = document.createElement('div');
+            wrap.className = 'grid-detail-field-value grid-detail-field-value-readonly';
+
+            if (liveTd) {
+                wrap.innerHTML = liveTd.innerHTML;
+                var liveCheckbox = wrap.querySelector('.cell-checkbox');
+                if (liveCheckbox) {
+                    liveCheckbox.disabled = true;
+                }
+                return wrap;
+            }
+
+            if (field.field_type === 'checkbox') {
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.disabled = true;
+                cb.checked = field.raw === '1';
+                wrap.appendChild(cb);
+                return wrap;
+            }
+
+            var span = document.createElement('span');
+            span.className = 'cell-view';
+            if (field.field_type === 'attachment') {
+                var names = (field.files || []).map(function (f) { return f.name; });
+                span.textContent = names.length ? names.join(', ') : '—';
+            } else {
+                span.textContent = field.raw || '—';
+            }
+            wrap.appendChild(span);
+            return wrap;
+        }
+
         function buildFieldWidget(tr, field) {
+            if (!canEditFields) {
+                return buildReadOnlyFieldWidget(tr, field);
+            }
+
             var liveTd = findLiveTd(tr, field.id);
             var wrap = document.createElement('div');
             wrap.className = 'grid-detail-field-value';
@@ -229,11 +312,194 @@
             }
         }
 
+        // --- Yorumlar (comment_list/add/update/delete.php) ----------------------
+        // Airtable paritesi: görüntüleme herkese açık (bkz. grid.php $canComment
+        // yalnızca FORM/hint'i belirler, listeyi DEĞİL), ekleme/kendi yorumunu
+        // düzenleme-silme yalnızca commenter+ — sunucu zaten require_role('commenter')
+        // + sahiplik kontrolü ile aynı kuralı uyguluyor, burası yalnızca UI.
+
+        function formatCommentDate(mysqlDatetime) {
+            return mysqlDatetime ? mysqlDatetime.substr(0, 16).replace('T', ' ') : '';
+        }
+
+        function buildCommentItem(c) {
+            var item = document.createElement('div');
+            item.className = 'grid-detail-comment';
+            item.setAttribute('data-comment-id', c.id);
+
+            var meta = document.createElement('div');
+            meta.className = 'grid-detail-comment-meta';
+            var author = document.createElement('span');
+            author.className = 'grid-detail-comment-author';
+            author.textContent = c.author_name || 'Silinmiş kullanıcı';
+            meta.appendChild(author);
+            var date = document.createElement('span');
+            date.className = 'grid-detail-comment-date';
+            date.textContent = formatCommentDate(c.created_at);
+            meta.appendChild(date);
+            item.appendChild(meta);
+
+            var body = document.createElement('div');
+            body.className = 'grid-detail-comment-body';
+            body.textContent = c.body;
+            item.appendChild(body);
+
+            if (c.is_own) {
+                var actions = document.createElement('div');
+                actions.className = 'grid-detail-comment-actions';
+
+                var editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'grid-detail-comment-edit';
+                editBtn.textContent = 'Düzenle';
+                editBtn.addEventListener('click', function () {
+                    startEditComment(body, c);
+                });
+                actions.appendChild(editBtn);
+
+                var delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'grid-detail-comment-delete';
+                delBtn.textContent = 'Sil';
+                delBtn.addEventListener('click', function () {
+                    deleteComment(c.id, item);
+                });
+                actions.appendChild(delBtn);
+
+                item.appendChild(actions);
+            }
+
+            return item;
+        }
+
+        function startEditComment(bodyEl, c) {
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'cell-input grid-detail-comment-edit-input';
+            input.maxLength = 4000;
+            input.value = c.body;
+            bodyEl.replaceWith(input);
+            input.focus();
+
+            var done = false;
+            function finish(save) {
+                if (done) {
+                    return;
+                }
+                done = true;
+
+                var newValue = input.value.trim();
+                if (save && newValue !== '' && newValue !== c.body) {
+                    commentPost('/api/comment_update.php', { comment_id: c.id, body: newValue, csrf_token: CSRF }).then(function (result) {
+                        var ok = result.httpOk && result.data && result.data.ok;
+                        if (!ok) {
+                            window.alert((result.data && result.data.error) ? result.data.error : 'Kaydedilemedi.');
+                            input.replaceWith(bodyEl);
+                            return;
+                        }
+                        c.body = result.data.comment.body;
+                        bodyEl.textContent = c.body;
+                        input.replaceWith(bodyEl);
+                    });
+                } else {
+                    input.replaceWith(bodyEl);
+                }
+            }
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finish(true);
+                } else if (e.key === 'Escape') {
+                    finish(false);
+                }
+            });
+            input.addEventListener('blur', function () {
+                finish(true);
+            });
+        }
+
+        function deleteComment(commentId, item) {
+            if (!window.confirm('Bu yorumu silmek istediğinize emin misiniz?')) {
+                return;
+            }
+            commentPost('/api/comment_delete.php', { comment_id: commentId, csrf_token: CSRF }).then(function (result) {
+                var ok = result.httpOk && result.data && result.data.ok;
+                if (!ok) {
+                    window.alert((result.data && result.data.error) ? result.data.error : 'Silinemedi.');
+                    return;
+                }
+                item.remove();
+                if (commentsList && commentsList.children.length === 0) {
+                    renderComments([]);
+                }
+            });
+        }
+
+        function renderComments(comments) {
+            if (!commentsList) {
+                return;
+            }
+            commentsList.textContent = '';
+
+            if (!comments.length) {
+                var empty = document.createElement('div');
+                empty.className = 'grid-detail-comments-empty';
+                empty.textContent = 'Bir konuşma başlatın';
+                commentsList.appendChild(empty);
+                return;
+            }
+
+            comments.forEach(function (c) {
+                commentsList.appendChild(buildCommentItem(c));
+            });
+        }
+
+        function loadComments(recordId) {
+            if (!commentsList) {
+                return;
+            }
+            commentsList.textContent = '';
+            fetch('/api/comment_list.php?record_id=' + encodeURIComponent(recordId))
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data && data.ok) {
+                        renderComments(data.comments);
+                    }
+                })
+                .catch(function () {});
+        }
+
+        if (commentsForm && commentsInput) {
+            commentsForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var body = commentsInput.value.trim();
+                if (body === '' || !currentDetailRow) {
+                    return;
+                }
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                commentPost('/api/comment_add.php', { record_id: recordId, body: body, csrf_token: CSRF }).then(function (result) {
+                    var ok = result.httpOk && result.data && result.data.ok;
+                    if (!ok) {
+                        window.alert((result.data && result.data.error) ? result.data.error : 'Gönderilemedi.');
+                        return;
+                    }
+                    commentsInput.value = '';
+                    var emptyEl = commentsList.querySelector('.grid-detail-comments-empty');
+                    if (emptyEl) {
+                        emptyEl.remove();
+                    }
+                    commentsList.appendChild(buildCommentItem(result.data.comment));
+                });
+            });
+        }
+
         function openDetail(tr) {
             currentDetailRow = tr;
             updateDetailTitle(tr);
             renderDetailFields(tr);
             updateNavState();
+            loadComments(tr.getAttribute('data-record-id'));
             overlay.hidden = false;
         }
 
@@ -241,6 +507,9 @@
             overlay.hidden = true;
             currentDetailRow = null;
             fieldsContainer.textContent = '';
+            if (commentsList) {
+                commentsList.textContent = '';
+            }
         }
 
         function navigate(delta) {

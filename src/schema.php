@@ -592,6 +592,22 @@ function bcc_find_field($fieldId)
     );
 }
 
+// bcc_find_field() ile AYNI amaç, bir kaydın (records.id) hangi tabloya/ekibe
+// ait olduğunu tek sorguda getirir — comment_list/add/update/delete.php'nin
+// KVKK (require_team_access/require_role) kontrolü bu zincire dayanır.
+// Bulunamazsa false döner.
+function bcc_find_record($recordId)
+{
+    return bcc_fetch_one(
+        'SELECT r.id, r.table_id, tm.base_id, b.team_id
+         FROM records r
+         INNER JOIN tables_meta tm ON tm.id = r.table_id
+         INNER JOIN bases b ON b.id = tm.base_id
+         WHERE r.id = :id LIMIT 1',
+        array('id' => $recordId)
+    );
+}
+
 // bcc_find_field() ile AYNI amaç, 'attachment' alan tipi için: bir ek dosyanın
 // (attachments.id) hangi alana/tabloya/ekibe ait olduğunu tek sorguda getirir —
 // attachment_upload/delete/download.php'nin KVKK (require_team_access/require_role)
@@ -824,18 +840,19 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
     <tr
         data-record-id="<?php echo (int) $record['id']; ?>"
         <?php echo $groupPath !== null ? 'data-group-path="' . htmlspecialchars($groupPath, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>
-        <?php if ($canEdit): ?>data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord), ENT_QUOTES, 'UTF-8'); ?>"<?php endif; ?>
+        data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord), ENT_QUOTES, 'UTF-8'); ?>"
     >
         <td class="grid-rownum">
+            <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
             <?php if ($canEdit): ?>
-                <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
                 <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
-                <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-            <?php else: ?>
-                <?php echo (int) $rowNum; ?>
             <?php endif; ?>
+            <!-- Genişlet paneli TÜM rollere açık (Airtable: kayıt görüntüleme herkese
+                 açık) — düzenleme/yorum yetkisi panel İÇİNDE BCC_CAN_EDIT/BCC_CAN_COMMENT
+                 ile ayrıca kısıtlanır, bkz. grid-row-detail.js. -->
+            <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
         </td>
         <?php foreach ($visibleFields as $f):
             $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;

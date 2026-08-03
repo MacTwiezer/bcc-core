@@ -22,7 +22,7 @@ try {
         json_fail(404, 'Tablo bulunamadı.');
     }
 
-    require_role($table['team_id'], 'editor');
+    require_role($table['team_id'], 'owner');
 
     $result = bcc_create_field($table['id'], $table['team_id'], $_POST);
 

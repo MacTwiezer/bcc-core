@@ -11,15 +11,15 @@ $base = find_base_or_404($baseId);
 require_team_access($base['team_id']);
 
 $role = current_user_role_in_team($base['team_id']);
-$canEdit = in_array($role, array('editor', 'owner'), true);
+$canEdit = ($role === 'owner');
 
 $error = null;
 $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
-    // Değiştirme yalnızca editor+ rolünde açık.
-    require_role($base['team_id'], 'editor');
+    // Değiştirme yalnızca owner rolünde açık.
+    require_role($base['team_id'], 'owner');
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
@@ -214,7 +214,7 @@ require __DIR__ . '/../src/partials/top_nav.php';
             </form>
         </div>
     <?php else: ?>
-        <p class="hint">Bu ekipte tablo oluşturmak/düzenlemek için editor veya owner rolü gerekir.</p>
+        <p class="hint">Bu ekipte tablo oluşturmak/düzenlemek için owner rolü gerekir.</p>
     <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../src/partials/footer.php'; ?>

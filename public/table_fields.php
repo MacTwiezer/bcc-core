@@ -11,7 +11,7 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = in_array($role, array('editor', 'owner'), true);
+$canEdit = ($role === 'owner');
 
 $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
 $typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
@@ -21,8 +21,8 @@ $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
-    // Değiştirme yalnızca editor+ rolünde açık.
-    require_role($table['team_id'], 'editor');
+    // Değiştirme yalnızca owner rolünde açık.
+    require_role($table['team_id'], 'owner');
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
@@ -279,7 +279,7 @@ require __DIR__ . '/../src/partials/top_nav.php';
         </script>
         <script src="/assets/field-type-wizard.js" defer></script>
     <?php else: ?>
-        <p class="hint">Bu ekipte alan oluşturmak/düzenlemek için editor veya owner rolü gerekir.</p>
+        <p class="hint">Bu ekipte alan oluşturmak/düzenlemek için owner rolü gerekir.</p>
     <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../src/partials/footer.php'; ?>

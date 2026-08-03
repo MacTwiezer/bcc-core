@@ -12,6 +12,13 @@ require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
 $canEdit = in_array($role, array('editor', 'owner'), true);
+// Yorum ekleyebilme (Airtable: Owner/Editor/Commenter, Read-only HARİÇ) —
+// satır genişletme panelindeki yorum girişini gösterip göstermeme burada.
+$canComment = in_array($role, array('commenter', 'editor', 'owner'), true);
+// Alan oluşturma artık owner-only (bkz. table_fields.php/field_create.php) —
+// "+" yeni alan butonu $canEdit'ten ayrıldı, aksi hâlde editor butonu görür
+// ama sunucu 403 döner.
+$isOwner = ($role === 'owner');
 
 // 'user' alan tipi (görüntüleme + hücre/filtre editörü seçenek listesi) için TEK
 // kaynak — yalnızca bu takımın (KVKK) aktif üyeleri, bkz. bcc_team_users_by_id().
@@ -1178,7 +1185,7 @@ $gridUser = current_user();
                                     <?php endif; ?>
                                 </th>
                             <?php endforeach; ?>
-                            <?php if ($canEdit): ?>
+                            <?php if ($isOwner): ?>
                             <th class="grid-add-field-th">
                                 <details class="grid-add-field-menu gs-tool-details" name="gs-table-tab-menu">
                                     <summary class="grid-add-field-btn" aria-label="Yeni alan ekle">+</summary>
@@ -1208,12 +1215,12 @@ $gridUser = current_user();
                     <tbody>
                         <?php if (empty($records)): ?>
                             <tr>
-                                <td class="grid-empty" colspan="<?php echo count($visibleFields) + 1 + ($canEdit ? 1 : 0); ?>">Bu tabloda henüz kayıt yok.</td>
+                                <td class="grid-empty" colspan="<?php echo count($visibleFields) + 1 + ($isOwner ? 1 : 0); ?>">Bu tabloda henüz kayıt yok.</td>
                             </tr>
                         <?php elseif (!empty($groupTree)): ?>
                             <?php
                                 $rowNum = 0;
-                                $groupColspan = count($visibleFields) + 1 + ($canEdit ? 1 : 0);
+                                $groupColspan = count($visibleFields) + 1 + ($isOwner ? 1 : 0);
                                 foreach ($groupTree as $topNode) {
                                     bcc_render_group_node($topNode, $groupFieldNames, $rowNum, $visibleFields, $cellsByRecord, $canEdit, $table['id'], $stateQueryString, $groupColspan, $usersById, $fields, $attachmentsByRecord);
                                 }
@@ -1277,6 +1284,7 @@ $gridUser = current_user();
     var BCC_MAX_FROZEN_COLUMNS = <?php echo (int) $maxFrozenColumns; ?>;
     var BCC_VIEW_ID = <?php echo (int) $view['id']; ?>;
     var BCC_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
+    var BCC_CAN_COMMENT = <?php echo $canComment ? 'true' : 'false'; ?>;
 </script>
 <script src="/assets/grid-toolbar.js" defer></script>
 <script src="/assets/grid-filter.js" defer></script>
@@ -1288,6 +1296,8 @@ $gridUser = current_user();
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="/assets/grid.js" defer></script>
+<?php endif; ?>
+<?php if ($isOwner && !empty($fields)): ?>
 <script>
     var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
 </script>
@@ -1295,6 +1305,12 @@ $gridUser = current_user();
      ikinci bir kopya YOK. Gönderim (fetch + kapat + reload) grid-add-field.js'de. -->
 <script src="/assets/field-type-wizard.js" defer></script>
 <script src="/assets/grid-add-field.js" defer></script>
+<?php endif; ?>
+<?php if (!empty($fields)): ?>
+<!-- Genişlet paneli TÜM takım üyelerine açık (Airtable: kayıt görüntüleme
+     herkese açık, yorum commenter+, hücre düzenleme editor+) — grid-row-detail.js
+     içeride BCC_CAN_EDIT/BCC_CAN_COMMENT'e göre salt-okunur/düzenlenebilir/
+     yorum-yazılabilir dallara ayrılır, ikinci bir panel YOK. -->
 <div class="grid-detail-overlay" id="grid-detail-overlay" hidden>
     <div class="grid-detail-modal">
         <div class="grid-detail-header">
@@ -1315,10 +1331,15 @@ $gridUser = current_user();
             <div class="grid-detail-fields" id="grid-detail-fields"></div>
             <div class="grid-detail-comments">
                 <div class="grid-detail-comments-header">Tüm yorumlar</div>
-                <div class="grid-detail-comments-empty">Bir konuşma başlatın</div>
-                <div class="grid-detail-comments-input">
-                    <input type="text" placeholder="Yorum bırakın" disabled>
-                </div>
+                <div class="grid-detail-comments-list" id="grid-detail-comments-list"></div>
+                <?php if ($canComment): ?>
+                <form class="grid-detail-comments-form" id="grid-detail-comments-form">
+                    <input type="text" id="grid-detail-comments-input" placeholder="Yorum bırakın" maxlength="4000" autocomplete="off">
+                    <button type="submit">Gönder</button>
+                </form>
+                <?php else: ?>
+                <p class="hint grid-detail-comments-hint">Yorum yapmak için commenter, editor veya owner rolü gerekir.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>

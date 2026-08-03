@@ -577,6 +577,37 @@ function bcc_team_users_by_id($teamId)
     return $byId;
 }
 
+// team_members.php'nin "Ekleyen" kolonu — YENİ bir invited_by kolonu YOK
+// (DDL gerekmez): audit_log zaten 'team_member.assign'/'team_member.role_change'
+// satırlarını atayan (al.user_id) + details JSON'unda hedef (target) user_id ile
+// tutuyor (bkz. src/audit.php, team_members.php'nin assign action'ı). Kronolojik
+// ASC sırayla ilerleyip her hedef için üzerine yazılarak en SON atama/rol
+// değişikliği kaydı tutulur. Hiç kaydı olmayan üyeler (ör. ilk admin,
+// scripts/create_admin.php ile oluşturuldu) haritada yer almaz — çağıran taraf
+// bunu "—" göstererek ele alır.
+function bcc_team_members_invited_by($teamId)
+{
+    $rows = bcc_fetch_all(
+        "SELECT al.details, u.full_name AS actor_name
+         FROM audit_log al
+         LEFT JOIN users u ON u.id = al.user_id
+         WHERE al.team_id = :team_id AND al.action IN ('team_member.assign', 'team_member.role_change')
+         ORDER BY al.created_at ASC, al.id ASC",
+        array('team_id' => $teamId)
+    );
+
+    $byTargetUserId = array();
+    foreach ($rows as $row) {
+        $details = $row['details'] !== null ? json_decode($row['details'], true) : null;
+        if (!is_array($details) || !isset($details['user_id'])) {
+            continue;
+        }
+        $byTargetUserId[(int) $details['user_id']] = $row['actor_name'];
+    }
+
+    return $byTargetUserId;
+}
+
 // team_id, fields -> tables_meta -> bases üzerinden gelir; bir alanın hücre verisine
 // erişen her sayfa/uçnokta bunu kullanmalı. Bulunamazsa null döner (404/die yapmaz) —
 // çağıran taraf kendi hata davranışını (die ile HTML ya da JSON) seçer.

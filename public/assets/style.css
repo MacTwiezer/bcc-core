@@ -1486,7 +1486,8 @@ td.cell-flash-error {
 .hide-fields-form,
 .group-form,
 .row-height-form,
-.share-popover-form {
+.share-popover-form,
+.collab-popover-form {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
@@ -1501,15 +1502,86 @@ td.cell-flash-error {
     overflow-y: auto;
 }
 
-/* Share popover'ları (D2 "Share", D3 "Share and Sync") — sağ tarafta oturan
-   tetikleyicilerden açıldığı için (topbar sağı / araç çubuğu sağı) sola doğru
-   taşmasın diye sağa hizalı; grid.php'nin sağ-üst köşesindeki "Share" için
-   ayrıca overflow olmaması adına daha geniş min-width. */
-.share-popover-trigger .share-popover-form {
+/* Share popover'ları (D1 "Paylaş"/collab-popover, D2 "Bağlantı"/share-popover) —
+   sağ tarafta oturan tetikleyicilerden açıldığı için (topbar sağı / araç çubuğu
+   sağı) sola doğru taşmasın diye sağa hizalı; grid.php'nin sağ-üst köşesindeki
+   popup'lar için ayrıca overflow olmaması adına daha geniş min-width. */
+.share-popover-trigger .share-popover-form,
+.collab-popover-trigger .collab-popover-form {
     left: auto;
     right: 0;
     min-width: 320px;
     overflow: visible;
+}
+
+/* ---------- D1 "Paylaş" popup (Airtable Share paritesi) ----------
+   Konumlandırma/kutu stili yukarıdaki .share-popover-form ile PAYLAŞILIYOR
+   (kopya yok); burada yalnızca içeriğe özgü kurallar var. */
+
+.collab-popover-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--bcc-text);
+    margin-bottom: 0.7rem;
+}
+
+.collab-popover-assign {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-bottom: 0.7rem;
+    margin-bottom: 0.7rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.collab-popover-field select {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+}
+
+.collab-popover-field { flex: 1; min-width: 150px; }
+.collab-popover-field-role { flex: 0 0 auto; min-width: 130px; }
+
+.collab-popover-note {
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+    margin: 0 0 0.7rem;
+}
+
+.collab-popover-people {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    padding: 0.4rem;
+    margin: 0 -0.4rem;
+    border-radius: 6px;
+}
+
+.collab-popover-people:hover { background: var(--bcc-surface-hover); }
+
+.collab-popover-avatars { display: flex; }
+
+/* .ws-collab-avatar (home.css) TABAN stilini kullanır — burada yalnızca
+   önizleme boyutu (30px→22px) ve üst üste binen "yığın" görünümü ekleniyor. */
+.collab-popover-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
+    border: 2px solid var(--bcc-surface);
+    margin-left: -0.45rem;
+}
+
+.collab-popover-avatar:first-child { margin-left: 0; }
+
+.collab-popover-people-label {
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
 }
 
 .share-popover-label {

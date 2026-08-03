@@ -1136,6 +1136,227 @@ html.home-view-list .home-list-header,
     flex-shrink: 0;
 }
 
+/* "Paylaş" .ws-detail-btn'in disabled <button> hâli zaten cursor:default —
+   team_members.php'ye bağlanan aktif (owner) hâli <a> etiketi, ayrı kural gerekir. */
+a.ws-detail-btn {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+a.ws-detail-btn:hover {
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
+    border-color: var(--bcc-accent);
+}
+
+/* ---------- team_members.php (owner'ın kendi takımı için sınırlı atama) ----------
+   Üye listesi .ws-collab-* (yukarıda) ile AYNI, ikinci bir kopya YAZILMADI —
+   burada yalnızca atama formu + çıkar butonuna özgü ekler var. */
+
+.tm-assign-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.tm-assign-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.tm-assign-field select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    min-width: 220px;
+}
+
+.tm-assign-submit {
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tm-assign-submit:hover { background: var(--bcc-accent-strong); }
+
+.tm-remove-btn {
+    background: none;
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-danger);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tm-remove-btn:hover { background: var(--bcc-surface-hover); }
+
+.tm-msg-error { color: var(--bcc-danger); font-weight: 600; margin: 0 0 1rem; }
+.tm-msg-success { color: #1a7f37; font-weight: 600; margin: 0 0 1rem; }
+
+/* ---------- team_members.php — görsel 2 (Airtable "Collaborators" tam paneli):
+   arama/filtre/CSV toolbar + toplu seçim + tablo. .ws-detail'in 640px max-width'i
+   5 kolonlu bir tablo için dar kalıyor, .tm-detail ile genişletiliyor. */
+
+.tm-detail { max-width: 880px; }
+
+.tm-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.tm-toolbar .ws-collab-heading { margin: 0; }
+
+.tm-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tm-search-input,
+.tm-filter-select {
+    font: inherit;
+    font-size: 0.83rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+}
+
+.tm-search-input { min-width: 180px; }
+
+.tm-export-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    color: var(--bcc-text-muted);
+    flex-shrink: 0;
+}
+
+.tm-export-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text); }
+
+/* Toplu "Çıkar" çubuğu — en az bir checkbox seçiliyken team-members.js
+   .is-active sınıfını ekler (bkz. public/assets/team-members.js). JS'siz
+   (progressive) durumda hep gizli kalır; #tm-bulk-remove-form yine de
+   çalışır (form="" ile bağlı checkbox'lar + Enter ile submit edilebilir). */
+.tm-bulk-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    background: var(--bcc-accent-soft);
+    border: 1px solid var(--bcc-accent);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--bcc-text);
+}
+
+.tm-bulk-bar.is-active { display: flex; }
+
+.tm-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+}
+
+.tm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.tm-table th,
+.tm-table td {
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--bcc-border);
+    vertical-align: middle;
+}
+
+.tm-table tbody tr:last-child td { border-bottom: none; }
+
+.tm-table thead th {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--bcc-surface-sunken);
+}
+
+.tm-col-check { width: 2.2rem; text-align: center; }
+
+.tm-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tm-sortable:hover { color: var(--bcc-text); }
+
+.tm-sortable::after { content: ' \2195'; }
+
+.tm-cell-member {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.tm-role-form { margin: 0; }
+
+.tm-role-select {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+}
+
+.tm-role-readonly {
+    font-size: 0.82rem;
+    color: var(--bcc-text-muted);
+}
+
+.tm-cell-muted {
+    color: var(--bcc-text-muted);
+    white-space: nowrap;
+}
+
+.tm-empty-state {
+    text-align: center;
+    color: var(--bcc-text-muted);
+    font-size: 0.85rem;
+    padding: 1.5rem 0.5rem;
+}
+
 /* ---------- Bildirim paneli (zil ikonu) ---------- */
 
 .home-notif { position: relative; }

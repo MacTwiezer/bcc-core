@@ -20,6 +20,35 @@ $canComment = in_array($role, array('commenter', 'editor', 'owner'), true);
 // ama sunucu 403 döner.
 $isOwner = ($role === 'owner');
 
+// D1 "Paylaş" popup (Airtable Share paritesi, görsel 1) — "People with access"
+// özeti + mevcut kullanıcılar arasından hızlı atama. Tam yönetim ekranı (görsel 2,
+// arama/filtre/CSV/hiyerarşik rol değişikliği) team_members.php'de YAŞIYOR — burada
+// mantık TEKRARLANMIYOR, atama formu doğrudan team_members.php'ye POST eder.
+$myRank = $GLOBALS['BCC_ROLE_RANK'][$role];
+$shareAssignableRoles = bcc_assignable_roles($myRank);
+$shareCollaborators = bcc_fetch_all(
+    'SELECT u.id, u.full_name, u.email
+     FROM team_members tm
+     INNER JOIN users u ON u.id = tm.user_id
+     WHERE tm.team_id = :team_id AND u.is_active = 1
+     ORDER BY u.full_name',
+    array('team_id' => $table['team_id'])
+);
+$shareCollaboratorPreview = array_slice($shareCollaborators, 0, 4);
+$shareCollaboratorExtraCount = count($shareCollaborators) - count($shareCollaboratorPreview);
+
+// Ata kutusu: takımın HENÜZ üyesi olmayan aktif kullanıcılar — team_members.php'nin
+// tam sayfa "Kullanıcı" seçicisinin AKSİNE burada zaten üye olanlar hariç tutulur
+// (popup'ın amacı YENİ birini eklemek; mevcut üyeleri autocomplete'te göstermek
+// gürültü olurdu, onların rolünü değiştirmek görsel 2'nin işi).
+$shareExistingIds = array_map('intval', array_column($shareCollaborators, 'id'));
+$shareCandidateUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY full_name');
+if (!empty($shareExistingIds)) {
+    $shareCandidateUsers = array_values(array_filter($shareCandidateUsers, function ($candidate) use ($shareExistingIds) {
+        return !in_array((int) $candidate['id'], $shareExistingIds, true);
+    }));
+}
+
 // 'user' alan tipi (görüntüleme + hücre/filtre editörü seçenek listesi) için TEK
 // kaynak — yalnızca bu takımın (KVKK) aktif üyeleri, bkz. bcc_team_users_by_id().
 $usersById = bcc_team_users_by_id($table['team_id']);
@@ -526,8 +555,54 @@ $gridUser = current_user();
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
         <div class="gs-topbar-right">
+            <details class="gs-tool-details collab-popover-trigger" name="gs-table-tab-menu">
+                <summary class="gs-btn-ghost">Paylaş</summary>
+                <div class="collab-popover-form">
+                    <div class="collab-popover-title">"<?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?>" paylaş</div>
+
+                    <form class="collab-popover-assign" method="post" action="/team_members.php?team_id=<?php echo (int) $table['team_id']; ?>">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="assign">
+                        <?php if (empty($shareCandidateUsers)): ?>
+                            <p class="collab-popover-note">Eklenebilecek başka aktif kullanıcı yok.</p>
+                        <?php else: ?>
+                            <label class="collab-popover-field">
+                                <select name="user_id" required>
+                                    <option value="">Kullanıcı ara ve seç...</option>
+                                    <?php foreach ($shareCandidateUsers as $cu): ?>
+                                        <option value="<?php echo (int) $cu['id']; ?>">
+                                            <?php echo htmlspecialchars($cu['full_name'] . ' (' . $cu['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="collab-popover-field collab-popover-field-role">
+                                <select name="role" required>
+                                    <?php foreach ($shareAssignableRoles as $r): ?>
+                                        <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <button type="submit" class="btn-sm">Ekle</button>
+                        <?php endif; ?>
+                    </form>
+
+                    <a class="collab-popover-people" href="/team_members.php?team_id=<?php echo (int) $table['team_id']; ?>">
+                        <div class="collab-popover-avatars">
+                            <?php foreach ($shareCollaboratorPreview as $c): ?>
+                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <span class="collab-popover-people-label">
+                            <?php echo count($shareCollaborators); ?> kişinin erişimi var<?php echo $shareCollaboratorExtraCount > 0 ? ' (+' . (int) $shareCollaboratorExtraCount . ')' : ''; ?>
+                        </span>
+                    </a>
+                </div>
+            </details>
             <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
-                <summary class="gs-btn-ghost">Share</summary>
+                <summary class="gs-btn-ghost">Bağlantı</summary>
                 <div class="share-popover-form">
                     <div class="share-popover-label">Bağlantıyı paylaş</div>
                     <div class="share-popover-row">

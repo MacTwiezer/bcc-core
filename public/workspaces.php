@@ -2,8 +2,9 @@
 // "Workspaces" — Airtable'ın "All Workspaces" ekranının karşılığı. YENİ bir
 // varlık/DDL YOK: mevcut teams/team_members üzerine kurulu (bkz. PROJE-DURUM.md
 // analiz notu — "team" zaten workspace'in KVKK-izole edilmiş, collaborators'lı
-// karşılığı). Create/Share/Settings PASİF (onaylanmış karar, yetkilendirme
-// kapsam dışı).
+// karşılığı). Create/Settings hâlâ PASİF (onaylanmış karar, kapsam dışı) — Paylaş
+// artık takımın HER üyesine açık (bkz. team_members.php'nin hiyerarşik rol
+// yönetimi, require_team_access zaten en dış koruma).
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -124,7 +125,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <h2 class="ws-detail-title"><?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?></h2>
                     <div class="ws-detail-actions">
                         <button type="button" class="ws-detail-btn" disabled>Oluştur</button>
-                        <button type="button" class="ws-detail-btn" disabled>Paylaş</button>
+                        <a href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" class="ws-detail-btn">Paylaş</a>
                         <button type="button" class="ws-detail-btn" disabled>Ayarlar</button>
                     </div>
                 </div>

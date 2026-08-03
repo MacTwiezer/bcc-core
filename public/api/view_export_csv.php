@@ -13,21 +13,8 @@
 
 require __DIR__ . '/../../src/bootstrap.php';
 
-// CSV enjeksiyonuna (Excel/Sheets formül yorumlaması) karşı — bulunan gerçek
-// güvenlik açığı: xlsx_writer.php'nin AKSİNE (orada inlineStr XLSX hücreleri
-// Excel tarafından hiç formül olarak taranmaz) bu dosya GERÇEK düz metin CSV
-// üretiyor. Bir hücre '=', '+', '-', '@' ile BAŞLIYORSA Excel/Sheets bunu
-// açılışta formül sanıp çalıştırır (ör. bir kullanıcı bir metin alanına
-// "=WEBSERVICE(...)" yazıp exportu açan bir admin'in Excel'inde veri
-// sızdırabilirdi). OWASP'ın önerdiği standart savunma: bu karakterlerle
-// başlayan değerlerin başına tek tırnak eklenir, Excel'de literal metin
-// olarak kalır.
-function bcc_csv_injection_guard($value)
-{
-    $value = (string) $value;
-
-    return ($value !== '' && preg_match('/^[=+\-@]/', $value) === 1) ? ("'" . $value) : $value;
-}
+// CSV enjeksiyonu koruması artık src/csv.php'de ortak (bcc_csv_injection_guard) —
+// team_members_export_csv.php de AYNI fonksiyonu kullanır, kopya YOK.
 
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : 0;
 $table = find_table_or_404($tableId);

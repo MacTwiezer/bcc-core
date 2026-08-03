@@ -126,6 +126,25 @@ function current_user_role_in_team($teamId)
     return $row ? $row['role'] : null;
 }
 
+// Bir rütbenin ATAYABİLECEĞİ rolleri döndürür — Airtable paritesi ("at or
+// below your permission level", eşit dahil, bkz. support.airtable.com/docs/base-permissions
+// + managing-billable-collaborators FAQ). team_members.php (tam Collaborators
+// paneli) VE grid.php'nin Paylaş popup'ı (hızlı atama) AYNI mantığı kullanır —
+// kopya YOK. $myRank çağıran tarafından hesaplanır (current_user_role_in_team()
+// zaten bir DB sorgusu; burada TEKRAR çağırıp ikinci bir sorgu açmak yerine
+// hazır rütbe alınır).
+function bcc_assignable_roles($myRank)
+{
+    $roles = array();
+    foreach ($GLOBALS['BCC_ROLE_RANK'] as $roleName => $rank) {
+        if ($rank <= $myRank) {
+            $roles[] = $roleName;
+        }
+    }
+
+    return $roles;
+}
+
 // Bir ekibin verisine (base/tablo/kayıt) erişen HER sorgudan önce çağrılmalı.
 function require_team_access($teamId)
 {

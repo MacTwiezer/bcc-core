@@ -19,6 +19,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/csv.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/slack.php';
 require_once __DIR__ . '/validation.php';

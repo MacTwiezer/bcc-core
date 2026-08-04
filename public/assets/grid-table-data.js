@@ -78,7 +78,7 @@
             });
         });
 
-        // ---- Veri içe aktar (Import CSV) ----
+        // ---- Veri içe aktar (Import Excel) ----
         var overlay = document.getElementById('gs-table-import-overlay');
         var fileInput = document.getElementById('gs-table-import-file');
         var resultBox = document.getElementById('gs-table-import-result');
@@ -130,7 +130,7 @@
 
             submitBtn.addEventListener('click', function () {
                 if (!fileInput.files || !fileInput.files[0]) {
-                    window.alert('Lütfen bir CSV dosyası seçin.');
+                    window.alert('Lütfen bir Excel (.xlsx) dosyası seçin.');
                     return;
                 }
                 if (!importTableId) {
@@ -140,12 +140,12 @@
                 var formData = new FormData();
                 formData.append('csrf_token', CSRF);
                 formData.append('table_id', importTableId);
-                formData.append('csv_file', fileInput.files[0]);
+                formData.append('xlsx_file', fileInput.files[0]);
 
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Aktarılıyor...';
 
-                fetch('/api/table_import_csv.php', {
+                fetch('/api/table_import_xlsx.php', {
                     method: 'POST',
                     body: formData,
                 }).then(function (res) {

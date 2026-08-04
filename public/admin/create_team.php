@@ -3,6 +3,7 @@
 require __DIR__ . '/../../src/bootstrap.php';
 
 require_admin();
+$user = current_user();
 
 $error = null;
 $success = null;
@@ -34,26 +35,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-$pageTitle = 'Yeni Ekip';
-require __DIR__ . '/../../src/partials/header.php';
-require __DIR__ . '/../../src/partials/top_nav.php';
-?>
-<div class="page">
-    <h1>Yeni Ekip Oluştur</h1>
-    <p><a href="/admin/index.php">&larr; Admin paneline dön</a></p>
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
 
-    <div class="card">
-        <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
-        <form class="stacked" method="post" action="/admin/create_team.php">
-            <?php echo csrf_field(); ?>
-            <label>Ekip adı
-                <input type="text" name="name" value="<?php echo htmlspecialchars(isset($name) ? $name : '', ENT_QUOTES, 'UTF-8'); ?>" required>
-            </label>
-            <div class="form-actions">
-                <button type="submit">Oluştur</button>
-                <a href="/admin/index.php" class="form-cancel-link">İptal</a>
-            </div>
-        </form>
-    </div>
-</div>
-<?php require __DIR__ . '/../../src/partials/footer.php'; ?>
+$homeActiveNav = 'admin';
+$homePageTitle = 'BCC-Core — Yeni Ekip';
+require __DIR__ . '/../../src/partials/home_shell_top.php';
+?>
+        <div class="settings-breadcrumb">
+            <a href="/admin/index.php">&larr; Admin paneline dön</a>
+        </div>
+        <div class="home-main-header">
+            <h1>Yeni Ekip Oluştur</h1>
+        </div>
+
+        <div class="settings-card">
+            <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
+            <form class="settings-form settings-form-stacked" method="post" action="/admin/create_team.php">
+                <?php echo csrf_field(); ?>
+                <label class="settings-field">Ekip adı
+                    <input type="text" name="name" value="<?php echo htmlspecialchars(isset($name) ? $name : '', ENT_QUOTES, 'UTF-8'); ?>" required>
+                </label>
+                <div class="settings-form-actions">
+                    <button type="submit" class="settings-btn settings-btn-primary">Oluştur</button>
+                    <a href="/admin/index.php" class="settings-cancel-link">İptal</a>
+                </div>
+            </form>
+        </div>
+<?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

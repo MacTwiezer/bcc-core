@@ -31,10 +31,15 @@ CREATE TABLE IF NOT EXISTS users (
     full_name                   VARCHAR(150) NOT NULL,
     is_admin                    TINYINT(1) NOT NULL DEFAULT 0,
     is_active                   TINYINT(1) NOT NULL DEFAULT 1,
+    -- E-posta doğrulama token'ı (register.php / verify_email.php, bkz.
+    -- migrations/011). Doğrulama tamamlanınca NULL'a döner.
+    email_verify_token           VARCHAR(64) NULL,
+    email_verify_expires_at      DATETIME NULL,
     last_seen_notifications_at  DATETIME NULL,
     created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_users_email (email)
+    UNIQUE KEY uq_users_email (email),
+    KEY idx_users_email_verify_token (email_verify_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

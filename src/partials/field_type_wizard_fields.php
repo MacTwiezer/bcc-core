@@ -10,7 +10,8 @@
 //
 // Beklenen değişkenler (include eden dosya ayarlar):
 //   $fieldTypeLabels        - array, field_type => Türkçe etiket ($GLOBALS['BCC_FIELD_TYPES'])
-//   $fieldTypeBadges        - array, field_type => rozet metni ($GLOBALS['BCC_FIELD_TYPE_BADGE'])
+//                              (tip rozeti artık field-type-badge--{type} CSS sınıfıyla
+//                              basılan bir ikon — metin rozet gerekmiyor)
 //   $fieldWizardShowRequired - (opsiyonel, varsayılan true) "Zorunlu alan" onay kutusu
 //                              gösterilsin mi (grid.php'nin kompakt popup'ı bunu
 //                              GÖSTERMEZ — davranış tabloya taşınmadan önceki hâliyle
@@ -31,7 +32,7 @@ if (!isset($fieldWizardShowRequired)) {
                 data-field-type="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>"
                 data-field-type-label="<?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>"
             >
-                <span class="field-type-badge"><?php echo htmlspecialchars($fieldTypeBadges[$typeKey], ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="field-type-badge field-type-badge--<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>"></span>
                 <span class="field-type-label"><?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
             </button>
         <?php endforeach; ?>

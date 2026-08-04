@@ -3,6 +3,7 @@
 require __DIR__ . '/../src/bootstrap.php';
 
 require_login();
+$user = current_user();
 
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : (isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0);
 $table = find_table_or_404($tableId);
@@ -14,7 +15,6 @@ $role = current_user_role_in_team($table['team_id']);
 $canEdit = ($role === 'owner');
 
 $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
-$typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
 
 $error = null;
 $success = null;
@@ -132,154 +132,170 @@ if ($canEdit && $editId > 0) {
         }
     }
 }
-$pageTitle = $table['name'];
-require __DIR__ . '/../src/partials/header.php';
-require __DIR__ . '/../src/partials/top_nav.php';
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
+
+$homeActiveNav = 'fields';
+$homePageTitle = 'BCC-Core — ' . $table['name'];
+require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
-<div class="page">
-    <p>
-        <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>">&larr; <?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?> tablolarına dön</a>
-        · <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">Grid'i görüntüle</a>
-        · <a href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>">Slack bildirimleri</a>
-    </p>
-    <h1><?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
-    <?php if ($table['description']): ?>
-        <p><?php echo htmlspecialchars($table['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-    <?php endif; ?>
+        <div class="settings-breadcrumb">
+            <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>">&larr; <?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?> tablolarına dön</a>
+            <span>·</span> <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">Grid'i görüntüle</a>
+            <span>·</span> <a href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>">Slack bildirimleri</a>
+        </div>
+        <div class="home-main-header">
+            <h1><?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
+            <?php if ($table['description']): ?>
+                <p class="settings-hint"><?php echo htmlspecialchars($table['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <?php endif; ?>
+        </div>
 
-    <?php require __DIR__ . '/../src/partials/flash.php'; ?>
+        <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
-    <div class="card">
-        <h2>Alanlar (<?php echo count($fields); ?>)</h2>
+        <div class="settings-card">
+            <h2>Alanlar (<?php echo count($fields); ?>)</h2>
 
-        <?php if (empty($fields)): ?>
-            <p>Bu tabloda henüz alan yok.</p>
-        <?php else: ?>
-            <table>
-                <tr><th>Alan</th><th>Tip</th><th>Seçenekler</th><th>Zorunlu</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr>
-                <?php foreach ($fields as $i => $f):
-                    $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
-                ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                        <td><?php echo htmlspecialchars($fieldTypes[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></td>
-                        <td><?php echo $choices ? htmlspecialchars(implode(', ', $choices), ENT_QUOTES, 'UTF-8') : '—'; ?></td>
-                        <td><?php echo ((int) $f['is_required'] === 1) ? 'Evet' : '—'; ?></td>
-                        <?php if ($canEdit): ?>
-                        <td class="row-actions">
-                            <form method="post" action="/table_fields.php">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="move_field">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
-                                <input type="hidden" name="direction" value="up">
-                                <button type="submit" class="btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
-                            </form>
-                            <form method="post" action="/table_fields.php">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="move_field">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
-                                <input type="hidden" name="direction" value="down">
-                                <button type="submit" class="btn-sm" <?php echo $i === count($fields) - 1 ? 'disabled' : ''; ?>>&darr;</button>
-                            </form>
-                            <a class="btn-sm" href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>&edit=<?php echo (int) $f['id']; ?>">Düzenle</a>
-                            <form method="post" action="/table_fields.php" onsubmit="return confirm('Bu alanı silmek istediğinize emin misiniz?');">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="delete_field">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
-                                <button type="submit" class="btn-sm btn-danger">Sil</button>
-                            </form>
-                        </td>
+            <?php if (empty($fields)): ?>
+                <p class="settings-empty">Bu tabloda henüz alan yok.</p>
+            <?php else: ?>
+                <div class="settings-table-wrap">
+                    <table class="settings-table">
+                        <thead><tr><th>Alan</th><th>Tip</th><th>Seçenekler</th><th>Zorunlu</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr></thead>
+                        <tbody>
+                        <?php foreach ($fields as $i => $f):
+                            $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
+                        ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><span class="field-type-badge settings-table-type-icon field-type-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span><?php echo htmlspecialchars($fieldTypes[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><?php echo $choices ? htmlspecialchars(implode(', ', $choices), ENT_QUOTES, 'UTF-8') : '—'; ?></td>
+                                <td><?php echo ((int) $f['is_required'] === 1) ? 'Evet' : '—'; ?></td>
+                                <?php if ($canEdit): ?>
+                                <td class="settings-row-actions">
+                                    <form method="post" action="/table_fields.php">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="move_field">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                        <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
+                                    </form>
+                                    <form method="post" action="/table_fields.php">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="move_field">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                        <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === count($fields) - 1 ? 'disabled' : ''; ?>>&darr;</button>
+                                    </form>
+                                    <a class="settings-btn settings-btn-sm" href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>&edit=<?php echo (int) $f['id']; ?>">Düzenle</a>
+                                    <form method="post" action="/table_fields.php" onsubmit="return confirm('Bu alanı silmek istediğinize emin misiniz?');">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="delete_field">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                        <input type="hidden" name="field_id" value="<?php echo (int) $f['id']; ?>">
+                                        <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                                <?php endif; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($canEdit): ?>
+            <?php if ($editField): ?>
+                <div class="settings-card">
+                    <h2>Alanı Düzenle: <?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <form class="settings-form settings-form-stacked" method="post" action="/table_fields.php">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="update_field">
+                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                        <input type="hidden" name="field_id" value="<?php echo (int) $editField['id']; ?>">
+                        <label class="settings-field">Alan adı
+                            <input type="text" name="name" value="<?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        </label>
+                        <label class="settings-field">Tip
+                            <select name="field_type" required>
+                                <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
+                                    <option value="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $editField['field_type'] === $typeKey ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label class="settings-field">Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
+                            <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
+                        </label>
+                        <?php if (is_select_field_type($editField['field_type'])):
+                            $editChoices = select_choices_from_options($editField['options']);
+                            $editSavedColors = select_choice_colors_from_options($editField['options']);
+                            $editColorMap = bcc_build_choice_color_map($editChoices, $editSavedColors);
+                        ?>
+                            <div class="choice-color-picker">
+                                <p class="settings-hint">Renkler (her seçenek için)</p>
+                                <?php foreach ($editChoices as $ci => $choiceText): ?>
+                                    <div class="choice-color-row">
+                                        <span class="choice-color-choice-name"><?php echo htmlspecialchars($choiceText, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <?php foreach ($GLOBALS['BCC_CHOICE_COLORS'] as $colorKey => $hex):
+                                            $inputId = 'cc-' . (int) $editField['id'] . '-' . $ci . '-' . $colorKey;
+                                        ?>
+                                            <input
+                                                type="radio"
+                                                id="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>"
+                                                class="choice-color-input"
+                                                name="colors[<?php echo $ci; ?>]"
+                                                value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"
+                                                <?php echo $editColorMap[$choiceText] === $colorKey ? 'checked' : ''; ?>
+                                            >
+                                            <label for="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>" class="choice-color-swatch" style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"></label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-        <?php endif; ?>
-    </div>
+                        <label class="settings-field settings-field-checkbox">
+                            <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?>>
+                            Zorunlu alan
+                        </label>
+                        <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
+                    </form>
+                </div>
+            <?php endif; ?>
 
-    <?php if ($canEdit): ?>
-        <?php if ($editField): ?>
-            <div class="card">
-                <h2>Alanı Düzenle: <?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
-                <form class="stacked" method="post" action="/table_fields.php">
+            <div class="settings-card">
+                <h2>Yeni Alan</h2>
+                <form class="settings-form settings-form-stacked" method="post" action="/table_fields.php" id="new-field-form">
                     <?php echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="update_field">
+                    <input type="hidden" name="action" value="create_field">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                    <input type="hidden" name="field_id" value="<?php echo (int) $editField['id']; ?>">
-                    <label>Alan adı
-                        <input type="text" name="name" value="<?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
-                    </label>
-                    <label>Tip
-                        <select name="field_type" required>
-                            <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
-                                <option value="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $editField['field_type'] === $typeKey ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-                    <label>Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
-                        <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
-                    </label>
-                    <?php if (is_select_field_type($editField['field_type'])):
-                        $editChoices = select_choices_from_options($editField['options']);
-                        $editSavedColors = select_choice_colors_from_options($editField['options']);
-                        $editColorMap = bcc_build_choice_color_map($editChoices, $editSavedColors);
+                    <input type="hidden" name="field_type" id="new-field-type-input" required>
+
+                    <?php
+                    $fieldTypeLabels = $fieldTypes;
+                    require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
                     ?>
-                        <div class="choice-color-picker">
-                            <p class="hint">Renkler (her seçenek için)</p>
-                            <?php foreach ($editChoices as $ci => $choiceText): ?>
-                                <div class="choice-color-row">
-                                    <span class="choice-color-choice-name"><?php echo htmlspecialchars($choiceText, ENT_QUOTES, 'UTF-8'); ?></span>
-                                    <?php foreach ($GLOBALS['BCC_CHOICE_COLORS'] as $colorKey => $hex):
-                                        $inputId = 'cc-' . (int) $editField['id'] . '-' . $ci . '-' . $colorKey;
-                                    ?>
-                                        <input
-                                            type="radio"
-                                            id="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>"
-                                            class="choice-color-input"
-                                            name="colors[<?php echo $ci; ?>]"
-                                            value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"
-                                            <?php echo $editColorMap[$choiceText] === $colorKey ? 'checked' : ''; ?>
-                                        >
-                                        <label for="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>" class="choice-color-swatch" style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"></label>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    <label>
-                        <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?> style="display:inline-block;width:auto;">
-                        Zorunlu alan
-                    </label>
-                    <button type="submit">Kaydet</button>
                 </form>
             </div>
+            <script>
+                var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
+            </script>
+            <script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
+        <?php else: ?>
+            <p class="settings-hint">Bu ekipte alan oluşturmak/düzenlemek için owner rolü gerekir.</p>
         <?php endif; ?>
-
-        <div class="card">
-            <h2>Yeni Alan</h2>
-            <form class="stacked" method="post" action="/table_fields.php" id="new-field-form">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="action" value="create_field">
-                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                <input type="hidden" name="field_type" id="new-field-type-input" required>
-
-                <?php
-                $fieldTypeLabels = $fieldTypes;
-                $fieldTypeBadges = $typeBadges;
-                require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
-                ?>
-            </form>
-        </div>
-        <script>
-            var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
-        </script>
-        <script src="/assets/field-type-wizard.js" defer></script>
-    <?php else: ?>
-        <p class="hint">Bu ekipte alan oluşturmak/düzenlemek için owner rolü gerekir.</p>
-    <?php endif; ?>
-</div>
-<?php require __DIR__ . '/../src/partials/footer.php'; ?>
+<?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

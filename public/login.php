@@ -32,7 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 } elseif (isset($_GET['registered']) && $_GET['registered'] === '1') {
-    $info = 'Kaydınız alındı. Yönetici hesabınızı onayladıktan sonra giriş yapabilirsiniz.';
+    $info = 'Kaydınız alındı. E-postanıza gönderilen bağlantıdan şifrenizi oluşturup hesabınızı etkinleştirebilirsiniz.';
+} elseif (isset($_GET['verified']) && $_GET['verified'] === '1') {
+    $info = 'Hesabınız etkinleştirildi. Şimdi giriş yapabilirsiniz.';
 }
 ?>
 <!doctype html>
@@ -41,9 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="utf-8">
 <title>BCC-Core — Giriş</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<script src="/assets/theme-init.js"></script>
-<link rel="stylesheet" href="/assets/theme.css">
-<link rel="stylesheet" href="/assets/login.css">
+<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
 </head>
 <body class="login-page">
 <div class="login-card">
@@ -84,16 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </p>
 
         <div class="login-legal">
-            <p>
-                Giriş yaparak
-                <a href="/terms.php">Kullanım Koşulları</a>
-                ve
-                <a href="/privacy.php">Gizlilik Politikası</a>'nı kabul etmiş olursunuz.
-            </p>
             <p class="login-tagline">BCC-Core — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>
-<script src="/assets/password-toggle.js" defer></script>
+<script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
 </body>
 </html>

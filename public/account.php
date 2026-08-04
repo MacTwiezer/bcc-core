@@ -187,6 +187,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <div class="account-row-error" id="account-delete-error" hidden></div>
             </form>
         </div>
-<script src="/assets/account-page.js" defer></script>
-<script src="/assets/password-toggle.js" defer></script>
+<script src="<?php echo bcc_asset_url('account-page.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

@@ -19,8 +19,21 @@
 
             function positionPanel() {
                 var rect = summary.getBoundingClientRect();
+                var margin = 8;
+                // Bulunan gerçek bug: left her zaman butonun sol kenarına
+                // hizalanıyordu — en sağdaki sütunlarda panel (min-width: 210px)
+                // viewport'un sağından taşıp kısmen ekran dışında kalıyordu
+                // (image 9). Sağda yeterli yer yoksa sağ kenara hizala.
+                var left = rect.left;
+                var panelWidth = panel.offsetWidth || 210;
+                if (left + panelWidth > window.innerWidth - margin) {
+                    left = window.innerWidth - margin - panelWidth;
+                }
+                if (left < margin) {
+                    left = margin;
+                }
                 panel.style.top = (rect.bottom + 4) + 'px';
-                panel.style.left = (rect.left) + 'px';
+                panel.style.left = left + 'px';
             }
 
             // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —

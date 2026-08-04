@@ -9,14 +9,19 @@ if (is_logged_in()) {
 
 $error = null;
 
+// Kayıt akışı artık şifreyi burada ALMAZ: kullanıcı Ad Soyad + E-posta girer,
+// e-postasına gelen tek kullanımlık bağlantıdan (/verify_email.php) kendi
+// şifresini oluşturur. Hesap o ana kadar is_active=0 kalır (giriş yapılamaz)
+// — password_hash kolonu NOT NULL olduğu için, hiç bilinmeyen/tahmin edilemeyen
+// rastgele bir değerle dolduruluyor (bkz. aşağı), gerçek şifre yalnızca
+// doğrulama linkinden ayarlanabiliyor.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
 
     $fullName = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
-    $password = isset($_POST['password']) ? $_POST['password'] : '';
 
-    if ($fullName === '' || $email === '' || $password === '') {
+    if ($fullName === '' || $email === '') {
         $error = 'Tüm alanları doldurun.';
     } elseif (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
@@ -30,21 +35,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // users.full_name VARCHAR(150) — admin/create_user.php/account_update_name.php
         // ile AYNI sınır/mesaj.
         $error = 'Ad Soyad en fazla 150 karakter olabilir.';
-    } elseif (!bcc_is_valid_password($password)) {
-        $error = 'Şifre 8-72 karakter arasında olmalı.';
     } else {
-        $existing = bcc_fetch_one('SELECT id FROM users WHERE email = :email LIMIT 1', array('email' => $email));
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 saat
 
-        if ($existing) {
+        $existing = bcc_fetch_one('SELECT id, is_active FROM users WHERE email = :email LIMIT 1', array('email' => $email));
+
+        if ($existing && (int) $existing['is_active'] === 1) {
+            // Zaten doğrulanmış/aktif bir hesap — normal "zaten kayıtlı" reddi.
             $error = 'Bu e-posta zaten kayıtlı.';
-        } else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
+        } elseif ($existing) {
+            // Daha önce kayıt olmuş ama hiç doğrulamamış (mailini kaçırmış/linki
+            // kaybetmiş olabilir) — yeni hesap açmak yerine token'ı yenileyip
+            // e-postayı tekrar gönderiyoruz. Sessizce aynı "kaydınız alındı"
+            // akışına düşer, bir saldırgana "bu e-posta zaten var" bilgisini
+            // aktif/pasif ayrımı dışında sızdırmaz.
             bcc_execute(
-                'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :full_name, 0, 0)',
-                array('email' => $email, 'hash' => $hash, 'full_name' => $fullName)
+                'UPDATE users SET full_name = :full_name, email_verify_token = :token, email_verify_expires_at = :expires WHERE id = :id',
+                array('full_name' => $fullName, 'token' => $token, 'expires' => $expiresAt, 'id' => $existing['id'])
+            );
+        } else {
+            $unusableHash = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
+            bcc_execute(
+                'INSERT INTO users (email, password_hash, full_name, is_admin, is_active, email_verify_token, email_verify_expires_at)
+                 VALUES (:email, :hash, :full_name, 0, 0, :token, :expires)',
+                array('email' => $email, 'hash' => $unusableHash, 'full_name' => $fullName, 'token' => $token, 'expires' => $expiresAt)
             );
             $newId = bcc_last_insert_id();
             log_audit('user.register', 'user', $newId, array('email' => $email));
+        }
+
+        if ($error === null) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+            $verifyLink = $scheme . '://' . $host . '/verify_email.php?token=' . $token;
+
+            $body = "Merhaba {$fullName},\n\n"
+                . "BCC-Core hesabınızı doğrulamak ve şifrenizi oluşturmak için aşağıdaki bağlantıya tıklayın:\n\n"
+                . $verifyLink . "\n\n"
+                . "Bu bağlantı 24 saat geçerlidir.\n\n"
+                . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.";
+
+            bcc_send_mail($email, 'BCC-Core — e-postanızı doğrulayın', $body);
 
             header('Location: /login.php?registered=1');
             exit;
@@ -58,9 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="utf-8">
 <title>BCC-Core — Kayıt ol</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<script src="/assets/theme-init.js"></script>
-<link rel="stylesheet" href="/assets/theme.css">
-<link rel="stylesheet" href="/assets/login.css">
+<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
 </head>
 <body class="login-page">
 <div class="login-card">
@@ -84,15 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="register-email">E-posta</label>
                 <input type="email" id="register-email" name="email" value="<?php echo htmlspecialchars(isset($email) ? $email : '', ENT_QUOTES, 'UTF-8'); ?>" required>
             </div>
-            <div class="login-field">
-                <label for="register-password">Şifre</label>
-                <div class="input-with-toggle">
-                    <input type="password" id="register-password" name="password" minlength="8" maxlength="72" required>
-                    <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
-                    </button>
-                </div>
-            </div>
+            <p class="login-tagline">Kayıt olduktan sonra e-postanıza gönderilecek bağlantıdan şifrenizi oluşturacaksınız.</p>
             <button type="submit" class="login-submit">Kayıt ol</button>
         </form>
 
@@ -101,16 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </p>
 
         <div class="login-legal">
-            <p>
-                Kayıt olarak
-                <a href="/terms.php">Kullanım Koşulları</a>
-                ve
-                <a href="/privacy.php">Gizlilik Politikası</a>'nı kabul etmiş olursunuz.
-            </p>
             <p class="login-tagline">BCC-Core — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>
-<script src="/assets/password-toggle.js" defer></script>
 </body>
 </html>

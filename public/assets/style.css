@@ -70,232 +70,8 @@ a:hover { text-decoration: underline; }
 
 .navlogout button:hover { background: var(--bcc-surface-hover); border-color: var(--bcc-border-strong); }
 
-/* ---------- Admin paneli (Airtable benzeri liste/pill görünümü) ---------- */
-
-.admin-section-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-}
-
-.admin-section-header h2 { margin: 0; }
-
-.admin-section-count { color: var(--bcc-text-muted); font-size: 0.85rem; font-weight: 500; }
-
-table.admin-table { border-collapse: collapse; width: 100%; }
-
-table.admin-table thead th {
-    text-align: left;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--bcc-text-muted);
-    padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid var(--bcc-border);
-}
-
-table.admin-table tbody td {
-    padding: 0.55rem 0.6rem;
-    border-bottom: 1px solid var(--bcc-border);
-    vertical-align: middle;
-}
-
-table.admin-table tbody tr:last-child td { border-bottom: none; }
-
-table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
-
-.admin-user-cell { display: flex; align-items: center; gap: 0.65rem; }
-
-.admin-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: var(--bcc-accent);
-    color: var(--bcc-surface);
-    font-weight: 700;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.admin-user-name { font-weight: 600; font-size: 0.9rem; }
-.admin-user-email { font-size: 0.8rem; color: var(--bcc-text-muted); }
-.admin-muted { color: var(--bcc-text-muted); font-size: 0.85rem; }
-
-.admin-pill {
-    display: inline-block;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.admin-pill-blue   { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
-.admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
-/* Bulunan gerçek bug: kardeşleri (blue hariç) sabit renk ÇİFTİ kullanırken bu
-   sabit zemin + tema-duyarlı metin (var(--bcc-text-muted)) karışımıydı —
-   koyu temada metin açılıp sabit açık zeminle düşük kontrasta düşüyordu. */
-.admin-pill-gray   { background: #eceef1; color: #5f6368; }
-.admin-pill-amber  { background: #fef3e2; color: #b45309; }
-.admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
-
-.admin-team-block { margin-bottom: 1.5rem; }
-.admin-team-block:last-child { margin-bottom: 0; }
-
-.admin-team-header { margin-bottom: 0.5rem; }
-.admin-team-header h3 { margin: 0; font-size: 0.95rem; }
-
-.admin-empty { color: var(--bcc-text-muted); font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
-
-.admin-add-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    color: var(--bcc-accent-strong);
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-decoration: none;
-    padding: 0.4rem 0;
-}
-
-.admin-add-link:hover { text-decoration: underline; }
-
-.admin-actions-row {
-    display: flex;
-    gap: 1.25rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--bcc-border);
-}
-
-.admin-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.6rem;
-}
-
-.admin-toolbar-end { justify-content: flex-end; margin-bottom: 0.75rem; }
-
-.admin-search-input {
-    flex: 1;
-    max-width: 280px;
-    padding: 0.4rem 0.65rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 0.85rem;
-}
-
-.admin-csv-link {
-    color: var(--bcc-accent-strong);
-    font-weight: 600;
-    font-size: 0.82rem;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.admin-csv-link:hover { text-decoration: underline; }
-
-table.admin-table th.admin-checkbox-col,
-table.admin-table td.admin-checkbox-cell { width: 30px; padding-right: 0; }
-
-table.admin-table th.admin-actions-col,
-table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
-
-.admin-row-checkbox,
-.admin-select-all { cursor: pointer; }
-
-/* "..." satır menüsü ve "İşlemler" bulk menüsü — home-base-more-menu ile
-   aynı <details>+dışarı-tık desenini kullanır (bkz. admin.js). */
-.admin-menu { position: relative; display: inline-block; }
-.admin-menu > summary { list-style: none; }
-.admin-menu > summary::-webkit-details-marker { display: none; }
-
-.admin-row-menu-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--bcc-text-muted);
-    cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
-}
-
-.admin-row-menu-btn:hover { background: var(--bcc-surface-hover); }
-
-.admin-menu-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    min-width: 190px;
-    background: var(--bcc-surface);
-    border: 1px solid var(--bcc-border);
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    padding: 0.35rem;
-    z-index: 30;
-}
-
-.admin-menu-panel form { display: block; }
-
-.admin-menu-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    padding: 0.45rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-family: inherit;
-    color: var(--bcc-text);
-    cursor: pointer;
-}
-
-.admin-menu-item:hover { background: var(--bcc-surface-hover); }
-.admin-menu-item:disabled { color: #b8b8bc; cursor: not-allowed; }
-.admin-menu-item:disabled:hover { background: none; }
-.admin-menu-item-danger { color: var(--bcc-danger); }
-
-.admin-bulk-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 0.6rem 0 0.9rem;
-}
-
-.admin-bulk-trigger {
-    background: var(--bcc-accent-strong);
-    color: var(--bcc-surface);
-    border: none;
-    padding: 0.45rem 0.9rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.admin-bulk-trigger:hover { background: var(--bcc-accent-strong); }
-
-.admin-bulk-trigger-muted {
-    background: #eceef1;
-    color: var(--bcc-text);
-}
-
-.admin-bulk-trigger-muted:hover { background: var(--bcc-surface-hover); }
-
-details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none; }
+/* Admin paneli (.admin-*) artık home.css'te — admin/index.php home-shell'e
+   taşındı, başka kullanan kalmadı, ikinci bir kopya YOK. */
 
 .page {
     max-width: 900px;
@@ -423,45 +199,9 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     font-size: 0.9rem;
 }
 
-.field-type-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.field-type-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bcc-surface);
-    /* Bulunan gerçek bug: color hiç belirtilmemişti — bu bir <button>,
-       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
-       kullanılır. Koyu temada background koyulaşıyor ama metin siyah
-       kalıyordu (alan tipi sihirbazı düğmeleri — neredeyse görünmezdi,
-       piksel örneklemesiyle doğrulandı). */
-    color: var(--bcc-text);
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 6px;
-    padding: 0.5rem 0.7rem;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.9rem;
-    text-align: left;
-}
-
-.field-type-option:hover {
-    border-color: var(--bcc-accent-strong);
-    background: var(--bcc-surface-hover);
-}
-
-.field-type-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.4rem;
-    color: var(--bcc-text-muted);
-}
+/* .field-type-grid/.field-type-option/.field-type-badge (+ --field-icon
+   modifier'ları) artık theme.css'te — grid.php VE table_fields.php (home-shell)
+   TARAFINDAN PAYLAŞILIR, ikinci bir kopya YOK. */
 
 .link-btn {
     background: none;
@@ -547,9 +287,15 @@ table.grid thead th {
 
 .field-badge {
     display: inline-block;
+    width: 13px;
+    height: 13px;
+    vertical-align: -2px;
     color: var(--bcc-text-muted);
-    font-weight: 600;
     margin-right: 0.3rem;
+    background-image: var(--field-icon);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 13px 13px;
 }
 
 .req-mark {
@@ -857,8 +603,25 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 .grid-detail-comment {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
-    border-radius: 6px;
-    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    padding: 0.55rem 0.65rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+/* .ws-collab-avatar (home.css) taban stilini kullanır — burada yalnızca
+   yorum kartına uygun küçük boyut override edilir, ikinci bir avatar
+   bileşeni YAZILMAZ (grid.php zaten home.css'i yüklüyor). */
+.grid-detail-comment-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+}
+
+.grid-detail-comment-main {
+    flex: 1;
+    min-width: 0;
 }
 
 .grid-detail-comment-meta {
@@ -895,16 +658,19 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 .grid-detail-comment-delete {
     background: none;
     border: none;
-    padding: 0;
+    padding: 0.1rem 0.35rem;
+    margin-left: -0.35rem;
+    border-radius: 4px;
     font-size: 0.72rem;
     color: var(--bcc-text-muted);
     cursor: pointer;
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 .grid-detail-comment-delete:hover,
 .grid-detail-comment-edit:hover {
     color: var(--bcc-text);
+    background: var(--bcc-surface-hover);
 }
 
 .grid-detail-comment-edit-input {
@@ -933,8 +699,16 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 .grid-detail-comments-form button {
     flex-shrink: 0;
     font-size: 0.8rem;
+    font-weight: 600;
     padding: 0.4rem 0.7rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
+    cursor: pointer;
 }
+
+.grid-detail-comments-form button:hover { background: var(--bcc-accent-strong); }
 
 .grid-detail-comments-hint {
     flex-shrink: 0;
@@ -1069,18 +843,24 @@ td.editable.richtext-editing {
 }
 
 .richtext-toolbar-btn {
-    width: 26px;
-    height: 26px;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 4px;
-    background: var(--bcc-surface);
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text);
     cursor: pointer;
     font-size: 0.9rem;
     font-family: inherit;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
 .richtext-toolbar-btn:hover {
     background: var(--bcc-surface-hover);
+    border-color: var(--bcc-border);
 }
 
 .richtext-editable {
@@ -1734,48 +1514,8 @@ td.cell-flash-error {
     white-space: nowrap;
 }
 
-/* Color: "Alanı Düzenle" formundaki seçenek başına renk seçici (Kalan İşler #2). */
-
-.choice-color-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-}
-
-.choice-color-choice-name {
-    min-width: 90px;
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.choice-color-input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.choice-color-swatch {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    margin-right: 0.3rem;
-}
-
-.choice-color-input:checked + .choice-color-swatch {
-    border-color: var(--bcc-text);
-}
-
-.choice-color-input:focus-visible + .choice-color-swatch {
-    outline: 2px solid var(--bcc-accent);
-    outline-offset: 2px;
-}
+/* Color: "Alanı Düzenle" seçenek renk seçicisi artık home.css'te
+   (table_fields.php dışında kullanan kalmadı — ikinci bir kopya YOK). */
 
 .hide-fields-actions {
     display: flex;

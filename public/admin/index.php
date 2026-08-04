@@ -6,6 +6,7 @@ require_admin();
 
 $currentUser = current_user();
 $currentUserId = (int) $currentUser['id'];
+$user = $currentUser;
 
 $error = null;
 $success = null;
@@ -98,15 +99,29 @@ $membersByTeam = array();
 foreach ($memberRows as $row) {
     $membersByTeam[$row['team_id']][] = $row;
 }
-$pageTitle = 'Admin';
-require __DIR__ . '/../../src/partials/header.php';
-require __DIR__ . '/../../src/partials/top_nav.php';
-?>
-<div class="page">
-    <h1>Admin</h1>
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
 
-    <div class="card">
-        <div class="admin-section-header">
+$homeActiveNav = 'admin';
+$homePageTitle = 'BCC-Core — Admin';
+require __DIR__ . '/../../src/partials/home_shell_top.php';
+?>
+        <div class="home-main-header">
+            <h1>Admin</h1>
+        </div>
+
+        <div class="settings-card">
+            <div class="admin-section-header">
             <h2>Kullanıcılar</h2>
             <span class="admin-section-count"><?php echo count($users); ?></span>
         </div>
@@ -115,7 +130,7 @@ require __DIR__ . '/../../src/partials/top_nav.php';
 
         <div class="admin-toolbar">
             <input type="text" class="admin-search-input" id="admin-users-search" placeholder="İsim veya e-posta ara..." autocomplete="off">
-            <a href="/admin/export_users_xlsx.php" class="admin-csv-link">Excel indir</a>
+            <a href="/admin/export_users_xlsx.php" class="admin-xlsx-link">Excel indir</a>
         </div>
 
         <form id="admin-users-bulk-form" method="post" action="/admin/index.php">
@@ -209,16 +224,16 @@ require __DIR__ . '/../../src/partials/top_nav.php';
         </div>
 
         <a href="/admin/create_user.php" class="admin-add-link">+ Yeni kullanıcı oluştur</a>
-    </div>
+        </div>
 
-    <div class="card">
-        <div class="admin-section-header">
+        <div class="settings-card">
+            <div class="admin-section-header">
             <h2>Ekipler</h2>
             <span class="admin-section-count"><?php echo count($teams); ?></span>
         </div>
 
         <div class="admin-toolbar admin-toolbar-end">
-            <a href="/admin/export_team_members_xlsx.php" class="admin-csv-link">Excel indir</a>
+            <a href="/admin/export_team_members_xlsx.php" class="admin-xlsx-link">Excel indir</a>
         </div>
 
         <?php
@@ -293,7 +308,6 @@ require __DIR__ . '/../../src/partials/top_nav.php';
             <a href="/admin/create_team.php" class="admin-add-link">+ Yeni ekip oluştur</a>
             <a href="/admin/assign_team.php" class="admin-add-link">Kullanıcıyı ekibe ata</a>
         </div>
-    </div>
-</div>
-<script src="/assets/admin.js"></script>
-<?php require __DIR__ . '/../../src/partials/footer.php'; ?>
+        </div>
+<script src="<?php echo bcc_asset_url('admin.js'); ?>"></script>
+<?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

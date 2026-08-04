@@ -208,7 +208,14 @@ body.gs-body a { text-decoration: none; color: inherit; }
     padding: 0.3rem 0.4rem;
     margin-left: -0.4rem;
     border-radius: 6px;
+    /* Artık /dashboard.php'ye dönen bir <a> (önceden tıklanamaz <span>'lerdi —
+       grid'den ana sayfaya dönmenin tarayıcı geri tuşu dışında yolu yoktu). */
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.12s ease;
 }
+
+.gs-topbar-left:hover { background: var(--bcc-surface-hover); }
 
 .gs-base-icon {
     width: 26px;
@@ -250,7 +257,18 @@ body.gs-body a { text-decoration: none; color: inherit; }
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border-strong);
     color: var(--bcc-text);
+    /* Bulunan gerçek bug: bu sınıf hem <a> (Launch) hem <summary> (Paylaş/
+       Bağlantı popover tetikleyicileri) üzerinde kullanılıyor ama <summary>'nin
+       tarayıcı varsayılan disclosure-üçgeni ve list-item display'i hiç
+       bastırılmamıştı — üçü de AYNI sınıfa rağmen Paylaş/Bağlantı düz metin +
+       ok işareti gibi görünüyordu, Launch ise düzgün buton gibiydi. .gs-tool-btn
+       (aynı dosyada) BUNU zaten çözüyordu, aynı yöntem burada da uygulanıyor. */
+    display: inline-flex;
+    align-items: center;
+    list-style: none;
 }
+
+.gs-btn-ghost::-webkit-details-marker { display: none; }
 
 .gs-btn-ghost:hover { background: var(--bcc-surface-sunken); }
 
@@ -690,6 +708,19 @@ html.is-mac .gs-kbd-other { display: none; }
 .gs-tool-btn::-webkit-details-marker { display: none; }
 
 .gs-tool-btn:hover { background: var(--bcc-surface-hover); }
+
+/* Seçili satırları toplu silme butonu (grid-row-detail.js checkbox seçimiyle
+   gösterilir/gizlenir) — diğer .gs-tool-btn'lerle aynı taban, yalnızca renk
+   "yıkıcı işlem" için kırmızıya çekiliyor.
+   Bulunan gerçek bug: .gs-tool-btn'nin display:flex'i, tarayıcının [hidden]
+   için varsayılan display:none kuralıyla AYNI özgüllükte (ikisi de tek sınıf/
+   attribute selector) — kaynak sırası author stylesheet'i (yani display:flex)
+   kazandırıyordu, bu yüzden buton hidden="" olsa BİLE görsel olarak
+   görünmeye devam ediyordu (checkbox seçilmemişken bile "0 seçileni sil"
+   basılıydı). [hidden] burada AÇIKÇA display:none ile geri kazandırılıyor. */
+.gs-delete-selected-btn { color: var(--bcc-danger); }
+.gs-delete-selected-btn[hidden] { display: none; }
+.gs-delete-selected-btn:hover { background: var(--bcc-danger-soft); }
 
 .gs-tool-details { position: relative; }
 

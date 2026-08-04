@@ -141,10 +141,11 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-account { order: 1; }
 .if-nav-spacer { order: 2; flex: 1; }
-.if-nav-share { order: 3; }
-.if-nav-bottom .home-notif { order: 4; }
-.if-nav-collapse-btn { order: 5; }
-.if-nav-expand-btn { order: 6; }
+.if-nav-collab-share { order: 3; }
+.if-nav-share { order: 4; }
+.if-nav-bottom .home-notif { order: 5; }
+.if-nav-collapse-btn { order: 6; }
+.if-nav-expand-btn { order: 7; }
 
 .if-nav-icon-btn {
     background: none;
@@ -164,7 +165,8 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-nav-icon-btn:hover { background: rgba(255, 255, 255, 0.3); }
 
-.if-nav-share-btn { width: 100%; }
+.if-nav-share-btn,
+.if-nav-collab-share-btn { width: 100%; }
 
 .if-nav-bottom-label {
     font-size: 0.82rem;
@@ -172,6 +174,17 @@ body.if-page a { text-decoration: none; color: inherit; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Bulunan gerçek bug: iki paylaşım butonu (Paylaş + Bağlantı) artık AYNI
+   satırda — ikisi de yazılı etiketle (bkz. yukarıdaki .if-nav-bottom-label)
+   220px'lik dar sütuna sığmıyor, taşan kısım .if-list-panel'in ALTINDA kalıp
+   görünmez oluyordu. .home-notif zaten simge-yalnız (etiketsiz) bu satırda —
+   AYNI yoğunluğa uyarlanıyor: title/aria-label (zaten var) hover tooltip'i
+   sağlıyor, metin etiketi genişken de gizli. */
+.if-nav-collab-share .if-nav-bottom-label,
+.if-nav-share .if-nav-bottom-label {
+    display: none;
 }
 
 .if-nav-expand-btn { display: none; }
@@ -200,8 +213,9 @@ body.if-page a { text-decoration: none; color: inherit; }
    ikisi de aynı satırda/sütunda yaşıyor (önceki karışıklığın kök nedeni
    buydu: ≪ .if-nav-top'ta, ≫ .if-nav-bottom'daydı). */
 .if-nav.is-collapsed .if-nav-spacer { display: none; }
-.if-nav.is-collapsed .if-nav-share { order: 4; flex: none; }
-.if-nav.is-collapsed .if-nav-bottom .home-notif { order: 3; }
+.if-nav.is-collapsed .if-nav-collab-share { order: 5; flex: none; }
+.if-nav.is-collapsed .if-nav-share { order: 6; flex: none; }
+.if-nav.is-collapsed .if-nav-bottom .home-notif { order: 4; }
 .if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
 .if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }
 
@@ -210,7 +224,8 @@ body.if-page a { text-decoration: none; color: inherit; }
     width: 100%;
 }
 
-.if-nav.is-collapsed .if-nav-share-btn { flex: none; }
+.if-nav.is-collapsed .if-nav-share-btn,
+.if-nav.is-collapsed .if-nav-collab-share-btn { flex: none; }
 .if-nav.is-collapsed .if-nav-expand-btn { display: flex; }
 
 /* Bildirim/hesap panelleri varsayılan olarak tetikleyicinin ALTINDA-SAĞINDA
@@ -218,6 +233,23 @@ body.if-page a { text-decoration: none; color: inherit; }
    tetikleyici sol sütunun EN ALTINDA olduğu için grid.php'nin .gs-rail
    .home-notif-panel'iyle AYNI düzeltme: panel sağa doğru açılır. */
 .if-nav-bottom .home-notif-panel {
+    top: auto;
+    bottom: 0;
+    left: calc(100% + 8px);
+    right: auto;
+}
+
+/* Paylaş/Bağlantı popover'ları (style.css'teki .share-popover-form/
+   .collab-popover-form) AYNI sorunu yaşıyordu: tetikleyici sol sütunun
+   EN ALTINDA olduğu için varsayılan top:100%+left:0 (ya da
+   .share-popover-trigger/.collab-popover-trigger'ın right:0 override'ı)
+   ekranın ALTINA/SOLUNA taşıp kırpılıyordu (bulunan gerçek bug — ekran
+   görüntüsüyle bildirildi). .home-notif-panel'le AYNI düzeltme: sağa doğru
+   açılır. Üç sınıflı seçici, style.css'teki iki sınıflı .share-popover-trigger
+   .share-popover-form kuralını özgüllükle KESİN yener (kaynak sırasına
+   bağlı kalınmaz). */
+.if-nav-bottom .share-popover-trigger .share-popover-form,
+.if-nav-bottom .collab-popover-trigger .collab-popover-form {
     top: auto;
     bottom: 0;
     left: calc(100% + 8px);

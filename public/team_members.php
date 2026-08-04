@@ -244,7 +244,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <a class="tm-export-btn" href="/api/team_members_export_csv.php?team_id=<?php echo (int) $teamId; ?>" title="CSV indir" aria-label="CSV indir">
+                    <a class="tm-export-btn" href="/api/team_members_export_xlsx.php?team_id=<?php echo (int) $teamId; ?>" title="Excel indir" aria-label="Excel indir">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M3 12.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </a>
                 </div>
@@ -334,4 +334,4 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </form>
         </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>
-<script src="/assets/team-members.js"></script>
+<script src="<?php echo bcc_asset_url('team-members.js'); ?>"></script>

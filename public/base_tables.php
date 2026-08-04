@@ -3,6 +3,7 @@
 require __DIR__ . '/../src/bootstrap.php';
 
 require_login();
+$user = current_user();
 
 $baseId = isset($_GET['base_id']) ? (int) $_GET['base_id'] : (isset($_POST['base_id']) ? (int) $_POST['base_id'] : 0);
 $base = find_base_or_404($baseId);
@@ -108,113 +109,132 @@ $tables = bcc_fetch_all(
     'SELECT id, name, description, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
     array('base_id' => $base['id'])
 );
-$pageTitle = $base['name'];
-require __DIR__ . '/../src/partials/header.php';
-require __DIR__ . '/../src/partials/top_nav.php';
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
+
+$homeActiveNav = 'bases';
+$homePageTitle = 'BCC-Core — ' . $base['name'];
+require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
-<div class="page">
-    <p><a href="/bases.php">&larr; Base'lere dön</a></p>
-    <h1><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
-    <?php if ($base['description']): ?>
-        <p><?php echo htmlspecialchars($base['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-    <?php endif; ?>
+        <div class="settings-breadcrumb">
+            <a href="/bases.php">&larr; Base'lere dön</a>
+        </div>
+        <div class="home-main-header">
+            <h1><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
+            <?php if ($base['description']): ?>
+                <p class="settings-hint"><?php echo htmlspecialchars($base['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+            <?php endif; ?>
+        </div>
 
-    <?php require __DIR__ . '/../src/partials/flash.php'; ?>
+        <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
-    <div class="card">
-        <h2>Tablolar (<?php echo count($tables); ?>)</h2>
+        <div class="settings-card">
+            <h2>Tablolar (<?php echo count($tables); ?>)</h2>
 
-        <?php if (empty($tables)): ?>
-            <p>Bu base'de henüz tablo yok.</p>
-        <?php else: ?>
-            <table>
-                <tr><th>Tablo</th><th>Açıklama</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr>
-                <?php foreach ($tables as $i => $t): ?>
-                    <tr>
-                        <td><a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></a></td>
-                        <td><?php echo htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8'); ?></td>
-                        <?php if ($canEdit): ?>
-                        <td class="row-actions">
-                            <form method="post" action="/base_tables.php">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="move_table">
-                                <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                <input type="hidden" name="direction" value="up">
-                                <button type="submit" class="btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
-                            </form>
-                            <form method="post" action="/base_tables.php">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="move_table">
-                                <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                <input type="hidden" name="direction" value="down">
-                                <button type="submit" class="btn-sm" <?php echo $i === count($tables) - 1 ? 'disabled' : ''; ?>>&darr;</button>
-                            </form>
-                            <a class="btn-sm" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>">Düzenle</a>
-                            <form method="post" action="/base_tables.php" onsubmit="return confirm('Bu tabloyu ve içindeki tüm alanları silmek istediğinize emin misiniz?');">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="delete_table">
-                                <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                                <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                <button type="submit" class="btn-sm btn-danger">Sil</button>
-                            </form>
-                        </td>
-                        <?php endif; ?>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-        <?php endif; ?>
-    </div>
+            <?php if (empty($tables)): ?>
+                <p class="settings-empty">Bu base'de henüz tablo yok.</p>
+            <?php else: ?>
+                <div class="settings-table-wrap">
+                    <table class="settings-table">
+                        <thead><tr><th>Tablo</th><th>Açıklama</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr></thead>
+                        <tbody>
+                        <?php foreach ($tables as $i => $t): ?>
+                            <tr>
+                                <td><a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></a></td>
+                                <td><?php echo htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <?php if ($canEdit): ?>
+                                <td class="settings-row-actions">
+                                    <form method="post" action="/base_tables.php">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="move_table">
+                                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
+                                    </form>
+                                    <form method="post" action="/base_tables.php">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="move_table">
+                                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === count($tables) - 1 ? 'disabled' : ''; ?>>&darr;</button>
+                                    </form>
+                                    <a class="settings-btn settings-btn-sm" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>">Düzenle</a>
+                                    <form method="post" action="/base_tables.php" onsubmit="return confirm('Bu tabloyu ve içindeki tüm alanları silmek istediğinize emin misiniz?');">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="delete_table">
+                                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
+                                        <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                                <?php endif; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
 
-    <?php if ($canEdit):
-        $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
-        $editTable = null;
-        if ($editId > 0) {
-            foreach ($tables as $t) {
-                if ((int) $t['id'] === $editId) {
-                    $editTable = $t;
-                    break;
+        <?php if ($canEdit):
+            $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+            $editTable = null;
+            if ($editId > 0) {
+                foreach ($tables as $t) {
+                    if ((int) $t['id'] === $editId) {
+                        $editTable = $t;
+                        break;
+                    }
                 }
             }
-        }
-    ?>
-        <?php if ($editTable): ?>
-            <div class="card">
-                <h2>Tabloyu Düzenle: <?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
-                <form class="stacked" method="post" action="/base_tables.php">
+        ?>
+            <?php if ($editTable): ?>
+                <div class="settings-card">
+                    <h2>Tabloyu Düzenle: <?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <form class="settings-form settings-form-stacked" method="post" action="/base_tables.php">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="rename_table">
+                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                        <input type="hidden" name="table_id" value="<?php echo (int) $editTable['id']; ?>">
+                        <label class="settings-field">Tablo adı
+                            <input type="text" name="name" value="<?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        </label>
+                        <label class="settings-field">Açıklama (opsiyonel)
+                            <input type="text" name="description" value="<?php echo htmlspecialchars((string) $editTable['description'], ENT_QUOTES, 'UTF-8'); ?>">
+                        </label>
+                        <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
+                    </form>
+                </div>
+            <?php endif; ?>
+
+            <div class="settings-card">
+                <h2>Yeni Tablo</h2>
+                <form class="settings-form settings-form-stacked" method="post" action="/base_tables.php">
                     <?php echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="rename_table">
+                    <input type="hidden" name="action" value="create_table">
                     <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                    <input type="hidden" name="table_id" value="<?php echo (int) $editTable['id']; ?>">
-                    <label>Tablo adı
-                        <input type="text" name="name" value="<?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                    <label class="settings-field">Tablo adı
+                        <input type="text" name="name" required>
                     </label>
-                    <label>Açıklama (opsiyonel)
-                        <input type="text" name="description" value="<?php echo htmlspecialchars((string) $editTable['description'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <label class="settings-field">Açıklama (opsiyonel)
+                        <input type="text" name="description">
                     </label>
-                    <button type="submit">Kaydet</button>
+                    <button type="submit" class="settings-btn settings-btn-primary">Tablo Oluştur</button>
                 </form>
             </div>
+        <?php else: ?>
+            <p class="settings-hint">Bu ekipte tablo oluşturmak/düzenlemek için owner rolü gerekir.</p>
         <?php endif; ?>
-
-        <div class="card">
-            <h2>Yeni Tablo</h2>
-            <form class="stacked" method="post" action="/base_tables.php">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="action" value="create_table">
-                <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                <label>Tablo adı
-                    <input type="text" name="name" required>
-                </label>
-                <label>Açıklama (opsiyonel)
-                    <input type="text" name="description">
-                </label>
-                <button type="submit">Tablo Oluştur</button>
-            </form>
-        </div>
-    <?php else: ?>
-        <p class="hint">Bu ekipte tablo oluşturmak/düzenlemek için owner rolü gerekir.</p>
-    <?php endif; ?>
-</div>
-<?php require __DIR__ . '/../src/partials/footer.php'; ?>
+<?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

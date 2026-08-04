@@ -22,7 +22,7 @@ $isOwner = ($role === 'owner');
 
 // D1 "Paylaş" popup (Airtable Share paritesi, görsel 1) — "People with access"
 // özeti + mevcut kullanıcılar arasından hızlı atama. Tam yönetim ekranı (görsel 2,
-// arama/filtre/CSV/hiyerarşik rol değişikliği) team_members.php'de YAŞIYOR — burada
+// arama/filtre/Excel indir/hiyerarşik rol değişikliği) team_members.php'de YAŞIYOR — burada
 // mantık TEKRARLANMIYOR, atama formu doğrudan team_members.php'ye POST eder.
 $myRank = $GLOBALS['BCC_ROLE_RANK'][$role];
 $shareAssignableRoles = bcc_assignable_roles($myRank);
@@ -114,22 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         log_audit('record.create', 'record', $newId, array('table_id' => $table['id']), $table['team_id']);
         bcc_notify_slack_new_record($table['id'], $newId, $user['full_name']);
         $success = 'Kayıt eklendi.';
-    } elseif ($action === 'delete_record') {
-        $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;
-
-        $existingRecord = bcc_fetch_one('SELECT id FROM records WHERE id = :id AND table_id = :table_id LIMIT 1', array(':id' => $recordId, ':table_id' => $table['id']));
-
-        if (!$existingRecord) {
-            http_response_code(403);
-            die('Bu kayıt bu tabloya ait değil.');
-        }
-
-        // DB satırı (ve attachments'taki karşılıkları) CASCADE ile siliniyor ama
-        // diskteki fiziksel dosyalar otomatik silinmez — bu yüzden DELETE'ten ÖNCE.
-        bcc_delete_attachment_files_by_record($recordId);
-        bcc_execute('DELETE FROM records WHERE id = :id', array(':id' => $recordId));
-        log_audit('record.delete', 'record', $recordId, array('table_id' => $table['id']), $table['team_id']);
-        $success = 'Kayıt silindi.';
     }
 }
 
@@ -189,7 +173,7 @@ $rowHeight = parse_grid_row_height($_GET);
 $wrapHeaders = parse_grid_wrap_headers($_GET);
 
 // Sorgu kurma mantığı bcc_build_grid_records_query()'ye taşındı (src/schema.php)
-// — public/api/view_export_csv.php (Download CSV, aktif sort/filter'ı AYNEN
+// — public/api/view_export_xlsx.php (Excel indir, aktif sort/filter'ı AYNEN
 // uygulamalı) de AYNI fonksiyonu çağırıyor, paralel bir sorgu-kurma mantığı YOK.
 list($recordsSql, $recordsParams) = bcc_build_grid_records_query($table['id'], $groupRules, $sortRules, $filterRules, $filterLogic);
 
@@ -362,7 +346,6 @@ if (!empty($records) && !empty($fields)) {
 // toplu-sorgu deseni (bcc_fetch_cells_by_record ile paralel).
 $attachmentsByRecord = !empty($records) ? bcc_fetch_attachments_by_record(array_column($records, 'id')) : array();
 
-$typeBadges = $GLOBALS['BCC_FIELD_TYPE_BADGE'];
 $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 
 // Çok seviyeli gruplama: $records üzerinde TEK geçişte, sıralı gelen kayıtları
@@ -516,11 +499,11 @@ $gridUser = current_user();
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <title>BCC-Core — <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<script src="/assets/theme-init.js"></script>
-<link rel="stylesheet" href="/assets/theme.css">
-<link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="/assets/grid-shell.css">
-<link rel="stylesheet" href="/assets/home.css">
+<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
 </head>
 <body class="gs-body">
 
@@ -550,10 +533,10 @@ $gridUser = current_user();
 
 <div class="gs-main-col">
     <header class="gs-topbar">
-        <div class="gs-topbar-left">
+        <a href="/dashboard.php" class="gs-topbar-left" title="Ana sayfaya dön">
             <span class="gs-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($table['base_id']), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14); ?></span>
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
-        </div>
+        </a>
         <div class="gs-topbar-right">
             <details class="gs-tool-details collab-popover-trigger" name="gs-table-tab-menu">
                 <summary class="gs-btn-ghost">Paylaş</summary>
@@ -612,7 +595,7 @@ $gridUser = current_user();
                     <p class="share-popover-note">Bu bağlantı yalnızca oturum açmış takım üyeleri için çalışır.</p>
                 </div>
             </details>
-            <a href="/interface.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-btn-ghost">Launch</a>
+            <a href="/interface.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-btn-ghost">Başlat</a>
         </div>
     </header>
 
@@ -739,9 +722,9 @@ $gridUser = current_user();
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <?php endif; ?>
-                    <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-csv-item">
+                    <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-xlsx-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
-                        CSV indir
+                        Excel indir
                     </button>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-print-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="3" width="10" height="5" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="8" width="14" height="6" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="6" y="12" width="8" height="5" stroke="#5f6368" stroke-width="1.3"/></svg>
@@ -773,15 +756,15 @@ $gridUser = current_user();
         <?php if ($canEdit): ?>
         <div class="gs-view-desc-overlay" id="gs-table-import-overlay" hidden>
             <div class="gs-view-desc-modal">
-                <div class="gs-view-desc-title">Veri içe aktar (CSV)</div>
+                <div class="gs-view-desc-title">Veri içe aktar (Excel)</div>
                 <p class="gs-import-help">
                     Dosyadaki ilk satır alan adları olmalı. Yalnızca tablodaki
                     alan adlarıyla BİREBİR eşleşen sütunlar aktarılır, eşleşmeyenler
-                    atlanır. Ayırıcı <strong>noktalı virgül (;)</strong> olmalı
-                    (Excel'den "Download CSV" ile aldığınız dosyayla aynı format).
+                    atlanır. Yalnızca <strong>.xlsx</strong> dosyaları desteklenir
+                    ("Excel indir" ile aldığınız dosyayla aynı format).
                     Dosya eki (attachment) alanları içe aktarılamaz.
                 </p>
-                <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".csv,text/csv">
+                <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                 <div class="gs-import-result" id="gs-table-import-result" hidden></div>
                 <div class="gs-view-desc-actions">
                     <button type="button" class="gs-table-tab-menu-item" id="gs-table-import-cancel">İptal</button>
@@ -792,6 +775,12 @@ $gridUser = current_user();
         <?php endif; ?>
 
         <div class="gs-view-toolbar-right">
+            <?php if ($canEdit): ?>
+            <button type="button" class="gs-tool-btn gs-delete-selected-btn" id="gs-delete-selected-btn" hidden data-table-id="<?php echo (int) $table['id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span id="gs-delete-selected-count">0</span> seçileni sil
+            </button>
+            <?php endif; ?>
             <?php if (!empty($fields)): ?>
             <details class="hide-fields-panel gs-tool-details" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn <?php echo !empty($hiddenFieldIds) ? 'hide-fields-btn-active' : ''; ?>">
@@ -966,7 +955,7 @@ $gridUser = current_user();
                                     class="group-field-option"
                                     href="/grid.php?<?php echo htmlspecialchars(http_build_query($groupFieldLinkBase + array('group_field_1' => $f['id'], 'group_dir_1' => 'asc')), ENT_QUOTES, 'UTF-8'); ?>"
                                 >
-                                    <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
                                     <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                 </a>
                             <?php endforeach; ?>
@@ -1122,7 +1111,7 @@ $gridUser = current_user();
             <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
                 <summary class="gs-tool-btn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M14 6.5a2 2 0 100-4 2 2 0 000 4zM6 11.5a2 2 0 100-4 2 2 0 000 4zM14 16.5a2 2 0 100-4 2 2 0 000 4z" stroke="#5f6368" stroke-width="1.3"/><path d="M7.7 10.3l4.6-2.6M7.7 9.7l4.6 2.6" stroke="#5f6368" stroke-width="1.3"/></svg>
-                    Share and Sync
+                    Paylaş ve Senkronize Et
                 </summary>
                 <div class="share-popover-form">
                     <div class="share-popover-label">Şu görünüme bağlantı paylaş</div>
@@ -1235,7 +1224,7 @@ $gridUser = current_user();
                                 $thCanHide = (int) $f['id'] !== $primaryFieldId;
                             ?>
                                 <th>
-                                    <span class="field-badge" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($typeBadges[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
                                     <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
                                     <?php if ($thSortable || $thCanHide): ?>
@@ -1276,7 +1265,6 @@ $gridUser = current_user();
                                             // diye "Zorunlu alan" onay kutusu burada YOK (önceki hâliyle
                                             // AYNI davranış — table_fields.php'de zaten var).
                                             $fieldTypeLabels = $typeLabels;
-                                            $fieldTypeBadges = $typeBadges;
                                             $fieldWizardShowRequired = false;
                                             require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
                                             ?>
@@ -1331,7 +1319,7 @@ $gridUser = current_user();
     </div>
 </div>
 
-<script src="/assets/dismissable-panel.js" defer></script>
+<script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <?php if (!empty($fields)): ?>
 <script>
     var BCC_FIELD_TYPES_BY_ID = <?php
@@ -1361,16 +1349,16 @@ $gridUser = current_user();
     var BCC_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
     var BCC_CAN_COMMENT = <?php echo $canComment ? 'true' : 'false'; ?>;
 </script>
-<script src="/assets/grid-toolbar.js" defer></script>
-<script src="/assets/grid-filter.js" defer></script>
-<script src="/assets/grid-hide-fields.js" defer></script>
-<script src="/assets/grid-group.js" defer></script>
-<script src="/assets/grid-column-drag.js" defer></script>
-<script src="/assets/grid-column-menu.js" defer></script>
-<script src="/assets/grid-freeze-columns.js" defer></script>
+<script src="<?php echo bcc_asset_url('grid-toolbar.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-filter.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-hide-fields.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-group.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-column-menu.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-freeze-columns.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
-<script src="/assets/grid.js" defer></script>
+<script src="<?php echo bcc_asset_url('grid.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if ($isOwner && !empty($fields)): ?>
 <script>
@@ -1378,8 +1366,8 @@ $gridUser = current_user();
 </script>
 <!-- Tip-önce-isim-sonra sihirbazı: table_fields.php ile PAYLAŞILAN aynı script,
      ikinci bir kopya YOK. Gönderim (fetch + kapat + reload) grid-add-field.js'de. -->
-<script src="/assets/field-type-wizard.js" defer></script>
-<script src="/assets/grid-add-field.js" defer></script>
+<script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-add-field.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($fields)): ?>
 <!-- Genişlet paneli TÜM takım üyelerine açık (Airtable: kayıt görüntüleme
@@ -1419,17 +1407,17 @@ $gridUser = current_user();
         </div>
     </div>
 </div>
-<script src="/assets/grid-row-detail.js" defer></script>
+<script src="<?php echo bcc_asset_url('grid-row-detail.js'); ?>" defer></script>
 <?php endif; ?>
-<script src="/assets/account-menu.js" defer></script>
-<script src="/assets/grid-table-tabs.js" defer></script>
-<script src="/assets/grid-view-manage.js" defer></script>
-<script src="/assets/grid-table-data.js" defer></script>
-<script src="/assets/share-popover.js" defer></script>
+<script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-table-tabs.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-view-manage.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
 <!-- Bildirim paneli JS'i home.js'de yaşıyor (#home-notif elemanına bağlanır) —
      dosyadaki diğer bloklar (arama, yıldız, sidebar) kendi elemanları burada
      bulunmadığı için no-op kalır, ikinci bir bildirim mekanizması YAZILMADI. -->
-<script src="/assets/home.js" defer></script>
+<script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
 <script>
 (function () {
     // Görünüm paneli artık açılır/kapanır bir dropdown DEĞİL, home.js'deki

@@ -155,5 +155,14 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </div>
         </div>
 
-        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz erişebileceğiniz bir base yok.', $roleByTeamId); ?>
+        <?php
+        // Hiç ekibi olmayan kullanıcı (ör. yeni e-posta doğrulaması yapmış ama
+        // henüz bir yönetici tarafından bir ekibe eklenmemiş) için ayrı, daha
+        // açıklayıcı bir mesaj — "base yok" genel mesajı bu durumda yanıltıcı
+        // olurdu, çünkü ortada bakılacak bir ekip bile yok.
+        $emptyMessage = empty($teams)
+            ? 'Hesabınız etkin ama henüz bir ekibe eklenmediniz. Bir yöneticinin sizi bir ekibe eklemesini bekleyin.'
+            : 'Henüz erişebileceğiniz bir base yok.';
+        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId);
+        ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

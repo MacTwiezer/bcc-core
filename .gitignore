@@ -6,6 +6,7 @@
 
 # Yerel gizli yapılandırma
 config/database.local.php
+config/mail.local.php
 
 # Kullanıcı tarafından yüklenen dosya ekleri (public/ dışında, DB'de referanslı)
 /storage/

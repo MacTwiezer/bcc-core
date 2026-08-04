@@ -3,6 +3,7 @@
 require __DIR__ . '/../../src/bootstrap.php';
 
 require_admin();
+$user = current_user();
 
 $users = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY email');
 $teams = bcc_fetch_all('SELECT id, name FROM teams ORDER BY name');
@@ -51,49 +52,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $success = 'Atama kaydedildi.';
     }
 }
-$pageTitle = 'Ekibe Ata';
-require __DIR__ . '/../../src/partials/header.php';
-require __DIR__ . '/../../src/partials/top_nav.php';
-?>
-<div class="page">
-    <h1>Kullanıcıyı Ekibe Ata</h1>
-    <p><a href="/admin/index.php">&larr; Admin paneline dön</a></p>
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
 
-    <div class="card">
-        <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
-        <form class="stacked" method="post" action="/admin/assign_team.php">
-            <?php echo csrf_field(); ?>
-            <label>Kullanıcı
-                <select name="user_id" required>
-                    <option value="">— seçin —</option>
-                    <?php foreach ($users as $u): ?>
-                        <option value="<?php echo (int) $u['id']; ?>">
-                            <?php echo htmlspecialchars($u['full_name'] . ' (' . $u['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label>Ekip
-                <select name="team_id" required>
-                    <option value="">— seçin —</option>
-                    <?php foreach ($teams as $t): ?>
-                        <option value="<?php echo (int) $t['id']; ?>">
-                            <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label>Rol
-                <select name="role" required>
-                    <?php foreach ($roles as $r): ?>
-                        <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <button type="submit">Ata</button>
-        </form>
-    </div>
-</div>
-<?php require __DIR__ . '/../../src/partials/footer.php'; ?>
+$homeActiveNav = 'admin';
+$homePageTitle = 'BCC-Core — Ekibe Ata';
+require __DIR__ . '/../../src/partials/home_shell_top.php';
+?>
+        <div class="settings-breadcrumb">
+            <a href="/admin/index.php">&larr; Admin paneline dön</a>
+        </div>
+        <div class="home-main-header">
+            <h1>Kullanıcıyı Ekibe Ata</h1>
+        </div>
+
+        <div class="settings-card">
+            <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
+            <form class="settings-form settings-form-stacked" method="post" action="/admin/assign_team.php">
+                <?php echo csrf_field(); ?>
+                <label class="settings-field">Kullanıcı
+                    <select name="user_id" required>
+                        <option value="">— seçin —</option>
+                        <?php foreach ($users as $u): ?>
+                            <option value="<?php echo (int) $u['id']; ?>">
+                                <?php echo htmlspecialchars($u['full_name'] . ' (' . $u['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="settings-field">Ekip
+                    <select name="team_id" required>
+                        <option value="">— seçin —</option>
+                        <?php foreach ($teams as $t): ?>
+                            <option value="<?php echo (int) $t['id']; ?>">
+                                <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="settings-field">Rol
+                    <select name="role" required>
+                        <?php foreach ($roles as $r): ?>
+                            <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <button type="submit" class="settings-btn settings-btn-primary">Ata</button>
+            </form>
+        </div>
+<?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

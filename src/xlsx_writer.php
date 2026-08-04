@@ -64,6 +64,20 @@ function bcc_xlsx_sheet_xml(array $headers, array $rows)
     return $xml;
 }
 
+// Excel sheet adı kuralları: en fazla 31 karakter, \/?*[]: yasak, boş olamaz.
+// Önceden bu fonksiyon hep sabit literal başlıklarla çağrılıyordu
+// ('Kullanıcılar' vb.) ama view_export_xlsx.php artık kullanıcının tablo
+// adını geçiyor — sanitize edilmezse uzun/özel karakterli bir tablo adı
+// bozuk bir .xlsx üretirdi.
+function bcc_xlsx_sanitize_sheet_title($title)
+{
+    $title = preg_replace('/[\\\\\/\?\*\[\]:]/', ' ', (string) $title);
+    $title = trim($title);
+    $title = mb_substr($title, 0, 31, 'UTF-8');
+
+    return $title !== '' ? $title : 'Sayfa1';
+}
+
 /**
  * $headers: sütun başlıkları düz dizi, örn. array('E-posta', 'Ad Soyad').
  * $rows: her biri $headers ile aynı sırada değerler içeren düz diziler.
@@ -71,6 +85,8 @@ function bcc_xlsx_sheet_xml(array $headers, array $rows)
  */
 function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows)
 {
+    $sheetTitle = bcc_xlsx_sanitize_sheet_title($sheetTitle);
+
     $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'

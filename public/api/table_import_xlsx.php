@@ -1,12 +1,13 @@
 <?php
-// AJAX uçnoktası: bir CSV dosyasını mevcut tabloya YENİ kayıtlar olarak aktarır
-// (Airtable'ın sekme dropdown'ındaki "Import data" karşılığı — üstüne yazmaz,
-// ekler). Sekme dropdown'ından çağrılır (public/grid.php, assets/grid-table-data.js).
-// Format: view_export_csv.php'nin ÜRETTİĞİ AYNI format (UTF-8 BOM, ";" ayırıcı,
-// ilk satır alan adları) — dış kütüphane YOK, native fgetcsv() kullanılır.
+// AJAX uçnoktası: bir Excel (.xlsx) dosyasını mevcut tabloya YENİ kayıtlar
+// olarak aktarır (Airtable'ın sekme dropdown'ındaki "Import data" karşılığı —
+// üstüne yazmaz, ekler). Sekme dropdown'ından çağrılır (public/grid.php,
+// assets/grid-table-data.js). Format: view_export_xlsx.php'nin ÜRETTİĞİ AYNI
+// düzen (ilk satır alan adları) — dış kütüphane YOK, src/xlsx_reader.php
+// (ZipArchive ile elle yazılmış okuyucu, xlsx_writer.php'nin ters yönü).
 // Yalnızca tablodaki alan adlarıyla BİREBİR (harf büyüklüğünden bağımsız)
 // eşleşen sütunlar aktarılır; eşleşmeyenler atlanır. "attachment" tipi alanlar
-// hiç eşleştirilmez (CSV hücresinde dosya verisi olamaz).
+// hiç eşleştirilmez (Excel hücresinde dosya verisi olamaz).
 // Her hücre normalize_cell_value() (src/schema.php) ile doğrulanır — cell_update.php
 // ile AYNI TEK doğrulama/tip-dönüştürme fonksiyonu, ikinci bir doğrulama yazılmaz.
 // Geçersiz/eşleşmeyen tek tek HÜCRELER satırı iptal etmez, yalnızca o hücre boş
@@ -14,54 +15,48 @@
 // Güvenlik: CSRF + require_role('editor') + table_id doğrulaması.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
+require __DIR__ . '/../../src/xlsx_reader.php';
 
 api_require_post();
 api_require_login();
 api_require_csrf();
 
-const BCC_CSV_IMPORT_MAX_BYTES = 10 * 1024 * 1024; // 10MB
-const BCC_CSV_IMPORT_MAX_ROWS = 5000;
+const BCC_XLSX_IMPORT_MAX_BYTES = 10 * 1024 * 1024; // 10MB
+const BCC_XLSX_IMPORT_MAX_ROWS = 5000;
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
 
 $table = find_table_or_404($tableId);
 require_role($table['team_id'], 'editor');
 
-if (!isset($_FILES['csv_file']) || !is_uploaded_file($_FILES['csv_file']['tmp_name'])) {
+if (!isset($_FILES['xlsx_file']) || !is_uploaded_file($_FILES['xlsx_file']['tmp_name'])) {
     json_fail(422, 'Dosya alınamadı.');
 }
 
-$upload = $_FILES['csv_file'];
+$upload = $_FILES['xlsx_file'];
 
 if ($upload['error'] !== UPLOAD_ERR_OK) {
     $tooBig = ($upload['error'] === UPLOAD_ERR_INI_SIZE || $upload['error'] === UPLOAD_ERR_FORM_SIZE);
     json_fail(422, $tooBig ? 'Dosya çok büyük.' : 'Dosya yüklenemedi.');
 }
 
-if ($upload['size'] <= 0 || $upload['size'] > BCC_CSV_IMPORT_MAX_BYTES) {
+if ($upload['size'] <= 0 || $upload['size'] > BCC_XLSX_IMPORT_MAX_BYTES) {
     json_fail(422, 'Dosya boyutu 10MB\'ı aşamaz.');
 }
 
 $ext = strtolower(pathinfo((string) $upload['name'], PATHINFO_EXTENSION));
-if ($ext !== 'csv') {
-    json_fail(422, 'Yalnızca .csv dosyaları desteklenir.');
+if ($ext !== 'xlsx') {
+    json_fail(422, 'Yalnızca .xlsx dosyaları desteklenir.');
 }
 
-$handle = fopen($upload['tmp_name'], 'r');
-if (!$handle) {
-    json_fail(422, 'Dosya okunamadı.');
+$sheetRows = bcc_xlsx_read_first_sheet($upload['tmp_name']);
+if (empty($sheetRows)) {
+    json_fail(422, 'Dosya okunamadı veya geçersiz bir Excel dosyası.');
 }
 
-$headerRow = fgetcsv($handle, 0, ';');
-if ($headerRow === false || empty($headerRow)) {
-    fclose($handle);
+$headerRow = array_shift($sheetRows);
+if (empty($headerRow)) {
     json_fail(422, 'Dosyada başlık satırı bulunamadı.');
-}
-
-// view_export_csv.php'nin yazdığı UTF-8 BOM'u — yalnızca ilk sütun adının
-// başında olabilir, header eşleşmesini bozmaması için temizleniyor.
-if (isset($headerRow[0]) && substr($headerRow[0], 0, 3) === "\xEF\xBB\xBF") {
-    $headerRow[0] = substr($headerRow[0], 3);
 }
 
 $fields = bcc_fetch_all(
@@ -71,9 +66,9 @@ $fields = bcc_fetch_all(
 
 // Zorunlu alanlar — cell_update.php'nin uyguladığı AYNI kural (bulunan gerçek
 // bug: import bunu hiç kontrol etmiyordu, cell_update.php'de reddedilen boş bir
-// zorunlu değer CSV'den sessizce geçiyordu). 'attachment' hiçbir zaman CSV'den
-// doldurulamayacağı için (zaten $fieldByName'e hiç girmiyor) buradan da hariç —
-// yoksa alakasız bir zorunlu dosya-eki alanı TÜM satırları eler.
+// zorunlu değer içe aktarımdan sessizce geçiyordu). 'attachment' hiçbir zaman
+// Excel'den doldurulamayacağı için (zaten $fieldByName'e hiç girmiyor) buradan
+// da hariç — yoksa alakasız bir zorunlu dosya-eki alanı TÜM satırları eler.
 $requiredFieldIds = array();
 foreach ($fields as $f) {
     if ($f['field_type'] !== 'attachment' && (int) $f['is_required'] === 1) {
@@ -82,7 +77,7 @@ foreach ($fields as $f) {
 }
 
 // Sütun adı → alan eşlemesi, harf büyüklüğünden bağımsız tam eşleşme.
-// 'attachment' BİLEREK haritaya girmiyor (yorum: CSV hücresinde dosya verisi olamaz).
+// 'attachment' BİLEREK haritaya girmiyor (yorum: Excel hücresinde dosya verisi olamaz).
 $fieldByName = array();
 foreach ($fields as $f) {
     if ($f['field_type'] === 'attachment') {
@@ -91,7 +86,7 @@ foreach ($fields as $f) {
     $fieldByName[mb_strtolower(trim($f['name']), 'UTF-8')] = $f;
 }
 
-// Her CSV sütununun karşılık geldiği alanı (varsa) baştan çözüyoruz —
+// Her Excel sütununun karşılık geldiği alanı (varsa) baştan çözüyoruz —
 // satır satır tekrar tekrar isim aramamak için.
 $columnFields = array();
 $unmatchedColumns = array();
@@ -106,12 +101,11 @@ foreach ($headerRow as $colIndex => $colName) {
 }
 
 if (empty(array_filter($columnFields))) {
-    fclose($handle);
     json_fail(422, 'Hiçbir sütun tablodaki alanlarla eşleşmedi.');
 }
 
 // 'user' tipi hücreler için: normalize_cell_value() ham değeri users.id (rakam)
-// bekliyor, ama export'un gösterdiği (ve kullanıcıların CSV'de düzenleyeceği)
+// bekliyor, ama export'un gösterdiği (ve kullanıcıların dosyada düzenleyeceği)
 // değer full_name — bu yüzden import'a ÖZEL, isimden id'ye ters bir eşleme
 // hazırlanıyor (normalize_cell_value'nun kendisi DEĞİŞTİRİLMİYOR).
 $usersById = bcc_team_users_by_id($table['team_id']);
@@ -121,19 +115,23 @@ foreach ($usersById as $uid => $uname) {
 }
 
 $rows = array();
-$rowCount = 0;
-while (($row = fgetcsv($handle, 0, ';')) !== false) {
-    if ($row === array(null) || (count($row) === 1 && trim((string) $row[0]) === '')) {
-        continue; // boş satır
+foreach ($sheetRows as $row) {
+    $isBlank = true;
+    foreach ($row as $cellValue) {
+        if (trim((string) $cellValue) !== '') {
+            $isBlank = false;
+            break;
+        }
     }
-    $rowCount++;
-    if ($rowCount > BCC_CSV_IMPORT_MAX_ROWS) {
-        fclose($handle);
-        json_fail(422, 'Dosya çok fazla satır içeriyor (limit: ' . BCC_CSV_IMPORT_MAX_ROWS . ').');
+    if ($isBlank) {
+        continue; // boş satır
     }
     $rows[] = $row;
 }
-fclose($handle);
+
+if (count($rows) > BCC_XLSX_IMPORT_MAX_ROWS) {
+    json_fail(422, 'Dosya çok fazla satır içeriyor (limit: ' . BCC_XLSX_IMPORT_MAX_ROWS . ').');
+}
 
 if (empty($rows)) {
     json_fail(422, 'Dosyada aktarılacak veri satırı bulunamadı.');
@@ -174,6 +172,11 @@ try {
 
             // 'date'/'user' için export-format → normalize_cell_value'nun
             // beklediği ham girdi biçimine dönüştürme (yukarıdaki yorum).
+            // Gerçek Excel'de oluşturulmuş bir dosyada tarih hücresi zaten
+            // xlsx_reader.php tarafından 'Y-m-d'ye çevrilmiş olarak gelir —
+            // bu durumda aşağıdaki d.m.Y ayrıştırması round-trip etmez ve ham
+            // değer değişmeden normalize_cell_value'nun kendi Y-m-d
+            // doğrulamasına düşer, ki bu da onu zaten kabul eder.
             if ($field['field_type'] === 'date') {
                 $d = DateTime::createFromFormat('d.m.Y', trim($rawValue));
                 if ($d && $d->format('d.m.Y') === trim($rawValue)) {
@@ -184,6 +187,17 @@ try {
                 if (!ctype_digit(trim($rawValue)) && isset($userIdByName[$nameKey])) {
                     $rawValue = (string) $userIdByName[$nameKey];
                 }
+            } elseif ($field['field_type'] === 'checkbox') {
+                // Bulunan gerçek bug: cell_display_text() export'ta 'İşaretli'/
+                // 'İşaretsiz' yazıyor (src/schema.php:783) ama normalize_cell_value()
+                // yalnızca '1'i işaretli sayıyor — bu satır olmadan işaretli bir
+                // kutu export edilip geri içe aktarılınca SESSİZCE işaretsize
+                // dönüyordu (aynı hata CSV döneminde de vardı, round-trip testiyle
+                // burada yakalandı). Türkçe İ/i büyük/küçük harf dönüşümü locale'e
+                // göre tutarsız olduğu için (mb_strtolower riskli) sabit literal
+                // ile birebir karşılaştırılıyor — bu string yalnızca export'un
+                // kendi ürettiği sabit metin, kullanıcı serbestçe yazmıyor.
+                $rawValue = (trim($rawValue) === 'İşaretli') ? '1' : '0';
             }
 
             $result = normalize_cell_value($field['field_type'], $field['options'], $rawValue, $usersById);
@@ -234,7 +248,7 @@ try {
 
     bcc_commit();
 
-    log_audit('table.import_csv', 'table', $table['id'], array(
+    log_audit('table.import_xlsx', 'table', $table['id'], array(
         'imported' => $imported,
         'skipped_cells' => $skippedCells,
         'skipped_rows' => $skippedRows,

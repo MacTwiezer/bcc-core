@@ -498,11 +498,15 @@
         // htmlspecialchars ile yazılmıştı, ham kullanıcı girdisi değil).
         editable.innerHTML = raw;
 
-        function makeToolbarButton(label, title, onClick) {
+        function makeToolbarButton(label, title, onClick, isIcon) {
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'richtext-toolbar-btn';
-            btn.textContent = label;
+            if (isIcon) {
+                btn.innerHTML = label;
+            } else {
+                btn.textContent = label;
+            }
             btn.title = title;
             // mousedown'da preventDefault: contenteditable'daki metin seçimi
             // buton tıklamasıyla kaybolmasın — execCommand mevcut seçime
@@ -526,7 +530,17 @@
         });
         italicBtn.style.fontStyle = 'italic';
 
-        var linkBtn = makeToolbarButton('🔗', 'Link ekle', function () {
+        // Emoji (🔗) yerine SVG ikon — B/i metin glifleriyle (Google Docs/Notion
+        // paritesi, tanıdık bir konvansiyon) tutarlı olsun diye tarayıcıya/işletim
+        // sistemine göre renkli/farklı render olan emoji yerine, uygulamanın geri
+        // kalanındaki ince çizgili ikon diliyle (bkz. grid.php'deki diğer SVG'ler)
+        // aynı stil kullanılıyor.
+        var linkIconSvg = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none">'
+            + '<path d="M8.5 11.5a3 3 0 004.24 0l2.5-2.5a3 3 0 10-4.24-4.24l-1 1" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+            + '<path d="M11.5 8.5a3 3 0 00-4.24 0l-2.5 2.5a3 3 0 104.24 4.24l1-1" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+            + '</svg>';
+
+        var linkBtn = makeToolbarButton(linkIconSvg, 'Link ekle', function () {
             var url = window.prompt('Link URL:', 'https://');
             if (!url) {
                 return;
@@ -537,7 +551,7 @@
             }
             editable.focus();
             document.execCommand('createLink', false, url);
-        });
+        }, true);
 
         toolbar.appendChild(boldBtn);
         toolbar.appendChild(italicBtn);
@@ -551,7 +565,10 @@
         cancelBtn.textContent = 'İptal';
         var saveBtn = document.createElement('button');
         saveBtn.type = 'button';
-        saveBtn.className = 'btn-sm';
+        // gs-view-desc-save vb. diğer "Kaydet" butonlarıyla AYNI sınıf
+        // (grid-shell.css) — önceden İptal ile aynı nötr .btn-sm'ydi, birincil/
+        // ikincil aksiyon ayrımı yoktu.
+        saveBtn.className = 'gs-btn-primary';
         saveBtn.textContent = 'Kaydet';
         actions.appendChild(cancelBtn);
         actions.appendChild(saveBtn);
@@ -939,5 +956,6 @@
         deleteAttachment: deleteAttachment,
         renderAttachmentChips: renderAttachmentChips,
         buildAttachmentManager: buildAttachmentManager,
+        renumberRows: renumberRows,
     };
 })();

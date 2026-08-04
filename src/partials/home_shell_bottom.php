@@ -5,9 +5,9 @@
     </main>
 </div>
 
-<script src="/assets/dismissable-panel.js" defer></script>
-<script src="/assets/account-menu.js" defer></script>
-<script src="/assets/home.js" defer></script>
+<script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
 <script>
 (function () {
     var sidebar = document.getElementById('home-sidebar');

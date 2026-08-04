@@ -60,6 +60,30 @@ $bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? '
 $bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
 $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.php?base_id=' . (int) $baseId . '&table_id=' . (int) $tableId;
 
+// D1 "Paylaş" popup — grid.php'deki AYNI Airtable Share paritesi (People with
+// access özeti + mevcut kullanıcılar arasından hızlı atama), burada da $base
+// üzerinden AYNI mantık. Kod tekrarı yok: bcc_assignable_roles() (src/auth.php).
+$myRank = $GLOBALS['BCC_ROLE_RANK'][current_user_role_in_team($base['team_id'])];
+$shareAssignableRoles = bcc_assignable_roles($myRank);
+$shareCollaborators = bcc_fetch_all(
+    'SELECT u.id, u.full_name, u.email
+     FROM team_members tm
+     INNER JOIN users u ON u.id = tm.user_id
+     WHERE tm.team_id = :team_id AND u.is_active = 1
+     ORDER BY u.full_name',
+    array('team_id' => $base['team_id'])
+);
+$shareCollaboratorPreview = array_slice($shareCollaborators, 0, 4);
+$shareCollaboratorExtraCount = count($shareCollaborators) - count($shareCollaboratorPreview);
+
+$shareExistingIds = array_map('intval', array_column($shareCollaborators, 'id'));
+$shareCandidateUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY full_name');
+if (!empty($shareExistingIds)) {
+    $shareCandidateUsers = array_values(array_filter($shareCandidateUsers, function ($candidate) use ($shareExistingIds) {
+        return !in_array((int) $candidate['id'], $shareExistingIds, true);
+    }));
+}
+
 ?>
 <!doctype html>
 <html lang="tr">
@@ -68,24 +92,24 @@ $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.p
 <title>BCC-Core — <?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
-<script src="/assets/theme-init.js"></script>
-<link rel="stylesheet" href="/assets/theme.css">
+<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <!-- Dosya eki (attachment) rozet/küçük resim stilleri (.attachment-*) style.css'te
      tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
      kopya YAZILMADI. -->
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
 <!-- E3/E1: "Bcc-Core ▾" menüsü + Share popover, grid.php'nin .gs-table-tab-menu-*/
      .share-popover-* sınıflarını kullanıyor — ikinci bir kopya YAZILMADI,
      grid-shell.css bu yüzden burada da yüklü (yalnızca .gs-*/.share-popover-*
      kapsamlı kurallar geçerli olur, grid.php'ye özgü .gs-body/.gs-rail vb.
      bu sayfada hiç eşleşmez). -->
-<link rel="stylesheet" href="/assets/grid-shell.css">
-<link rel="stylesheet" href="/assets/interface.css?v=<?php echo (int) @filemtime(__DIR__ . '/assets/interface.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('interface.css'); ?>">
 <!-- Bildirim paneli + hesap menüsü partial'ları home.css'teki .home-notif-*/
      paylaşılan sınıfları kullanıyor (bkz. src/partials/notifications_panel.php
      yorumu) — grid.php'nin de aynı gerekçeyle style.css/grid-shell.css'in
      YANINDA home.css yüklemesiyle AYNI desen, ikinci bir kopya YOK. -->
-<link rel="stylesheet" href="/assets/home.css">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
 </head>
 <body class="if-page">
 
@@ -152,12 +176,67 @@ $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.p
             ?>
             <div class="if-nav-spacer" aria-hidden="true"></div>
 
-            <!-- E1 — grid.php'deki D2/D3 "Share" popover'ıyla AYNI mekanizma
-                 (share-popover.js + .share-popover-form), ikinci bir kopya YOK. -->
-            <details class="if-nav-share gs-tool-details share-popover-trigger" name="if-nav-share">
-                <summary class="if-nav-icon-btn if-nav-share-btn" aria-label="Paylaş" title="Paylaş">
+            <!-- D1 — grid.php'deki AYNI Airtable Share paritesi (collab-popover-*),
+                 ikinci bir kopya YOK. .if-nav-bottom içindeki konumlandırma
+                 düzeltmesi (sağa açılma) interface.css'te. -->
+            <details class="if-nav-collab-share gs-tool-details collab-popover-trigger" name="if-nav-share">
+                <summary class="if-nav-icon-btn if-nav-collab-share-btn" aria-label="Paylaş" title="Paylaş">
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="5" cy="10" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="15" cy="15" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><path d="M6.9 8.8l6.2-2.6M6.9 11.2l6.2 2.6" stroke="#5a4a00" stroke-width="1.4"/></svg>
                     <span class="if-nav-bottom-label">Paylaş</span>
+                </summary>
+                <div class="collab-popover-form">
+                    <div class="collab-popover-title">"<?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?>" paylaş</div>
+
+                    <form class="collab-popover-assign" method="post" action="/team_members.php?team_id=<?php echo (int) $base['team_id']; ?>">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="assign">
+                        <?php if (empty($shareCandidateUsers)): ?>
+                            <p class="collab-popover-note">Eklenebilecek başka aktif kullanıcı yok.</p>
+                        <?php else: ?>
+                            <label class="collab-popover-field">
+                                <select name="user_id" required>
+                                    <option value="">Kullanıcı ara ve seç...</option>
+                                    <?php foreach ($shareCandidateUsers as $cu): ?>
+                                        <option value="<?php echo (int) $cu['id']; ?>">
+                                            <?php echo htmlspecialchars($cu['full_name'] . ' (' . $cu['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="collab-popover-field collab-popover-field-role">
+                                <select name="role" required>
+                                    <?php foreach ($shareAssignableRoles as $r): ?>
+                                        <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <button type="submit" class="btn-sm">Ekle</button>
+                        <?php endif; ?>
+                    </form>
+
+                    <a class="collab-popover-people" href="/team_members.php?team_id=<?php echo (int) $base['team_id']; ?>">
+                        <div class="collab-popover-avatars">
+                            <?php foreach ($shareCollaboratorPreview as $c): ?>
+                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <span class="collab-popover-people-label">
+                            <?php echo count($shareCollaborators); ?> kişinin erişimi var<?php echo $shareCollaboratorExtraCount > 0 ? ' (+' . (int) $shareCollaboratorExtraCount . ')' : ''; ?>
+                        </span>
+                    </a>
+                </div>
+            </details>
+
+            <!-- E1 — eski "Paylaş" (view-link kopyalama), grid.php'nin "Bağlantı"sıyla
+                 AYNI ad değişikliği — yukarıdaki YENİ collaborators "Paylaş"'ıyla
+                 karışmasın diye (share-popover.js + .share-popover-form, ikinci
+                 bir kopya YOK). -->
+            <details class="if-nav-share gs-tool-details share-popover-trigger" name="if-nav-share">
+                <summary class="if-nav-icon-btn if-nav-share-btn" aria-label="Bağlantı" title="Bağlantı">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span class="if-nav-bottom-label">Bağlantı</span>
                 </summary>
                 <div class="share-popover-form">
                     <div class="share-popover-label">Bağlantıyı paylaş</div>
@@ -302,10 +381,10 @@ $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.p
      yaşıyor, ikinci bir kopya YAZILMAZ — home.js'deki TÜM diğer bloklar
      (arama popover'ı, starred listesi, kart/liste görünüm) bu sayfada
      bulunmayan elemanlara bakar ve null-check'li olduğu için no-op kalır. -->
-<script src="/assets/dismissable-panel.js" defer></script>
-<script src="/assets/account-menu.js" defer></script>
-<script src="/assets/home.js" defer></script>
-<script src="/assets/share-popover.js" defer></script>
-<script src="/assets/interface.js?v=<?php echo (int) @filemtime(__DIR__ . '/assets/interface.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('interface.js'); ?>" defer></script>
 </body>
 </html>

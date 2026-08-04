@@ -3,6 +3,7 @@
 require __DIR__ . '/../../src/bootstrap.php';
 
 require_admin();
+$user = current_user();
 
 $error = null;
 $success = null;
@@ -48,38 +49,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-$pageTitle = 'Yeni Kullanıcı';
-require __DIR__ . '/../../src/partials/header.php';
-require __DIR__ . '/../../src/partials/top_nav.php';
-?>
-<div class="page">
-    <h1>Yeni Kullanıcı Oluştur</h1>
-    <p><a href="/admin/index.php">&larr; Admin paneline dön</a></p>
+// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
 
-    <div class="card">
-        <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
-        <form class="stacked" method="post" action="/admin/create_user.php">
-            <?php echo csrf_field(); ?>
-            <label>E-posta
-                <input type="email" name="email" value="<?php echo htmlspecialchars(isset($email) ? $email : '', ENT_QUOTES, 'UTF-8'); ?>" required>
-            </label>
-            <label>Ad Soyad
-                <input type="text" name="full_name" value="<?php echo htmlspecialchars(isset($fullName) ? $fullName : '', ENT_QUOTES, 'UTF-8'); ?>" required>
-            </label>
-            <label>Şifre (en az 8 karakter)
-                <div class="input-with-toggle">
-                    <input type="password" name="password" required minlength="8" maxlength="72">
-                    <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
-                    </button>
+$homeActiveNav = 'admin';
+$homePageTitle = 'BCC-Core — Yeni Kullanıcı';
+require __DIR__ . '/../../src/partials/home_shell_top.php';
+?>
+        <div class="settings-breadcrumb">
+            <a href="/admin/index.php">&larr; Admin paneline dön</a>
+        </div>
+        <div class="home-main-header">
+            <h1>Yeni Kullanıcı Oluştur</h1>
+        </div>
+
+        <div class="settings-card">
+            <?php require __DIR__ . '/../../src/partials/flash.php'; ?>
+            <form class="settings-form settings-form-stacked" method="post" action="/admin/create_user.php">
+                <?php echo csrf_field(); ?>
+                <label class="settings-field">E-posta
+                    <input type="email" name="email" value="<?php echo htmlspecialchars(isset($email) ? $email : '', ENT_QUOTES, 'UTF-8'); ?>" required>
+                </label>
+                <label class="settings-field">Ad Soyad
+                    <input type="text" name="full_name" value="<?php echo htmlspecialchars(isset($fullName) ? $fullName : '', ENT_QUOTES, 'UTF-8'); ?>" required>
+                </label>
+                <label class="settings-field">Şifre (en az 8 karakter)
+                    <div class="input-with-toggle">
+                        <input type="password" name="password" required minlength="8" maxlength="72">
+                        <button type="button" class="input-toggle-btn" aria-label="Şifreyi göster">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5-8-5.5-8-5.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.3" stroke="currentColor" stroke-width="1.4"/></svg>
+                        </button>
+                    </div>
+                </label>
+                <div class="settings-form-actions">
+                    <button type="submit" class="settings-btn settings-btn-primary">Oluştur</button>
+                    <a href="/admin/index.php" class="settings-cancel-link">İptal</a>
                 </div>
-            </label>
-            <div class="form-actions">
-                <button type="submit">Oluştur</button>
-                <a href="/admin/index.php" class="form-cancel-link">İptal</a>
-            </div>
-        </form>
-    </div>
-</div>
-<script src="/assets/password-toggle.js" defer></script>
-<?php require __DIR__ . '/../../src/partials/footer.php'; ?>
+            </form>
+        </div>
+<script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
+<?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

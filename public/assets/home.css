@@ -1211,7 +1211,7 @@ a.ws-detail-btn:hover {
 .tm-msg-success { color: #1a7f37; font-weight: 600; margin: 0 0 1rem; }
 
 /* ---------- team_members.php — görsel 2 (Airtable "Collaborators" tam paneli):
-   arama/filtre/CSV toolbar + toplu seçim + tablo. .ws-detail'in 640px max-width'i
+   arama/filtre/Excel indir toolbar + toplu seçim + tablo. .ws-detail'in 640px max-width'i
    5 kolonlu bir tablo için dar kalıyor, .tm-detail ile genişletiliyor. */
 
 .tm-detail { max-width: 880px; }
@@ -1640,7 +1640,7 @@ a.ws-detail-btn:hover {
     max-width: 320px;
 }
 
-.input-with-toggle .account-input { padding-right: 2.4rem; }
+.input-with-toggle input { padding-right: 2.4rem; }
 
 .input-toggle-btn {
     position: absolute;
@@ -1760,4 +1760,509 @@ a.ws-detail-btn:hover {
     font-weight: 600;
     font-size: 0.88rem;
     color: var(--bcc-text);
+}
+
+/* ---------------------------------------------------------------------
+   Settings/CRUD sayfaları (bases.php, base_tables.php, table_fields.php,
+   slack_settings.php, admin/*) — ws-card/tm-table/account-btn ile AYNI
+   tasarım dilini paylaşan, tek noktadan yönetilen ORTAK bileşen seti.
+   Bu sayfa ailesi kendi ws-*/tm-*/account-* önekini icat etmek yerine
+   burayı kullanır — sekiz sayfa arasında ikinci bir kopya YOK.
+   ------------------------------------------------------------------- */
+
+.settings-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+    margin-bottom: 0.9rem;
+}
+
+.settings-breadcrumb a {
+    color: var(--bcc-accent-strong);
+    text-decoration: none;
+}
+
+.settings-breadcrumb a:hover { text-decoration: underline; }
+
+.settings-card {
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.5rem;
+}
+
+.settings-card h2 {
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+}
+
+.settings-card h2 .settings-pill { margin-left: 0.4rem; vertical-align: middle; }
+
+.settings-empty {
+    color: var(--bcc-text-muted);
+    font-size: 0.9rem;
+}
+
+.settings-hint {
+    color: var(--bcc-text-muted);
+    font-size: 0.85rem;
+}
+
+.settings-pill {
+    display: inline-block;
+    background: var(--bcc-surface-hover);
+    border: 1px solid var(--bcc-border);
+    border-radius: 999px;
+    padding: 0.1rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.settings-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+}
+
+.settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.settings-table th,
+.settings-table td {
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--bcc-border);
+    vertical-align: middle;
+}
+
+.settings-table thead th {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--bcc-surface-sunken);
+}
+
+.settings-table tbody tr:last-child td { border-bottom: none; }
+.settings-table tbody tr:hover { background: var(--bcc-surface-sunken); }
+
+.settings-table-type-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    background-size: 14px 14px;
+    vertical-align: -3px;
+    margin-right: 0.3rem;
+}
+
+.settings-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.settings-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    align-items: flex-end;
+}
+
+.settings-form.settings-form-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 420px;
+}
+
+.settings-form-stacked .settings-btn { align-self: flex-start; }
+
+.settings-card > .settings-form:not(:first-child),
+.settings-card > .settings-hint:not(:first-child) {
+    margin-top: 1.25rem;
+}
+
+.settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.settings-field input[type="text"],
+.settings-field input[type="email"],
+.settings-field input[type="password"],
+.settings-field input[type="url"],
+.settings-field textarea,
+.settings-field select {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 360px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--bcc-text);
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    min-width: 220px;
+}
+
+.settings-field textarea { max-width: 100%; resize: vertical; }
+
+/* Şifre göster/gizle ikonlu input (admin/create_user.php) — .settings-form
+   içindeki .input-with-toggle sarmalayıcı da FULL WIDTH olmalı, aksi halde
+   mutlak konumlanan buton görünen input'un dışında kalır (bulunan gerçek
+   bug: sarmalayıcı yalnızca max-width alıyordu, width:100% almıyordu). */
+.settings-field .input-with-toggle { display: block; width: 100%; max-width: 320px; }
+
+.settings-field-checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.settings-field-checkbox input { width: auto; }
+
+.settings-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--bcc-surface-hover);
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.settings-btn:hover { background: var(--bcc-border); text-decoration: none; }
+.settings-btn:disabled { opacity: 0.45; cursor: default; }
+.settings-btn:disabled:hover { background: var(--bcc-surface-hover); }
+
+.settings-btn-primary {
+    background: var(--bcc-accent);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-surface);
+}
+
+.settings-btn-primary:hover { background: var(--bcc-accent-strong); border-color: var(--bcc-accent-strong); }
+
+.settings-btn-danger {
+    background: var(--bcc-danger-soft);
+    border-color: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+}
+
+.settings-btn-danger:hover { background: var(--bcc-danger-soft); filter: brightness(0.95); }
+
+.settings-btn-sm {
+    padding: 0.28rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+.settings-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 0.4rem;
+}
+
+.settings-cancel-link {
+    color: var(--bcc-text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.settings-cancel-link:hover { color: var(--bcc-text); }
+
+/* ---------- Admin paneli (Airtable benzeri liste/pill görünümü) ----------
+   style.css'ten TAŞINDI (admin/index.php home-shell'e geçti, başka kullanan
+   yok, ikinci bir kopya YOK). */
+
+.admin-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.admin-section-header h2 { margin: 0; }
+
+.admin-section-count { color: var(--bcc-text-muted); font-size: 0.85rem; font-weight: 500; }
+
+table.admin-table { border-collapse: collapse; width: 100%; }
+
+table.admin-table thead th {
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--bcc-text-muted);
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+table.admin-table tbody td {
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid var(--bcc-border);
+    vertical-align: middle;
+}
+
+table.admin-table tbody tr:last-child td { border-bottom: none; }
+
+table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
+
+.admin-user-cell { display: flex; align-items: center; gap: 0.65rem; }
+
+.admin-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bcc-accent);
+    color: var(--bcc-surface);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.admin-user-name { font-weight: 600; font-size: 0.9rem; }
+.admin-user-email { font-size: 0.8rem; color: var(--bcc-text-muted); }
+.admin-muted { color: var(--bcc-text-muted); font-size: 0.85rem; }
+
+.admin-pill {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-pill-blue   { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
+.admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
+/* Bulunan gerçek bug: kardeşleri (blue hariç) sabit renk ÇİFTİ kullanırken bu
+   sabit zemin + tema-duyarlı metin (var(--bcc-text-muted)) karışımıydı —
+   koyu temada metin açılıp sabit açık zeminle düşük kontrasta düşüyordu. */
+.admin-pill-gray   { background: #eceef1; color: #5f6368; }
+.admin-pill-amber  { background: #fef3e2; color: #b45309; }
+.admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
+
+.admin-team-block { margin-bottom: 1.5rem; }
+.admin-team-block:last-child { margin-bottom: 0; }
+
+.admin-team-header { margin-bottom: 0.5rem; }
+.admin-team-header h3 { margin: 0; font-size: 0.95rem; }
+
+.admin-empty { color: var(--bcc-text-muted); font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
+
+.admin-add-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--bcc-accent-strong);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    padding: 0.4rem 0;
+}
+
+.admin-add-link:hover { text-decoration: underline; }
+
+.admin-actions-row {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+}
+
+.admin-toolbar-end { justify-content: flex-end; margin-bottom: 0.75rem; }
+
+.admin-search-input {
+    flex: 1;
+    max-width: 280px;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.admin-xlsx-link {
+    color: var(--bcc-accent-strong);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.admin-xlsx-link:hover { text-decoration: underline; }
+
+table.admin-table th.admin-checkbox-col,
+table.admin-table td.admin-checkbox-cell { width: 30px; padding-right: 0; }
+
+table.admin-table th.admin-actions-col,
+table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
+
+.admin-row-checkbox,
+.admin-select-all { cursor: pointer; }
+
+/* "..." satır menüsü ve "İşlemler" bulk menüsü — home-base-more-menu ile
+   aynı <details>+dışarı-tık desenini kullanır (bkz. admin.js). */
+.admin-menu { position: relative; display: inline-block; }
+.admin-menu > summary { list-style: none; }
+.admin-menu > summary::-webkit-details-marker { display: none; }
+
+.admin-row-menu-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.admin-row-menu-btn:hover { background: var(--bcc-surface-hover); }
+
+.admin-menu-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 190px;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.35rem;
+    z-index: 30;
+}
+
+.admin-menu-panel form { display: block; }
+
+.admin-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--bcc-text);
+    cursor: pointer;
+}
+
+.admin-menu-item:hover { background: var(--bcc-surface-hover); }
+.admin-menu-item:disabled { color: #b8b8bc; cursor: not-allowed; }
+.admin-menu-item:disabled:hover { background: none; }
+.admin-menu-item-danger { color: var(--bcc-danger); }
+
+.admin-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.6rem 0 0.9rem;
+}
+
+.admin-bulk-trigger {
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-surface);
+    border: none;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.admin-bulk-trigger:hover { background: var(--bcc-accent-strong); }
+
+.admin-bulk-trigger-muted {
+    background: #eceef1;
+    color: var(--bcc-text);
+}
+
+.admin-bulk-trigger-muted:hover { background: var(--bcc-surface-hover); }
+
+details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none; }
+
+/* Color: table_fields.php "Alanı Düzenle" formundaki seçenek başına renk
+   seçici — style.css'ten TAŞINDI (başka kullanan kalmadı, ikinci kopya YOK). */
+.choice-color-picker { margin-top: 0.5rem; }
+
+.choice-color-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+}
+
+.choice-color-choice-name {
+    min-width: 90px;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.choice-color-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.choice-color-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    margin-right: 0.3rem;
+}
+
+.choice-color-input:checked + .choice-color-swatch {
+    border-color: var(--bcc-text);
+}
+
+.choice-color-input:focus-visible + .choice-color-swatch {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
 }

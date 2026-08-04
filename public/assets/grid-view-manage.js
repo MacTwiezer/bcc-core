@@ -174,13 +174,13 @@
             });
         }
 
-        // ---- Download CSV — aktif URL state'i (sort/filter/hidden_fields) AYNEN
-        // /api/view_export_csv.php'ye taşınır, ikinci bir state okuma/parse YOK.
-        var downloadItem = document.getElementById('gs-view-download-csv-item');
+        // ---- Excel indir — aktif URL state'i (sort/filter/hidden_fields) AYNEN
+        // /api/view_export_xlsx.php'ye taşınır, ikinci bir state okuma/parse YOK.
+        var downloadItem = document.getElementById('gs-view-download-xlsx-item');
         if (downloadItem) {
             downloadItem.addEventListener('click', function () {
                 closeOptionsMenu();
-                window.location.href = '/api/view_export_csv.php' + window.location.search;
+                window.location.href = '/api/view_export_xlsx.php' + window.location.search;
             });
         }
 

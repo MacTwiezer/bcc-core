@@ -89,6 +89,8 @@
         var prevBtn = document.getElementById('grid-detail-prev');
         var nextBtn = document.getElementById('grid-detail-next');
         var selectAll = document.getElementById('grid-rownum-selectall');
+        var deleteSelectedBtn = document.getElementById('gs-delete-selected-btn');
+        var deleteSelectedCountEl = document.getElementById('gs-delete-selected-count');
         var commentsList = document.getElementById('grid-detail-comments-list');
         var commentsForm = document.getElementById('grid-detail-comments-form');
         var commentsInput = document.getElementById('grid-detail-comments-input');
@@ -322,27 +324,41 @@
             return mysqlDatetime ? mysqlDatetime.substr(0, 16).replace('T', ' ') : '';
         }
 
+        // Avatar: .ws-collab-avatar (home.css) yeniden kullanılır — grid.php zaten
+        // home.css'i yüklüyor (collab-popover-avatar de aynı sınıfı paylaşıyor),
+        // ikinci bir avatar bileşeni YAZILMAZ. İlk harf, bcc_user_initial()
+        // (src/auth.php) ile AYNI mantık: ad'ın ilk karakteri, büyük harf.
         function buildCommentItem(c) {
             var item = document.createElement('div');
             item.className = 'grid-detail-comment';
             item.setAttribute('data-comment-id', c.id);
 
+            var authorName = c.author_name || 'Silinmiş kullanıcı';
+
+            var avatar = document.createElement('div');
+            avatar.className = 'ws-collab-avatar grid-detail-comment-avatar';
+            avatar.textContent = authorName.charAt(0).toUpperCase();
+            item.appendChild(avatar);
+
+            var main = document.createElement('div');
+            main.className = 'grid-detail-comment-main';
+
             var meta = document.createElement('div');
             meta.className = 'grid-detail-comment-meta';
             var author = document.createElement('span');
             author.className = 'grid-detail-comment-author';
-            author.textContent = c.author_name || 'Silinmiş kullanıcı';
+            author.textContent = authorName;
             meta.appendChild(author);
             var date = document.createElement('span');
             date.className = 'grid-detail-comment-date';
             date.textContent = formatCommentDate(c.created_at);
             meta.appendChild(date);
-            item.appendChild(meta);
+            main.appendChild(meta);
 
             var body = document.createElement('div');
             body.className = 'grid-detail-comment-body';
             body.textContent = c.body;
-            item.appendChild(body);
+            main.appendChild(body);
 
             if (c.is_own) {
                 var actions = document.createElement('div');
@@ -366,8 +382,10 @@
                 });
                 actions.appendChild(delBtn);
 
-                item.appendChild(actions);
+                main.appendChild(actions);
             }
+
+            item.appendChild(main);
 
             return item;
         }
@@ -524,6 +542,28 @@
             }
         }
 
+        function getSelectedRows() {
+            return getAllDataRows().filter(function (tr) {
+                var cb = tr.querySelector('.grid-row-select');
+                return cb && cb.checked;
+            });
+        }
+
+        // Ölü delete_record handler'ının yerini alan toplu silme — checkbox
+        // seçimi zaten vardı (yalnızca .is-row-selected görsel vurgusu yapıyordu),
+        // burada bir "Seçilenleri sil" butonuna bağlanıyor. Buton grid.php'de
+        // yalnızca $canEdit iken render edilir (bkz. gs-delete-selected-btn).
+        function updateDeleteButtonState() {
+            if (!deleteSelectedBtn) {
+                return;
+            }
+            var count = getSelectedRows().length;
+            deleteSelectedBtn.hidden = count === 0;
+            if (deleteSelectedCountEl) {
+                deleteSelectedCountEl.textContent = String(count);
+            }
+        }
+
         function updateSelectAllState() {
             if (!selectAll) {
                 return;
@@ -559,6 +599,7 @@
                 tr.classList.toggle('is-row-selected', e.target.checked);
             }
             updateSelectAllState();
+            updateDeleteButtonState();
         });
 
         if (selectAll) {
@@ -572,6 +613,74 @@
                     tr.classList.toggle('is-row-selected', checked);
                 });
                 selectAll.indeterminate = false;
+                updateDeleteButtonState();
+            });
+        }
+
+        if (deleteSelectedBtn) {
+            deleteSelectedBtn.addEventListener('click', function () {
+                var selectedRows = getSelectedRows();
+                if (!selectedRows.length) {
+                    return;
+                }
+
+                var confirmMsg = selectedRows.length === 1
+                    ? 'Seçili 1 kaydı silmek istediğinize emin misiniz?'
+                    : 'Seçili ' + selectedRows.length + ' kaydı silmek istediğinize emin misiniz?';
+                if (!window.confirm(confirmMsg)) {
+                    return;
+                }
+
+                var tableId = deleteSelectedBtn.getAttribute('data-table-id');
+                var body = new URLSearchParams();
+                body.append('csrf_token', CSRF);
+                body.append('table_id', tableId);
+                selectedRows.forEach(function (tr) {
+                    body.append('record_ids[]', tr.getAttribute('data-record-id'));
+                });
+
+                deleteSelectedBtn.disabled = true;
+
+                fetch('/api/record_delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () {
+                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                    });
+                }).then(function (data) {
+                    deleteSelectedBtn.disabled = false;
+
+                    if (!data || !data.ok) {
+                        window.alert((data && data.error) || 'Kayıtlar silinemedi.');
+                        return;
+                    }
+
+                    var deletedIds = (data.deleted_record_ids || []).map(String);
+                    selectedRows.forEach(function (tr) {
+                        if (deletedIds.indexOf(tr.getAttribute('data-record-id')) !== -1 && tr.parentNode) {
+                            tr.parentNode.removeChild(tr);
+                        }
+                    });
+
+                    // Tam sayfa reload YOK — record_add.php'nin AJAX satır-ekleme
+                    // deseniyle simetrik. Satır numaraları + "X kayıt" sayacı
+                    // grid.js'nin zaten sahip olduğu renumberRows() ile güncellenir
+                    // (window.BCC_GRID üzerinden, ikinci bir sayaç mantığı YAZILMAZ).
+                    if (window.BCC_GRID && window.BCC_GRID.renumberRows) {
+                        window.BCC_GRID.renumberRows();
+                    }
+
+                    if (selectAll) {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = false;
+                    }
+                    updateDeleteButtonState();
+                }).catch(function () {
+                    deleteSelectedBtn.disabled = false;
+                    window.alert('Kayıtlar silinemedi (bağlantı hatası).');
+                });
             });
         }
 

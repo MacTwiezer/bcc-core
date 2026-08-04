@@ -777,9 +777,9 @@ function cell_display_text($fieldType, $cellRow, $usersById = array())
             // grid.php'nin bcc_build_grouped_tree()'sindeki AYNI etiketler —
             // eskiden bu case burada yoktu (bulunan gerçek bug), grid.php grup
             // başlıkları için yerel bir workaround yazmıştı ama slack.php/
-            // interface.php/view_export_csv.php gibi bu fonksiyonu DOĞRUDAN
+            // interface.php/view_export_xlsx.php gibi bu fonksiyonu DOĞRUDAN
             // çağıran diğer yerlerde checkbox hücreleri sessizce boş görünüyordu
-            // (ör. CSV export'ta checkbox verisi kayboluyordu).
+            // (ör. Excel export'ta checkbox verisi kayboluyordu).
             return ((int) $cellRow['value_number'] === 1) ? 'İşaretli' : 'İşaretsiz';
         case 'date':
             return $cellRow['value_date'] !== null ? date('d.m.Y', strtotime($cellRow['value_date'])) : '';
@@ -1741,9 +1741,9 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
 }
 
 // grid.php'nin kayıt sorgusunu (sort/filter/group JOIN'leri + WHERE + ORDER BY)
-// kuran mantık — grid.php'nin KENDİSİ VE public/api/view_export_csv.php (CSV
+// kuran mantık — grid.php'nin KENDİSİ VE public/api/view_export_xlsx.php (Excel
 // indirme, aktif sort/filter'ı AYNEN uygulamalı) tarafından çağrılır. Grup
-// desteği CSV'de kullanılmaz ($groupRules = array() geçilir), fonksiyon yine de
+// desteği Excel export'ta kullanılmaz ($groupRules = array() geçilir), fonksiyon yine de
 // grid.php'nin tam ihtiyacını (3 seviyeye kadar grup) karşılar — paralel bir
 // sorgu-kurma mantığı YOK, grid.php'nin ZATEN çalışan/test edilmiş satırları
 // buraya taşındı.
@@ -2000,7 +2000,7 @@ function bcc_fetch_cells_by_record($recordIds)
 // bcc_fetch_cells_by_record() ile AYNI toplu-sorgu deseni ('attachment' alanları
 // cell_values'ta değil, ayrı attachments tablosunda yaşadığı için paralel bir
 // fonksiyon). Dönüş: $byRecord[record_id][field_id] = [{id,name,mime,size}, ...]
-// — grid.php/record_add.php/view_export_csv.php/interface.php hepsi bunu çağırır,
+// — grid.php/record_add.php/view_export_xlsx.php/interface.php hepsi bunu çağırır,
 // paralel bir sorgu yazılmaz.
 function bcc_fetch_attachments_by_record($recordIds)
 {

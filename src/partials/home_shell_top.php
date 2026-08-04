@@ -22,9 +22,9 @@ if (!isset($homeActiveNav)) {
 <title><?php echo htmlspecialchars($homePageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
-<script src="/assets/theme-init.js"></script>
-<link rel="stylesheet" href="/assets/theme.css">
-<link rel="stylesheet" href="/assets/home.css?v=<?php echo (int) @filemtime(__DIR__ . '/../../public/assets/home.css'); ?>">
+<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
+<link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
 <script>
 // Sayfa boyanmadan ÖNCE çalışır (senkron, defer değil) — localStorage'daki
 // görünüm tercihini burada okuyup doğrulamak, .home-base-grid henüz DOM'da

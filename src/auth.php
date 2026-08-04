@@ -12,14 +12,15 @@ $GLOBALS['BCC_ROLE_RANK'] = array(
     'owner' => 4,
 );
 
-// Rol adlarının Türkçe görünen karşılıkları — DB'deki İngilizce değerler
-// (require_role()/BCC_ROLE_RANK'in çalışması için) DEĞİŞMEDİ, yalnızca
-// EKRANDA gösterilecek metin burada tek yerden tanımlı.
+// Rol adlarının ekranda gösterilecek karşılıkları (kullanıcı isteğiyle
+// İngilizce'ye çevrildi) — DB'deki İngilizce değerler (require_role()/
+// BCC_ROLE_RANK'in çalışması için) zaten değişmedi, yalnızca EKRANDA
+// gösterilecek metin burada tek yerden tanımlı.
 $GLOBALS['BCC_ROLE_LABELS'] = array(
-    'viewer' => 'Görüntüleyici',
-    'commenter' => 'Yorumcu',
-    'editor' => 'Düzenleyici',
-    'owner' => 'Sahip',
+    'viewer' => 'Viewer',
+    'commenter' => 'Commenter',
+    'editor' => 'Editor',
+    'owner' => 'Owner',
 );
 
 function current_user($forceReload = false)

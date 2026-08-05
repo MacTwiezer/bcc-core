@@ -644,6 +644,24 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-size: 0.9rem;
 }
 
+/* Airtable parite: birincil alanın (grid-detail-field-primary, JS'te index
+   0'a veriliyor) DEĞERİ öne çıkar — etiket (.grid-detail-field-label)
+   BİLEREK burada hedeflenmiyor, küçük/gri kalmaya devam ediyor. Kutunun
+   kendisi (border/padding) diğer alanlarla tutarlı kalsın diye burada
+   değiştirilmiyor, sadece yazı büyüklüğü/kalınlığı. */
+.grid-detail-field-primary .grid-detail-field-value .cell-input,
+.grid-detail-field-primary .grid-detail-field-value select,
+.grid-detail-field-primary .grid-detail-field-value input[type="text"],
+.grid-detail-field-primary .grid-detail-field-value input[type="number"],
+.grid-detail-field-primary .grid-detail-field-value input[type="date"],
+.grid-detail-field-primary .grid-detail-field-value input[type="time"],
+.grid-detail-field-primary .grid-detail-field-value .grid-detail-textarea,
+.grid-detail-field-primary .grid-detail-field-value .cell-view {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
 .grid-detail-textarea {
     min-height: 5rem;
     resize: vertical;

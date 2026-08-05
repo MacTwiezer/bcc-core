@@ -294,7 +294,7 @@
                 // Birincil alan (index 0): mevcut tam genişlik/etiket-üstte
                 // şablonda kalır, dokunulmadı. Diğer TÜM alanlar Airtable'daki
                 // gibi iki sütuna (sol dar etiket / sağ değer) geçer.
-                row.className = index === 0 ? 'grid-detail-field' : 'grid-detail-field grid-detail-field-inline';
+                row.className = index === 0 ? 'grid-detail-field grid-detail-field-primary' : 'grid-detail-field grid-detail-field-inline';
 
                 var label = document.createElement('label');
                 label.className = 'grid-detail-field-label';

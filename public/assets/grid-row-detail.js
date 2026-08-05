@@ -295,7 +295,14 @@
 
                 var label = document.createElement('label');
                 label.className = 'grid-detail-field-label';
-                label.textContent = field.name;
+                // .field-badge / --field-icon: theme.css'te zaten var olan, tüm
+                // alan tiplerini kapsayan ikon seti (grid başlığı/alan sihirbazında
+                // kullanılan AYNI ikonlar) — Airtable parite isteği için ikinci
+                // bir ikon seti icat edilmedi, burada yeniden kullanılıyor.
+                var badge = document.createElement('span');
+                badge.className = 'field-badge field-badge--' + field.field_type;
+                label.appendChild(badge);
+                label.appendChild(document.createTextNode(field.name));
                 row.appendChild(label);
 
                 row.appendChild(buildFieldWidget(tr, field));
@@ -463,7 +470,14 @@
             if (!comments.length) {
                 var empty = document.createElement('div');
                 empty.className = 'grid-detail-comments-empty';
-                empty.textContent = 'Bir konuşma başlatın';
+                // Statik ikon (kullanıcı verisi YOK) — innerHTML burada güvenli.
+                var icon = document.createElement('div');
+                icon.className = 'grid-detail-comments-empty-icon';
+                icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+                empty.appendChild(icon);
+                var emptyText = document.createElement('p');
+                emptyText.textContent = 'Bir konuşma başlatın';
+                empty.appendChild(emptyText);
                 commentsList.appendChild(empty);
                 return;
             }

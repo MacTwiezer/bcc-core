@@ -83,7 +83,7 @@ if ($error === null && !$pending) {
 </head>
 <body class="login-page">
 <div class="login-card">
-    <div class="login-card-header">
+    <div class="login-logo">
         <img src="/assets/logo.png" alt="BCC-Core">
     </div>
     <div class="login-card-body">

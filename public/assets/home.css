@@ -231,7 +231,7 @@ a { text-decoration: none; color: inherit; }
     height: 30px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     font-weight: 700;
     font-size: 0.85rem;
@@ -381,7 +381,7 @@ a { text-decoration: none; color: inherit; }
     height: 28px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 0.76rem;
     flex-shrink: 0;
@@ -1102,7 +1102,7 @@ html.home-view-list .home-list-header,
     height: 30px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 0.82rem;
     flex-shrink: 0;
@@ -1145,7 +1145,7 @@ a.ws-detail-btn {
 
 a.ws-detail-btn:hover {
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border-color: var(--bcc-accent);
 }
 
@@ -1182,7 +1182,7 @@ a.ws-detail-btn:hover {
 
 .tm-assign-submit {
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     border-radius: 6px;
     padding: 0.5rem 1rem;
@@ -1377,7 +1377,7 @@ a.ws-detail-btn:hover {
     padding: 0 3px;
     border-radius: 999px;
     background: var(--bcc-danger);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-size: 0.62rem;
     font-weight: 700;
     line-height: 15px;
@@ -1482,7 +1482,7 @@ a.ws-detail-btn:hover {
     height: 28px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 0.76rem;
     flex-shrink: 0;
@@ -1534,7 +1534,7 @@ a.ws-detail-btn:hover {
     height: 64px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 1.6rem;
     flex-shrink: 0;
@@ -1664,7 +1664,7 @@ a.ws-detail-btn:hover {
 
 .account-btn-primary {
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     border-radius: 6px;
     padding: 0.35rem 0.75rem;
@@ -1726,7 +1726,7 @@ a.ws-detail-btn:hover {
 
 .account-btn-danger {
     background: var(--bcc-danger);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     border-radius: 6px;
     padding: 0.45rem 0.9rem;
@@ -1959,7 +1959,7 @@ a.ws-detail-btn:hover {
 .settings-btn-primary {
     background: var(--bcc-accent);
     border-color: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
 }
 
 .settings-btn-primary:hover { background: var(--bcc-accent-strong); border-color: var(--bcc-accent-strong); }
@@ -2038,7 +2038,7 @@ table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
     height: 30px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 0.8rem;
     display: flex;
@@ -2201,7 +2201,7 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
 
 .admin-bulk-trigger {
     background: var(--bcc-accent-strong);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     padding: 0.45rem 0.9rem;
     border-radius: 8px;

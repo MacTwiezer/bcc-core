@@ -803,6 +803,24 @@
         var moreMenu = document.getElementById('grid-detail-more-menu');
         if (moreMenu) {
             window.bcc_bindDismissable(moreMenu);
+
+            // ESC katmanlaması: bcc_bindDismissable her çağrıda document'a
+            // BAĞIMSIZ bir keydown dinleyicisi ekliyor (dismissable-panel.js) —
+            // overlay'in kendi ESC dinleyicisi menü açık mı diye bakmadan her
+            // zaman kapanıyordu, tek ESC ikisini birden kapatırdı. Helper 5
+            // BAŞKA yerde de kullanıldığı için (account-menu/grid-table-data/
+            // grid-view-manage/home.js) global DEĞİŞTİRİLMEDİ — yalnızca bu
+            // menüye özel, capture fazında (bubble fazındaki overlay/menü
+            // dinleyicilerinden HER ZAMAN önce çalışır, kayıt sırasından
+            // bağımsız) bir dinleyici: menü açıksa ESC'i kendisi kapatıp
+            // stopPropagation ile olayın overlay'e ulaşmasını engelliyor; menü
+            // kapalıysa hiçbir şey yapmaz, olay normal akıp modalı kapatır.
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && moreMenu.hasAttribute('open')) {
+                    e.stopPropagation();
+                    moreMenu.removeAttribute('open');
+                }
+            }, true);
         }
     });
 })();

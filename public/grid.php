@@ -1386,6 +1386,12 @@ $gridUser = current_user();
                 </button>
             </div>
             <div class="grid-detail-title" id="grid-detail-title"></div>
+            <button type="button" class="grid-detail-nav-btn" id="grid-detail-copy-link" aria-label="Kayıt bağlantısını kopyala">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5l3-3M6.2 4.3l.6-.6a2 2 0 0 1 2.8 2.8l-.6.6M7.8 9.7l-.6.6a2 2 0 0 1-2.8-2.8l.6-.6" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="grid-detail-nav-btn" id="grid-detail-comments-toggle" aria-label="Yorumları göster/gizle">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H6l-2.5 2v-2H3a1 1 0 0 1-1-1v-5z" stroke="#5f6368" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </button>
             <button type="button" class="grid-detail-close" id="grid-detail-close" aria-label="Kapat">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>

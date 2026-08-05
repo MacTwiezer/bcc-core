@@ -602,6 +602,33 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
    ikinci bir boşluk kuralı eklenmiyor, ikon+etiket arası tek kaynaktan geliyor. */
 .grid-detail-field-label .field-badge { flex-shrink: 0; }
 
+/* Airtable parite: birincil alan (index 0, JS'te ayrılıyor) tam genişlik/
+   etiket-üstte kalır; diğer TÜM alanlar sol dar etiket / sağ değer iki
+   sütununa geçer. */
+.grid-detail-field-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.grid-detail-field-inline .grid-detail-field-label {
+    flex: 0 0 150px;
+    margin-bottom: 0;
+    padding-top: 0.65rem;
+}
+
+.grid-detail-field-inline .grid-detail-field-value {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Bulunan/tekrarlanan proje tuzağı: [hidden] tek başına bazı yerlerde
+   display:flex/block tarafından eziliyordu (bkz. .grid-detail-overlay[hidden]
+   ve .home-search-result[hidden] notları). Bu satır şu an hiçbir yerde
+   hidden attribute'u almıyor (grep ile doğrulandı) ama ileride biri
+   eklerse display:flex'in üstüne çıkması için açıkça geri kazanılıyor. */
+.grid-detail-field-inline[hidden] { display: none !important; }
+
 .grid-detail-field-value .cell-input,
 .grid-detail-field-value select,
 .grid-detail-field-value input[type="text"],

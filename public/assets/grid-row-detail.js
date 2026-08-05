@@ -795,5 +795,14 @@
             close: closeDetail,
             isClickOutside: function (target) { return target === overlay; },
         });
+
+        // "..." (Diğer seçenekler) menüsü: native <details> — varsayılan
+        // isOpen/close/isClickOutside (el.hasAttribute('open') vb.) native
+        // <details> için zaten doğru, hiçbir option geçmeye gerek yok. Menü
+        // kalemleri bu adımda BİLEREK no-op (işlev sonraki adımda bağlanacak).
+        var moreMenu = document.getElementById('grid-detail-more-menu');
+        if (moreMenu) {
+            window.bcc_bindDismissable(moreMenu);
+        }
     });
 })();

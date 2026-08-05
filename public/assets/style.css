@@ -573,6 +573,24 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 
 .grid-detail-close { margin-left: auto; flex-shrink: 0; }
 
+/* "..." (Diğer seçenekler) menüsü — mevcut .gs-table-tab-menu-panel/
+   .gs-table-tab-menu-item (grid-shell.css) desenini yeniden kullanır, yeni
+   panel/kalem stili YAZILMADI. Yalnızca konumlandırma (sağa hizalı, .grid-th-menu
+   ile AYNI position:relative sarmalayıcı deseni) ve <summary> disclosure
+   üçgenini gizleme burada. */
+.grid-detail-more-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.grid-detail-more-menu summary { list-style: none; cursor: pointer; }
+.grid-detail-more-menu summary::-webkit-details-marker { display: none; }
+
+.grid-detail-more-panel {
+    left: auto;
+    right: 0;
+}
+
 .grid-detail-body {
     flex: 1;
     min-height: 0;

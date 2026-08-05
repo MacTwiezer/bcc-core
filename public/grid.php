@@ -1386,6 +1386,30 @@ $gridUser = current_user();
                 </button>
             </div>
             <div class="grid-detail-title" id="grid-detail-title"></div>
+            <details class="grid-detail-more-menu" id="grid-detail-more-menu">
+                <summary class="grid-detail-nav-btn" aria-label="Diğer seçenekler">
+                    <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
+                </summary>
+                <div class="gs-table-tab-menu-panel grid-detail-more-panel">
+                    <button type="button" class="gs-table-tab-menu-item">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 6l6.5 5 6.5-5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Kaydı gönder
+                    </button>
+                    <button type="button" class="gs-table-tab-menu-item">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M13.5 6.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v7A1.5 1.5 0 0 0 5 13.5h1.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Kaydı çoğalt
+                    </button>
+                    <button type="button" class="gs-table-tab-menu-item">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="7.5" width="10" height="5.5" rx="1" stroke="#5f6368" stroke-width="1.3"/><path d="M6 7.5V4.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M6 13v2.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V13" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Kaydı yazdır
+                    </button>
+                    <div class="gs-table-tab-menu-divider"></div>
+                    <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Kaydı sil
+                    </button>
+                </div>
+            </details>
             <button type="button" class="grid-detail-nav-btn" id="grid-detail-copy-link" aria-label="Kayıt bağlantısını kopyala">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 8.5l3-3M6.2 4.3l.6-.6a2 2 0 0 1 2.8 2.8l-.6.6M7.8 9.7l-.6.6a2 2 0 0 1-2.8-2.8l.6-.6" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>

@@ -261,6 +261,16 @@ scripts/                   create_admin, test_isolation, _isolation_case,
   - **Dokümantasyon denetimi**: `GEREKSINIMLER.md`'ye gerçek durumla çelişen/eksik kalan yerlere (F2 alan tipleri, F6 font boyutu kararı, veri modeli — `record_links`/`tables_meta`/`slack_routing_rules`, roadmap'in donduğu, açık soruların fiilen cevaplandığı) **[GÜNCEL DURUM]** notları eklendi, orijinal metin silinmedi. Bu dosyanın (`PROJE-DURUM.md`) kendisi de denetlendi: Bölüm 4'teki "13 tablo"/"7 alan tipi" yanlış sayıları ve eski dosya haritası güncellendi, kullanılmayan `public/assets/bcc-logo.svg` (kod tabanında sıfır referans, `logo.png`'ye geçişten kalma) silindi.
   - Tüm değişiklikler `/browse` ile canlı Apache üzerinden test edildi (import/clear-data uçtan uca bir CSV ile, sürükle-bırak gerçek mouse event simülasyonuyla, hata yakalayıcı gerçek bir DB hatası tetiklenerek); 6/6+8/8+19/19 regresyon bu turun SONUNDA da yeşil.
 
+- **2026-08-05 — Kayıt detay modalı görsel güncellemesi (Airtable parite).** Grid'de satır genişletme paneli (`grid-row-detail.js` + `style.css`'teki `.grid-detail-*`) yalnızca `public/grid.php`'de tanımlıydı (kopya yoktu, ayrı partial'a taşımaya gerek kalmadı). Değişiklikler:
+  - Alan etiketlerine tip ikonu eklendi (`renderDetailFields()`) — yeni bir ikon seti icat edilmedi, `theme.css`'teki mevcut `.field-badge--{tip}` seti (grid başlığı/alan sihirbazıyla PAYLAŞILAN) yeniden kullanıldı.
+  - `.grid-detail-field` dikey boşluğu (0.9rem→1.4rem) ve input/select/textarea kutuları (border-radius 6→8px, padding 0.4rem→0.65rem/0.8rem) Airtable referansına yaklaştırıldı; odak (focus) mavi glow zaten `theme.css`'teki genel `input:focus`/`textarea:focus` kuralından geliyordu, ikinci bir kural yazılmadı.
+  - Yorum paneli (`.grid-detail-comments-form`) input/buton border-radius'u sol taraftaki alan kutularıyla (8px) eşitlendi.
+  - Boş yorum durumu (`renderComments([])`) artık düz metin değil, ortalanmış bir konuşma balonu ikonu + "Bir konuşma başlatın" — Airtable'ın "Start a conversation" boş durumuyla birebir.
+  - Dosya eki alanı (`.attachment-manager .attachment-file-input`, YALNIZCA bu geniş bağlamda — 260px'lik sıkışık `.attachment-popover`'a dokunulmadı) kesikli çerçeve + sunken zeminle hafifçe iyileştirildi; native `<input type=file>` bir "drop zone" bileşenine dönüştürülmedi çünkü bu, ana grid hücresindeki AYNI paylaşılan bileşeni de etkileyecekti (kapsam dışı bırakıldı, kullanıcıya raporlandı).
+  - Renk/font: hiçbir yeni sabit değer eklenmedi, tamamı mevcut `--bcc-*` (theme.css) değişkenlerine bağlı — koyu modda `/browse` ile ayrıca doğrulandı.
+  - `[hidden]` tuzağına (bkz. bu dosyada DAHA ÖNCE birkaç kez geçen aynı ders) dokunulmadı; `.grid-detail-overlay[hidden] { display: none; }` override'ı olduğu gibi korundu.
+  - `/browse` ile açık mod, koyu mod, dolu yorum listesi VE boş yorum durumu ayrı ayrı ekran görüntüsüyle doğrulandı. `php -l` + 6/6+19/19+8/8 regresyon yeşil.
+
 ---
 
 ## 6. Kalan İşler

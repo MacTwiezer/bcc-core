@@ -874,16 +874,24 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
         data-fields="<?php echo htmlspecialchars(bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord), ENT_QUOTES, 'UTF-8'); ?>"
     >
         <td class="grid-rownum">
-            <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
-            <?php if ($canEdit): ?>
-                <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
-            <?php endif; ?>
-            <!-- Genişlet paneli TÜM rollere açık (Airtable: kayıt görüntüleme herkese
-                 açık) — düzenleme/yorum yetkisi panel İÇİNDE BCC_CAN_EDIT/BCC_CAN_COMMENT
-                 ile ayrıca kısıtlanır, bkz. grid-row-detail.js. -->
-            <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+            <!-- .grid-rownum-inner: flex düzeni (numara/checkbox/genişlet butonunu
+                 yan yana dizip dikey ortalamak) BİLEREK <td>'nin kendisinde DEĞİL,
+                 bu iç sarmalayıcıda — bkz. style.css'teki "Bulunan gerçek bug" notu:
+                 <td>'ye doğrudan display:flex vermek onu tablonun "hücreleri satırın
+                 en uzun içeriğine göre otomatik eşitle" mekanizmasının DIŞINA
+                 çıkarıyordu. -->
+            <div class="grid-rownum-inner">
+                <span class="grid-rownum-number"><?php echo (int) $rowNum; ?></span>
+                <?php if ($canEdit): ?>
+                    <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
+                <?php endif; ?>
+                <!-- Genişlet paneli TÜM rollere açık (Airtable: kayıt görüntüleme herkese
+                     açık) — düzenleme/yorum yetkisi panel İÇİNDE BCC_CAN_EDIT/BCC_CAN_COMMENT
+                     ile ayrıca kısıtlanır, bkz. grid-row-detail.js. -->
+                <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5h-3v3M7.5 10.5h3v-3M1.5 4.5V1.5h3M10.5 7.5v3h-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
         </td>
         <?php foreach ($visibleFields as $f):
             $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;

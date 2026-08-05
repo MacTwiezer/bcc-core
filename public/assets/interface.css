@@ -263,7 +263,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     height: 28px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     font-weight: 700;
     font-size: 0.78rem;

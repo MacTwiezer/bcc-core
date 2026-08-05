@@ -45,7 +45,7 @@ a:hover { text-decoration: underline; }
     height: 26px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-weight: 700;
     font-size: 0.75rem;
     display: flex;
@@ -175,7 +175,7 @@ form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; pa
 
 form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn) {
     background: var(--bcc-accent-strong);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     padding: 0.55rem 1.4rem;
     border-radius: 8px;
@@ -263,6 +263,34 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     overflow: auto;
     max-width: 100%;
     margin-bottom: 1rem;
+    /* Kalın/gri, işletim sistemi varsayılanı sürükleme çubuğu yerine ince,
+       Airtable tarzı bir kaydırma çubuğu (bkz. ::-webkit-scrollbar altta) —
+       Firefox için standart karşılığı. */
+    scrollbar-width: thin;
+    scrollbar-color: var(--bcc-border-strong) transparent;
+}
+
+.grid-wrap::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.grid-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.grid-wrap::-webkit-scrollbar-thumb {
+    background-color: var(--bcc-border-strong);
+    border-radius: 999px;
+    border: 2px solid var(--bcc-surface);
+}
+
+.grid-wrap::-webkit-scrollbar-thumb:hover {
+    background-color: var(--bcc-text-muted);
+}
+
+.grid-wrap::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 table.grid {
@@ -369,6 +397,14 @@ table.grid .grid-rownum {
     padding: 0.4rem 0.5rem;
     border-right: none;
     min-width: 2.5rem;
+    /* Bulunan gerçek bug: grid-freeze-columns.js'teki yorum burada "statik CSS
+       zaten hallediyor, dokunma" diyordu, ama border-right hep none'du — yatay
+       kaydırmada donuk satır-no sütununun sağında HİÇBİR ayraç/gölge yoktu,
+       arkadan kayan sütun içeriği ona yapışık/üst üste biniyormuş gibi
+       görünüyordu. .grid-frozen-edge'in kullandığı sert border yerine Airtable
+       referansındaki gibi yumuşak bir "kaldırma" gölgesi — donuk sütun az da
+       olsa altındaki içerikten ayrışıyor. */
+    box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.18);
 }
 
 table.grid thead .grid-rownum {
@@ -388,11 +424,34 @@ table.grid tbody tr:hover td {
    (.is-row-selected) hover'dan bağımsız görünür kalır — Starred kartındaki
    yıldız ikonuyla AYNI opacity/display deseni. */
 table.grid tbody .grid-rownum {
+    min-width: 3.8rem;
+}
+
+/* Bulunan gerçek bug: satır no/checkbox/genişlet düğmesini yan yana dizmek
+   için flex düzeni ÖNCEDEN doğrudan bu <td>'ye (display:flex) veriliyordu.
+   table.grid td { height: 2rem } sabit yüksekliği, <td> flex'e geçtiği için
+   tablonun "hücreleri satırın en uzun içeriğine göre otomatik eşitle"
+   mekanizmasının DIŞINDA kalıyordu (display:table-cell olan diğer hücreler
+   bunu otomatik yapar, flex container'a çevrilmiş bir <td> yapmaz — height:
+   100% ile zorlamak da denendi, tabloya özgü bu köşe durumda işe yaramadı).
+   Sonuç: uzun metin/yorum gibi bir hücre satırı 2 satıra çıkarıp taşıyınca
+   (row-h-short'ta bile), donuk satır-no sütunu eski (kısa) yükseklikte
+   kalıyor, satırın alt kısmında donuk sütunun arkasını KAPATMAYAN bir boşluk
+   oluşuyordu — komşu (dondurulmamış) hücrenin taşan/ikinci satır metni tam o
+   boşluktan görünür oluyordu (yatay kaydırmada "üst üste binme/karman
+   çorman" hissi buradan geliyordu). Çözüm: flex düzeni <td>'nin kendisinden
+   ÇIKARILIP src/schema.php'de eklenen .grid-rownum-inner sarmalayıcıya
+   taşındı — <td> artık normal bir tablo hücresi (display: table-cell,
+   varsayılan) olarak kalıyor, diğer hücrelerle birebir AYNI otomatik
+   yükseklik eşitlemesine katılıyor; iç sarmalayıcı da height:100% ile o
+   (artık doğru) yüksekliği doldurup içeriği dikey ortalıyor. */
+table.grid tbody .grid-rownum-inner {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 0.3rem;
-    min-width: 3.8rem;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .grid-rownum-number { flex: 1; text-align: left; }
@@ -526,15 +585,22 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     padding: 1rem 1.1rem;
 }
 
-.grid-detail-field { margin-bottom: 0.9rem; }
+/* Airtable parite: kutular arası dikey boşluk önceki 0.9rem'den daha
+   ferah (bkz. PROJE-DURUM.md "Kayıt detay modalı" notu). */
+.grid-detail-field { margin-bottom: 1.4rem; }
 
 .grid-detail-field-label {
-    display: block;
+    display: flex;
+    align-items: center;
     font-size: 0.76rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
 }
+
+/* .field-badge (theme.css) zaten kendi margin-right'ını taşıyor — burada
+   ikinci bir boşluk kuralı eklenmiyor, ikon+etiket arası tek kaynaktan geliyor. */
+.grid-detail-field-label .field-badge { flex-shrink: 0; }
 
 .grid-detail-field-value .cell-input,
 .grid-detail-field-value select,
@@ -545,10 +611,10 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     width: 100%;
     box-sizing: border-box;
     border: 1px solid var(--bcc-border-strong);
-    border-radius: 6px;
-    padding: 0.4rem 0.5rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
 }
 
 .grid-detail-textarea {
@@ -587,9 +653,22 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 
 .grid-detail-comments-empty {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6rem;
     color: var(--bcc-text-muted);
     font-size: 0.82rem;
+    padding: 0 0.5rem;
 }
+
+.grid-detail-comments-empty-icon {
+    color: var(--bcc-border-strong);
+}
+
+.grid-detail-comments-empty p { margin: 0; }
 
 .grid-detail-comments-list {
     flex: 1;
@@ -687,9 +766,9 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     flex: 1;
     min-width: 0;
     box-sizing: border-box;
-    border: 1px solid var(--bcc-border);
-    border-radius: 6px;
-    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
     font: inherit;
     font-size: 0.85rem;
     background: var(--bcc-surface);
@@ -702,9 +781,9 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-weight: 600;
     padding: 0.4rem 0.7rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     cursor: pointer;
 }
 
@@ -728,7 +807,18 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 }
 
 table.grid thead th.grid-frozen-cell {
-    z-index: 2;
+    /* Bulunan gerçek bug: thead'de TÜM <th>'ler (dondurulmuş olsun olmasın)
+       dikey sticky-header için position:sticky + z-index:2 alıyor (yukarıdaki
+       genel "table.grid thead th" kuralı). Bu sınıf da z-index:2 verdiği için
+       dondurulmuş sütunla (ör. "Ad") hemen sağındaki DONDURULMAMIŞ, kayan
+       sütun (ör. "Notlar") AYNI z-index'te eşitleniyordu — eşitlikte tarayıcı
+       DOM sırasına göre boyuyor, DOM'da SONRA gelen (kayan) sütun ÜSTTE
+       kalıp donuk sütunun başlığını kaplıyor/metnini sızdırıyordu. tbody'de
+       bu sorun yok (dondurulmamış hücreler orada position:static, sticky
+       öğelerin her zaman altında kalır) — sorun yalnızca thead'e özgü.
+       z-index'i satır-no ile eşitleyip (3) genel kuralın (2) üzerine çıkarmak
+       donuk sütunun her zaman üstte kalmasını garanti eder. */
+    z-index: 3;
     background: var(--bcc-surface);
 }
 
@@ -934,7 +1024,7 @@ td.editable.richtext-editing {
     padding: 0.05rem 0.35rem;
     border-radius: 4px;
     background: var(--bcc-accent-strong);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1029,6 +1119,17 @@ td.editable.attachment-editing {
 
 .attachment-manager .attachment-popover-list {
     max-height: 10rem;
+}
+
+/* Yalnızca kayıt detay panelindeki (geniş) bağlam — sıkışık 260px popover'a
+   (.attachment-popover) dokunulmadı, oradaki .attachment-file-input tabanı
+   aynı kalıyor. */
+.attachment-manager .attachment-file-input {
+    border: 1px dashed var(--bcc-border-strong);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    background: var(--bcc-surface-sunken);
+    cursor: pointer;
 }
 
 .cell-input {

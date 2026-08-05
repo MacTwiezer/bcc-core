@@ -18,6 +18,16 @@
     --bcc-accent-soft: #e8f0fe;
     --bcc-danger: #c62828;
     --bcc-danger-soft: #fdecea;
+    /* Renkli (accent/danger) zeminler üzerindeki metin/ikon için — BİLEREK
+       koyu temada da AYNI (#fff) kalır, :root[data-theme="dark"] altında
+       YENİDEN TANIMLANMAZ. Bulunan gerçek bug: birçok yerde bunun yerine
+       var(--bcc-surface) kullanılmıştı — o değişken "sayfa zemini" anlamına
+       geldiği için koyu temada koyulaşır, böylece mavi/kırmızı bir buton
+       üzerindeki metin koyu-üstüne-koyu haline gelip neredeyse okunmaz
+       oluyordu (ör. login-submit, account-btn-danger, gs-btn-primary).
+       accent/danger'ın kendisi zaten iki temada da orta-açık tonda kalacak
+       şekilde ayarlı, o yüzden üzerindeki metin sabit beyaz kalabilir. */
+    --bcc-on-accent: #fff;
 }
 
 /* Kullanıcı "Koyu" seçtiğinde (theme-init.js <html data-theme="dark"> yazar). */

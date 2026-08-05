@@ -98,7 +98,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
     height: 30px;
     border-radius: 50%;
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
     border: none;
     font-weight: 700;
     font-size: 0.8rem;
@@ -274,7 +274,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 .gs-btn-primary {
     background: var(--bcc-accent);
-    color: var(--bcc-surface);
+    color: var(--bcc-on-accent);
 }
 
 .gs-btn-primary:hover { background: var(--bcc-accent-strong); }

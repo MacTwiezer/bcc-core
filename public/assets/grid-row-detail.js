@@ -94,6 +94,9 @@
         var commentsList = document.getElementById('grid-detail-comments-list');
         var commentsForm = document.getElementById('grid-detail-comments-form');
         var commentsInput = document.getElementById('grid-detail-comments-input');
+        var copyLinkBtn = document.getElementById('grid-detail-copy-link');
+        var commentsToggleBtn = document.getElementById('grid-detail-comments-toggle');
+        var commentsPanel = document.querySelector('.grid-detail-comments');
 
         var currentDetailRow = null;
 
@@ -709,6 +712,80 @@
         }
         if (nextBtn) {
             nextBtn.addEventListener('click', function () { navigate(1); });
+        }
+
+        // Bağlantı kopyalama bildirimi: grid.js'teki showToast() ile AYNI ".ok"
+        // (yeşil başarı metni, style.css) rengi kullanılıyor — ikinci bir
+        // bildirim sistemi DEĞİL, o rengin modal'a uygun bir yerleşimi.
+        // grid.js'teki showToast() burada KULLANILAMAZ: bu dosya (grid-row-detail.js)
+        // BİLEREK window.BCC_GRID'e/grid.js'e bağımlı değil (viewer/commenter'da
+        // grid.js hiç yüklenmez), ve o fonksiyon zaten modal açıkken görünmeyen
+        // .gs-grid-footer'a ekleniyor.
+        function showDetailToast(message) {
+            var header = document.querySelector('.grid-detail-header');
+            if (!header) {
+                return;
+            }
+            var existing = header.querySelector('.grid-detail-toast');
+            if (existing && existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+            var toast = document.createElement('span');
+            toast.className = 'ok grid-detail-toast';
+            toast.textContent = message;
+            header.appendChild(toast);
+            setTimeout(function () {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 2500);
+        }
+
+        if (copyLinkBtn) {
+            copyLinkBtn.addEventListener('click', function () {
+                if (!currentDetailRow) {
+                    return;
+                }
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                var url = new URL(window.location.href);
+                url.searchParams.set('record_id', recordId);
+                var text = url.toString();
+
+                function done() {
+                    showDetailToast('Kayıt bağlantısı kopyalandı');
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done).catch(function () {
+                        legacyCopy(text, done);
+                    });
+                } else {
+                    legacyCopy(text, done);
+                }
+            });
+        }
+
+        // navigator.clipboard bazı bağlamlarda (ör. http, eski tarayıcı)
+        // hiç yoktur/reddeder — eski execCommand yöntemine sessizce düşülür.
+        function legacyCopy(text, onDone) {
+            var input = document.createElement('textarea');
+            input.value = text;
+            input.style.position = 'fixed';
+            input.style.opacity = '0';
+            document.body.appendChild(input);
+            input.focus();
+            input.select();
+            try {
+                document.execCommand('copy');
+            } catch (e) {}
+            document.body.removeChild(input);
+            onDone();
+        }
+
+        if (commentsToggleBtn && commentsPanel) {
+            commentsToggleBtn.addEventListener('click', function () {
+                commentsPanel.classList.toggle('is-collapsed');
+            });
         }
 
         // Backdrop'a (modal içeriğine değil) tıklayınca / Escape ile kapanma —

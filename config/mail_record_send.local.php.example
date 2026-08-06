@@ -1,0 +1,14 @@
+<?php
+// "Kaydı gönder" özelliği için SMTP ayarları — örnek şablon (şifresiz, git'e
+// girebilir). Gerçek ayarlar için bu dosyayı config/mail_record_send.local.php
+// olarak kopyalayın ve değerleri doldurun (o dosya .gitignore'dadır).
+
+return array(
+    'host' => 'smtp.example.com',
+    'port' => 587,
+    'encryption' => 'tls', // STARTTLS
+    'username' => 'kullanici@ornek.com',
+    'password' => 'BURAYA_SIFRE',
+    'from_email' => 'kullanici@ornek.com',
+    'from_name' => 'Gönderen Adı',
+);

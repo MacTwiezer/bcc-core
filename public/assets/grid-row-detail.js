@@ -67,9 +67,17 @@
     // <div>'e yazılıp .textContent okunuyor (script YÜRÜTÜLMEZ, hiçbir zaman
     // sayfaya eklenmedi); panelde tam zengin metin araç çubuğu YOK, "input/
     // textarea" isteğine uygun düz bir <textarea>.
-    function htmlToPlainText(html) {
+    // Bulunan gerçek bug: .textContent tek başına <br>'ları HİÇBİR ayırıcı
+    // eklemeden siliyordu ("Merhaba<br>a<br>a" -> "Merhabaaa") — bu yüzden
+    // ÖNCE <br>/<br/>/<br /> \n'e çevrilip SONRA geri kalan etiketler
+    // textContent ile temizleniyor. Detay modalı textarea'sı (aşağıda) VE
+    // fieldPrintText()'in salt-okunur dalı (yazdır + gönder e-posta
+    // önizlemesi, ikisi de fieldPrintText'i çağırıyor) AYNI bu fonksiyonu
+    // kullanıyor — ikinci bir kopya yazılmadı.
+    function htmlToPlainTextWithLineBreaks(html) {
+        var withBreaks = String(html || '').replace(/<br\s*\/?>/gi, '\n');
         var tmp = document.createElement('div');
-        tmp.innerHTML = html;
+        tmp.innerHTML = withBreaks;
         return tmp.textContent || '';
     }
 
@@ -216,7 +224,7 @@
                 var rawHtml = liveTd ? liveTd.getAttribute('data-value') : field.raw;
                 var ta = document.createElement('textarea');
                 ta.className = 'cell-input grid-detail-textarea';
-                var initialPlainText = htmlToPlainText(rawHtml || '');
+                var initialPlainText = htmlToPlainTextWithLineBreaks(rawHtml || '');
                 ta.value = initialPlainText;
                 // Bulunan gerçek bug: panelde zengin metin (kalın/link) araç çubuğu
                 // YOK, bu yüzden düzenleme alanı yalnızca DÜZ METİN gösteriyor —
@@ -851,7 +859,10 @@
             }
             var cellView = valueWrap.querySelector('.cell-view');
             if (cellView) {
-                return cellView.textContent.trim() || '—';
+                // Salt-okunur long_text hücreleri gerçek <br> etiketleri taşıyabilir —
+                // htmlToPlainTextWithLineBreaks() ile AYNI kural (diğer alan tiplerinde
+                // <br> hiç geçmediği için davranış değişmiyor, no-op).
+                return htmlToPlainTextWithLineBreaks(cellView.innerHTML).trim() || '—';
             }
             return valueWrap.textContent.trim() || '—';
         }

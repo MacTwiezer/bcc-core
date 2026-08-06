@@ -2155,6 +2155,25 @@ table.grid.row-h-extra .cell-view {
     -webkit-line-clamp: 6;
 }
 
+/* Bulunan gerçek bug: kısa satır yükseklikte (taban .cell-view, satır ~1249)
+   white-space:nowrap yalnızca DOĞAL kelime kaydırmasını engelliyor — gerçek
+   <br> etiketleri (long_text zengin metin alanları) buna RAĞMEN satır
+   atlatıyor, sonuç sabit kısa yükseklikte hizasız/kırpık bir görünümdü
+   (docs/PROJE-DURUM.md teşhis notu). Orta/uzun/ekstra'nın ZATEN kullandığı
+   line-clamp deseni (yukarıda) burada TEK SATIRLIK hâliyle YENİDEN
+   KULLANILIYOR — <br> artık doğru sayılıp ilk satırdan sonra temiz "..." ile
+   kesiliyor. Yalnızca .rich-text-view (long_text) hedeflendi — taban
+   .cell-view'a EKLENMEDİ, diğer alan tipleri (sayı/tarih/düz metin/tekli
+   seçim) etkilenmiyor. */
+table.grid.row-h-short .cell-view.rich-text-view {
+    display: -webkit-box;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
 table.grid.wrap-headers thead th {
     white-space: normal;
 }

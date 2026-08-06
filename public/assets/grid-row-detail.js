@@ -97,6 +97,9 @@
         var copyLinkBtn = document.getElementById('grid-detail-copy-link');
         var commentsToggleBtn = document.getElementById('grid-detail-comments-toggle');
         var commentsPanel = document.querySelector('.grid-detail-comments');
+        var printBtn = document.getElementById('grid-detail-print-btn');
+        var printMetaTop = document.getElementById('grid-detail-print-meta-top');
+        var printMetaBottom = document.getElementById('grid-detail-print-meta-bottom');
 
         var currentDetailRow = null;
 
@@ -785,6 +788,93 @@
         if (commentsToggleBtn && commentsPanel) {
             commentsToggleBtn.addEventListener('click', function () {
                 commentsPanel.classList.toggle('is-collapsed');
+            });
+        }
+
+        // "Kaydı yazdır" — bir alanın widget'ından (input/select/textarea/
+        // checkbox/dosya eki yöneticisi/salt-okunur .cell-view) o anki
+        // GÖRÜNEN değeri düz metne çevirir. Print CSS'in (style.css @media
+        // print) widget'ları gizleyip yerine gösterdiği .grid-detail-print-value
+        // span'ı BUNUNLA doldurulur — textarea/select gibi kendi scroll/dropdown
+        // alanı olan elemanlar print'te boş/kırpılmış çıkabildiği için, gerçek
+        // metni DOM'dan okuyup ayrı bir düz-metin elemanına taşımak, tarayıcı
+        // print motoruna güvenmekten daha güvenilir.
+        function fieldPrintText(valueWrap) {
+            var checkbox = valueWrap.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                return checkbox.checked ? 'Evet' : 'Hayır';
+            }
+            var attachmentChips = valueWrap.querySelectorAll('.attachment-chip');
+            if (attachmentChips.length) {
+                return Array.prototype.map.call(attachmentChips, function (chip) {
+                    return chip.title || chip.textContent.trim();
+                }).join(', ');
+            }
+            if (valueWrap.querySelector('.attachment-manager')) {
+                return '—';
+            }
+            var select = valueWrap.querySelector('select');
+            if (select) {
+                var selected = Array.prototype.filter.call(select.options, function (opt) {
+                    return opt.selected;
+                });
+                return selected.length ? selected.map(function (opt) { return opt.textContent; }).join(', ') : '—';
+            }
+            var textarea = valueWrap.querySelector('textarea');
+            if (textarea) {
+                return textarea.value || '—';
+            }
+            var input = valueWrap.querySelector('input');
+            if (input) {
+                return input.value || '—';
+            }
+            var cellView = valueWrap.querySelector('.cell-view');
+            if (cellView) {
+                return cellView.textContent.trim() || '—';
+            }
+            return valueWrap.textContent.trim() || '—';
+        }
+
+        function preparePrintView() {
+            Array.prototype.forEach.call(fieldsContainer.querySelectorAll('.grid-detail-field'), function (row) {
+                var valueWrap = row.querySelector('.grid-detail-field-value');
+                if (!valueWrap) {
+                    return;
+                }
+                var printSpan = valueWrap.querySelector('.grid-detail-print-value');
+                if (!printSpan) {
+                    printSpan = document.createElement('span');
+                    printSpan.className = 'grid-detail-print-value';
+                    valueWrap.appendChild(printSpan);
+                }
+                printSpan.textContent = fieldPrintText(valueWrap);
+            });
+
+            if (printMetaTop) {
+                var baseNameEl = document.querySelector('.gs-base-name');
+                var baseName = baseNameEl ? baseNameEl.textContent.trim() : '';
+                var today = new Date();
+                var dd = String(today.getDate()).padStart(2, '0');
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dateStr = dd + '.' + mm + '.' + today.getFullYear();
+                printMetaTop.textContent = baseName ? (baseName + ' — ' + dateStr) : dateStr;
+            }
+
+            if (printMetaBottom && currentDetailRow) {
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                var url = new URL(window.location.href);
+                url.searchParams.set('record_id', recordId);
+                printMetaBottom.textContent = url.toString();
+            }
+        }
+
+        if (printBtn) {
+            printBtn.addEventListener('click', function () {
+                if (moreMenu) {
+                    moreMenu.removeAttribute('open');
+                }
+                preparePrintView();
+                window.print();
             });
         }
 

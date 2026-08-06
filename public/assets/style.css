@@ -880,6 +880,117 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     margin: 0;
 }
 
+/* "Kaydı yazdır" — ekranda hep gizli, yalnızca @media print'te (aşağıda)
+   .grid-detail-overlay:not([hidden]) şartıyla gösteriliyor. */
+.grid-detail-print-meta,
+.grid-detail-print-value {
+    display: none;
+}
+
+/* Kayıt yazdırma (grid-row-detail.js "Kaydı yazdır" → preparePrintView() +
+   window.print()) — TAMAMI ":not([hidden])" ile şartlı: overlay kapalıyken
+   (normal grid/"Görünümü yazdır" akışı, bkz. grid-shell.css @media print)
+   bu blok hiçbir şeye dokunmuyor, [hidden] zaten kendi display:none'ını
+   koruyor. table.grid overlay'in DOM kardeşi olmadığı için :has() ile
+   hedefleniyor (modern Chromium — hem yerel geliştirme hem /browse aynı motor). */
+@media print {
+    /* body.gs-body { display:flex } (grid-shell.css) — overlay'i position:static
+       yapmak onu bu flex satırına SOKUYOR, .gs-main-col (topbar/sekmeler/
+       toolbar/grid — hepsi görünür içeriği tek tek gizlense de KENDİSİ hâlâ
+       flex:1 alan kaplıyordu) yanında dar bir sütuna sıkışıyordu (bulunan
+       gerçek bug — ilk denemede içerik sayfanın sağ yarısına kaymıştı).
+       Kök çözüm: .gs-main-col'un TAMAMINI gizle (tek tek table.grid/
+       gs-table-tabs/gs-fields-link yerine — hepsini zaten sarmalıyor) ve
+       body'yi flex'ten çıkar, overlay normal blok akışında tam genişlik alsın. */
+    body:has(.grid-detail-overlay:not([hidden])) {
+        display: block !important;
+    }
+
+    body:has(.grid-detail-overlay:not([hidden])) .gs-main-col {
+        display: none !important;
+    }
+
+    .grid-detail-overlay:not([hidden]) {
+        position: static;
+        background: #fff;
+        display: block;
+        width: 100%;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-modal {
+        width: auto;
+        max-width: none;
+        height: auto;
+        max-height: none;
+        box-shadow: none;
+        border-radius: 0;
+        display: block;
+        overflow: visible;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-header,
+    .grid-detail-overlay:not([hidden]) .grid-detail-comments {
+        display: none !important;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-body {
+        display: block;
+        overflow: visible;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-fields {
+        overflow: visible;
+        padding: 0.5rem 0;
+    }
+
+    /* background-color (background KISALTMASI DEĞİL): kısaltma .field-badge'in
+       background-image ikonunu da SIFIRLARDI (bulunan gerçek bug — ilk
+       denemede ikonlar bu yüzden hiç basılmadı). */
+    .grid-detail-overlay:not([hidden]) .grid-detail-fields,
+    .grid-detail-overlay:not([hidden]) .grid-detail-fields * {
+        color: #000 !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* input/select/textarea/dosya-eki yöneticisi/readonly cell-view print'te
+       kırpılabilir/boş çıkabilir (ör. textarea kendi scroll alanı) — bunun
+       yerine preparePrintView()'ın o anki DEĞERDEN ürettiği düz metin
+       (.grid-detail-print-value, üstteki genel kural görünür yapıyor) basılır. */
+    .grid-detail-overlay:not([hidden]) .grid-detail-field-value input,
+    .grid-detail-overlay:not([hidden]) .grid-detail-field-value select,
+    .grid-detail-overlay:not([hidden]) .grid-detail-field-value textarea,
+    .grid-detail-overlay:not([hidden]) .grid-detail-field-value .attachment-manager,
+    .grid-detail-overlay:not([hidden]) .grid-detail-field-value .cell-view {
+        display: none !important;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-print-value {
+        display: block;
+        white-space: pre-wrap;
+    }
+
+    /* .field-badge ikonları background-image (theme.css) — tarayıcıların
+       "Arka plan grafikleri" print ayarı kapalıyken varsayılan olarak
+       basılmaz, bu iki özellik ayardan bağımsız zorluyor. */
+    .grid-detail-overlay:not([hidden]) .field-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .grid-detail-overlay:not([hidden]) .grid-detail-print-meta {
+        display: block;
+        color: #444 !important;
+        font-size: 0.8rem;
+        margin: 0 0 0.75rem;
+    }
+
+    #grid-detail-print-meta-bottom {
+        margin: 1.5rem 0 0;
+        word-break: break-all;
+    }
+}
+
 /* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
    buraya dokunulmuyor (frozen_column_count=1 = bugünkü varsayılan davranışla
    birebir aynı). .grid-frozen-cell yalnızca EK dondurulmuş veri kolonlarına

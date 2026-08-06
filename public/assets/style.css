@@ -1505,9 +1505,33 @@ td.editable.attachment-editing {
     border-radius: 4px;
 }
 
-.attachment-file-input {
-    font-size: 0.8rem;
+/* Bulunan gerçek bug: eski .attachment-file-input (çıplak <input type=file>)
+   yalnızca tarayıcının küçük native butonuyla tıklanabiliyordu, çevresindeki
+   dolgu dekoratifti. Artık gizli input bir <label class="attachment-dropzone">
+   içinde — TÜM kutu native olarak tıklanabilir + sürükle-bırak destekli
+   (grid.js buildAttachmentManager). Taban kural burada dar popover (260px,
+   .attachment-popover) bağlamı için — kompakt kalması BİLİNÇLİ, önceki
+   oturumda o dar bağlama dokunulmaması kararı korunuyor, yalnızca DAVRANIŞ
+   (tıklanabilirlik/drag-drop) düzeltildi, BOYUT büyütülmedi. */
+.attachment-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     width: 100%;
+    box-sizing: border-box;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+    border: 1px dashed var(--bcc-border-strong);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+}
+
+.attachment-dropzone:hover,
+.attachment-dropzone.is-dragover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-accent);
 }
 
 .attachment-popover-close {
@@ -1522,14 +1546,15 @@ td.editable.attachment-editing {
 }
 
 /* Yalnızca kayıt detay panelindeki (geniş) bağlam — sıkışık 260px popover'a
-   (.attachment-popover) dokunulmadı, oradaki .attachment-file-input tabanı
-   aynı kalıyor. */
-.attachment-manager .attachment-file-input {
-    border: 1px dashed var(--bcc-border-strong);
+   (.attachment-popover) dokunulmadı, oradaki taban .attachment-dropzone
+   kompakt kalıyor. Bu, önceki oturumdaki dashed-box görünümünün AYNISI
+   (yalnızca selector adı .attachment-file-input'tan .attachment-dropzone'a
+   değişti — davranış artık tüm kutuyu kapsıyor). */
+.attachment-manager .attachment-dropzone {
     border-radius: 8px;
     padding: 0.65rem 0.8rem;
     background: var(--bcc-surface-sunken);
-    cursor: pointer;
+    font-size: 0.85rem;
 }
 
 .cell-input {

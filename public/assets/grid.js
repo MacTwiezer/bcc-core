@@ -735,8 +735,16 @@
         fileInput.type = 'file';
         fileInput.accept = '.png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
         fileInput.className = 'attachment-file-input';
-        fileInput.addEventListener('change', function () {
-            var file = fileInput.files[0];
+        // Bulunan gerçek bug: input DOĞRUDAN görünür eklendiğinde tarayıcının
+        // kendi native "Dosya Seç" butonu ÇOK küçük, dolgulu kesikli çerçevenin
+        // geri kalanı tıklanmıyordu. Artık gizli (hidden) — <label> ile sarmalanıp
+        // (aşağıda) kutunun HERHANGİ bir yerine tıklamak native olarak dosya
+        // diyaloğunu açıyor, ayrı bir onclick/.click() JS'i gerekmiyor.
+        fileInput.hidden = true;
+
+        // change (native seçim) VE drop (sürükle-bırak) AYNI upload mantığını
+        // çağırır — uploadAttachment()'a HİÇ dokunulmadı, ikinci bir kopya yok.
+        function handleFileSelected(file) {
             if (!file) {
                 return;
             }
@@ -752,10 +760,41 @@
                     window.alert((result.data && result.data.error) || 'Yüklenemedi.');
                 }
             });
+        }
+
+        fileInput.addEventListener('change', function () {
+            handleFileSelected(fileInput.files[0]);
+        });
+
+        // Airtable'daki "Drop files here or click to browse" paritesi: TÜM kutu
+        // tıklanabilir (native <label> davranışı) + sürükle-bırak. Projede daha
+        // önce hiç drag/drop altyapısı yoktu (grep ile doğrulandı), burada
+        // eklendi — yalnızca preventDefault + görsel .is-dragover durumu,
+        // gerçek yükleme yine handleFileSelected() üzerinden.
+        var dropzone = document.createElement('label');
+        dropzone.className = 'attachment-dropzone';
+        var dropzoneText = document.createElement('span');
+        dropzoneText.className = 'attachment-dropzone-text';
+        dropzoneText.textContent = 'Dosya seçmek için tıklayın veya buraya sürükleyin';
+        dropzone.appendChild(dropzoneText);
+        dropzone.appendChild(fileInput);
+
+        dropzone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            dropzone.classList.add('is-dragover');
+        });
+        dropzone.addEventListener('dragleave', function () {
+            dropzone.classList.remove('is-dragover');
+        });
+        dropzone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropzone.classList.remove('is-dragover');
+            var dropped = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
+            handleFileSelected(dropped);
         });
 
         container.appendChild(list);
-        container.appendChild(fileInput);
+        container.appendChild(dropzone);
         renderList();
 
         return container;

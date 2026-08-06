@@ -681,9 +681,25 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     line-height: 1.3;
 }
 
-.grid-detail-textarea {
+/* Auto-grow (grid-row-detail.js autoGrowTextarea): JS height'i içeriğe göre
+   ayarlar, buradaki max-height GÜVENLİK ÜST SINIRI — çok uzun bir değer
+   (yüzlerce satır) modalı kullanılamaz hale getirmesin diye. Tavana çarpınca
+   tarayıcı textarea'nın NATIVE scrollbar'ını otomatik gösterir, ayrı bir
+   overflow kuralı gerekmez. resize:vertical BİLEREK KALDIRILDI — sürekli
+   auto-grow (input event) elle sürüklemeyle çakışırdı (kullanıcı elle
+   büyütse bile bir sonraki tuş vuruşunda auto-grow onu ANINDA ezerdi).
+   Bulunan gerçek bug: taban .grid-detail-textarea (0,1,0) yerine burada
+   .grid-detail-field-value içinde tanımlandı (0,2,0) — textarea.cell-input
+   (satır ~1546, 0,1,1) BUNDAN DAHA SPESİFİK olduğu için resize:none'ı
+   ezerdi, sıradan .grid-detail-textarea selector'ı yeterli olmazdı.
+   max-height: 60vh yerine SABİT 600px seçildi — canlı testte 720px'lik
+   standart bir viewport'ta 60vh (432px) gerçek bir 27 satırlık değeri
+   (561px, record_id=421) bile kırpıyordu; 600px o değeri rahat karşılıyor,
+   50+ satırlık aşırı uzun bir değeri yine de sınırlıyor. */
+.grid-detail-field-value .grid-detail-textarea {
     min-height: 5rem;
-    resize: vertical;
+    max-height: 600px;
+    resize: none;
 }
 
 /* Salt-okunur panel (viewer/commenter): grid-row-detail.js canlı <td>'nin

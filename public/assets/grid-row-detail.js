@@ -81,6 +81,19 @@
         return tmp.textContent || '';
     }
 
+    // Detay panelindeki TÜM long_text/textarea alanlarının (tek oluşturma yeri:
+    // buildFieldWidget()'in long_text dalı) ortak auto-grow mantığı — üst sınır
+    // (max-height: 600px, style.css) CSS'te, burada yalnızca içeriğe göre
+    // height ayarlanır; tavana çarpınca tarayıcı textarea'nın kendi native
+    // scrollbar'ını otomatik gösterir, ayrı bir overflow state takibi gerekmez.
+    // [hidden] tuzağı: bu fonksiyon overlay GÖRÜNÜRKEN çağrılmalı — layout
+    // hesaplanmamış (display:none) bir ağaçta scrollHeight her zaman 0 döner
+    // (bkz. openDetail()'deki çağrı sırası).
+    function autoGrowTextarea(ta) {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('table.grid');
         var overlay = document.getElementById('grid-detail-overlay');
@@ -231,6 +244,12 @@
                 // dokunulmadan panel kapatılsa bile blur, bu düz metni sunucuya
                 // geri gönderip mevcut biçimlendirmeyi sessizce siliyordu. Artık
                 // yalnızca kullanıcı gerçekten metni değiştirdiyse kaydediliyor.
+                // Sürekli auto-grow: kullanıcı yazarken de textarea içeriğe göre
+                // büyümeye devam eder (tek seferlik açılış boyutlandırması
+                // openDetail()'de, overlay görünür olduktan SONRA yapılır).
+                ta.addEventListener('input', function () {
+                    autoGrowTextarea(ta);
+                });
                 ta.addEventListener('blur', function () {
                     if (ta.value === initialPlainText) {
                         return;
@@ -569,6 +588,10 @@
             updateNavState();
             loadComments(tr.getAttribute('data-record-id'));
             overlay.hidden = false;
+            // Açılış boyutlandırması overlay GÖRÜNÜR OLDUKTAN SONRA yapılır —
+            // renderDetailFields() sırasında overlay hâlâ [hidden] (display:none)
+            // olduğu için textarea'ların scrollHeight'i o an her zaman 0 döner.
+            fieldsContainer.querySelectorAll('.grid-detail-textarea').forEach(autoGrowTextarea);
         }
 
         function closeDetail() {

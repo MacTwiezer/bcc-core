@@ -294,6 +294,11 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 
 **"Kaydı gönder" tamamlandı** (mail backend + arayüz + gerçek gönderim, Bölüm 5 sekiz/dokuz/onuncu adımlar) — şu anda bilinen bir kalan iş yok. Bilinçli kapsam dışı bırakılan: gönderim geçmişi loglama (istenirse ayrı bir iş).
 
+- **"..." (Diğer seçenekler) menüsü — 4 kalemin güncel durumu:**
+  - **Kaydı yazdır** → TAMAM, işlevsel (Bölüm 5, yedinci adım — `window.print()` + temiz tek-kayıt çıktısı).
+  - **Kaydı gönder** → TAMAM, işlevsel (Bölüm 5, sekiz/dokuz/onuncu adımlar — modal + rol/domain kontrollü PHPMailer backend'i).
+  - **Kaydı çoğalt** → HENÜZ no-op, yalnızca görünüm (Bölüm 5, beşinci adım — `onClick` yok, buton disabled/gri de değil).
+  - **Kaydı sil** → HENÜZ no-op, yalnızca görünüm (Bölüm 5, beşinci adım — `onClick` yok).
 - **`vendor/` .gitignore'da** — projeyi yeni çeken biri `composer install` çalıştırmalı (composer.json/composer.lock commit'te, vendor/ değil).
 
 **Tamamlandı (bu oturum):** Önceki turun "Gelecek İşler" notu — "kendi seviyende veya altında davet et" kuralı (Airtable: dört rolün hepsi, Read-Only dahil, kendi seviyesinde/altında davet edebilir, eşit dahil — bkz. support.airtable.com/docs/base-permissions + managing-billable-collaborators FAQ, /browse ile bu oturumda doğrulandı) — artık UYGULANIYOR. `team_members.php` owner-only kısıtlamasından çıktı (`require_role($teamId, 'viewer')`), `$myRank` `current_user_role_in_team()`'den okunuyor, `bcc_assignable_roles()` (src/auth.php) ortak mantığı taşıyor. Airtable'ın Share popup'ı (grid.php'de "Paylaş" — Launch'ın soluna eklendi) + tam Collaborators paneli (team_members.php: arama/rol filtresi/CSV export/"Ekleyen" (audit_log'dan türetilir, yeni kolon YOK)/"Eklenme tarihi" sıralama/toplu çıkarma) paritesi kuruldu. Gerçek e-posta ile yeni hesap davet etme hâlâ YOK (kapsam dışı bırakılmaya devam ediyor) — popup'taki atama kutusu yalnızca var olan aktif kullanıcılar arasında arama yapar.

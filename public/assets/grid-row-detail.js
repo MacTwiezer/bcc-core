@@ -1221,5 +1221,20 @@
                 }
             }, true);
         }
+
+        // URL'den otomatik kayıt açma: copyLinkBtn'in ürettiği AYNI formattaki
+        // (?record_id=N) bir link ziyaret edildiğinde ilgili kaydın detay
+        // paneli otomatik açılır. Kayıt şu an render edilen satırlar arasında
+        // yoksa (filtre/sayfalama dışında, silinmiş, başka tablo) sessizce
+        // hiçbir şey yapılmaz — eski/hatalı bir link için zorlama yok.
+        var initialRecordId = new URLSearchParams(window.location.search).get('record_id');
+        if (initialRecordId) {
+            var initialRow = getAllDataRows().filter(function (tr) {
+                return tr.getAttribute('data-record-id') === initialRecordId;
+            })[0];
+            if (initialRow) {
+                openDetail(initialRow);
+            }
+        }
     });
 })();

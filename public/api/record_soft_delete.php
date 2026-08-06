@@ -49,7 +49,10 @@ try {
     // bcc_execute() etkilenen satır sayısını doğrudan döndürür (mysqli_stmt
     // ->affected_rows), ayrı bir ROW_COUNT() sorgusu gerekmez.
     $affected = bcc_execute(
-        'UPDATE records SET deleted_at = NOW(), deleted_by = :uid WHERE id = :id AND deleted_at IS NULL',
+        // updated_at = updated_at: silme "içerik değişikliği" sayılmaz (Grup B2
+        // tasarım ilkesi) — MySQL'in ON UPDATE CURRENT_TIMESTAMP'i aksi halde bu
+        // UPDATE'te de otomatik bumplardı, kendi değerine EXPLICIT atama bastırıyor.
+        'UPDATE records SET deleted_at = NOW(), deleted_by = :uid, updated_at = updated_at WHERE id = :id AND deleted_at IS NULL',
         array(':uid' => $user['id'], ':id' => $recordId)
     );
     if ((int) $affected === 0) {

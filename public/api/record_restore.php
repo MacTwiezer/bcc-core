@@ -32,7 +32,10 @@ try {
     }
 
     $affected = bcc_execute(
-        'UPDATE records SET deleted_at = NULL, deleted_by = NULL WHERE id = :id AND deleted_at IS NOT NULL',
+        // updated_at = updated_at: geri yükleme de "içerik değişikliği" sayılmaz
+        // (soft-delete'in TAM SİMETRİĞİ, Grup B2 tasarım ilkesi) — MySQL'in ON
+        // UPDATE CURRENT_TIMESTAMP'i bastırılıyor (record_soft_delete.php ile AYNI teknik).
+        'UPDATE records SET deleted_at = NULL, deleted_by = NULL, updated_at = updated_at WHERE id = :id AND deleted_at IS NOT NULL',
         array(':id' => $recordId)
     );
     if ((int) $affected === 0) {

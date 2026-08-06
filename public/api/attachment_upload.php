@@ -109,6 +109,10 @@ if (!move_uploaded_file($upload['tmp_name'], $destPath)) {
 
 try {
     $user = current_user();
+    // "Last modified time/by" (Grup B2): attachments INSERT + records'un "son
+    // değişiklik" damgası + audit log AYNI transaction'da (cell_update.php ile
+    // AYNI gerekçe — bkz. o dosyadaki yorum).
+    bcc_begin_transaction();
     bcc_execute(
         'INSERT INTO attachments (field_id, record_id, original_name, stored_name, mime_type, file_size, uploaded_by)
          VALUES (:field_id, :record_id, :original_name, :stored_name, :mime_type, :file_size, :uploaded_by)',
@@ -124,12 +128,16 @@ try {
     );
     $newId = (int) bcc_last_insert_id();
 
+    bcc_touch_record_modified($recordId);
+
     // record_add.php ile AYNI desen: log_audit() try/catch İÇİNDE — dışarıda
     // olursa (bulunan gerçek bug) burada atılan bir istisna yakalanmaz, ham PHP
     // hata çıktısı (display_errors=On, bkz. C:\xampp\php\php.ini) doğrudan
     // istemciye sızar; dosya aslında başarıyla yüklenmiş olsa bile.
     log_audit('attachment.upload', 'record', $recordId, array('field_id' => $fieldId, 'file_name' => $originalName), $field['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     unlink($destPath);
     json_fail(500, 'Veritabanı hatası.');
 }

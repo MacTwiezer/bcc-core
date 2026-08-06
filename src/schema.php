@@ -16,12 +16,16 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     'attachment' => 'Dosya eki',
     // Otomatik/salt-okunur alanlar (Airtable "Created time"/"Created by" paritesi,
     // Grup B1) — DDL YOK, değer zaten records.created_at/created_by'da sağlam
-    // duruyor (bkz. docs/PROJE-DURUM.md teşhis notu). "Last modified time/by"
-    // (Grup B2) BİLEREK burada YOK — records.updated_at kanıtlı güvenilmez ve
-    // updated_by kolonu hiç yok, DDL + cell_update.php'nin records'u da
-    // güncellemesi gerekir; bu tamamen AYRI, DDL gerektiren bir sonraki adım.
+    // duruyor (bkz. docs/PROJE-DURUM.md teşhis notu).
     'created_time' => 'Oluşturulma zamanı',
     'created_by' => 'Oluşturan',
+    // "Last modified time"/"Last modified by" (Grup B2, migrations/013) —
+    // records.updated_at ARTIK bcc_touch_record_modified() ile doğru tutuluyor
+    // (yalnızca "içerik değişikliği" sayılan yazma noktalarından — bkz. o
+    // fonksiyonun yorumu), updated_by YENİ kolon. created_time/created_by ile
+    // BİREBİR AYNI mekanizma (BCC_RECORD_COLUMN_FIELD_TYPES), yalnızca kolon adı farklı.
+    'last_modified_time' => 'Son değişiklik zamanı',
+    'last_modified_by' => 'Son değiştiren',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
@@ -54,17 +58,23 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     // adı için BCC_RECORD_COLUMN_FIELD_TYPES'a bakılır (aşağıda).
     'created_time' => 'value_date',
     'created_by' => 'value_number',
+    // last_modified_time/by: created_time/by ile AYNI mantık (value_date/
+    // value_number ödünç alınır) — gerçek kolon BCC_RECORD_COLUMN_FIELD_TYPES'ta.
+    'last_modified_time' => 'value_date',
+    'last_modified_by' => 'value_number',
 );
 
-// created_time/created_by gibi "records tablosundan doğrudan okunan" alan
-// tipleri — bcc_build_grid_records_query()/filter_condition_sql() bu haritada
-// bir field_type bulursa cell_values'a LEFT JOIN ATMAZ, records'un (alias 'r')
-// KENDİ kolonunu doğrudan kullanır. BCC_FIELD_VALUE_COLUMN'daki 'value_date'/
-// 'value_number' İLE KARIŞTIRILMASIN — o render fonksiyonlarının $cellRow şekli
-// için, bu ise gerçek SQL kolon adı için.
+// created_time/created_by/last_modified_time/last_modified_by gibi "records
+// tablosundan doğrudan okunan" alan tipleri — bcc_build_grid_records_query()/
+// filter_condition_sql() bu haritada bir field_type bulursa cell_values'a LEFT
+// JOIN ATMAZ, records'un (alias 'r') KENDİ kolonunu doğrudan kullanır.
+// BCC_FIELD_VALUE_COLUMN'daki 'value_date'/'value_number' İLE KARIŞTIRILMASIN
+// — o render fonksiyonlarının $cellRow şekli için, bu ise gerçek SQL kolon adı için.
 $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'] = array(
     'created_time' => 'created_at',
     'created_by' => 'created_by',
+    'last_modified_time' => 'updated_at',
+    'last_modified_by' => 'updated_by',
 );
 
 // Grid sütun başlığında gösterilen kısa tip rozeti.
@@ -81,6 +91,8 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'attachment' => '📎',
     'created_time' => '🕐',
     'created_by' => '@',
+    'last_modified_time' => '🕐',
+    'last_modified_by' => '@',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -132,6 +144,20 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
     // created_by: 'user' ile AYNI — records.created_by NULL olabilir (oluşturan
     // kullanıcı silinmişse, FK ON DELETE SET NULL), empty/not_empty anlamlı.
     'created_by' => array(
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    // last_modified_time: created_time ile AYNI gerekçeyle empty/not_empty YOK
+    // — records.updated_at NOT NULL, hiçbir zaman boş olamaz.
+    'last_modified_time' => array(
+        'before' => 'önce', 'after' => 'sonra', 'equals' => 'eşittir',
+    ),
+    // last_modified_by: created_by ile AYNI — records.updated_by NULL olabilir
+    // (henüz hiç düzenlenmemiş VEYA düzenleyen kullanıcı silinmiş). NOT: bu
+    // filtre/sıralama HAM updated_by üzerinde çalışır — grid/detay panelindeki
+    // "hiç düzenlenmemişse created_by'a düş" GÖRÜNTÜLEME kuralı (bcc_cell_row_for_field)
+    // burayı etkilemez, "empty" burada GERÇEKTEN "hiç düzenlenmemiş" anlamına gelir.
+    'last_modified_by' => array(
         'equals' => 'eşittir', 'not_equals' => 'eşit değil',
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
@@ -791,13 +817,17 @@ function cell_raw_value($fieldType, $cellRow)
             return (string) $cellRow['value_text'];
         case 'user':
             return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
-        // created_time/created_by: bcc_cell_row_for_field() bu $cellRow'u
-        // records.created_at/created_by'dan taklit ediyor (bkz. o fonksiyonun
-        // yorumu) — "raw" hiç kısaltılmaz (date'in aksine — bu alanlar asla
-        // <input> doldurmak için kullanılmıyor, tam hassasiyet daha bilgilendirici).
+        // created_time/created_by/last_modified_time/last_modified_by:
+        // bcc_cell_row_for_field() bu $cellRow'u records'tan taklit ediyor
+        // (last_modified_by'ın "hiç düzenlenmemişse created_by'a düş" kuralı DAHİL,
+        // bkz. o fonksiyonun yorumu — burada AYRI bir dal gerekmez, $cellRow
+        // zaten doğru değerle gelir) — "raw" hiç kısaltılmaz (date'in aksine,
+        // bu alanlar asla <input> doldurmak için kullanılmıyor).
         case 'created_time':
+        case 'last_modified_time':
             return $cellRow['value_date'] !== null ? (string) $cellRow['value_date'] : '';
         case 'created_by':
+        case 'last_modified_by':
             return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
         default:
             return '';
@@ -842,12 +872,17 @@ function cell_display_text($fieldType, $cellRow, $usersById = array())
             }
             $userId = (int) $cellRow['value_number'];
             return isset($usersById[$userId]) ? $usersById[$userId] : '';
-        // created_time: tam tarih+saat (madde 5) — 'date' case'i gibi sadece
-        // güne kısaltmaz. created_by: 'user' ile BİREBİR AYNI id→ad çözümü
-        // (AYNI $usersById haritası, ikinci bir kaynak İCAT EDİLMEDİ).
+        // created_time/last_modified_time: tam tarih+saat (madde 5) — 'date'
+        // case'i gibi sadece güne kısaltmaz. created_by/last_modified_by: 'user'
+        // ile BİREBİR AYNI id→ad çözümü (AYNI $usersById haritası, ikinci bir
+        // kaynak İCAT EDİLMEDİ) — last_modified_by'ın "hiç düzenlenmemişse
+        // created_by'a düş" kuralı bcc_cell_row_for_field()'de UYGULANMIŞ olarak
+        // gelir, burada ayrıca ele alınmaz.
         case 'created_time':
+        case 'last_modified_time':
             return $cellRow['value_date'] !== null ? date('d.m.Y H:i', strtotime($cellRow['value_date'])) : '';
         case 'created_by':
+        case 'last_modified_by':
             if ($cellRow['value_number'] === null) {
                 return '';
             }
@@ -892,6 +927,24 @@ function bcc_user_choices_from_map($usersById)
 // kullandığı AYNI yardımcı) ile $record'dan bir $cellRow "taklit edilir". Diğer
 // tüm tipler değişmeden $cellsByRecord'dan okumaya devam eder. bcc_render_grid_row_fields_json()
 // VE bcc_render_grid_data_row() İKİSİ DE bunu çağırır, kopya dal yazılmadı.
+// "Last modified time/by" (Grup B2): records.updated_at zaten ON UPDATE
+// CURRENT_TIMESTAMP ama YALNIZCA bu fonksiyon çağrılan satırlar için (elle,
+// bilinçli) tetiklenir — log_audit() ile AYNI imza felsefesi, current_user()
+// KENDİSİ çağrılır, çağıran taraf user id geçirmez. Yalnızca "içerik
+// değişikliği" sayılan yazma noktalarından (cell_update.php, attachment_upload.php,
+// attachment_delete.php) çağrılır — record_add.php/record_duplicate.php'nin
+// pozisyon kaydırma UPDATE'i, record_soft_delete.php/record_restore.php'nin
+// deleted_at UPDATE'i BİLEREK çağırmaz (bkz. docs/PROJE-DURUM.md Grup B2 tasarım
+// notu — "içerik değişikliği" vs. "satır yaşam döngüsü/idari işlem" ayrımı).
+function bcc_touch_record_modified($recordId)
+{
+    $user = current_user();
+    bcc_execute(
+        'UPDATE records SET updated_at = NOW(), updated_by = :uid WHERE id = :id',
+        array(':uid' => $user ? $user['id'] : null, ':id' => $recordId)
+    );
+}
+
 function bcc_cell_row_for_field($fieldType, $record, $cellsByRecord, $fieldId)
 {
     if ($fieldType === 'created_time') {
@@ -899,6 +952,22 @@ function bcc_cell_row_for_field($fieldType, $record, $cellsByRecord, $fieldId)
     }
     if ($fieldType === 'created_by') {
         return bcc_group_cell_row('value_number', $record['created_by']);
+    }
+    if ($fieldType === 'last_modified_time') {
+        // Kayıt hiç düzenlenmemişse (updated_by NULL — bcc_touch_record_modified()
+        // hiç çağrılmamış) updated_at yine de created_at'e EŞİT (ON UPDATE
+        // CURRENT_TIMESTAMP satır INSERT edilirken de bir kez tetiklenir, MySQL'in
+        // kendi davranışı) — ayrı bir fallback YAZILMADI, records.updated_at
+        // zaten doğru değeri taşıyor.
+        return bcc_group_cell_row('value_date', $record['updated_at']);
+    }
+    if ($fieldType === 'last_modified_by') {
+        // Airtable paritesi: hiç düzenlenmemiş bir kayıtta "Son değiştiren"
+        // OLUŞTURAN kişiyi gösterir ("son değişiklik" == "oluşturma"). Yalnızca
+        // GRİD/DETAY RENDER'ı için (bkz. filter_condition_sql — filtre/sıralama
+        // HAM updated_by üzerinde çalışmaya devam eder, bu fallback'i görmez).
+        $value = $record['updated_by'] !== null ? $record['updated_by'] : $record['created_by'];
+        return bcc_group_cell_row('value_number', $value);
     }
 
     return isset($cellsByRecord[$record['id']][$fieldId]) ? $cellsByRecord[$record['id']][$fieldId] : null;
@@ -979,7 +1048,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
             // 'editable' class'ına bakıyor (bkz. grid.js td.editable), bu class
             // hiç eklenmezse ikinci bir JS kontrolüne gerek kalmaz.
-            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by'), true);
+            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by', 'last_modified_time', 'last_modified_by'), true);
             if ($isSelectType) {
                 $choices = select_choices_from_options($f['options']);
             } elseif ($f['field_type'] === 'user') {
@@ -1353,14 +1422,20 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
 
             return array('ok' => true, 'column' => $column, 'value' => $userId);
 
-        // created_time/created_by: Airtable'daki gibi kullanıcı tarafından ASLA
-        // düzenlenemez — backend'de son söz burası (grid-row-detail.js'in
-        // buildFieldWidget() dalı zaten frontend'de engelliyor, ama bypass
-        // ihtimaline karşı gerçek karar burada). $columnMap'te (BCC_FIELD_VALUE_COLUMN)
-        // bu iki tip VAR (aksi halde fonksiyon başındaki isset() kontrolü
-        // "Bilinmeyen alan tipi" ile reddederdi) — burada AYRI, doğru mesajla reddedilir.
+        // created_time/created_by/last_modified_time/last_modified_by:
+        // Airtable'daki gibi kullanıcı tarafından ASLA düzenlenemez — backend'de
+        // son söz burası (grid-row-detail.js'in buildFieldWidget() dalı zaten
+        // frontend'de engelliyor, ama bypass ihtimaline karşı gerçek karar
+        // burada). $columnMap'te (BCC_FIELD_VALUE_COLUMN) bu dört tip VAR (aksi
+        // halde fonksiyon başındaki isset() kontrolü "Bilinmeyen alan tipi" ile
+        // reddederdi) — burada AYRI, doğru mesajla reddedilir. last_modified_time/by
+        // zaten YALNIZCA bcc_touch_record_modified() ile (madde b'deki "içerik
+        // değişikliği" yazma noktalarından) dolaylı olarak güncellenir, hiçbir
+        // zaman doğrudan bir cell_update.php isteğiyle YAZILAMAZ.
         case 'created_time':
         case 'created_by':
+        case 'last_modified_time':
+        case 'last_modified_by':
             return array('ok' => false, 'error' => 'Bu alan otomatik doldurulur, düzenlenemez.');
 
         default:
@@ -1765,7 +1840,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $value));
     }
 
-    if ($fieldType === 'user' || $fieldType === 'created_by') {
+    if ($fieldType === 'user' || $fieldType === 'created_by' || $fieldType === 'last_modified_by') {
         if ($raw === '' || !ctype_digit($raw)) {
             return null;
         }
@@ -1796,7 +1871,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $raw));
     }
 
-    if ($fieldType === 'date' || $fieldType === 'created_time') {
+    if ($fieldType === 'date' || $fieldType === 'created_time' || $fieldType === 'last_modified_time') {
         $d = DateTime::createFromFormat('Y-m-d', $raw);
         if (!$d || $d->format('Y-m-d') !== $raw) {
             return null;
@@ -1871,10 +1946,10 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
             $groupSelectExtra .= ", gv{$gIdx}.{$gRule['column']} AS group_raw_value_{$gIdx}";
         }
     }
-    // r.created_by: created_by alan tipinin render'ı için (bcc_render_grid_data_row
-    // vb.) — r.created_at zaten seçiliydi, created_by de AYNI şekilde her zaman
-    // gerekli (yalnızca bir group/sort/filter kuralı varken değil).
-    $recordsSql = "SELECT r.id, r.position, r.created_at, r.created_by{$groupSelectExtra} FROM records r";
+    // r.created_by/updated_at/updated_by: created_time/created_by/last_modified_time/
+    // last_modified_by alan tiplerinin render'ı için (bcc_render_grid_data_row vb.)
+    // — her zaman gerekli (yalnızca bir group/sort/filter kuralı varken değil).
+    $recordsSql = "SELECT r.id, r.position, r.created_at, r.created_by, r.updated_at, r.updated_by{$groupSelectExtra} FROM records r";
     $recordsParams = array(':table_id' => $tableId);
     $orderParts = array();
 

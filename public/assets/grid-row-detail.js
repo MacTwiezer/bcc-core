@@ -100,6 +100,19 @@
         var printBtn = document.getElementById('grid-detail-print-btn');
         var printMetaTop = document.getElementById('grid-detail-print-meta-top');
         var printMetaBottom = document.getElementById('grid-detail-print-meta-bottom');
+        var sendBtn = document.getElementById('grid-detail-send-btn');
+        var sendOverlay = document.getElementById('grid-send-overlay');
+        var sendHeader = document.querySelector('.grid-send-header');
+        var sendCloseBtn = document.getElementById('grid-send-close');
+        var sendCancelBtn = document.getElementById('grid-send-cancel');
+        var sendSubmitBtn = document.getElementById('grid-send-submit');
+        var sendToInput = document.getElementById('grid-send-to');
+        var sendToError = document.getElementById('grid-send-to-error');
+        var sendSubjectInput = document.getElementById('grid-send-subject');
+        var sendMessageInput = document.getElementById('grid-send-message');
+        var sendPreview = document.getElementById('grid-send-preview');
+        var sendUseGridLayoutToggle = document.getElementById('grid-send-use-grid-layout');
+        var sendCopySelfToggle = document.getElementById('grid-send-copy-self');
 
         var currentDetailRow = null;
 
@@ -723,9 +736,11 @@
         // grid.js'teki showToast() burada KULLANILAMAZ: bu dosya (grid-row-detail.js)
         // BİLEREK window.BCC_GRID'e/grid.js'e bağımlı değil (viewer/commenter'da
         // grid.js hiç yüklenmez), ve o fonksiyon zaten modal açıkken görünmeyen
-        // .gs-grid-footer'a ekleniyor.
-        function showDetailToast(message) {
-            var header = document.querySelector('.grid-detail-header');
+        // .gs-grid-footer'a ekleniyor. headerEl opsiyonel — gönder modalının
+        // "Gönderme Adım 4'te bağlanacak" bildirimi de AYNI fonksiyonu kendi
+        // header'ıyla (.grid-send-header) çağırıyor, ikinci bir toast yazılmadı.
+        function showDetailToast(message, headerEl) {
+            var header = headerEl || document.querySelector('.grid-detail-header');
             if (!header) {
                 return;
             }
@@ -878,6 +893,123 @@
             });
         }
 
+        // "Kaydı gönder" modalı (Airtable "Send record" paritesi) — alan
+        // önizlemesi YAZDIRDAKİ fieldPrintText()'i AYNEN çağırır (KOPYALAMA
+        // yok, fonksiyon zaten print'e özel bir şey içermiyordu); yalnızca
+        // sonucu .grid-detail-print-value yerine kendi önizleme listesine
+        // yazar. Etiket (ikon+metin) de yazdırdaki gibi yeniden ÜRETİLMEZ,
+        // mevcut .grid-detail-field-label DOM'u cloneNode ile taşınır.
+        function renderSendPreview() {
+            if (!sendPreview) {
+                return;
+            }
+            sendPreview.textContent = '';
+            Array.prototype.forEach.call(fieldsContainer.querySelectorAll('.grid-detail-field'), function (row) {
+                var labelEl = row.querySelector('.grid-detail-field-label');
+                var valueWrap = row.querySelector('.grid-detail-field-value');
+                if (!labelEl || !valueWrap) {
+                    return;
+                }
+                var field = document.createElement('div');
+                field.className = 'grid-send-preview-field';
+
+                var label = document.createElement('div');
+                label.className = 'grid-send-preview-label';
+                label.appendChild(labelEl.cloneNode(true));
+                field.appendChild(label);
+
+                var value = document.createElement('div');
+                value.className = 'grid-send-preview-value';
+                value.textContent = fieldPrintText(valueWrap);
+                field.appendChild(value);
+
+                sendPreview.appendChild(field);
+            });
+        }
+
+        function validateSendRecipients() {
+            if (!sendToInput) {
+                return true;
+            }
+            var count = sendToInput.value.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; }).length;
+            var overLimit = count > 15;
+            if (sendToError) {
+                sendToError.hidden = !overLimit;
+            }
+            if (sendSubmitBtn) {
+                sendSubmitBtn.disabled = overLimit;
+            }
+            return !overLimit;
+        }
+
+        function openSendModal() {
+            if (!sendOverlay || !currentDetailRow) {
+                return;
+            }
+            var userName = window.BCC_CURRENT_USER_NAME || '';
+            var tableName = window.BCC_TABLE_NAME || '';
+            if (sendToInput) {
+                sendToInput.value = '';
+            }
+            if (sendToError) {
+                sendToError.hidden = true;
+            }
+            if (sendSubjectInput) {
+                sendSubjectInput.value = userName + " '" + tableName + "' tablosundan 1 kayıt paylaştı";
+            }
+            if (sendMessageInput) {
+                sendMessageInput.value = "İşte '" + tableName + "' tablosundan bu kaydın son hali:";
+            }
+            if (sendUseGridLayoutToggle) {
+                sendUseGridLayoutToggle.checked = false;
+            }
+            if (sendCopySelfToggle) {
+                sendCopySelfToggle.checked = false;
+            }
+            if (sendSubmitBtn) {
+                sendSubmitBtn.disabled = false;
+            }
+            renderSendPreview();
+            sendOverlay.hidden = false;
+        }
+
+        function closeSendModal() {
+            if (sendOverlay) {
+                sendOverlay.hidden = true;
+            }
+        }
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', function () {
+                if (moreMenu) {
+                    moreMenu.removeAttribute('open');
+                }
+                openSendModal();
+            });
+        }
+
+        if (sendCloseBtn) {
+            sendCloseBtn.addEventListener('click', closeSendModal);
+        }
+        if (sendCancelBtn) {
+            sendCancelBtn.addEventListener('click', closeSendModal);
+        }
+        if (sendToInput) {
+            sendToInput.addEventListener('input', validateSendRecipients);
+        }
+        // Bu adımda gerçek gönderim YOK — backend'e (PHPMailer/Office 365)
+        // BİLEREK dokunulmadı, o Adım 4'te bağlanacak. Modal açık kalır,
+        // yalnızca bilgilendirme toast'ı gösterilir (showDetailToast() aynen
+        // yeniden kullanılıyor, kendi header'ıyla).
+        if (sendSubmitBtn) {
+            sendSubmitBtn.addEventListener('click', function () {
+                if (!validateSendRecipients()) {
+                    return;
+                }
+                showDetailToast('Gönderme Adım 4\'te bağlanacak', sendHeader);
+            });
+        }
+
         // Backdrop'a (modal içeriğine değil) tıklayınca / Escape ile kapanma —
         // assets/dismissable-panel.js, isOpen/close .hidden'a göre override edilir.
         window.bcc_bindDismissable(overlay, {
@@ -909,6 +1041,29 @@
                 if (e.key === 'Escape' && moreMenu.hasAttribute('open')) {
                     e.stopPropagation();
                     moreMenu.removeAttribute('open');
+                }
+            }, true);
+        }
+
+        // "Kaydı gönder" modalı — kayıt detay overlay'inin ÜSTÜNDE ayrı bir
+        // overlay (z-index, style.css). Backdrop-tık için AYNI kanıtlanmış
+        // desen (isClickOutside: target===overlay). ESC katmanlaması "..."
+        // menüsüyle BİREBİR AYNI mantık: gönder modalı açıkken ESC SADECE onu
+        // kapatmalı, alttaki kayıt modalını DEĞİL — capture fazında önce
+        // çalışan özel bir dinleyici, açıksa kendisi kapatıp stopPropagation
+        // ile olayın overlay'in bubble-fazlı ESC dinleyicisine ulaşmasını
+        // engelliyor; kapalıyken hiçbir şey yapmaz.
+        if (sendOverlay) {
+            window.bcc_bindDismissable(sendOverlay, {
+                isOpen: function () { return !sendOverlay.hidden; },
+                close: closeSendModal,
+                isClickOutside: function (target) { return target === sendOverlay; },
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !sendOverlay.hidden) {
+                    e.stopPropagation();
+                    closeSendModal();
                 }
             }, true);
         }

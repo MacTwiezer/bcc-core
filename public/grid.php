@@ -1348,6 +1348,11 @@ $gridUser = current_user();
     var BCC_VIEW_ID = <?php echo (int) $view['id']; ?>;
     var BCC_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
     var BCC_CAN_COMMENT = <?php echo $canComment ? 'true' : 'false'; ?>;
+    // "Kaydı gönder" modalının otomatik Konu/Mesaj metni için — DOM'dan
+    // scrape etmek yerine (ör. .gs-account-name) diğer BCC_* globalleriyle
+    // AYNI desen, tek kaynak sunucudan gelir.
+    var BCC_CURRENT_USER_NAME = <?php echo json_encode($gridUser['full_name'], JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_TABLE_NAME = <?php echo json_encode($table['name'], JSON_UNESCAPED_UNICODE); ?>;
 </script>
 <script src="<?php echo bcc_asset_url('grid-toolbar.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-filter.js'); ?>" defer></script>
@@ -1391,7 +1396,7 @@ $gridUser = current_user();
                     <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
                 </summary>
                 <div class="gs-table-tab-menu-panel grid-detail-more-panel">
-                    <button type="button" class="gs-table-tab-menu-item">
+                    <button type="button" class="gs-table-tab-menu-item" id="grid-detail-send-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 6l6.5 5 6.5-5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı gönder
                     </button>
@@ -1442,6 +1447,54 @@ $gridUser = current_user();
             </div>
         </div>
         <div class="grid-detail-print-meta" id="grid-detail-print-meta-bottom"></div>
+    </div>
+</div>
+<!-- "Kaydı gönder" modalı (Airtable "Send record" paritesi) — kayıt detay
+     overlay'inden AYRI, kendi backdrop'ı olan bir ikinci overlay (grid-shell.css
+     .gs-view-desc-overlay/grid-table-data.js import overlay'iyle AYNI kanıtlanmış
+     [hidden]+açık override deseni, bkz. style.css). Konu/Mesaj/alan önizlemesi
+     TAMAMEN JS'te dolduruluyor (grid-row-detail.js) — sunucu burada yalnızca
+     boş iskeleti basıyor, ikinci bir PHP render yolu YOK. -->
+<div class="grid-send-overlay" id="grid-send-overlay" hidden>
+    <div class="grid-send-modal">
+        <div class="grid-send-header">
+            <div class="grid-send-title">Kaydı gönder</div>
+            <button type="button" class="grid-detail-close" id="grid-send-close" aria-label="Kapat">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <div class="grid-send-body">
+            <label class="grid-send-label" for="grid-send-to">Kime</label>
+            <input type="text" id="grid-send-to" class="grid-send-input" autocomplete="off" placeholder="Alıcılar (birden fazla e-posta adresini virgülle ayırın). En fazla 15 alıcı.">
+            <div class="grid-send-error" id="grid-send-to-error" hidden>En fazla 15 alıcı ekleyebilirsiniz.</div>
+
+            <label class="grid-send-label" for="grid-send-subject">Konu</label>
+            <input type="text" id="grid-send-subject" class="grid-send-input" autocomplete="off">
+
+            <label class="grid-send-label" for="grid-send-message">Mesaj</label>
+            <textarea id="grid-send-message" class="grid-send-input grid-send-textarea"></textarea>
+
+            <div class="grid-send-preview" id="grid-send-preview"></div>
+
+            <label class="grid-send-toggle-row">
+                <span class="grid-send-toggle-switch">
+                    <input type="checkbox" id="grid-send-use-grid-layout">
+                    <span class="grid-send-toggle-track"></span>
+                </span>
+                Tablo düzenini kullan
+            </label>
+            <label class="grid-send-toggle-row">
+                <span class="grid-send-toggle-switch">
+                    <input type="checkbox" id="grid-send-copy-self">
+                    <span class="grid-send-toggle-track"></span>
+                </span>
+                Bir kopyasını bana gönder
+            </label>
+        </div>
+        <div class="grid-send-footer">
+            <button type="button" class="gs-btn-ghost" id="grid-send-cancel">İptal</button>
+            <button type="button" class="gs-btn-primary" id="grid-send-submit">Gönder</button>
+        </div>
     </div>
 </div>
 <script src="<?php echo bcc_asset_url('grid-row-detail.js'); ?>" defer></script>

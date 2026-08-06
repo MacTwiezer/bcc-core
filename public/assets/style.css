@@ -991,6 +991,186 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     }
 }
 
+/* ---------- "Kaydı gönder" modalı (Airtable "Send record" paritesi) ---------- */
+
+.grid-send-overlay {
+    position: fixed;
+    inset: 0;
+    /* Kayıt detay overlay'inin (z-index:60) ÜSTÜNDE durmalı — ikisi aynı anda
+       açık olabiliyor (gönder modalı kayıt modalının üstünde açılıyor). */
+    z-index: 70;
+    background: rgba(15, 15, 20, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* [hidden] tek başına yetmez — .grid-detail-overlay'de bulunan AYNI tuzak
+   (yukarıdaki display:flex, UA'nın [hidden]{display:none} varsayılanını ezer). */
+.grid-send-overlay[hidden] { display: none; }
+
+.grid-send-modal {
+    width: 480px;
+    max-width: 92vw;
+    max-height: 88vh;
+    background: var(--bcc-surface);
+    border-radius: 12px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.grid-send-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--bcc-border);
+    flex-shrink: 0;
+}
+
+.grid-send-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.grid-send-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.grid-send-label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    margin: 0.9rem 0 0.4rem;
+}
+
+.grid-send-label:first-child { margin-top: 0; }
+
+.grid-send-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    font-size: 0.9rem;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+}
+
+.grid-send-textarea {
+    min-height: 4.5rem;
+    resize: vertical;
+}
+
+.grid-send-error {
+    color: var(--bcc-danger);
+    font-size: 0.78rem;
+    margin-top: 0.3rem;
+}
+
+.grid-send-preview {
+    margin-top: 0.9rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    padding: 0.8rem 0.9rem;
+    background: var(--bcc-surface-sunken);
+}
+
+.grid-send-preview-field { margin-bottom: 0.7rem; }
+.grid-send-preview-field:last-child { margin-bottom: 0; }
+
+.grid-send-preview-label {
+    display: flex;
+    align-items: center;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.grid-send-preview-label .field-badge { flex-shrink: 0; }
+
+.grid-send-preview-value {
+    font-size: 0.88rem;
+    color: var(--bcc-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.grid-send-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+/* Projede hazır bir toggle-switch bileşeni yok — native checkbox görsel
+   olarak gizlenip (opacity:0, ama erişilebilirlik için DOM'da/tıklanabilir
+   kalır) yerine bu iki eleman (track + ::before ile thumb) konuyor. */
+.grid-send-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.grid-send-toggle-switch input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.grid-send-toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--bcc-border-strong);
+    border-radius: 999px;
+    transition: background 0.15s;
+}
+
+.grid-send-toggle-track::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s;
+}
+
+.grid-send-toggle-switch input:checked + .grid-send-toggle-track {
+    background: var(--bcc-accent);
+}
+
+.grid-send-toggle-switch input:checked + .grid-send-toggle-track::before {
+    transform: translateX(14px);
+}
+
+.grid-send-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--bcc-border);
+    flex-shrink: 0;
+}
+
 /* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
    buraya dokunulmuyor (frozen_column_count=1 = bugünkü varsayılan davranışla
    birebir aynı). .grid-frozen-cell yalnızca EK dondurulmuş veri kolonlarına

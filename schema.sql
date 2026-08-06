@@ -144,13 +144,19 @@ CREATE TABLE IF NOT EXISTS records (
     position    INT NOT NULL DEFAULT 0,
     created_by  INT UNSIGNED DEFAULT NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- Not: "Son güncelleme" sıralaması BUNU değil, MAX(cell_values.updated_at)'i
-    -- kullanır (bkz. src/schema.php'deki bcc_build_grid_records_query yorumu) —
-    -- bir kaydın hücre içeriği DEĞİL, satır düzeyi (ör. yeniden sıralama) meta
-    -- bilgisinin ne zaman değiştiğini tutan standart bookkeeping kolonu; şu an
-    -- hiçbir sorgu bunu doğrudan OKUMUYOR, ama tables_meta/views/cell_values ile
-    -- AYNI desen (silinmesi tutarsızlık yaratır, tutulması bedelsiz).
+    -- "Last modified time" (Airtable paritesi, Grup B2, migrations/013):
+    -- ON UPDATE CURRENT_TIMESTAMP kendisi TEK BAŞINA yeterli değildi — hiçbir
+    -- yazma noktası (ör. cell_update.php) bu satırı DOĞRUDAN güncellemiyordu,
+    -- yalnızca cell_values'a yazıyordu. Artık bcc_touch_record_modified()
+    -- (src/schema.php) "içerik değişikliği" sayılan yazma noktalarından
+    -- (cell_update.php, attachment_upload.php, attachment_delete.php) BİLEREK
+    -- ELLE çağrılıyor — pozisyon kaydırma/silme/geri yükleme SAYILMIYOR (bkz.
+    -- docs/PROJE-DURUM.md Grup B2 tasarım notu, "içerik vs. yaşam döngüsü" ayrımı).
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- "Last modified by" (Grup B2, migrations/013) — created_by/deleted_by ile
+    -- AYNI ilke: ON DELETE SET NULL, düzenleyen kullanıcının hesabı silinirse
+    -- kayıt bozulmaz. updated_at ile AYNI 3 yazma noktasında elle set edilir.
+    updated_by  INT UNSIGNED NULL,
     -- Trash özelliği (bases.deleted_at/deleted_by ile AYNI desen, bkz.
     -- migrations/012_records_soft_delete.sql) — NULL = aktif/silinmemiş.
     deleted_at  DATETIME NULL,
@@ -163,6 +169,7 @@ CREATE TABLE IF NOT EXISTS records (
     KEY idx_records_table_deleted_at (table_id, deleted_at),
     CONSTRAINT fk_records_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
     CONSTRAINT fk_records_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_records_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT fk_records_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

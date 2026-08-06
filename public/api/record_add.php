@@ -62,7 +62,12 @@ try {
             // Araya ekleme: after_record_id'den sonraki kayıtların position'ı bir
             // kaydırılır, yeni kayıt açılan boşluğa yerleşir.
             bcc_execute(
-                'UPDATE records SET position = position + 1 WHERE table_id = :tid AND position > :pos',
+                // updated_at = updated_at: MySQL'in ON UPDATE CURRENT_TIMESTAMP'i
+                // aksi halde bu satır DEĞİŞMESE bile (yalnızca position kayması,
+                // içerik değil — Grup B2 tasarım ilkesi) otomatik bumplardı.
+                // Kendi değerine EXPLICIT atama bu otomatik tetiklemeyi bastırıyor
+                // (MySQL kuralı: kolona açıkça değer atanırsa otomatik davranış devre dışı kalır).
+                'UPDATE records SET position = position + 1, updated_at = updated_at WHERE table_id = :tid AND position > :pos',
                 array(':tid' => $table['id'], ':pos' => $afterRecord['position'])
             );
             $newPos = $afterRecord['position'] + 1;

@@ -69,7 +69,10 @@ try {
     // "Araya ekleme": orijinalin position'ından BÜYÜK tüm kayıtlar +1
     // kaydırılır — record_add.php'nin after_record_id dalıyla BİREBİR AYNI.
     bcc_execute(
-        'UPDATE records SET position = position + 1 WHERE table_id = :tid AND position > :pos',
+        // updated_at = updated_at: record_add.php'deki AYNI bastırma — pozisyon
+        // kayması "içerik değişikliği" sayılmaz (Grup B2 tasarım ilkesi), MySQL'in
+        // ON UPDATE CURRENT_TIMESTAMP'i bu satırlara dokunmasın diye.
+        'UPDATE records SET position = position + 1, updated_at = updated_at WHERE table_id = :tid AND position > :pos',
         array(':tid' => $tableId, ':pos' => $original['position'])
     );
     $newPos = $original['position'] + 1;

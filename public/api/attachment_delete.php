@@ -20,9 +20,16 @@ if (!$attachment) {
 require_role($attachment['team_id'], 'editor');
 
 try {
+    // "Last modified time/by" (Grup B2): attachments DELETE + records'un "son
+    // değişiklik" damgası + audit log AYNI transaction'da (cell_update.php ile
+    // AYNI gerekçe).
+    bcc_begin_transaction();
     bcc_execute('DELETE FROM attachments WHERE id = :id', array('id' => $attachment['id']));
+    bcc_touch_record_modified($attachment['record_id']);
     log_audit('attachment.delete', 'record', $attachment['record_id'], array('field_id' => $attachment['field_id'], 'file_name' => $attachment['original_name']), $attachment['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

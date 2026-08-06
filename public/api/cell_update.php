@@ -58,12 +58,22 @@ try {
     $column = $result['column'];
     $value = $result['value'];
 
+    // "Last modified time/by" (Grup B2): cell_values yazması + records'un
+    // "son değişiklik" damgası + audit log AYNI transaction'da — view_save_state.php
+    // ile AYNI gerekçe: ikisi ayrı olsaydı, ikinci yazma istisna atarsa ilki zaten
+    // commit edilmiş olurdu, "içerik değişti ama son değişiklik yansımadı" gibi
+    // tutarsız bir durum ortaya çıkardı.
+    bcc_begin_transaction();
     $sql = "INSERT INTO cell_values (record_id, field_id, {$column}) VALUES (:record_id, :field_id, :value)
             ON DUPLICATE KEY UPDATE {$column} = VALUES({$column})";
     bcc_execute($sql, array(':record_id' => $recordId, ':field_id' => $fieldId, ':value' => $value));
 
+    bcc_touch_record_modified($recordId);
+
     log_audit('cell.update', 'record', $recordId, array('field_id' => $fieldId, 'field_name' => $field['name']), $field['team_id']);
+    bcc_commit();
 } catch (Throwable $e) {
+    bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');
 }
 

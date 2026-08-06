@@ -213,6 +213,14 @@
         }
 
         function buildFieldWidget(tr, field) {
+            // created_time/created_by: Airtable'daki gibi kullanıcı tarafından
+            // ASLA düzenlenemez — rol fark etmeksizin (owner dahil) her zaman
+            // salt-okunur render'a düşer. Zaten var olan buildReadOnlyFieldWidget()
+            // (viewer/commenter için kullanılan AYNI desen) yeniden kullanılıyor,
+            // ikinci bir salt-okunur widget YAZILMADI.
+            if (field.field_type === 'created_time' || field.field_type === 'created_by') {
+                return buildReadOnlyFieldWidget(tr, field);
+            }
             if (!canEditFields) {
                 return buildReadOnlyFieldWidget(tr, field);
             }

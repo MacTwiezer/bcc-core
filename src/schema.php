@@ -14,6 +14,14 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     'time' => 'Saat',
     'user' => 'Kullanıcı',
     'attachment' => 'Dosya eki',
+    // Otomatik/salt-okunur alanlar (Airtable "Created time"/"Created by" paritesi,
+    // Grup B1) — DDL YOK, değer zaten records.created_at/created_by'da sağlam
+    // duruyor (bkz. docs/PROJE-DURUM.md teşhis notu). "Last modified time/by"
+    // (Grup B2) BİLEREK burada YOK — records.updated_at kanıtlı güvenilmez ve
+    // updated_by kolonu hiç yok, DDL + cell_update.php'nin records'u da
+    // güncellemesi gerekir; bu tamamen AYRI, DDL gerektiren bir sonraki adım.
+    'created_time' => 'Oluşturulma zamanı',
+    'created_by' => 'Oluşturan',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
@@ -39,6 +47,24 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     // kullanılır). Görünen ad DEĞİL id saklanır — görüntüleme id→ad haritası
     // (bcc_team_users_by_id) ile cell_display_text()'te çözülür.
     'user' => 'value_number',
+    // created_time/created_by: cell_values'ta GERÇEKTEN bir satırları YOK (değer
+    // records.created_at/created_by'dan geliyor) — burada yalnızca cell_raw_value()/
+    // cell_display_text()/bcc_group_cell_row()'un beklediği $cellRow ŞEKLİNİ
+    // (value_date/value_number anahtarları) ödünç alıyoruz; gerçek SQL kolon
+    // adı için BCC_RECORD_COLUMN_FIELD_TYPES'a bakılır (aşağıda).
+    'created_time' => 'value_date',
+    'created_by' => 'value_number',
+);
+
+// created_time/created_by gibi "records tablosundan doğrudan okunan" alan
+// tipleri — bcc_build_grid_records_query()/filter_condition_sql() bu haritada
+// bir field_type bulursa cell_values'a LEFT JOIN ATMAZ, records'un (alias 'r')
+// KENDİ kolonunu doğrudan kullanır. BCC_FIELD_VALUE_COLUMN'daki 'value_date'/
+// 'value_number' İLE KARIŞTIRILMASIN — o render fonksiyonlarının $cellRow şekli
+// için, bu ise gerçek SQL kolon adı için.
+$GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'] = array(
+    'created_time' => 'created_at',
+    'created_by' => 'created_by',
 );
 
 // Grid sütun başlığında gösterilen kısa tip rozeti.
@@ -53,6 +79,8 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'time' => '🕐',
     'user' => '@',
     'attachment' => '📎',
+    'created_time' => '🕐',
+    'created_by' => '@',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -92,6 +120,18 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
     'user' => array(
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    // created_time: 'date' ile AYNI operatörler ama empty/not_empty BİLEREK YOK —
+    // records.created_at NOT NULL, hiçbir zaman boş olamaz (her zaman aynı sonucu
+    // verecek anlamsız bir filtre olurdu).
+    'created_time' => array(
+        'before' => 'önce', 'after' => 'sonra', 'equals' => 'eşittir',
+    ),
+    // created_by: 'user' ile AYNI — records.created_by NULL olabilir (oluşturan
+    // kullanıcı silinmişse, FK ON DELETE SET NULL), empty/not_empty anlamlı.
+    'created_by' => array(
         'equals' => 'eşittir', 'not_equals' => 'eşit değil',
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
@@ -751,6 +791,14 @@ function cell_raw_value($fieldType, $cellRow)
             return (string) $cellRow['value_text'];
         case 'user':
             return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
+        // created_time/created_by: bcc_cell_row_for_field() bu $cellRow'u
+        // records.created_at/created_by'dan taklit ediyor (bkz. o fonksiyonun
+        // yorumu) — "raw" hiç kısaltılmaz (date'in aksine — bu alanlar asla
+        // <input> doldurmak için kullanılmıyor, tam hassasiyet daha bilgilendirici).
+        case 'created_time':
+            return $cellRow['value_date'] !== null ? (string) $cellRow['value_date'] : '';
+        case 'created_by':
+            return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
         default:
             return '';
     }
@@ -794,6 +842,17 @@ function cell_display_text($fieldType, $cellRow, $usersById = array())
             }
             $userId = (int) $cellRow['value_number'];
             return isset($usersById[$userId]) ? $usersById[$userId] : '';
+        // created_time: tam tarih+saat (madde 5) — 'date' case'i gibi sadece
+        // güne kısaltmaz. created_by: 'user' ile BİREBİR AYNI id→ad çözümü
+        // (AYNI $usersById haritası, ikinci bir kaynak İCAT EDİLMEDİ).
+        case 'created_time':
+            return $cellRow['value_date'] !== null ? date('d.m.Y H:i', strtotime($cellRow['value_date'])) : '';
+        case 'created_by':
+            if ($cellRow['value_number'] === null) {
+                return '';
+            }
+            $userId = (int) $cellRow['value_number'];
+            return isset($usersById[$userId]) ? $usersById[$userId] : '';
         default:
             return '';
     }
@@ -827,11 +886,29 @@ function bcc_user_choices_from_map($usersById)
 // önce canlı <td>'yi arar, yoksa (gizli alan) bu JSON'a düşer — ikinci bir
 // AJAX/sorgu YOK. $allFields verilmezse (eski çağıranlarla uyumluluk)
 // $visibleFields'e düşer.
+// created_time/created_by: cell_values'ta GERÇEKTEN bir satırları yok (değer
+// records.created_at/created_by'dan geliyor) — bu iki tip için $cellsByRecord'a
+// hiç bakılmaz, bcc_group_cell_row() (zaten var, group başlığı render'ının da
+// kullandığı AYNI yardımcı) ile $record'dan bir $cellRow "taklit edilir". Diğer
+// tüm tipler değişmeden $cellsByRecord'dan okumaya devam eder. bcc_render_grid_row_fields_json()
+// VE bcc_render_grid_data_row() İKİSİ DE bunu çağırır, kopya dal yazılmadı.
+function bcc_cell_row_for_field($fieldType, $record, $cellsByRecord, $fieldId)
+{
+    if ($fieldType === 'created_time') {
+        return bcc_group_cell_row('value_date', $record['created_at']);
+    }
+    if ($fieldType === 'created_by') {
+        return bcc_group_cell_row('value_number', $record['created_by']);
+    }
+
+    return isset($cellsByRecord[$record['id']][$fieldId]) ? $cellsByRecord[$record['id']][$fieldId] : null;
+}
+
 function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $usersById, $attachmentsByRecord = array())
 {
     $out = array();
     foreach ($allFields as $f) {
-        $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
+        $cellRow = bcc_cell_row_for_field($f['field_type'], $record, $cellsByRecord, $f['id']);
         $rawValue = cell_raw_value($f['field_type'], $cellRow);
 
         if (is_select_field_type($f['field_type'])) {
@@ -894,10 +971,15 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             </div>
         </td>
         <?php foreach ($visibleFields as $f):
-            $cellRow = isset($cellsByRecord[$record['id']][$f['id']]) ? $cellsByRecord[$record['id']][$f['id']] : null;
+            $cellRow = bcc_cell_row_for_field($f['field_type'], $record, $cellsByRecord, $f['id']);
             $rawValue = cell_raw_value($f['field_type'], $cellRow);
             $displayText = cell_display_text($f['field_type'], $cellRow, $usersById);
             $isSelectType = is_select_field_type($f['field_type']);
+            // created_time/created_by: Airtable'daki gibi kullanıcı tarafından
+            // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
+            // 'editable' class'ına bakıyor (bkz. grid.js td.editable), bu class
+            // hiç eklenmezse ikinci bir JS kontrolüne gerek kalmaz.
+            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by'), true);
             if ($isSelectType) {
                 $choices = select_choices_from_options($f['options']);
             } elseif ($f['field_type'] === 'user') {
@@ -919,7 +1001,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                 : array();
         ?>
             <td
-                class="grid-cell <?php echo $canEdit ? 'editable' : ''; ?>"
+                class="grid-cell <?php echo ($canEdit && !$isReadOnlyFieldType) ? 'editable' : ''; ?>"
                 data-field-id="<?php echo (int) $f['id']; ?>"
                 data-field-type="<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"
                 data-value="<?php echo htmlspecialchars($rawValue, ENT_QUOTES, 'UTF-8'); ?>"
@@ -1271,6 +1353,16 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
 
             return array('ok' => true, 'column' => $column, 'value' => $userId);
 
+        // created_time/created_by: Airtable'daki gibi kullanıcı tarafından ASLA
+        // düzenlenemez — backend'de son söz burası (grid-row-detail.js'in
+        // buildFieldWidget() dalı zaten frontend'de engelliyor, ama bypass
+        // ihtimaline karşı gerçek karar burada). $columnMap'te (BCC_FIELD_VALUE_COLUMN)
+        // bu iki tip VAR (aksi halde fonksiyon başındaki isset() kontrolü
+        // "Bilinmeyen alan tipi" ile reddederdi) — burada AYRI, doğru mesajla reddedilir.
+        case 'created_time':
+        case 'created_by':
+            return array('ok' => false, 'error' => 'Bu alan otomatik doldurulur, düzenlenemez.');
+
         default:
             return array('ok' => false, 'error' => 'Bilinmeyen alan tipi.');
     }
@@ -1311,6 +1403,10 @@ function parse_grid_sort_rules($params, $fieldsById)
         $rules[] = array(
             'slot' => $i,
             'field_id' => $fieldId,
+            // field_type: bcc_build_grid_records_query()'nin created_time/created_by
+            // için LEFT JOIN cell_values'ı atlayıp records'un kendi kolonunu
+            // kullanması gerektiğini anlaması için (BCC_RECORD_COLUMN_FIELD_TYPES).
+            'field_type' => $fieldType,
             'dir' => $dir,
             'column' => $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType],
         );
@@ -1621,7 +1717,12 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return null;
     }
 
-    $column = $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType];
+    // created_time/created_by: gerçek SQL kolonu records'un KENDİ kolonu
+    // (created_at/created_by) — BCC_FIELD_VALUE_COLUMN'daki 'value_date'/
+    // 'value_number' yalnızca render fonksiyonları içindir, SQL'e ASLA gömülmez.
+    $column = isset($GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType])
+        ? $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType]
+        : $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType];
     $isTextLike = in_array($fieldType, array('single_line_text', 'long_text', 'single_select'), true);
 
     if (in_array($operator, $GLOBALS['BCC_FILTER_NO_VALUE_OPS'], true)) {
@@ -1664,7 +1765,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $value));
     }
 
-    if ($fieldType === 'user') {
+    if ($fieldType === 'user' || $fieldType === 'created_by') {
         if ($raw === '' || !ctype_digit($raw)) {
             return null;
         }
@@ -1695,7 +1796,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $raw));
     }
 
-    if ($fieldType === 'date') {
+    if ($fieldType === 'date' || $fieldType === 'created_time') {
         $d = DateTime::createFromFormat('Y-m-d', $raw);
         if (!$d || $d->format('Y-m-d') !== $raw) {
             return null;
@@ -1757,15 +1858,33 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
 // buraya taşındı.
 function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filterRules, $filterLogic)
 {
+    // created_time/created_by (BCC_RECORD_COLUMN_FIELD_TYPES): değer records'un
+    // KENDİ kolonunda (r.created_at/r.created_by) — cell_values'a hiç LEFT JOIN
+    // atılmaz, field_id eşleştirmesi gerekmez, doğrudan alias 'r' kullanılır.
+    $recordColumnTypes = $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'];
+
     $groupSelectExtra = '';
     foreach ($groupRules as $gIdx => $gRule) {
-        $groupSelectExtra .= ", gv{$gIdx}.{$gRule['column']} AS group_raw_value_{$gIdx}";
+        if (isset($recordColumnTypes[$gRule['field_type']])) {
+            $groupSelectExtra .= ", r.{$recordColumnTypes[$gRule['field_type']]} AS group_raw_value_{$gIdx}";
+        } else {
+            $groupSelectExtra .= ", gv{$gIdx}.{$gRule['column']} AS group_raw_value_{$gIdx}";
+        }
     }
-    $recordsSql = "SELECT r.id, r.position, r.created_at{$groupSelectExtra} FROM records r";
+    // r.created_by: created_by alan tipinin render'ı için (bcc_render_grid_data_row
+    // vb.) — r.created_at zaten seçiliydi, created_by de AYNI şekilde her zaman
+    // gerekli (yalnızca bir group/sort/filter kuralı varken değil).
+    $recordsSql = "SELECT r.id, r.position, r.created_at, r.created_by{$groupSelectExtra} FROM records r";
     $recordsParams = array(':table_id' => $tableId);
     $orderParts = array();
 
     foreach ($groupRules as $gIdx => $gRule) {
+        if (isset($recordColumnTypes[$gRule['field_type']])) {
+            $col = 'r.' . $recordColumnTypes[$gRule['field_type']];
+            $orderParts[] = "({$col} IS NULL) DESC";
+            $orderParts[] = "{$col} {$gRule['dir']}";
+            continue;
+        }
         $alias = 'gv' . $gIdx;
         $recordsSql .= " LEFT JOIN cell_values {$alias} ON {$alias}.record_id = r.id AND {$alias}.field_id = :gfid{$gIdx}";
         $recordsParams[':gfid' . $gIdx] = $gRule['field_id'];
@@ -1774,6 +1893,10 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
     }
 
     foreach ($sortRules as $idx => $rule) {
+        if (isset($recordColumnTypes[$rule['field_type']])) {
+            $orderParts[] = "r.{$recordColumnTypes[$rule['field_type']]} {$rule['dir']}";
+            continue;
+        }
         $alias = 'sv' . $idx;
         $recordsSql .= " LEFT JOIN cell_values {$alias} ON {$alias}.record_id = r.id AND {$alias}.field_id = :sfid{$idx}";
         $recordsParams[':sfid' . $idx] = $rule['field_id'];
@@ -1782,8 +1905,21 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
 
     $filterConds = array();
     foreach ($filterRules as $idx => $rule) {
-        $alias = 'fv' . $idx;
         $paramName = ':fval' . $idx;
+
+        if (isset($recordColumnTypes[$rule['field_type']])) {
+            $frag = filter_condition_sql($rule['field_type'], $rule['operator'], $rule['raw_value'], 'r', $paramName);
+            if ($frag === null) {
+                continue;
+            }
+            foreach ($frag['params'] as $pName => $pValue) {
+                $recordsParams[$pName] = $pValue;
+            }
+            $filterConds[] = $frag['sql'];
+            continue;
+        }
+
+        $alias = 'fv' . $idx;
         $frag = filter_condition_sql($rule['field_type'], $rule['operator'], $rule['raw_value'], $alias, $paramName);
 
         if ($frag === null) {

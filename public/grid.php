@@ -1399,7 +1399,7 @@ $gridUser = current_user();
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M13.5 6.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v7A1.5 1.5 0 0 0 5 13.5h1.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı çoğalt
                     </button>
-                    <button type="button" class="gs-table-tab-menu-item">
+                    <button type="button" class="gs-table-tab-menu-item" id="grid-detail-print-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="7.5" width="10" height="5.5" rx="1" stroke="#5f6368" stroke-width="1.3"/><path d="M6 7.5V4.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M6 13v2.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V13" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı yazdır
                     </button>
@@ -1420,6 +1420,12 @@ $gridUser = current_user();
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#5f6368" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>
         </div>
+        <!-- Yazdırma-özel üst/alt bilgi: ekranda hep gizli (style.css), JS
+             "Kaydı yazdır"a basılınca window.print()'ten HEMEN önce dolduruyor
+             (bkz. grid-row-detail.js preparePrintView()) — sunucu tarafında
+             hesaplanmıyor çünkü base adı zaten sayfada (.gs-base-name) var,
+             ikinci bir sorgu YOK. -->
+        <div class="grid-detail-print-meta" id="grid-detail-print-meta-top"></div>
         <div class="grid-detail-body">
             <div class="grid-detail-fields" id="grid-detail-fields"></div>
             <div class="grid-detail-comments">
@@ -1435,6 +1441,7 @@ $gridUser = current_user();
                 <?php endif; ?>
             </div>
         </div>
+        <div class="grid-detail-print-meta" id="grid-detail-print-meta-bottom"></div>
     </div>
 </div>
 <script src="<?php echo bcc_asset_url('grid-row-detail.js'); ?>" defer></script>

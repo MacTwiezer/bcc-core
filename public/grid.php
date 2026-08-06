@@ -1405,10 +1405,15 @@ $gridUser = current_user();
                         Kaydı gönder
                     </button>
                     <?php endif; ?>
-                    <button type="button" class="gs-table-tab-menu-item">
+                    <?php if ($canEdit): ?>
+                    <!-- Frontend kapısı yalnızca UX içindir — commenter/viewer'da
+                         buton DOM'da bile yok. Asıl karar record_duplicate.php'de
+                         require_role($teamId, 'editor'), burada TEKRAR edilmiyor. -->
+                    <button type="button" class="gs-table-tab-menu-item" id="grid-detail-duplicate-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M13.5 6.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v7A1.5 1.5 0 0 0 5 13.5h1.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı çoğalt
                     </button>
+                    <?php endif; ?>
                     <button type="button" class="gs-table-tab-menu-item" id="grid-detail-print-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="7.5" width="10" height="5.5" rx="1" stroke="#5f6368" stroke-width="1.3"/><path d="M6 7.5V4.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M6 13v2.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V13" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı yazdır

@@ -104,6 +104,7 @@
         var printMetaTop = document.getElementById('grid-detail-print-meta-top');
         var printMetaBottom = document.getElementById('grid-detail-print-meta-bottom');
         var sendBtn = document.getElementById('grid-detail-send-btn');
+        var duplicateBtn = document.getElementById('grid-detail-duplicate-btn');
         var sendOverlay = document.getElementById('grid-send-overlay');
         var sendHeader = document.querySelector('.grid-send-header');
         var sendCloseBtn = document.getElementById('grid-send-close');
@@ -1007,6 +1008,56 @@
                     moreMenu.removeAttribute('open');
                 }
                 openSendModal();
+            });
+        }
+
+        // "Kaydı çoğalt" — record_duplicate.php'ye POST. Rol kontrolü BACKEND'de
+        // zorunlu (require_role('editor')), burada yalnızca UX (buton zaten
+        // $canEdit değilse DOM'da yok). Dönen row_html record_add.php'nin
+        // addRecord()'daki AYNI ekleme deseniyle orijinalin hemen altına konur
+        // (window.BCC_GRID.renumberRows/window.BCC_reapplyFreeze zaten dışa
+        // açık, ikinci bir kopyası yazılmadı), sonra openDetail() ile modal
+        // KOPYAYA geçirilir (orijinal değil — kullanıcı hangisinin kopya
+        // olduğunu görsün).
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', function () {
+                if (moreMenu) {
+                    moreMenu.removeAttribute('open');
+                }
+                if (!currentDetailRow) {
+                    return;
+                }
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                apiPost('/api/record_duplicate.php', {
+                    csrf_token: CSRF,
+                    record_id: recordId,
+                    state_query_string: window.location.search.replace(/^\?/, ''),
+                }).then(function (result) {
+                    var ok = result.httpOk && result.data && result.data.ok;
+                    if (!ok) {
+                        var message = (result.data && result.data.error) ? result.data.error : 'Kayıt çoğaltılamadı.';
+                        window.alert(message);
+                        return;
+                    }
+
+                    var temp = document.createElement('tbody');
+                    temp.innerHTML = result.data.row_html;
+                    var newRow = temp.querySelector('tr[data-record-id]');
+                    if (!newRow || !currentDetailRow.parentNode) {
+                        return;
+                    }
+
+                    currentDetailRow.insertAdjacentElement('afterend', newRow);
+
+                    if (window.BCC_GRID && window.BCC_GRID.renumberRows) {
+                        window.BCC_GRID.renumberRows();
+                    }
+                    if (window.BCC_reapplyFreeze) {
+                        window.BCC_reapplyFreeze();
+                    }
+
+                    openDetail(newRow);
+                });
             });
         }
 

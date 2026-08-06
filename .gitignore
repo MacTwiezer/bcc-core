@@ -7,6 +7,10 @@
 # Yerel gizli yapılandırma
 config/database.local.php
 config/mail.local.php
+config/mail_record_send.local.php
+
+# Composer bağımlılıkları (composer.json/composer.lock commit edilir, vendor/ değil)
+/vendor/
 
 # Kullanıcı tarafından yüklenen dosya ekleri (public/ dışında, DB'de referanslı)
 /storage/

@@ -105,6 +105,7 @@
         var printMetaBottom = document.getElementById('grid-detail-print-meta-bottom');
         var sendBtn = document.getElementById('grid-detail-send-btn');
         var duplicateBtn = document.getElementById('grid-detail-duplicate-btn');
+        var deleteRecordBtn = document.getElementById('grid-detail-delete-btn');
         var sendOverlay = document.getElementById('grid-send-overlay');
         var sendHeader = document.querySelector('.grid-send-header');
         var sendCloseBtn = document.getElementById('grid-send-close');
@@ -1057,6 +1058,49 @@
                     }
 
                     openDetail(newRow);
+                });
+            });
+        }
+
+        // "Kaydı sil" — Adım 3b: SADECE soft-delete işaretleme. Grid/filtre/
+        // arama sorgularının silinmiş kayıtları gizlemesi Adım 3c'nin işi —
+        // bu adımdan sonra kayıt hâlâ grid'de görünebilir, bu BEKLENEN.
+        // Onay diyaloğu: projede ÖZEL bir modal deseni YOK, her yerde
+        // (record_delete/home.js/grid-view-manage.js/team-members.js) native
+        // window.confirm() kullanılıyor — burada da AYNI, yeni bir modal
+        // icat edilmedi. "Çöp kutusundan geri yükleyebilirsiniz" ifadesi
+        // home.js'teki base silme onayıyla BİREBİR AYNI ton.
+        if (deleteRecordBtn) {
+            deleteRecordBtn.addEventListener('click', function () {
+                if (moreMenu) {
+                    moreMenu.removeAttribute('open');
+                }
+                if (!currentDetailRow) {
+                    return;
+                }
+                var title = primaryFieldTitle(currentDetailRow) || '(başlıksız kayıt)';
+                var confirmMsg = "'" + title + "' kaydını silmek istediğinizden emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.";
+                if (!window.confirm(confirmMsg)) {
+                    return;
+                }
+
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                apiPost('/api/record_soft_delete.php', {
+                    csrf_token: CSRF,
+                    record_id: recordId,
+                }).then(function (result) {
+                    var ok = result.httpOk && result.data && result.data.ok;
+                    if (!ok) {
+                        var message = (result.data && result.data.error) ? result.data.error : 'Kayıt silinemedi.';
+                        window.alert(message);
+                        return;
+                    }
+
+                    // Toast'ın (henüz açık olan) modal header'ında görünmesi
+                    // için kapatma kısa bir gecikmeyle yapılır — showDetailToast
+                    // AYNEN yeniden kullanılıyor, yeni bir bildirim yolu yok.
+                    showDetailToast('Kayıt silindi');
+                    setTimeout(closeDetail, 700);
                 });
             });
         }

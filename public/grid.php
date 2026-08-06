@@ -1418,11 +1418,17 @@ $gridUser = current_user();
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="7.5" width="10" height="5.5" rx="1" stroke="#5f6368" stroke-width="1.3"/><path d="M6 7.5V4.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M6 13v2.5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V13" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı yazdır
                     </button>
+                    <?php if ($canEdit): ?>
                     <div class="gs-table-tab-menu-divider"></div>
-                    <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger">
+                    <!-- Frontend kapısı yalnızca UX içindir — commenter/viewer'da
+                         buton (ve tek amacı onu ayırmak olan divider) DOM'da bile
+                         yok. Asıl karar record_soft_delete.php'de
+                         require_role($teamId, 'editor'), burada TEKRAR edilmiyor. -->
+                    <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" id="grid-detail-delete-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı sil
                     </button>
+                    <?php endif; ?>
                 </div>
             </details>
             <button type="button" class="grid-detail-nav-btn" id="grid-detail-copy-link" aria-label="Kayıt bağlantısını kopyala">

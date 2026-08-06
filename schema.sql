@@ -151,10 +151,19 @@ CREATE TABLE IF NOT EXISTS records (
     -- hiçbir sorgu bunu doğrudan OKUMUYOR, ama tables_meta/views/cell_values ile
     -- AYNI desen (silinmesi tutarsızlık yaratır, tutulması bedelsiz).
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- Trash özelliği (bases.deleted_at/deleted_by ile AYNI desen, bkz.
+    -- migrations/012_records_soft_delete.sql) — NULL = aktif/silinmemiş.
+    deleted_at  DATETIME NULL,
+    deleted_by  INT UNSIGNED NULL,
     PRIMARY KEY (id),
     KEY idx_records_table (table_id),
+    -- Bileşik: bases'ten FARKLI olarak (tek kolon idx_bases_deleted_at) —
+    -- records çok daha sık sorgulanıyor (her grid yüklemesi table_id +
+    -- deleted_at IS NULL ile filtreler).
+    KEY idx_records_table_deleted_at (table_id, deleted_at),
     CONSTRAINT fk_records_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
-    CONSTRAINT fk_records_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_records_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_records_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

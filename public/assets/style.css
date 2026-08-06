@@ -1077,6 +1077,13 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     margin-top: 0.3rem;
 }
 
+/* .grid-send-body dışında (footer'ın hemen üstünde) — backend hatası
+   scroll'a bağlı olmadan her zaman görünsün. */
+.grid-send-form-error {
+    padding: 0 1rem;
+    margin: 0.6rem 0 0;
+}
+
 .grid-send-preview {
     margin-top: 0.9rem;
     border: 1px solid var(--bcc-border);

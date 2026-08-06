@@ -23,10 +23,15 @@ try {
     // KVKK ekip izolasyonu + editor+ rolü — team_id bu satırdan geliyor, istekten değil.
     require_role($field['team_id'], 'editor');
 
-    $record = bcc_fetch_one('SELECT id, table_id FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
+    $record = bcc_fetch_one('SELECT id, table_id, deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
 
     if (!$record || (int) $record['table_id'] !== (int) $field['table_id']) {
         json_fail(400, 'Bu kayıt bu alana ait değil.');
+    }
+    // Adım 3c: silinmiş (çöp kutusundaki) bir kaydın hücresi düzenlenemez —
+    // ör. kayıt açıkken başka bir sekmede silinmişse bu isteği yakalar.
+    if ($record['deleted_at'] !== null) {
+        json_fail(400, 'Bu kayıt silinmiş, düzenlenemez.');
     }
 
     // 'user' tipi için tek kaynak: bu takımın (KVKK) aktif üyeleri — hem gönderilen

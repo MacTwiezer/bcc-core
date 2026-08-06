@@ -1801,7 +1801,12 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
     $orderParts[] = 'r.position ASC';
     $orderParts[] = 'r.id ASC';
 
-    $recordsSql .= ' WHERE r.table_id = :table_id';
+    // Adım 3c: soft-delete edilmiş kayıtlar (bkz. migrations/012) hiçbir grid
+    // görünümünde (sıralama/filtre/gruplama/arama — arama client-side ama bu
+    // sonuçtan besleniyor, ikinci bir sorgu yok) görünmemeli. TEK filtre noktası
+    // burası — public/grid.php VE view_export_xlsx.php (Excel indir) İKİSİ DE
+    // bu fonksiyonu çağırıyor, paralel bir sorgu yolu yok.
+    $recordsSql .= ' WHERE r.table_id = :table_id AND r.deleted_at IS NULL';
     if (!empty($filterConds)) {
         $joinWord = ($filterLogic === 'OR') ? ' OR ' : ' AND ';
         $recordsSql .= ' AND (' . implode($joinWord, $filterConds) . ')';

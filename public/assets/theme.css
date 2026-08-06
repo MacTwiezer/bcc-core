@@ -201,10 +201,16 @@ button {
 .field-badge--multiple_select, .field-type-badge--multiple_select {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='9' y1='6' x2='21' y2='6'/%3E%3Cline x1='9' y1='12' x2='21' y2='12'/%3E%3Cline x1='9' y1='18' x2='21' y2='18'/%3E%3Cline x1='4' y1='6' x2='4' y2='6'/%3E%3Cline x1='4' y1='12' x2='4' y2='12'/%3E%3Cline x1='4' y1='18' x2='4' y2='18'/%3E%3C/svg%3E");
 }
-.field-badge--time, .field-type-badge--time {
+/* created_time AYNI saat ikonunu paylaşıyor (yeni SVG çizilmedi) — Airtable'da da
+   "Created time" ikonu "Time" alanınınkiyle aynı ruhta (saat/zaman damgası). */
+.field-badge--time, .field-type-badge--time,
+.field-badge--created_time, .field-type-badge--created_time {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpolyline points='12 7 12 12 15.5 14'/%3E%3C/svg%3E");
 }
-.field-badge--user, .field-type-badge--user {
+/* created_by AYNI kişi ikonunu paylaşıyor — 'user' alanıyla aynı kavram (bir
+   kullanıcıya referans), yeni SVG çizilmedi. */
+.field-badge--user, .field-type-badge--user,
+.field-badge--created_by, .field-type-badge--created_by {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
 }
 .field-badge--attachment, .field-type-badge--attachment {

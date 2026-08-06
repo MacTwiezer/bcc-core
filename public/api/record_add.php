@@ -50,8 +50,11 @@ try {
     $newPos = null;
 
     if ($afterRecordId > 0) {
+        // Adım 3c: silinmiş bir kaydın "hemen altına" araya eklemek anlamsız —
+        // deleted_at IS NULL eklenince zaten var olan "bulunamadıysa sona ekle"
+        // fallback'ine (aşağıdaki $afterRecord boş kalır) doğal düşer, hata YOK.
         $afterRecord = bcc_fetch_one(
-            'SELECT id, position FROM records WHERE id = :id AND table_id = :tid LIMIT 1',
+            'SELECT id, position FROM records WHERE id = :id AND table_id = :tid AND deleted_at IS NULL LIMIT 1',
             array(':id' => $afterRecordId, ':tid' => $table['id'])
         );
 

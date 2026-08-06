@@ -39,8 +39,10 @@ require_role($record['team_id'], 'editor');
 try {
     $tableId = (int) $record['table_id'];
 
+    // Adım 3c: silinmiş (çöp kutusundaki) bir kayıt "bulunamadı" sayılır — çoğaltma
+    // reddedilir, yeni kod eklemeden mevcut 404 yoluna doğal düşer.
     $original = bcc_fetch_one(
-        'SELECT id, position FROM records WHERE id = :id AND table_id = :tid LIMIT 1',
+        'SELECT id, position FROM records WHERE id = :id AND table_id = :tid AND deleted_at IS NULL LIMIT 1',
         array(':id' => $recordId, ':tid' => $tableId)
     );
     if (!$original) {

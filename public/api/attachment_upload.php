@@ -50,9 +50,14 @@ if ($field['field_type'] !== 'attachment') {
     json_fail(400, 'Bu alan dosya eki tipinde değil.');
 }
 
-$record = bcc_fetch_one('SELECT id, table_id FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
+$record = bcc_fetch_one('SELECT id, table_id, deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
 if (!$record || (int) $record['table_id'] !== (int) $field['table_id']) {
     json_fail(400, 'Bu kayıt bu alana ait değil.');
+}
+// Adım 3c: silinmiş (çöp kutusundaki) bir kayda dosya eklenemez — cell_update.php
+// ile AYNI gerekçe/desen.
+if ($record['deleted_at'] !== null) {
+    json_fail(400, 'Bu kayıt silinmiş, düzenlenemez.');
 }
 
 if (!isset($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {

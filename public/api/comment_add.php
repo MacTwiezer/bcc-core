@@ -23,6 +23,16 @@ if (!$record) {
 
 require_role($record['team_id'], 'commenter');
 
+// Adım 3c'nin tamamlayıcısı: silinmiş (çöp kutusundaki) bir kayda yorum
+// eklenemez — cell_update.php/attachment_upload.php ile AYNI desen. Global
+// bir çözüm (bcc_find_record()'u filtrelemek) YOK — record_soft_delete.php
+// deleted_at'i "zaten silinmiş" 422'si için OKUYABİLMEK zorunda, o yüzden
+// burada YEREL, ayrı bir kontrol.
+$recordStatus = bcc_fetch_one('SELECT deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
+if (!$recordStatus || $recordStatus['deleted_at'] !== null) {
+    json_fail(404, 'Kayıt bulunamadı (silinmiş).');
+}
+
 if ($body === '') {
     json_fail(422, 'Yorum boş olamaz.');
 }

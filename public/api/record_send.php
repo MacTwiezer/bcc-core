@@ -100,6 +100,15 @@ if (!$record) {
 // require_role() içinde 403 ile reddedilir (mail HİÇ gönderilmez).
 require_role($record['team_id'], 'editor');
 
+// Adım 3c'nin tamamlayıcısı: silinmiş (çöp kutusundaki) bir kayıt
+// gönderilemez — cell_update.php/attachment_upload.php ile AYNI desen.
+// bcc_find_record()'a DOKUNULMADI (record_soft_delete.php deleted_at'i
+// "zaten silinmiş" 422'si için OKUYABİLMEK zorunda), burada YEREL kontrol.
+$recordStatus = bcc_fetch_one('SELECT deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
+if (!$recordStatus || $recordStatus['deleted_at'] !== null) {
+    json_fail(404, 'Kayıt bulunamadı (silinmiş).');
+}
+
 // preview_fields: istemcinin çıkardığı {label, value} listesi — biçim
 // dışında GÜVENMİYORUZ, her ihtimale karşı şekli doğrulanıp string'e
 // zorlanıyor (htmlspecialchars zaten aşağıda XSS'e karşı koruyor).

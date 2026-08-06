@@ -80,7 +80,9 @@
     // Trash — Airtable workspace trash referansı. Overlay .X-account'ın
     // DIŞINDA (sayfa-geneli), bu yüzden document üzerinden aranıyor; tek
     // sayfada en fazla bir tane olur (account_menu.php sayfa başına tek kez
-    // require ediliyor).
+    // require ediliyor). Adım 3d: aynı modale "Kayıtlar" bölümü eklendi —
+    // satır render + geri-yükle mantığı TEK bir fonksiyona (renderTrashSection)
+    // çıkarıldı, base'ler VE kayıtlar AYNI fonksiyonu çağırıyor, kopya yok.
     var trashOpenBtn = menu.querySelector('[data-account-trash-open]');
     var trashOverlay = document.querySelector('.bcc-trash-overlay');
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -89,23 +91,28 @@
     if (trashOpenBtn && trashOverlay) {
         var trashList = trashOverlay.querySelector('[data-trash-list]');
         var trashEmpty = trashOverlay.querySelector('[data-trash-empty]');
+        var trashRecordList = trashOverlay.querySelector('[data-trash-record-list]');
+        var trashRecordEmpty = trashOverlay.querySelector('[data-trash-record-empty]');
         var trashCloseBtn = trashOverlay.querySelector('[data-account-trash-close]');
 
         function closeTrash() {
             trashOverlay.hidden = true;
         }
 
-        function renderTrashItems(items) {
-            Array.prototype.forEach.call(trashList.querySelectorAll('.bcc-trash-item'), function (el) {
+        // listEl/emptyEl: hedef bölüm. idAttr: satırın taşıyacağı data-* (yalnızca
+        // hata ayıklama/gelecekteki kullanım için, işlevsel olarak kullanılmıyor).
+        // restoreUrl/idParam: "Geri Yükle" hangi uçnoktaya, hangi POST alanıyla gitsin.
+        function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam) {
+            Array.prototype.forEach.call(listEl.querySelectorAll('.bcc-trash-item'), function (el) {
                 el.remove();
             });
 
-            trashEmpty.hidden = items.length > 0;
+            emptyEl.hidden = items.length > 0;
 
             items.forEach(function (item) {
                 var row = document.createElement('div');
                 row.className = 'bcc-trash-item';
-                row.setAttribute('data-trash-base-id', item.id);
+                row.setAttribute(idAttr, item.id);
 
                 var avatar = document.createElement('div');
                 avatar.className = 'bcc-trash-item-avatar';
@@ -134,17 +141,20 @@
                     restoreBtn.textContent = 'Geri Yükle';
                     restoreBtn.addEventListener('click', function () {
                         restoreBtn.disabled = true;
-                        fetch('/api/base_restore.php', {
+                        var params = {};
+                        params.csrf_token = CSRF;
+                        params[idParam] = item.id;
+                        fetch(restoreUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({ csrf_token: CSRF, base_id: item.id }).toString(),
+                            body: new URLSearchParams(params).toString(),
                         }).then(function (res) {
                             return res.json().catch(function () { return { ok: false }; });
                         }).then(function (data) {
                             if (data && data.ok) {
                                 row.remove();
-                                if (!trashList.querySelector('.bcc-trash-item')) {
-                                    trashEmpty.hidden = false;
+                                if (!listEl.querySelector('.bcc-trash-item')) {
+                                    emptyEl.hidden = false;
                                 }
                             } else {
                                 restoreBtn.disabled = false;
@@ -158,7 +168,7 @@
                     row.appendChild(restoreBtn);
                 }
 
-                trashList.appendChild(row);
+                listEl.appendChild(row);
             });
         }
 
@@ -171,10 +181,21 @@
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (data && data.ok) {
-                        renderTrashItems(data.items);
+                        renderTrashSection(data.items, trashList, trashEmpty, 'data-trash-base-id', '/api/base_restore.php', 'base_id');
                     }
                 })
                 .catch(function () {});
+
+            if (trashRecordList && trashRecordEmpty) {
+                fetch('/api/trash_records_list.php')
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data && data.ok) {
+                            renderTrashSection(data.items, trashRecordList, trashRecordEmpty, 'data-trash-record-id', '/api/record_restore.php', 'record_id');
+                        }
+                    })
+                    .catch(function () {});
+            }
         });
 
         if (trashCloseBtn) {

@@ -103,9 +103,17 @@ $p = $accountMenuPrefix;
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>
         </div>
-        <p class="bcc-trash-desc">Takımlarınızda silinen base'ler burada listelenir.</p>
+        <p class="bcc-trash-desc">Takımlarınızda silinen base'ler ve kayıtlar burada listelenir (kayıtlar 7 gün sonra kalıcı silinir).</p>
+        <h3 class="bcc-trash-section-title">Base'ler</h3>
         <div class="bcc-trash-list" data-trash-list>
             <div class="bcc-trash-empty" data-trash-empty hidden>Çöp kutusu boş.</div>
+        </div>
+        <!-- Kayıtlar bölümü — Adım 3d. AYNI overlay/modal içinde, kopya bir
+             arayüz YOK; base'lerle AYNI .bcc-trash-list/.bcc-trash-item
+             sınıfları yeniden kullanılıyor, tek yeni şey bu küçük başlık. -->
+        <h3 class="bcc-trash-section-title">Kayıtlar</h3>
+        <div class="bcc-trash-list" data-trash-record-list>
+            <div class="bcc-trash-empty" data-trash-record-empty hidden>Çöp kutusu boş.</div>
         </div>
     </div>
 </div>

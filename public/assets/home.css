@@ -360,6 +360,18 @@ a { text-decoration: none; color: inherit; }
     margin: 0.35rem 0 0.75rem;
 }
 
+/* Çöp kutusu — "Kayıtlar" bölümü (Adım 3d), Base'ler bölümüyle AYNI
+   .bcc-trash-list/.bcc-trash-item'ı paylaşır — tek YENİ kural bu küçük
+   bölüm başlığı. */
+.bcc-trash-section-title {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0.6rem 0 0.3rem;
+}
+
 .bcc-trash-list {
     overflow-y: auto;
     display: flex;

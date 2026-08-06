@@ -20,7 +20,7 @@
     //
     // Yorumlar (comment_list/add/update/delete.php): window.BCC_GRID'den TAMAMEN
     // bağımsız, kendi küçük fetch sarmalayıcısını kullanır (grid.js'deki post()
-    // dışa açılmıyor, ve bu dosya grid.js YOKKEN de çalışmalı) — bkz. commentPost().
+    // dışa açılmıyor, ve bu dosya grid.js YOKKEN de çalışmalı) — bkz. apiPost().
 
     function getRowFields(tr) {
         var raw = tr.getAttribute('data-fields');
@@ -42,10 +42,13 @@
     // grid.js'deki post()'un küçük bir kopyası — BİLEREK: window.BCC_GRID'i
     // (dolayısıyla grid.js'i) hiç yüklemeyen viewer/commenter'da da yorum
     // gönderebilmek için bu dosyanın grid.js'e bağımlı OLMAMASI gerekiyor.
+    // Adı "commentPost" iken artık "Kaydı gönder" (record_send.php) de AYNI
+    // fonksiyonu çağırıyor — genel bir POST+JSON yardımcısı olduğu için
+    // ikinci bir kopya yazılmadı, ismi buna göre güncellendi.
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     var CSRF = csrfMeta ? csrfMeta.content : '';
 
-    function commentPost(url, params) {
+    function apiPost(url, params) {
         return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -113,6 +116,7 @@
         var sendPreview = document.getElementById('grid-send-preview');
         var sendUseGridLayoutToggle = document.getElementById('grid-send-use-grid-layout');
         var sendCopySelfToggle = document.getElementById('grid-send-copy-self');
+        var sendFormError = document.getElementById('grid-send-form-error');
 
         var currentDetailRow = null;
 
@@ -437,7 +441,7 @@
 
                 var newValue = input.value.trim();
                 if (save && newValue !== '' && newValue !== c.body) {
-                    commentPost('/api/comment_update.php', { comment_id: c.id, body: newValue, csrf_token: CSRF }).then(function (result) {
+                    apiPost('/api/comment_update.php', { comment_id: c.id, body: newValue, csrf_token: CSRF }).then(function (result) {
                         var ok = result.httpOk && result.data && result.data.ok;
                         if (!ok) {
                             window.alert((result.data && result.data.error) ? result.data.error : 'Kaydedilemedi.');
@@ -470,7 +474,7 @@
             if (!window.confirm('Bu yorumu silmek istediğinize emin misiniz?')) {
                 return;
             }
-            commentPost('/api/comment_delete.php', { comment_id: commentId, csrf_token: CSRF }).then(function (result) {
+            apiPost('/api/comment_delete.php', { comment_id: commentId, csrf_token: CSRF }).then(function (result) {
                 var ok = result.httpOk && result.data && result.data.ok;
                 if (!ok) {
                     window.alert((result.data && result.data.error) ? result.data.error : 'Silinemedi.');
@@ -532,7 +536,7 @@
                     return;
                 }
                 var recordId = currentDetailRow.getAttribute('data-record-id');
-                commentPost('/api/comment_add.php', { record_id: recordId, body: body, csrf_token: CSRF }).then(function (result) {
+                apiPost('/api/comment_add.php', { record_id: recordId, body: body, csrf_token: CSRF }).then(function (result) {
                     var ok = result.httpOk && result.data && result.data.ok;
                     if (!ok) {
                         window.alert((result.data && result.data.error) ? result.data.error : 'Gönderilemedi.');
@@ -895,32 +899,47 @@
 
         // "Kaydı gönder" modalı (Airtable "Send record" paritesi) — alan
         // önizlemesi YAZDIRDAKİ fieldPrintText()'i AYNEN çağırır (KOPYALAMA
-        // yok, fonksiyon zaten print'e özel bir şey içermiyordu); yalnızca
-        // sonucu .grid-detail-print-value yerine kendi önizleme listesine
-        // yazar. Etiket (ikon+metin) de yazdırdaki gibi yeniden ÜRETİLMEZ,
-        // mevcut .grid-detail-field-label DOM'u cloneNode ile taşınır.
-        function renderSendPreview() {
-            if (!sendPreview) {
-                return;
-            }
-            sendPreview.textContent = '';
+        // yok, fonksiyon zaten print'e özel bir şey içermiyordu). Bu tek
+        // döngü hem EKRANDAKİ önizlemeyi (renderSendPreview, ikonlu DOM
+        // clone'u) hem "Gönder"de backend'e giden payload'ı (submit handler,
+        // düz {label,value} — sunucu bunu yeniden ÇIKARMAZ, yalnızca
+        // escape'leyip biçimlendirir) besler, ikinci bir alan-okuma kodu YOK.
+        function collectFieldPreviewData() {
+            var items = [];
             Array.prototype.forEach.call(fieldsContainer.querySelectorAll('.grid-detail-field'), function (row) {
                 var labelEl = row.querySelector('.grid-detail-field-label');
                 var valueWrap = row.querySelector('.grid-detail-field-value');
                 if (!labelEl || !valueWrap) {
                     return;
                 }
+                items.push({
+                    labelEl: labelEl,
+                    labelText: labelEl.textContent.trim(),
+                    value: fieldPrintText(valueWrap),
+                });
+            });
+            return items;
+        }
+
+        function renderSendPreview() {
+            if (!sendPreview) {
+                return;
+            }
+            sendPreview.textContent = '';
+            collectFieldPreviewData().forEach(function (item) {
                 var field = document.createElement('div');
                 field.className = 'grid-send-preview-field';
 
                 var label = document.createElement('div');
                 label.className = 'grid-send-preview-label';
-                label.appendChild(labelEl.cloneNode(true));
+                // Etiket (ikon+metin) yazdırdaki gibi yeniden ÜRETİLMEZ,
+                // mevcut .grid-detail-field-label DOM'u cloneNode ile taşınır.
+                label.appendChild(item.labelEl.cloneNode(true));
                 field.appendChild(label);
 
                 var value = document.createElement('div');
                 value.className = 'grid-send-preview-value';
-                value.textContent = fieldPrintText(valueWrap);
+                value.textContent = item.value;
                 field.appendChild(value);
 
                 sendPreview.appendChild(field);
@@ -969,6 +988,9 @@
             if (sendSubmitBtn) {
                 sendSubmitBtn.disabled = false;
             }
+            if (sendFormError) {
+                sendFormError.hidden = true;
+            }
             renderSendPreview();
             sendOverlay.hidden = false;
         }
@@ -997,16 +1019,53 @@
         if (sendToInput) {
             sendToInput.addEventListener('input', validateSendRecipients);
         }
-        // Bu adımda gerçek gönderim YOK — backend'e (PHPMailer/Office 365)
-        // BİLEREK dokunulmadı, o Adım 4'te bağlanacak. Modal açık kalır,
-        // yalnızca bilgilendirme toast'ı gösterilir (showDetailToast() aynen
-        // yeniden kullanılıyor, kendi header'ıyla).
+        // "Kaydı gönder" — record_send.php'ye POST. Rol/alıcı-domain/15-limit
+        // kontrolü BACKEND'de (frontend'deki validateSendRecipients() sadece
+        // UX için, tek gerçek karar sunucuda). Alan önizlemesi zaten ekranda
+        // görüneni (collectFieldPreviewData()) JSON olarak taşır — backend
+        // BUNU YENİDEN ÇIKARMAZ, yalnızca escape'leyip biçimlendirir.
+        function showSendFormError(message) {
+            if (!sendFormError) {
+                return;
+            }
+            sendFormError.textContent = message;
+            sendFormError.hidden = false;
+        }
+
         if (sendSubmitBtn) {
             sendSubmitBtn.addEventListener('click', function () {
-                if (!validateSendRecipients()) {
+                if (!validateSendRecipients() || !currentDetailRow) {
                     return;
                 }
-                showDetailToast('Gönderme Adım 4\'te bağlanacak', sendHeader);
+                if (sendFormError) {
+                    sendFormError.hidden = true;
+                }
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                var previewFields = collectFieldPreviewData().map(function (item) {
+                    return { label: item.labelText, value: item.value };
+                });
+
+                sendSubmitBtn.disabled = true;
+                apiPost('/api/record_send.php', {
+                    csrf_token: CSRF,
+                    record_id: recordId,
+                    recipients: sendToInput ? sendToInput.value : '',
+                    subject: sendSubjectInput ? sendSubjectInput.value : '',
+                    message: sendMessageInput ? sendMessageInput.value : '',
+                    use_grid_layout: sendUseGridLayoutToggle && sendUseGridLayoutToggle.checked ? '1' : '0',
+                    send_copy_to_self: sendCopySelfToggle && sendCopySelfToggle.checked ? '1' : '0',
+                    preview_fields: JSON.stringify(previewFields),
+                }).then(function (result) {
+                    sendSubmitBtn.disabled = false;
+                    var ok = result.httpOk && result.data && result.data.ok;
+                    if (ok) {
+                        closeSendModal();
+                        showDetailToast('Kayıt gönderildi', document.querySelector('.grid-detail-header'));
+                        return;
+                    }
+                    var message = (result.data && result.data.error) ? result.data.error : 'Gönderilemedi.';
+                    showSendFormError(message);
+                });
             });
         }
 

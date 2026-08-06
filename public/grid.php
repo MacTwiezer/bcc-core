@@ -1396,10 +1396,15 @@ $gridUser = current_user();
                     <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
                 </summary>
                 <div class="gs-table-tab-menu-panel grid-detail-more-panel">
+                    <?php if ($canEdit): ?>
+                    <!-- Frontend kapısı yalnızca UX içindir — commenter/viewer'da
+                         buton DOM'da bile yok. Asıl karar record_send.php'de
+                         require_role($teamId, 'editor'), burada TEKRAR edilmiyor. -->
                     <button type="button" class="gs-table-tab-menu-item" id="grid-detail-send-btn">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 6l6.5 5 6.5-5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı gönder
                     </button>
+                    <?php endif; ?>
                     <button type="button" class="gs-table-tab-menu-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M13.5 6.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v7A1.5 1.5 0 0 0 5 13.5h1.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         Kaydı çoğalt
@@ -1491,6 +1496,10 @@ $gridUser = current_user();
                 Bir kopyasını bana gönder
             </label>
         </div>
+        <!-- Backend hatası (rol reddi/geçersiz alıcı/SMTP hatası) burada
+             gösterilir — 15-alıcı uyarısıyla AYNI .grid-send-error sınıfı,
+             ikinci bir hata stili YAZILMADI. -->
+        <div class="grid-send-error grid-send-form-error" id="grid-send-form-error" hidden></div>
         <div class="grid-send-footer">
             <button type="button" class="gs-btn-ghost" id="grid-send-cancel">İptal</button>
             <button type="button" class="gs-btn-primary" id="grid-send-submit">Gönder</button>

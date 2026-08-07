@@ -219,8 +219,11 @@
             // düşer. Zaten var olan buildReadOnlyFieldWidget() (viewer/commenter
             // için kullanılan AYNI desen) yeniden kullanılıyor, ikinci bir
             // salt-okunur widget YAZILMADI.
+            // autonumber (Grup C2) da AYNI listede — değeri cell_values'ta gerçekten
+            // yaşıyor ama yalnızca sunucu (bcc_assign_autonumbers) yazabilir.
             if (field.field_type === 'created_time' || field.field_type === 'created_by'
-                || field.field_type === 'last_modified_time' || field.field_type === 'last_modified_by') {
+                || field.field_type === 'last_modified_time' || field.field_type === 'last_modified_by'
+                || field.field_type === 'autonumber') {
                 return buildReadOnlyFieldWidget(tr, field);
             }
             if (!canEditFields) {

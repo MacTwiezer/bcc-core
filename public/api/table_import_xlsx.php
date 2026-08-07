@@ -64,23 +64,37 @@ $fields = bcc_fetch_all(
     array(':tid' => $table['id'])
 );
 
+// Excel'den ASLA doldurulamayan alan tipleri — iki AYRI listeden de (aşağıdaki
+// $requiredFieldIds ve $fieldByName) hariç tutulurlar, bu yüzden tek yerde
+// tanımlı (iki ayrı literal listesi zamanla ayrışırdı).
+//   * attachment — Excel hücresinde dosya verisi olamaz (eskiden beri hariçti).
+//   * autonumber (Grup C2) — değeri YALNIZCA sunucu yazar
+//     (bcc_assign_autonumbers); normalize_cell_value() bu tipi zaten
+//     reddediyor. Bulunan gerçek bug: view_export_xlsx.php autonumber
+//     sütununu DA dışa aktarıyor (görünür alanların hepsini yazıyor), yani
+//     "dışa aktar → düzenle → içe aktar" turunda bu sütun geri geliyordu ve
+//     (a) her satırda normalize reddi "N hücre atlandı" uyarısını şişiriyordu,
+//     (b) alan is_required=1 ise $filledFieldIds'e HİÇ giremediği için
+//     $missingRequired her satırda true oluyor ve içe aktarım SIFIR kayıtla
+//     bitiyordu. Kayıtlar numaralarını zaten aşağıda bcc_assign_autonumbers()
+//     ile taze alıyor — dosyadaki eski numara hiçbir durumda kullanılmamalı.
+$importIgnoredFieldTypes = array('attachment', 'autonumber');
+
 // Zorunlu alanlar — cell_update.php'nin uyguladığı AYNI kural (bulunan gerçek
 // bug: import bunu hiç kontrol etmiyordu, cell_update.php'de reddedilen boş bir
-// zorunlu değer içe aktarımdan sessizce geçiyordu). 'attachment' hiçbir zaman
-// Excel'den doldurulamayacağı için (zaten $fieldByName'e hiç girmiyor) buradan
+// zorunlu değer içe aktarımdan sessizce geçiyordu). Yukarıdaki tipler buradan
 // da hariç — yoksa alakasız bir zorunlu dosya-eki alanı TÜM satırları eler.
 $requiredFieldIds = array();
 foreach ($fields as $f) {
-    if ($f['field_type'] !== 'attachment' && (int) $f['is_required'] === 1) {
+    if (!in_array($f['field_type'], $importIgnoredFieldTypes, true) && (int) $f['is_required'] === 1) {
         $requiredFieldIds[] = (int) $f['id'];
     }
 }
 
 // Sütun adı → alan eşlemesi, harf büyüklüğünden bağımsız tam eşleşme.
-// 'attachment' BİLEREK haritaya girmiyor (yorum: Excel hücresinde dosya verisi olamaz).
 $fieldByName = array();
 foreach ($fields as $f) {
-    if ($f['field_type'] === 'attachment') {
+    if (in_array($f['field_type'], $importIgnoredFieldTypes, true)) {
         continue;
     }
     $fieldByName[mb_strtolower(trim($f['name']), 'UTF-8')] = $f;
@@ -233,6 +247,14 @@ try {
         );
         $recordId = (int) bcc_last_insert_id();
         $nextPos++;
+
+        // Autonumber (Grup C2): içe aktarılan her satır da kendi numarasını alır.
+        // ⚠️ bcc_last_insert_id() ÇAĞRISINDAN SONRA — bcc_assign_autonumbers()
+        // LAST_INSERT_ID(expr) ile oturumun last-insert-id'sini EZER; daha önce
+        // çağrılsaydı $recordId kayıt id'si değil autonumber olurdu.
+        // Zaten açık olan toplu transaction'ın (satır ~146) içinde: import
+        // ortasında bir hata olursa sayaç ilerlemesi de geri alınır.
+        bcc_assign_autonumbers($table['id'], $recordId);
 
         foreach ($cellsToInsert as $cell) {
             $column = $cell['column'];

@@ -29,11 +29,17 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     // Grup C1 — Currency/Percent/Rating: DDL YOK, üçü de value_number'ı
     // paylaşıyor (aşağıda), yalnızca GÖRÜNTÜLEME formatı + fields.options'ta
     // (JSON, zaten var olan mekanizma — select tiplerinin choices/colors'ıyla
-    // AYNI kolon) küçük bir config farklı. Autonumber (Grup C2) BİLEREK
-    // burada YOK — o gerçekten YENİ bir DDL (fields'e sayaç kolonu) gerektiriyor.
+    // AYNI kolon) küçük bir config farklı.
     'currency' => 'Para birimi',
     'percent' => 'Yüzde',
     'rating' => 'Değerlendirme',
+    // Grup C2 — Autonumber: C1'in üç tipinden FARKLI olarak GERÇEK bir DDL
+    // gerektirdi (migrations/014, fields.autonumber_next sayaç kolonu) çünkü
+    // records.id (global AUTO_INCREMENT) ve records.position (sürükle-bırakla
+    // kayar) ikisi de kullanılamıyordu. Değerin KENDİSİ yine value_number'da
+    // (aşağıda) — yeni değer kolonu YOK. Kullanıcı tarafından ASLA düzenlenemez
+    // (B1/B2 ile AYNI üç katmanlı salt-okunur zorlaması).
+    'autonumber' => 'Otomatik numara',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
@@ -77,6 +83,12 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     'currency' => 'value_number',
     'percent' => 'value_number',
     'rating' => 'value_number',
+    // autonumber: number ile AYNI kolon — değer GERÇEKTEN cell_values'ta yaşıyor
+    // (created_time/created_by'ın aksine, onlar records'tan türetiliyordu ve bu
+    // yüzden BCC_RECORD_COLUMN_FIELD_TYPES'a da giriyorlardı; autonumber oraya
+    // GİRMEZ). Yeni olan tek şey fields.autonumber_next SAYACI (migrations/014),
+    // değerin saklandığı yer değil.
+    'autonumber' => 'value_number',
 );
 
 // created_time/created_by/last_modified_time/last_modified_by gibi "records
@@ -111,6 +123,8 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'currency' => '💲',
     'percent' => '%',
     'rating' => '★',
+    // autonumber: 'number' ile AYNI rozeti paylaşır — yeni bir simge çizilmedi.
+    'autonumber' => '#',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -191,6 +205,16 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
     'rating' => array(
+        'eq' => '=', 'neq' => '≠', 'gt' => '>', 'lt' => '<', 'gte' => '≥', 'lte' => '≤',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    // autonumber: yine 'number' ile AYNI set. 'empty'/'not_empty' BİLEREK
+    // korundu — teoride her kayıt numara alır, ama autonumber alanı eklenmeden
+    // ÖNCE çöpe atılmış bir kayıt geri yüklenirse (backfill silinmiş kayıtları
+    // da kapsıyor, bkz. bcc_backfill_autonumber_field) veya backfill'den sonra
+    // hücre elle silinirse boş olabilir; filtreyi kaldırmak bu kayıtları
+    // bulunamaz yapardı.
+    'autonumber' => array(
         'eq' => '=', 'neq' => '≠', 'gt' => '>', 'lt' => '<', 'gte' => '≥', 'lte' => '≤',
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
@@ -608,12 +632,30 @@ function bcc_build_field_options($fieldType, $optionsText, $colorsPost = null, $
 // tarafından PAYLAŞILIR, ikinci bir insert mantığı YOK. $postData: name,
 // field_type, is_required, options_text, colors[] anahtarlarını (ör. $_POST
 // şeklinde) bekler.
+// "Zorunlu alan" bayrağını alan tipine göre normalize eder. autonumber (Grup C2)
+// için HER ZAMAN 0: değeri kullanıcı DEĞİL sunucu doldurur, "kullanıcı boş
+// bırakmasın" diye bir durum yok — is_required=1 kalsaydı grid başlığında
+// (grid.php'deki "*" rozeti) kullanıcının asla dolduramayacağı bir alan zorunlu
+// görünürdü. field-type-wizard.js onay kutusunu zaten gizliyor ama son söz
+// burada: "Alanı Düzenle" formunda kutu görünür kalıyor ve bir API isteği
+// doğrudan is_required=1 gönderebilir.
+// İKİ çağrı yeri (bcc_create_field ve table_fields.php update_field) — ayrı ayrı
+// yazılsaydı biri güncellenip diğeri unutulurdu.
+function bcc_normalize_is_required($fieldType, $rawIsRequired)
+{
+    if ($fieldType === 'autonumber') {
+        return 0;
+    }
+
+    return !empty($rawIsRequired) ? 1 : 0;
+}
+
 function bcc_create_field($tableId, $teamId, $postData)
 {
     $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
     $name = isset($postData['name']) ? trim($postData['name']) : '';
     $fieldType = isset($postData['field_type']) ? $postData['field_type'] : '';
-    $isRequired = !empty($postData['is_required']) ? 1 : 0;
+    $isRequired = bcc_normalize_is_required($fieldType, isset($postData['is_required']) ? $postData['is_required'] : null);
     $optionsText = isset($postData['options_text']) ? $postData['options_text'] : '';
 
     if ($name === '') {
@@ -639,20 +681,44 @@ function bcc_create_field($tableId, $teamId, $postData)
         array('table_id' => $tableId)
     );
 
-    bcc_execute(
-        'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
-         VALUES (:table_id, :name, :field_type, :options, :position, :is_required)',
-        array(
-            'table_id' => $tableId,
-            'name' => $name,
-            'field_type' => $fieldType,
-            'options' => $optionsResult['options'],
-            'position' => $nextPos,
-            'is_required' => $isRequired,
-        )
-    );
-    $newId = bcc_last_insert_id();
-    log_audit('field.create', 'field', $newId, array('name' => $name, 'field_type' => $fieldType, 'table_id' => $tableId), $teamId);
+    // Transaction (Grup C2'de eklendi): autonumber alanında alan INSERT'i,
+    // mevcut kayıtların backfill'i ve sayaç UPDATE'i ATOMİK olmalı — ayrı ayrı
+    // commit edilirse "alan var ama hiçbir kayıtta numara yok" veya "numaralar
+    // var ama sayaç 1'de kalmış (sonraki kayıt ÇAKIŞAN numara alır)" durumu
+    // kalır. Diğer tipler için de zararsız (tek INSERT + audit).
+    try {
+        bcc_begin_transaction();
+
+        bcc_execute(
+            'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
+             VALUES (:table_id, :name, :field_type, :options, :position, :is_required)',
+            array(
+                'table_id' => $tableId,
+                'name' => $name,
+                'field_type' => $fieldType,
+                'options' => $optionsResult['options'],
+                'position' => $nextPos,
+                'is_required' => $isRequired,
+            )
+        );
+        $newId = bcc_last_insert_id();
+
+        // Autonumber (Grup C2): tablo ZATEN DOLUYSA mevcut kayıtlar 1'den
+        // başlayarak numaralanır ve sayaç oradan devam eder (Airtable paritesi).
+        // ⚠️ bcc_last_insert_id() çağrısından SONRA — bcc_backfill_autonumber_field()
+        // içindeki UPDATE ... GREATEST(...) LAST_INSERT_ID kullanmasa da,
+        // bcc_assign_autonumbers() ile AYNI sıralama disiplini korunuyor.
+        if ($fieldType === 'autonumber') {
+            bcc_backfill_autonumber_field((int) $newId, $tableId);
+        }
+
+        log_audit('field.create', 'field', $newId, array('name' => $name, 'field_type' => $fieldType, 'table_id' => $tableId), $teamId);
+
+        bcc_commit();
+    } catch (Throwable $e) {
+        bcc_rollback();
+        throw $e;
+    }
 
     return array('ok' => true, 'field_id' => $newId, 'name' => $name, 'field_type' => $fieldType, 'is_required' => $isRequired);
 }
@@ -894,6 +960,11 @@ function cell_raw_value($fieldType, $cellRow)
         // doğrudan gösterir (sembol/ondalık formatı SADECE cell_display_text()'te).
         case 'currency':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
+        // autonumber: her zaman tam sayı (value_number DECIMAL(20,6) olduğu için
+        // (int) cast şart — aksi halde "3.000000" görünürdü). Salt-okunur olduğu
+        // için bu "raw" bir edit kutusuna DEĞİL, yalnızca data-value'ya gider.
+        case 'autonumber':
+            return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
         // percent: normalize_cell_value()'un TERSİ — DB'de 0.45 duruyor ama edit
         // kutusu kullanıcının yazdığı "45"i göstermeli, ×100 burada yapılır.
         case 'percent':
@@ -950,6 +1021,10 @@ function cell_display_text($fieldType, $cellRow, $usersById = array(), $options 
             return (string) $cellRow['value_text'];
         case 'number':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
+        // autonumber: biçimlendirmesiz tam sayı — binlik ayırıcı BİLEREK YOK
+        // (bu bir MİKTAR değil, bir KİMLİK; "1.024" değil "1024" okunmalı).
+        case 'autonumber':
+            return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
         // currency: sembol + Türkçe sayı formatı (binlik nokta, ondalık virgül —
         // projenin geri kalanıyla AYNI Türkçe yerelleştirme). $options yoksa
         // (eski/formatsız çağrı) makul varsayılanlara düşer, hata VERMEZ.
@@ -1078,6 +1153,135 @@ function bcc_touch_record_modified($recordId)
     );
 }
 
+// Autonumber (Grup C2, migrations/014) — $tableId'deki TÜM autonumber alanları
+// için birer numara ayırır ve $recordId'ye yazar. bcc_touch_record_modified()
+// ile AYNI felsefe: TEK ortak fonksiyon, DÖRT çağrı yeri (record_add.php,
+// record_duplicate.php, table_import_xlsx.php, grid.php'nin create_record
+// aksiyonu), ikinci bir kopya YOK.
+//
+// Bir tabloda BİRDEN FAZLA autonumber alanı olabilir ve her birinin sayacı
+// BAĞIMSIZDIR (fields.autonumber_next, alan başına) — bu yüzden döngü.
+//
+// ATOMİKLİK — neden LAST_INSERT_ID(expr) idiomu:
+//   UPDATE fields SET autonumber_next = LAST_INSERT_ID(autonumber_next) + 1
+// Sağ taraf ESKİ değerle hesaplanır: LAST_INSERT_ID(eski) o değeri OTURUMA
+// yazıp geri döndürür, kolona eski+1 kaydedilir. Yani tek ifadede hem "bana
+// verilecek numarayı ayır" hem "sayacı ilerlet".
+//   * "UPDATE x = x+1, sonra ayrı SELECT x" transaction İÇİNDE güvenlidir
+//     (InnoDB satıra X-lock koyar) ama transaction DIŞINDA yarışır — iki nokta,
+//     birinin unutulması sessiz bug.
+//   * "SELECT MAX(value_number)+1" KIRIK: kayıt silinince numara geri sarar ve
+//     iki eşzamanlı okuma aynı MAX'ı görür.
+//   * LAST_INSERT_ID(expr) BAĞLANTIYA ÖZELDİR — değer oturum değişkeninde durur,
+//     başka bir bağlantı onu göremez/ezemez. İzolasyon seviyesinden ve
+//     transaction'ın varlığından BAĞIMSIZ doğru. MySQL/MariaDB'nin kendi
+//     belgelenmiş "sequence emülasyonu" idiomu.
+//
+// ⚠️ ÇAĞRI SIRASI (footgun): bu fonksiyon LAST_INSERT_ID(expr) kullandığı için
+// OTURUMUN last-insert-id'sini EZER. bcc_last_insert_id() (config/database.php,
+// mysqli->insert_id okur) bu fonksiyondan SONRA çağrılırsa yeni kaydın id'sini
+// DEĞİL, son ayrılan autonumber'ı döndürür. Çağıran taraf $recordId'yi
+// bcc_last_insert_id() ile ALMIŞ OLMALI. Dört çağrı yerinin dördünde de
+// bcc_last_insert_id() INSERT'in HEMEN ardından çağrılıyor — araya kod sokan
+// biri bu sırayı bozmasın diye burada açıkça yazılı.
+//
+// ⚠️ TRANSACTION: çağıran taraf bcc_begin_transaction() açmış OLMALI. Sayaç
+// UPDATE'i ile cell_values INSERT'i ayrı commit edilirse araya düşen bir hata
+// numarayı "yakar" (sayaç ilerlemiş ama kayıtta numara yok). Dört çağrı yerinin
+// üçünde transaction zaten vardı; grid.php'nin create_record dalına bu turda
+// EKLENDİ (öncesinde hiç transaction'ı yoktu).
+function bcc_assign_autonumbers($tableId, $recordId)
+{
+    $autoFields = bcc_fetch_all(
+        "SELECT id FROM fields WHERE table_id = :tid AND field_type = 'autonumber'",
+        array(':tid' => $tableId)
+    );
+
+    foreach ($autoFields as $af) {
+        $fieldId = (int) $af['id'];
+
+        bcc_execute(
+            'UPDATE fields SET autonumber_next = LAST_INSERT_ID(autonumber_next) + 1 WHERE id = :fid',
+            array(':fid' => $fieldId)
+        );
+        $number = (int) bcc_fetch_column('SELECT LAST_INSERT_ID()');
+
+        bcc_execute(
+            'INSERT INTO cell_values (record_id, field_id, value_number) VALUES (:rid, :fid, :val)',
+            array(':rid' => $recordId, ':fid' => $fieldId, ':val' => $number)
+        );
+    }
+}
+
+// Autonumber backfill — bir autonumber alanı, İÇİNDE ZATEN KAYIT OLAN bir
+// tabloya eklendiğinde mevcut kayıtları 1'den başlayarak numaralar ve sayacı
+// oradan devam ettirir (Airtable paritesi). İKİ yerden çağrılır:
+//   (1) bcc_create_field() — yeni bir autonumber alanı oluşturulurken,
+//   (2) table_fields.php update_field — mevcut bir alanın TİPİ autonumber'a
+//       çevrilirken (bu form tip değiştirmeye izin veriyor; atlanırsa alan var
+//       ama tüm kayıtlar boş görünürdü).
+//
+// SIRALAMA: position ASC, id ASC — kullanıcı alanı eklediği anda GRİDDE GÖRDÜĞÜ
+// sıra. (Alternatif 'id ASC' = oluşturma sırası; position karıştırılmışsa ikisi
+// ayrışır. Tek seferlik ve kozmetik bir fark, "gördüğüm sıra" daha az şaşırtıcı
+// bulundu. Bundan SONRAKİ kayıtlar her hâlükârda oluşturma sırasına göre numara alır.)
+//
+// SİLİNMİŞ KAYITLAR DA NUMARALANIR — 'deleted_at IS NULL' filtresi BİLEREK YOK.
+// Aksi hâlde çöp kutusundan geri yüklenen bir kayıt boş autonumber'la geri gelir
+// ve bir daha ASLA numara alamaz (numara yalnızca oluşturma anında veriliyor).
+//
+// ROW_NUMBER() (MariaDB 10.2+, bu kurulum 10.4.32) kullanılıyor; "SET @n := @n+1"
+// kullanıcı değişkeni hilesi BİLEREK seçilmedi — INSERT...SELECT içinde ORDER BY
+// ile birlikte değişken değerlendirme sırası optimizer'a bağlıdır ve MySQL/MariaDB
+// belgelerinde açıkça "güvenilmez" olarak işaretlidir.
+//
+// YALNIZCA NUMARASI OLMAYAN KAYITLAR doldurulur ve numaralama 1'den DEĞİL,
+// alanın MEVCUT sayacından (autonumber_next) başlar. İki gerçek nedenle:
+//   (1) cell_values'ta UNIQUE KEY (record_id, field_id) VAR — mevcut bir alanın
+//       tipi autonumber'a çevrildiğinde o alanın hücreleri ZATEN VARDIR; koşulsuz
+//       bir INSERT "Duplicate entry" ile patlardı. (Satır var ama value_number
+//       NULL ise — ör. eski tip metindi — ON DUPLICATE KEY UPDATE ile doldurulur.)
+//   (2) Tasarım kararı: autonumber -> number -> autonumber çevrimlerinde ESKİ
+//       NUMARALAR KORUNUR ve sayaç GERİ SARMAZ. Koşulsuz bir backfill her
+//       çevrimde her şeyi yeniden numaralar ve sayacı sıfırlardı.
+// Sonuç: taze alan (sayaç 1) 1'den başlar; geri çevrilen alan hiçbir şeyi
+// değiştirmez; arada eklenmiş numarasız kayıtlar sayacın kaldığı yerden alır.
+//
+// Sayaç güncellemesi GREATEST(...) ile MONOTON: asla azalmaz ve kullanılmış bir
+// numaranın üstüne düşmez (kendi kendini onaran savunma — hücreler elle
+// kurcalanmış olsa bile sonraki kayıt çakışan numara ALMAZ).
+//
+// ⚠️ TRANSACTION: çağıran taraf açmış OLMALI — alan INSERT'i, hücre backfill'i ve
+// sayaç UPDATE'i ayrı commit edilirse "alan var ama numara yok" ya da "numaralar
+// var ama sayaç 1'de kalmış (sonraki kayıt ÇAKIŞAN numara alır)" durumu kalır.
+function bcc_backfill_autonumber_field($fieldId, $tableId)
+{
+    $start = (int) bcc_fetch_column(
+        'SELECT autonumber_next FROM fields WHERE id = :fid',
+        array(':fid' => $fieldId)
+    );
+
+    bcc_execute(
+        'INSERT INTO cell_values (record_id, field_id, value_number)
+         SELECT r.id, :fid, :start + ROW_NUMBER() OVER (ORDER BY r.position, r.id) - 1
+         FROM records r
+         LEFT JOIN cell_values cv ON cv.record_id = r.id AND cv.field_id = :fid2
+         WHERE r.table_id = :tid AND cv.value_number IS NULL
+         ON DUPLICATE KEY UPDATE value_number = VALUES(value_number)',
+        array(':fid' => $fieldId, ':start' => $start, ':fid2' => $fieldId, ':tid' => $tableId)
+    );
+
+    bcc_execute(
+        'UPDATE fields f
+         SET f.autonumber_next = GREATEST(
+             f.autonumber_next,
+             COALESCE((SELECT MAX(cv.value_number) FROM cell_values cv WHERE cv.field_id = f.id), 0) + 1
+         )
+         WHERE f.id = :fid',
+        array(':fid' => $fieldId)
+    );
+}
+
 function bcc_cell_row_for_field($fieldType, $record, $cellsByRecord, $fieldId)
 {
     if ($fieldType === 'created_time') {
@@ -1188,7 +1392,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
             // 'editable' class'ına bakıyor (bkz. grid.js td.editable), bu class
             // hiç eklenmezse ikinci bir JS kontrolüne gerek kalmaz.
-            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by', 'last_modified_time', 'last_modified_by'), true);
+            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by', 'last_modified_time', 'last_modified_by', 'autonumber'), true);
             if ($isSelectType) {
                 $choices = select_choices_from_options($f['options']);
             } elseif ($f['field_type'] === 'user') {
@@ -1637,10 +1841,15 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
         // zaten YALNIZCA bcc_touch_record_modified() ile (madde b'deki "içerik
         // değişikliği" yazma noktalarından) dolaylı olarak güncellenir, hiçbir
         // zaman doğrudan bir cell_update.php isteğiyle YAZILAMAZ.
+        // autonumber (Grup C2): B1/B2 ile AYNI red. Farkı, değerin records'tan
+        // TÜRETİLMEMESİ — cell_values'ta gerçekten yaşıyor ama YALNIZCA
+        // bcc_assign_autonumbers()/bcc_backfill_autonumber_field() yazabilir,
+        // hiçbir zaman doğrudan bir cell_update.php isteğiyle YAZILAMAZ.
         case 'created_time':
         case 'created_by':
         case 'last_modified_time':
         case 'last_modified_by':
+        case 'autonumber':
             return array('ok' => false, 'error' => 'Bu alan otomatik doldurulur, düzenlenemez.');
 
         default:
@@ -2038,7 +2247,9 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
     // niyetiyle) bunu da normalize_cell_value() ile AYNI kuralla 100'e bölüp
     // DB'deki ondalıkla (0.5) karşılaştırıyoruz — aksi halde kullanıcı hücreye
     // yazarken "50", filtrelerken "0.5" yazmak zorunda kalırdı (tutarsız UX).
-    if ($fieldType === 'number' || $fieldType === 'currency' || $fieldType === 'percent' || $fieldType === 'rating') {
+    // autonumber da AYNI dalda — düz tamsayı karşılaştırması, percent'in ÷100
+    // istisnası ona uygulanmaz (aşağıdaki koşul yalnızca 'percent'i yakalar).
+    if ($fieldType === 'number' || $fieldType === 'currency' || $fieldType === 'percent' || $fieldType === 'rating' || $fieldType === 'autonumber') {
         if ($raw === '' || !is_numeric($raw)) {
             return null;
         }

@@ -90,6 +90,13 @@ try {
     );
     $newRecordId = (int) bcc_last_insert_id();
 
+    // Autonumber (Grup C2): bu tablonun her autonumber alanı için birer numara
+    // ayrılıp cell_values'a yazılır. ⚠️ bcc_last_insert_id() ÇAĞRISINDAN SONRA
+    // gelmek ZORUNDA — bcc_assign_autonumbers() LAST_INSERT_ID(expr) kullanır ve
+    // oturumun last-insert-id'sini EZER (bkz. o fonksiyonun yorumu). Zaten açık
+    // olan transaction'ın içinde: sayaç ilerleyip hücre yazılamazsa numara "yanar".
+    bcc_assign_autonumbers($table['id'], $newRecordId);
+
     // log_audit() commit'TEN ÖNCE, AYNI transaction içinde — bulunan gerçek bug:
     // burada bir istisna atarsa (nadir ama mümkün) ve bcc_commit() ÖNCE
     // çağrılmış olsaydı, bcc_rollback() artık geri alacak bir şey bulamaz;
@@ -108,14 +115,30 @@ try {
 
 // Yeni satırın HTML'i grid.php'nin ilk sayfa render'ıyla AYNI fonksiyondan üretilir
 // (bcc_render_grid_data_row, src/schema.php) — ikinci bir satır şablonu yazılmaz.
-// $usersById: yeni satırda henüz hücre verisi yok (görüntülenecek isim yok) ama
-// 'user' tipi hücrelerin editör seçeneği (data-options) için yine de gerekir.
+// $usersById: 'user' tipi hücrelerin editör seçeneği (data-options) için gerekir.
 $usersById = bcc_team_users_by_id($table['team_id']);
-$record = array('id' => $newRecordId);
+
+// Bulunan gerçek bug (Grup B1'den beri sessizce duruyordu, Grup C2'de yakalandı):
+// burası eskiden $record = array('id' => $newRecordId) kuruyordu, ama
+// bcc_cell_row_for_field() created_time/created_by/last_modified_time/
+// last_modified_by tipleri için $record['created_at']/['created_by']/['updated_at']/
+// ['updated_by']'a KORUMASIZ erişiyor — bu dört tipten biri olan bir tabloda
+// "Undefined index" notice'ı üretip hücreyi BOŞ render ediyordu (grid.php'nin
+// ilk yüklemesinde doğru görünüyor, yalnızca YENİ EKLENEN satırda boş kalıyordu).
+// Artık gerçek satır DB'den okunuyor — hem o bug kapanıyor hem de autonumber
+// (Grup C2) için gereken cell_values satırı geliyor.
+$record = bcc_fetch_one(
+    'SELECT id, created_at, created_by, updated_at, updated_by FROM records WHERE id = :id',
+    array(':id' => $newRecordId)
+);
+// Yeni kayıtta artık hücre OLABİLİR: bcc_assign_autonumbers() bu tablonun her
+// autonumber alanı için birer cell_values satırı yazmış olabilir. Eskiden
+// buraya sabit array() geçiliyordu — autonumber hücresi boş görünürdü.
+$cellsByRecord = bcc_fetch_cells_by_record(array($newRecordId));
 ob_start();
 // Yeni kayıtta henüz hiç ek dosya yok — boş dizi (bcc_fetch_attachments_by_record'a
 // ikinci bir sorgu atmaya gerek yok).
-bcc_render_grid_data_row($record, 0, $visibleFields, array(), true, $table['id'], $stateQueryString, null, $usersById, $fields, array());
+bcc_render_grid_data_row($record, 0, $visibleFields, $cellsByRecord, true, $table['id'], $stateQueryString, null, $usersById, $fields, array());
 $rowHtml = ob_get_clean();
 
 echo json_encode(array(

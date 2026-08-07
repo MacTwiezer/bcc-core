@@ -216,6 +216,26 @@ button {
 .field-badge--last_modified_by, .field-type-badge--last_modified_by {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
 }
+/* Currency/Percent/Rating (Grup C1) ve Autonumber (Grup C2) ikonları.
+   Bulunan gerçek bug: C1'in üç tipi eklenirken bu blok yazılmamıştı — .field-type-badge
+   `background-image: var(--field-icon)` kullanıyor ve YEDEK değeri YOK, yani tanımsız
+   değişken görüntüyü geçersiz kılıp rozeti BOŞ 1.4rem'lik bir kutu olarak bırakıyordu
+   (alan ekleme sihirbazının tip grid'inde ve grid sütun başlıklarında ikonsuz görünüyordu).
+   Autonumber aynı hatayı tekrarlamasın diye dördü birlikte tanımlandı. */
+.field-badge--currency, .field-type-badge--currency {
+    --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cpath d='M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/%3E%3C/svg%3E");
+}
+.field-badge--percent, .field-type-badge--percent {
+    --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3Ccircle cx='6.5' cy='6.5' r='2.5'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.5'/%3E%3C/svg%3E");
+}
+.field-badge--rating, .field-type-badge--rating {
+    --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/%3E%3C/svg%3E");
+}
+/* autonumber: 'number' ile AYNI kavram ailesinden ama ayırt edilebilir olmalı —
+   "#" işareti + artan bir çubuk (sayaç), Airtable'ın autonumber ikonuyla aynı ruhta. */
+.field-badge--autonumber, .field-type-badge--autonumber {
+    --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='8' x2='15' y2='8'/%3E%3Cline x1='3' y1='14' x2='15' y2='14'/%3E%3Cline x1='8' y1='3' x2='6' y2='19'/%3E%3Cline x1='13' y1='3' x2='11' y2='19'/%3E%3Cpolyline points='18 15 21 18 18 21'/%3E%3C/svg%3E");
+}
 .field-badge--attachment, .field-type-badge--attachment {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E");
 }

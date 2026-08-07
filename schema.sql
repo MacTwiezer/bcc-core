@@ -117,9 +117,10 @@ CREATE TABLE IF NOT EXISTS tables_meta (
 -- field_type: ENUM DEĞİL, kasıtlı olarak serbest VARCHAR — geçerli değerler
 -- kod tarafında (src/schema.php, $GLOBALS['BCC_FIELD_TYPES']) whitelist'lenir,
 -- yeni bir tip eklemek DDL gerektirmez (slack_routing_rules.operator ile AYNI
--- ilke). Şu an gerçekten uygulanan 10 tip: single_line_text, long_text, number,
--- checkbox, date, single_select, multiple_select, time, user, attachment —
--- güncel liste her zaman $GLOBALS['BCC_FIELD_TYPES']'tadır, burada YİNELENMEZ.
+-- ilke). Güncel liste her zaman $GLOBALS['BCC_FIELD_TYPES']'tadır ve burada
+-- BİLEREK yinelenmez — eskiden bu yorum "uygulanan 10 tip"i tek tek sayıyordu
+-- (kendi "yinelenmez" kuralıyla çelişerek) ve Grup B1/B2/C1/C2 ile eklenen
+-- 8 tipten sonra bayatlamıştı.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fields (
     id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -129,6 +130,12 @@ CREATE TABLE IF NOT EXISTS fields (
     options      JSON DEFAULT NULL,
     position     INT NOT NULL DEFAULT 0,
     is_required  TINYINT(1) NOT NULL DEFAULT 0,
+    -- autonumber_next (migrations/014): YALNIZCA field_type='autonumber'
+    -- alanları için anlamlı — o alanın BİR SONRAKİ kayda vereceği numara
+    -- (verilmiş SON numara değil, bu yüzden DEFAULT 1). Alan başına bağımsız
+    -- sayaç: bir tabloda birden fazla autonumber alanı olabilir. Diğer tüm
+    -- tiplerde 1'de kalır, okunmaz. Ayrıntılı gerekçe migration dosyasında.
+    autonumber_next INT UNSIGNED NOT NULL DEFAULT 1,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_fields_table (table_id),

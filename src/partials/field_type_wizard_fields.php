@@ -79,7 +79,12 @@ if (!isset($fieldWizardShowRequired)) {
         </label>
     </div>
     <?php if ($fieldWizardShowRequired): ?>
-        <label>
+        <?php /* id: field-type-wizard.js autonumber seçilince bu satırı gizler —
+                autonumber her kayıtta OTOMATİK dolar, "zorunlu" işaretlemek
+                anlamsız (kullanıcının doldurabileceği bir şey değil). Gizli
+                kalsa bile işaretlenmemiş checkbox forma HİÇ dahil olmaz
+                (HTML kuralı), bu yüzden ekstra bir sunucu kontrolü gerekmedi. */ ?>
+        <label id="new-field-required-row">
             <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">
             Zorunlu alan
         </label>

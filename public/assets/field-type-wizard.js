@@ -19,6 +19,12 @@
         var currencyRow = document.getElementById('new-field-currency-row');
         var percentRow = document.getElementById('new-field-percent-row');
         var ratingRow = document.getElementById('new-field-rating-row');
+        // Autonumber (Grup C2): "Zorunlu alan" onay kutusu bu tipte gizlenir —
+        // değer her kayıtta sunucu tarafından otomatik dolar, kullanıcının
+        // doldurup doldurmaması diye bir durum YOK. Bu satır yalnızca
+        // table_fields.php'de var (grid.php'nin "+" popup'ında $fieldWizardShowRequired
+        // false), bu yüzden null olabilir — her erişim korumalı.
+        var requiredRow = document.getElementById('new-field-required-row');
         var nameInput = document.getElementById('new-field-name-input');
         var changeBtn = document.getElementById('new-field-type-change');
 
@@ -43,6 +49,18 @@
                 }
                 if (ratingRow) {
                     ratingRow.hidden = (type !== 'rating');
+                }
+                if (requiredRow) {
+                    requiredRow.hidden = (type === 'autonumber');
+                    // Gizlerken işareti de temizle: kullanıcı önce "number" seçip
+                    // kutuyu işaretler, sonra tip değiştirip autonumber'a geçerse
+                    // gizli-ama-işaretli bir checkbox forma DAHİL olurdu.
+                    if (requiredRow.hidden) {
+                        var reqInput = requiredRow.querySelector('input[name="is_required"]');
+                        if (reqInput) {
+                            reqInput.checked = false;
+                        }
+                    }
                 }
 
                 typeStep.hidden = true;

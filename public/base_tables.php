@@ -45,18 +45,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 array('base_id' => $base['id'])
             );
 
-            bcc_execute(
-                'INSERT INTO tables_meta (base_id, name, description, position) VALUES (:base_id, :name, :description, :position)',
-                array(
-                    'base_id' => $base['id'],
-                    'name' => $name,
-                    'description' => $description !== '' ? $description : null,
-                    'position' => $nextPos,
-                )
-            );
-            $newId = bcc_last_insert_id();
-            log_audit('table.create', 'table', $newId, array('name' => $name, 'base_id' => $base['id']), $base['team_id']);
-            $success = 'Tablo oluşturuldu: ' . $name;
+            // INSERT + log_audit AYNI transaction'da — view_create.php/
+            // record_add.php/table_clear_data.php'de bulunan AYNI sınıf bug:
+            // ikisi ayrı commit edilseydi, log_audit() bir istisna atarsa
+            // (nadir ama mümkün) tablo satırı ZATEN yazılmış olurdu ve
+            // kullanıcı "Veritabanı hatası" görüp tekrar denerken ikinci bir
+            // tablo oluştururdu. Bu dosya o düzeltmeden pay almamıştı.
+            try {
+                bcc_begin_transaction();
+
+                bcc_execute(
+                    'INSERT INTO tables_meta (base_id, name, description, position) VALUES (:base_id, :name, :description, :position)',
+                    array(
+                        'base_id' => $base['id'],
+                        'name' => $name,
+                        'description' => $description !== '' ? $description : null,
+                        'position' => $nextPos,
+                    )
+                );
+                $newId = bcc_last_insert_id();
+                log_audit('table.create', 'table', $newId, array('name' => $name, 'base_id' => $base['id']), $base['team_id']);
+
+                bcc_commit();
+                $success = 'Tablo oluşturuldu: ' . $name;
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Tablo oluşturulamadı (veritabanı hatası).';
+            }
         }
     } elseif ($action === 'rename_table' || $action === 'delete_table' || $action === 'move_table') {
         $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
@@ -90,9 +105,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'Tablo güncellendi: ' . $name;
             }
         } elseif ($action === 'delete_table') {
-            bcc_execute('DELETE FROM tables_meta WHERE id = :id', array('id' => $table['id']));
-            log_audit('table.delete', 'table', $table['id'], array('name' => $table['name']), $base['team_id']);
-            $success = 'Tablo silindi: ' . $table['name'];
+            // DELETE + log_audit AYNI transaction'da (create_table ile AYNI
+            // gerekçe). Burada ekstra önemli: tables_meta silinince fields/
+            // records/views/cell_values CASCADE ile gidiyor — audit satırı
+            // yazılamazsa geriye "neyin silindiğini söyleyen hiçbir kayıt
+            // olmadan yok olmuş bir tablo" kalırdı.
+            try {
+                bcc_begin_transaction();
+
+                bcc_execute('DELETE FROM tables_meta WHERE id = :id', array('id' => $table['id']));
+                log_audit('table.delete', 'table', $table['id'], array('name' => $table['name']), $base['team_id']);
+
+                bcc_commit();
+                $success = 'Tablo silindi: ' . $table['name'];
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Tablo silinemedi (veritabanı hatası).';
+            }
         } elseif ($action === 'move_table') {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 

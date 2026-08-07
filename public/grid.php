@@ -660,7 +660,15 @@ $gridUser = current_user();
                 </div>
             <?php endforeach; ?>
         </div>
-        <?php if ($canEdit): ?>
+        <?php /* $isOwner, $canEdit DEĞİL — tablo oluşturma base_tables.php'de
+                 owner-only (require_role($base['team_id'], 'owner')). $canEdit
+                 (editor+) ile gösterildiğinde editor "+"yı görüyor, tıklıyor,
+                 ayrı sayfaya gidiyor ve orada "owner rolü gerekir" duvarına
+                 çarpıyordu.
+                 ⚠️ Bu, ALAN oluşturma "+"sında ZATEN düzeltilmiş olan hatanın
+                 aynısıydı (bkz. bu dosyanın başındaki $isOwner tanımı ve
+                 gerekçesi) — tablo "+"sı o düzeltmeden pay almamıştı. */ ?>
+        <?php if ($isOwner): ?>
         <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-table-tab-add" title="Yeni tablo">+</a>
         <?php endif; ?>
         <details class="gs-table-tab-menu gs-all-tables-menu" name="gs-table-tab-menu">

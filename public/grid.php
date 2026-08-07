@@ -1005,7 +1005,16 @@ $gridUser = current_user();
                                 $isActive = ($activeRule !== null);
                                 $currentFieldId = $isActive ? $activeRule['field_id'] : 0;
                                 $currentDir = $isActive ? strtolower($activeRule['dir']) : 'asc';
-                                if ($isActive) {
+                                // Bulunan gerçek bug (Grup A turunda yakalandı): bu erişim
+                                // KORUMASIZDI ve BCC_GROUP_DIR_LABELS Grup B1/B2/C1/C2 ile
+                                // eklenen sekiz tipin HİÇBİRİNİ içermiyordu — gruplama paneli
+                                // yalnızca 'attachment'ı elediği için (aşağıdaki döngü) o
+                                // tiplerden birine göre gruplamak "Undefined index" notice'ı
+                                // ve BOŞ yön etiketleri üretiyordu. Eksik girişler
+                                // src/schema.php'de tamamlandı; buradaki isset() ise gelecekte
+                                // eklenecek bir tip diziye yazılmayı unutursa aynı hatanın
+                                // TEKRARLAMAMASI için — zaten var olan genel varsayılana düşer.
+                                if ($isActive && isset($GLOBALS['BCC_GROUP_DIR_LABELS'][$activeRule['field_type']])) {
                                     $slotDirLabels = $GLOBALS['BCC_GROUP_DIR_LABELS'][$activeRule['field_type']];
                                 } else {
                                     $slotDirLabels = array('asc' => 'artan', 'desc' => 'azalan');

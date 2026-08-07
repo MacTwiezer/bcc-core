@@ -72,6 +72,36 @@ try {
         );
     }
 
+    // Kanban: tablodaki İLK single_select alanı varsayılan sütunlama alanı olur —
+    // kullanıcı görünümü açar açmaz çalışan bir tahta görsün, önce ayar paneline
+    // gitmek zorunda kalmasın (Airtable'ın "hemen kullanılabilir" hissi).
+    //
+    // Hiç single_select yoksa kanban_field_id HİÇ yazılmaz (bcc_kanban_config_from_view
+    // 0 döndürür = "seçilmemiş") — bu HATA DEĞİL, tasarlanmış bir boş durum:
+    // kanban.php yönlendirici bir ekran gösterip alan oluşturmaya çağırır.
+    // Görünümün oluşturulmasını ENGELLEMİYORUZ; tip seçiciyi tablo durumuna göre
+    // gri yapmak menüye tablo bilgisi taşımak demek olurdu ve kullanıcıyı
+    // "Kanban istiyorum ama neden yok?" çıkmazına sokardı.
+    if ($viewType === 'kanban') {
+        $firstSelect = bcc_fetch_one(
+            "SELECT id FROM fields WHERE table_id = :tid AND field_type = 'single_select'
+             ORDER BY position, id LIMIT 1",
+            array(':tid' => $table['id'])
+        );
+
+        if ($firstSelect) {
+            bcc_execute(
+                'UPDATE views SET config = :config WHERE id = :id',
+                array(
+                    // Yeni görünüm, config'i NULL — read-modify-write gerekmez,
+                    // ezilecek başka anahtar yok.
+                    ':config' => json_encode(array('kanban_field_id' => (int) $firstSelect['id']), JSON_UNESCAPED_UNICODE),
+                    ':id' => $newViewId,
+                )
+            );
+        }
+    }
+
     log_audit('view.create', 'view', $newViewId, array('table_id' => $table['id'], 'name' => $newName, 'view_type' => $viewType), $table['team_id']);
 
     bcc_commit();

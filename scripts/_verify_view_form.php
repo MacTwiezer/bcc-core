@@ -146,15 +146,22 @@ try {
     // A) ORTAK TEMEL
     // =======================================================================
     echo "\n--- A) Ortak temel ---\n";
-    check('A) BCC_VIEW_TYPES grid+form iceriyor',
-        $GLOBALS['BCC_VIEW_TYPES'] === array('grid' => 'Tablo', 'form' => 'Form'),
+    // ⚠️ TAM ESITLIK YERINE ICERME: bu kontrol once
+    // BCC_VIEW_TYPES === array('grid','form') diye SABITLENMISTI ve Kanban
+    // eklenince KIRILDI — urun dogruydu, testin varsayimi bayatlamisti.
+    // Yeni turler eklendikce kirilmasin diye artik yalnizca Form'un kendi
+    // ihtiyaci olan iki turun VARLIGI kontrol ediliyor.
+    check('A) BCC_VIEW_TYPES grid ve form iceriyor',
+        isset($GLOBALS['BCC_VIEW_TYPES']['grid']) && isset($GLOBALS['BCC_VIEW_TYPES']['form']),
         implode(',', array_keys($GLOBALS['BCC_VIEW_TYPES'])));
     check('A) bcc_view_route_for form -> form_edit.php',
         bcc_view_route_for('form', 1, 2) === '/form_edit.php?table_id=1&view_id=2');
     check('A) bcc_view_route_for grid -> grid.php',
         bcc_view_route_for('grid', 1, 2) === '/grid.php?table_id=1&view_id=2');
+    // Gercekten TANIMSIZ bir tur kullanilmali — 'kanban' artik GECERLI bir tur
+    // (bu satir once 'kanban' kullaniyordu ve Kanban eklenince kirildi).
     check('A) bilinmeyen tur grid\'e duser (fail-safe)',
-        bcc_view_route_for('kanban', 1, 2) === '/grid.php?table_id=1&view_id=2');
+        bcc_view_route_for('__tanimsiz_tur__', 1, 2) === '/grid.php?table_id=1&view_id=2');
 
     $gridPage = http_request('GET', "/grid.php?table_id={$tableId}", $cookie);
     $csrf = extract_csrf($gridPage['body']);
@@ -162,8 +169,9 @@ try {
         strpos($gridPage['body'], 'gs-view-create-panel') !== false
         && strpos($gridPage['body'], 'data-view-type="form"') !== false);
 
-    // Gecersiz tur reddedilmeli
-    $resp = http_request('POST', '/api/view_create.php', $cookie, array('csrf_token' => $csrf, 'table_id' => $tableId, 'view_type' => 'kanban'));
+    // Gecersiz tur reddedilmeli — whitelist'te ASLA bulunmayacak bir deger
+    // kullaniliyor ('kanban' burada da kullaniliyordu ve gecerli olunca kirildi).
+    $resp = http_request('POST', '/api/view_create.php', $cookie, array('csrf_token' => $csrf, 'table_id' => $tableId, 'view_type' => '__tanimsiz_tur__'));
     check('A) Gecersiz view_type REDDEDILDI (422)', $resp['status'] === 422, 'durum: ' . $resp['status'] . ' ' . $resp['body']);
 
     // =======================================================================

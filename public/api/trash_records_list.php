@@ -88,7 +88,7 @@ if (!empty($teamIds)) {
         $tablePlaceholders = implode(',', array_fill(0, count($tableIds), '?'));
 
         $primaryFieldRows = bcc_fetch_all(
-            "SELECT f1.table_id, f1.id AS field_id, f1.field_type
+            "SELECT f1.table_id, f1.id AS field_id, f1.field_type, f1.options
              FROM fields f1
              LEFT JOIN fields f2 ON f2.table_id = f1.table_id
                  AND (f2.position < f1.position OR (f2.position = f1.position AND f2.id < f1.id))
@@ -97,7 +97,9 @@ if (!empty($teamIds)) {
         );
         $primaryFieldByTable = array();
         foreach ($primaryFieldRows as $pf) {
-            $primaryFieldByTable[(int) $pf['table_id']] = array('id' => (int) $pf['field_id'], 'type' => $pf['field_type']);
+            // 'options': Currency/Percent/Rating (Grup C1) formatı için — birincil
+            // alan bu tiplerden biriyse cell_display_text() doğru formatlasın diye.
+            $primaryFieldByTable[(int) $pf['table_id']] = array('id' => (int) $pf['field_id'], 'type' => $pf['field_type'], 'options' => $pf['options']);
         }
 
         $primaryFieldIds = array_values(array_unique(array_map(function ($pf) { return $pf['id']; }, $primaryFieldByTable)));
@@ -132,7 +134,7 @@ if (!empty($teamIds)) {
                 ? $cellByRecordField[(int) $row['id']][$pf['id']]
                 : null;
             $primaryValue = $pf
-                ? cell_display_text($pf['type'], $cellRow, isset($usersByTeam[$teamId]) ? $usersByTeam[$teamId] : array())
+                ? cell_display_text($pf['type'], $cellRow, isset($usersByTeam[$teamId]) ? $usersByTeam[$teamId] : array(), $pf['options'])
                 : '';
             if ($primaryValue === '') {
                 $primaryValue = '(başlıksız kayıt)';

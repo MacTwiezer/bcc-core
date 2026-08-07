@@ -145,6 +145,17 @@
         });
     }
 
+    // Rating hücresini yeniden çizmez (data.display "★★★☆☆" düz metnini
+    // view.textContent'e yazmak tıklanabilir <span data-rating-star>'ları
+    // YOK ederdi, sonraki tıklamalar çalışmazdı) — MEVCUT yıldız span'larının
+    // sadece .rating-star-filled class'ını günceller.
+    function updateRatingStars(view, value) {
+        Array.prototype.forEach.call(view.querySelectorAll('.rating-star'), function (star) {
+            var idx = parseInt(star.getAttribute('data-rating-star'), 10);
+            star.classList.toggle('rating-star-filled', idx <= value);
+        });
+    }
+
     function applyCellResultToTd(td, data) {
         td.setAttribute('data-value', data.raw);
         var view = td.querySelector('.cell-view');
@@ -156,6 +167,8 @@
                 // ile temizlenmiş HTML — ham kullanıcı girdisi DEĞİL, innerHTML
                 // ile yazmak güvenlidir (bkz. src/schema.php).
                 view.innerHTML = data.display;
+            } else if (td.getAttribute('data-field-type') === 'rating') {
+                updateRatingStars(view, parseInt(data.raw, 10) || 0);
             } else {
                 view.textContent = data.display;
             }
@@ -333,7 +346,11 @@
         var input;
         choices = choices || [];
 
-        if (type === 'number') {
+        if (type === 'number' || type === 'currency' || type === 'percent') {
+            // currency/percent: number ile AYNI native <input type=number> —
+            // percent'in "45 yaz, DB'ye 0.45 yazılır" dönüşümü zaten raw'a
+            // (cell_raw_value() ×100'lü döndürür) ve normalize_cell_value()'a
+            // (÷100) uygulanıyor, burada ekstra bir şey yapılmaz.
             input = document.createElement('input');
             input.type = 'number';
             input.step = 'any';
@@ -893,6 +910,24 @@
             if (e.target.matches('input[type="checkbox"].cell-checkbox')) {
                 return; // change olayı hallediyor
             }
+            // Rating: checkbox İLE AYNI "girmeden doğrudan tıkla-kaydet" deseni —
+            // startEdit()'in input-aç/blur-ile-kaydet akışına HİÇ girmez. Aynı
+            // yıldıza TEKRAR tıklamak değerlendirmeyi TEMİZLER (0'a döner) —
+            // Airtable'ın kendi davranışı, "yanlışlıkla verdiğim puanı nasıl
+            // sileceğim" sorusuna native bir cevap.
+            var star = e.target.closest('.rating-star');
+            if (star) {
+                var ratingView = star.closest('.rating-view-editable');
+                if (!ratingView) {
+                    return; // salt-okunur (canEdit=false) — .rating-view-editable class'ı yok
+                }
+                var ratingTd = ratingView.closest('td');
+                var clickedValue = parseInt(star.getAttribute('data-rating-star'), 10);
+                var currentValue = parseInt(ratingTd.getAttribute('data-value'), 10) || 0;
+                var nextValue = (clickedValue === currentValue) ? 0 : clickedValue;
+                saveCell(ratingTd, String(nextValue));
+                return;
+            }
             var td = e.target.closest('td.editable');
             if (!td) {
                 return;
@@ -902,9 +937,41 @@
                 startRichTextEdit(td);
             } else if (fieldType === 'attachment') {
                 startAttachmentEdit(td);
+            } else if (fieldType === 'rating') {
+                return; // yıldızlara tıklama yukarıda ele alındı, boş alana tıklamak hiçbir şey yapmaz
             } else {
                 startEdit(td);
             }
+        });
+
+        // Rating hover-önizleme: fareyle üzerine gelince o yıldıza kadar
+        // GEÇİCİ olarak dolu gösterir (Airtable paritesi), fare ayrılınca
+        // GERÇEK değere (data-value) geri döner — mouseover/mouseout event
+        // delegation ile (grid'e TEK dinleyici, satır sayısına göre çoğalmaz).
+        grid.addEventListener('mouseover', function (e) {
+            var star = e.target.closest('.rating-star');
+            if (!star) {
+                return;
+            }
+            var ratingView = star.closest('.rating-view-editable');
+            if (!ratingView) {
+                return;
+            }
+            var hoverValue = parseInt(star.getAttribute('data-rating-star'), 10);
+            updateRatingStars(ratingView, hoverValue);
+        });
+        grid.addEventListener('mouseout', function (e) {
+            var star = e.target.closest('.rating-star');
+            if (!star) {
+                return;
+            }
+            var ratingView = star.closest('.rating-view-editable');
+            if (!ratingView) {
+                return;
+            }
+            var ratingTd = ratingView.closest('td');
+            var actualValue = parseInt(ratingTd.getAttribute('data-value'), 10) || 0;
+            updateRatingStars(ratingView, actualValue);
         });
 
         grid.addEventListener('change', function (e) {

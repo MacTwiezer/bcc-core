@@ -243,6 +243,67 @@
                 return wrap;
             }
 
+            // Rating: grid hücresindeki AYNI tıkla-kaydet yıldız deseni (grid.js'in
+            // click/mouseover/mouseout dinleyicileri BURADA TEKRARLANMADI — bu widget
+            // panel içinde TEK bir örnek olduğu için kendi kapanış-scope'lu
+            // dinleyicilerini doğrudan kuruyor, grid'in event-delegation'ına gerek yok).
+            if (field.field_type === 'rating') {
+                var ratingRaw = liveTd ? liveTd.getAttribute('data-value') : field.raw;
+                var ratingCurrentValue = ratingRaw ? parseInt(ratingRaw, 10) : 0;
+                // Bulunan gerçek bug: window.BCC_GRID.getChoices() YALNIZCA dizi
+                // döndürür (Array.isArray kontrolü, select/user'ın diziyle çalışan
+                // buildInput()'u için doğru) — rating'in {"max_rating":N} NESNESİNİ
+                // sessizce [] yapıp max_rating'i kaybederdi. data-options doğrudan
+                // okunup ayrıştırılıyor, getChoices() KULLANILMIYOR.
+                var ratingOptsSource = {};
+                if (liveTd) {
+                    try {
+                        ratingOptsSource = JSON.parse(liveTd.getAttribute('data-options') || '{}');
+                    } catch (e) {
+                        ratingOptsSource = {};
+                    }
+                } else {
+                    ratingOptsSource = field.options || {};
+                }
+                var ratingMaxValue = (ratingOptsSource && ratingOptsSource.max_rating) ? parseInt(ratingOptsSource.max_rating, 10) : 5;
+
+                var ratingContainer = document.createElement('div');
+                ratingContainer.className = 'rating-view rating-view-editable';
+
+                function paintRatingStars(previewValue) {
+                    Array.prototype.forEach.call(ratingContainer.querySelectorAll('.rating-star'), function (starEl) {
+                        var idx = parseInt(starEl.getAttribute('data-rating-star'), 10);
+                        starEl.classList.toggle('rating-star-filled', idx <= previewValue);
+                    });
+                }
+
+                var _loop = function (i) {
+                    var starSpan = document.createElement('span');
+                    starSpan.className = 'rating-star' + (i <= ratingCurrentValue ? ' rating-star-filled' : '');
+                    starSpan.setAttribute('data-rating-star', String(i));
+                    starSpan.textContent = '★';
+                    starSpan.addEventListener('mouseover', function () {
+                        paintRatingStars(i);
+                    });
+                    starSpan.addEventListener('mouseout', function () {
+                        paintRatingStars(ratingCurrentValue);
+                    });
+                    starSpan.addEventListener('click', function () {
+                        var nextValue = (i === ratingCurrentValue) ? 0 : i;
+                        ratingCurrentValue = nextValue;
+                        paintRatingStars(nextValue);
+                        commitFieldValue(tr, field, liveTd, String(nextValue));
+                    });
+                    ratingContainer.appendChild(starSpan);
+                };
+                for (var ratingI = 1; ratingI <= ratingMaxValue; ratingI++) {
+                    _loop(ratingI);
+                }
+
+                wrap.appendChild(ratingContainer);
+                return wrap;
+            }
+
             if (field.field_type === 'long_text') {
                 var rawHtml = liveTd ? liveTd.getAttribute('data-value') : field.raw;
                 var ta = document.createElement('textarea');

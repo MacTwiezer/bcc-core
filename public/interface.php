@@ -286,7 +286,7 @@ if (!empty($shareExistingIds)) {
                     $primaryText = '';
                     if ($primaryFieldId !== null) {
                         $primaryCell = isset($cellsForRecord[$primaryFieldId]) ? $cellsForRecord[$primaryFieldId] : null;
-                        $primaryText = cell_display_text($fields[0]['field_type'], $primaryCell, $usersById);
+                        $primaryText = cell_display_text($fields[0]['field_type'], $primaryCell, $usersById, $fields[0]['options']);
                     }
                     $primaryText = $primaryText !== '' ? $primaryText : '(başlıksız kayıt)';
 
@@ -322,7 +322,7 @@ if (!empty($shareExistingIds)) {
                         $fCell = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
                         $detailFields[] = array(
                             'label' => $f['name'],
-                            'value' => cell_display_text($f['field_type'], $fCell, $usersById),
+                            'value' => cell_display_text($f['field_type'], $fCell, $usersById, $f['options']),
                             'is_rich' => $f['field_type'] === 'long_text',
                             'field_type' => $f['field_type'],
                             'files' => null,

@@ -409,7 +409,7 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
             if ($rawValue === null) {
                 $display = '(Boş)';
             } else {
-                $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById);
+                $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById, $rule['options']);
             }
 
             $isLeaf = ($lvl === $levelCount - 1);

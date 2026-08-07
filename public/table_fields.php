@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // render sırasında palete otomatik sırayla düşer, bkz.
             // bcc_resolved_choice_color_key). Aynı istekte hem metni hem rengi
             // değiştirmek indeksleri kaydırabilir — kozmetik bir sınır.
-            $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($_POST['colors']) ? $_POST['colors'] : null);
+            $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($_POST['colors']) ? $_POST['colors'] : null, $_POST);
 
             if (!$optionsResult['ok']) {
                 $error = $optionsResult['error'];
@@ -241,6 +241,36 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <label class="settings-field">Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
                             <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                         </label>
+                        <?php
+                        // Currency/Percent/Rating (Grup C1) — input name'leri
+                        // src/partials/field_type_wizard_fields.php ile BİREBİR AYNI
+                        // (currency_symbol / currency_decimal_places /
+                        // percent_decimal_places / max_rating); bcc_build_field_options()
+                        // tek bir yerden bu adları okuyor, ikinci bir eşleme YOK.
+                        // Bulunan gerçek bug: bu satırlar hiç yoktu — mevcut bir currency
+                        // alanının yalnızca ADINI değiştirmek bile $_POST'ta sembol/ondalık
+                        // bulunmadığı için options'ı sessizce varsayılana (₺, 2) sıfırlıyordu.
+                        // Değerler kayıtlı options'tan ön-doldurulduğu için "değiştirmeden
+                        // kaydet" artık AYNI değerleri geri yazar.
+                        $editFieldOptions = json_decode((string) $editField['options'], true);
+                        $editFieldOptions = is_array($editFieldOptions) ? $editFieldOptions : array();
+                        ?>
+                        <?php if ($editField['field_type'] === 'currency'): ?>
+                            <label class="settings-field">Para birimi sembolü
+                                <input type="text" name="currency_symbol" maxlength="5" value="<?php echo htmlspecialchars(isset($editFieldOptions['currency_symbol']) && $editFieldOptions['currency_symbol'] !== '' ? $editFieldOptions['currency_symbol'] : '₺', ENT_QUOTES, 'UTF-8'); ?>">
+                            </label>
+                            <label class="settings-field">Ondalık basamak
+                                <input type="number" name="currency_decimal_places" min="0" max="6" value="<?php echo isset($editFieldOptions['decimal_places']) ? (int) $editFieldOptions['decimal_places'] : 2; ?>">
+                            </label>
+                        <?php elseif ($editField['field_type'] === 'percent'): ?>
+                            <label class="settings-field">Ondalık basamak
+                                <input type="number" name="percent_decimal_places" min="0" max="6" value="<?php echo isset($editFieldOptions['decimal_places']) ? (int) $editFieldOptions['decimal_places'] : 0; ?>">
+                            </label>
+                        <?php elseif ($editField['field_type'] === 'rating'): ?>
+                            <label class="settings-field">Maksimum yıldız
+                                <input type="number" name="max_rating" min="1" max="10" value="<?php echo isset($editFieldOptions['max_rating']) ? (int) $editFieldOptions['max_rating'] : 5; ?>">
+                            </label>
+                        <?php endif; ?>
                         <?php if (is_select_field_type($editField['field_type'])):
                             $editChoices = select_choices_from_options($editField['options']);
                             $editSavedColors = select_choice_colors_from_options($editField['options']);

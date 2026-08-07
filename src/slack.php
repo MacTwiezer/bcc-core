@@ -133,7 +133,7 @@ function bcc_notify_slack_new_record($tableId, $recordId, $userFullName = null)
         // Mesajın "başlığı": birincil alanın (position/id'ye göre ilk alan) değeri —
         // grid.php/table_fields.php'nin her yerde kullandığı AYNI "primary field" kavramı.
         $primaryField = bcc_fetch_one(
-            'SELECT id, field_type FROM fields WHERE table_id = :table_id ORDER BY position, id LIMIT 1',
+            'SELECT id, field_type, options FROM fields WHERE table_id = :table_id ORDER BY position, id LIMIT 1',
             array('table_id' => $tableId)
         );
 
@@ -149,7 +149,7 @@ function bcc_notify_slack_new_record($tableId, $recordId, $userFullName = null)
             $cellRow = $cellRow !== false ? $cellRow : null;
 
             $usersById = ($primaryField['field_type'] === 'user') ? bcc_team_users_by_id($tableRow['team_id']) : array();
-            $display = cell_display_text($primaryField['field_type'], $cellRow, $usersById);
+            $display = cell_display_text($primaryField['field_type'], $cellRow, $usersById, $primaryField['options']);
             if ($display !== '') {
                 $primaryDisplay = $display;
             }

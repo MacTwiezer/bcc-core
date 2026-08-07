@@ -12,6 +12,13 @@
         var typeInput = document.getElementById('new-field-type-input');
         var chosenLabel = document.getElementById('new-field-type-chosen-label');
         var optionsRow = document.getElementById('new-field-options-row');
+        // Currency/Percent/Rating (Grup C1) — optionsRow ile AYNI desen: sihirbaz
+        // yalnızca GÖRÜNÜRLÜĞÜ ayarlar, hangi anahtarın okunacağına sunucu tarafı
+        // (bcc_build_field_options, field_type'a göre) karar verir. Bu yüzden
+        // gizli satırların input'ları forma dahil olsa bile zararsız.
+        var currencyRow = document.getElementById('new-field-currency-row');
+        var percentRow = document.getElementById('new-field-percent-row');
+        var ratingRow = document.getElementById('new-field-rating-row');
         var nameInput = document.getElementById('new-field-name-input');
         var changeBtn = document.getElementById('new-field-type-change');
 
@@ -27,6 +34,15 @@
                 chosenLabel.textContent = btn.getAttribute('data-field-type-label');
                 if (optionsRow) {
                     optionsRow.hidden = (window.BCC_SELECT_FIELD_TYPES || []).indexOf(type) === -1;
+                }
+                if (currencyRow) {
+                    currencyRow.hidden = (type !== 'currency');
+                }
+                if (percentRow) {
+                    percentRow.hidden = (type !== 'percent');
+                }
+                if (ratingRow) {
+                    ratingRow.hidden = (type !== 'rating');
                 }
 
                 typeStep.hidden = true;

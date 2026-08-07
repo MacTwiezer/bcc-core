@@ -82,7 +82,7 @@ $cellRow[$column] = $value;
 
 $response = array(
     'ok' => true,
-    'display' => cell_display_text($field['field_type'], $cellRow, $usersById),
+    'display' => cell_display_text($field['field_type'], $cellRow, $usersById, $field['options']),
     'raw' => cell_raw_value($field['field_type'], $cellRow),
 );
 

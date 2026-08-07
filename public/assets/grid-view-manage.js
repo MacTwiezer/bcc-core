@@ -141,12 +141,33 @@
         // dinamik üretiliyor) — her seçenek kendi data-view-type'ını gönderir.
         // Tek dinleyici, panele delegasyonla: yeni bir görünüm türü eklendiğinde
         // bu JS'e DOKUNMAK GEREKMEZ.
+        var createMenu = document.querySelector('.gs-view-create-menu');
         var createPanel = document.querySelector('.gs-view-create-panel');
+
+        // YÜZEN menü: panel position:fixed, konumu ortak yardımcıdan
+        // (bcc_bindFloatingPanel) — sol paneldeki görünüm listesini AŞAĞI İTMEZ.
+        // Kapanma (dışarı tık + Escape + karşılıklı dışlama) grid-table-tabs.js'in
+        // <details name="gs-table-tab-menu"> grup yöneticisinden gelir, burada
+        // ikinci bir dinleyici YAZILMADI.
+        if (createMenu && createPanel) {
+            var createSummary = createMenu.querySelector(':scope > summary');
+            if (createSummary) {
+                window.bcc_bindFloatingPanel(createMenu, createPanel, createSummary);
+            }
+        }
+
         if (createPanel) {
             createPanel.addEventListener('click', function (e) {
                 var option = e.target.closest('.gs-view-create-option');
                 if (!option) {
                     return;
+                }
+
+                // Seçim yapılınca menü KAPANIR — istek yola çıkarken açık kalan
+                // bir menü, yönlendirme gecikirse kullanıcıya "tıklamam işe
+                // yaramadı" hissi verirdi.
+                if (createMenu) {
+                    createMenu.removeAttribute('open');
                 }
 
                 var tableId = new URLSearchParams(window.location.search).get('table_id');

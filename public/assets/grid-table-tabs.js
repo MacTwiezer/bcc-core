@@ -9,10 +9,20 @@
         // Firefox/Safari bunu desteklemiyor — bu yüzden "toggle" olayıyla da
         // aynı davranış JS tarafında garanti ediliyor. Ayrıca projedeki ortak
         // "dışarı tıklayınca / Escape ile kapanma" deseni burada uygulanıyor.
-        // (Toolbar panelleri daha önce bu gruba dahil değildi — Group ve Sort
-        // aynı anda açılabiliyor, dışarı tıklayınca kapanmıyordu; kök neden
-        // buydu, aşağıdaki tek satırlık selector genişletmesiyle çözüldü.)
-        var menus = document.querySelectorAll('.gs-table-tab-menu, .gs-tool-details');
+        // ⚠️ SEÇİCİ SINIF ADIYLA DEĞİL, name ÖZNİTELİĞİYLE — grup üyeliğini
+        // ZATEN tanımlayan şey o. Sınıf listesi tutmak aynı hatanın ÜÇ KEZ
+        // tekrarlanmasına yol açtı:
+        //   1) Toolbar panelleri (.gs-tool-details) gruba dahil değildi — Group
+        //      ve Sort aynı anda açılabiliyor, dışarı tıklayınca kapanmıyordu.
+        //   2) .grid-th-menu (sütun başlığı ▾ — Sırala/Filtrele/Grupla) hiç
+        //      eklenmemişti; grid-column-menu.js'nin yorumu "bu grupta dışarı-tık
+        //      dinleyicisi zaten hiçbirinde yok" derken doğruydu, sonra grup
+        //      yönetimi eklendi ama o sınıf seçiciye alınmadı.
+        //   3) .gs-view-create-menu ("+ Yeni oluştur..." tip seçici) — Grup
+        //      View-Form ile eklendi, aynı sebeple kapsam dışı kaldı.
+        // name="gs-table-tab-menu" taşıyan HER <details> artık otomatik dahil;
+        // ileride eklenecek bir menü bu listeye yazılmayı UNUTAMAZ.
+        var menus = document.querySelectorAll('details[name="gs-table-tab-menu"]');
 
         if (!menus.length) {
             return;

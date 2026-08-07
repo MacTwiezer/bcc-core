@@ -15,26 +15,13 @@
         var panel = menu ? menu.querySelector(':scope > .grid-add-field-panel') : null;
 
         if (menu && summary && panel) {
-            function positionPanel() {
-                var rect = summary.getBoundingClientRect();
-                panel.style.top = (rect.bottom + 4) + 'px';
-                panel.style.left = 'auto';
-                panel.style.right = (window.innerWidth - rect.right) + 'px';
-            }
-
-            // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu — panel
-            // açıkken sayfa kaydırılırsa (uzun bir tabloda çok olağan) "+" butonu
-            // kayarken panel ekranda sabit kalıp butondan tamamen kopuyordu
-            // (grid.js'deki richtext-popover'da bulunan AYNI sorun). Scroll'da
-            // yeniden konumlandırılır, menü kapanınca listener kaldırılır.
-            menu.addEventListener('toggle', function () {
-                if (!menu.open) {
-                    window.removeEventListener('scroll', positionPanel, true);
-                    return;
-                }
-                positionPanel();
-                window.addEventListener('scroll', positionPanel, true);
-            });
+            // Konumlandırma bloğu ortak yardımcıya taşındı (bcc_bindFloatingPanel,
+            // dismissable-panel.js) — grid-column-menu.js ile BİREBİR aynı kod
+            // iki yerde duruyordu, "+ Yeni oluştur..." menüsü üçüncüsünü
+            // gerektirince tek yere alındı. Davranış aynı (sağa hizalı), üstüne
+            // resize dinleyicisi de bedava geldi (burada EKSİKTİ: pencere yeniden
+            // boyutlandırılınca panel butondan kopuyordu).
+            window.bcc_bindFloatingPanel(menu, panel, summary, { align: 'right' });
         }
 
         var form = document.querySelector('[data-grid-add-field]');

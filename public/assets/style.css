@@ -1587,6 +1587,35 @@ textarea.cell-input {
     height: 1rem;
 }
 
+/* Rating (Grup C1) — checkbox İLE AYNI ruh: hücrede her zaman görünür, doğrudan
+   tıklanabilir gerçek elemanlar (startEdit()'in input-aç/blur-kaydet akışına
+   girmez). Yıldızlar TEK karakterden (★) ibaret; "boş" yıldız ayrı bir ☆ glifi
+   DEĞİL, aynı ★'ın soluk rengi — böylece dolu/boş arası genişlik kaymaz ve
+   hover önizlemesi (grid.js updateRatingStars) titremez.
+   .rating-view-editable YOKSA (canEdit=false) cursor/hover yok: salt-okunur
+   olduğu görsel olarak da belli olur. */
+.rating-view {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    line-height: 1;
+}
+
+.rating-star {
+    color: #dadce0;
+    font-size: 1rem;
+    user-select: none;
+    transition: color 0.08s ease-in-out;
+}
+
+.rating-star-filled {
+    color: #f5b301;
+}
+
+.rating-view-editable .rating-star {
+    cursor: pointer;
+}
+
 @keyframes cellFlashOk {
     0% { background: #d3f3dd; }
     100% { background: transparent; }

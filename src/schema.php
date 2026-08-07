@@ -26,6 +26,14 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     // BİREBİR AYNI mekanizma (BCC_RECORD_COLUMN_FIELD_TYPES), yalnızca kolon adı farklı.
     'last_modified_time' => 'Son değişiklik zamanı',
     'last_modified_by' => 'Son değiştiren',
+    // Grup C1 — Currency/Percent/Rating: DDL YOK, üçü de value_number'ı
+    // paylaşıyor (aşağıda), yalnızca GÖRÜNTÜLEME formatı + fields.options'ta
+    // (JSON, zaten var olan mekanizma — select tiplerinin choices/colors'ıyla
+    // AYNI kolon) küçük bir config farklı. Autonumber (Grup C2) BİLEREK
+    // burada YOK — o gerçekten YENİ bir DDL (fields'e sayaç kolonu) gerektiriyor.
+    'currency' => 'Para birimi',
+    'percent' => 'Yüzde',
+    'rating' => 'Değerlendirme',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
@@ -62,6 +70,13 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     // value_number ödünç alınır) — gerçek kolon BCC_RECORD_COLUMN_FIELD_TYPES'ta.
     'last_modified_time' => 'value_date',
     'last_modified_by' => 'value_number',
+    // currency/percent/rating: number ile AYNI kolon — GERÇEK bir sayı değeri,
+    // yalnızca cell_display_text() farklı formatlar (sembol/yüzde/yıldız).
+    // percent İSTİSNAİ: DB'de ondalık (0.45) saklanır, normalize_cell_value()
+    // girileni 100'e böler, cell_display_text() ×100 yapıp geri çevirir.
+    'currency' => 'value_number',
+    'percent' => 'value_number',
+    'rating' => 'value_number',
 );
 
 // created_time/created_by/last_modified_time/last_modified_by gibi "records
@@ -93,6 +108,9 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'created_by' => '@',
     'last_modified_time' => '🕐',
     'last_modified_by' => '@',
+    'currency' => '💲',
+    'percent' => '%',
+    'rating' => '★',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -159,6 +177,21 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
     // burayı etkilemez, "empty" burada GERÇEKTEN "hiç düzenlenmemiş" anlamına gelir.
     'last_modified_by' => array(
         'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    // currency/percent/rating: 'number' ile BİREBİR AYNI operatör seti —
+    // filter_condition_sql()'in 'number' dalı da bu üç tipi kapsayacak
+    // şekilde genişletildi, ikinci bir karşılaştırma mantığı yazılmadı.
+    'currency' => array(
+        'eq' => '=', 'neq' => '≠', 'gt' => '>', 'lt' => '<', 'gte' => '≥', 'lte' => '≤',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    'percent' => array(
+        'eq' => '=', 'neq' => '≠', 'gt' => '>', 'lt' => '<', 'gte' => '≥', 'lte' => '≤',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    'rating' => array(
+        'eq' => '=', 'neq' => '≠', 'gt' => '>', 'lt' => '<', 'gte' => '≥', 'lte' => '≤',
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
 );
@@ -497,8 +530,48 @@ function bcc_choice_chip_data($values, $choiceColorMap)
 // update_field) tarafından PAYLAŞILIR, ikinci bir kopya YOK. Select-olmayan
 // tipler için sessizce options:null döner; select tipinde $optionsText boş
 // seçenek listesine çözümlenirse hata döner (en az bir seçenek şart).
-function bcc_build_field_options($fieldType, $optionsText, $colorsPost = null)
+// $extraPost: ham $_POST/$postData dizisi — YALNIZCA currency/percent/rating
+// kendi anahtarlarını buradan okur, select tipleri (choices/colors,
+// $optionsText/$colorsPost üzerinden) bunu görmezden gelir. Sınırlar
+// (ondalık basamak 0-6, max_rating 1-10, sembol 5 karaktere kadar) kötüye
+// kullanıma/aşırı uzun girdiye karşı savunmacı.
+// Okunan anahtarlar — HEM yeni alan (src/partials/field_type_wizard_fields.php)
+// HEM mevcut alan düzenleme (public/table_fields.php) formlarında BİREBİR AYNI
+// olmak ZORUNDA; currency ve percent'in ondalık input'ları BİLEREK farklı adlar
+// taşıyor (currency_decimal_places / percent_decimal_places) çünkü hidden bir
+// satırın input'ları da forma dahil olur — ortak bir "decimal_places" adı
+// hangisinin $_POST'a gireceğini belirsiz bırakırdı:
+//   currency → currency_symbol, currency_decimal_places
+//   percent  → percent_decimal_places
+//   rating   → max_rating
+function bcc_build_field_options($fieldType, $optionsText, $colorsPost = null, $extraPost = array())
 {
+    if ($fieldType === 'currency') {
+        $symbol = isset($extraPost['currency_symbol']) ? trim((string) $extraPost['currency_symbol']) : '';
+        $symbol = $symbol !== '' ? mb_substr($symbol, 0, 5, 'UTF-8') : '₺';
+        $decimals = (isset($extraPost['currency_decimal_places']) && ctype_digit((string) $extraPost['currency_decimal_places']))
+            ? min(6, max(0, (int) $extraPost['currency_decimal_places']))
+            : 2;
+
+        return array('ok' => true, 'options' => json_encode(array('currency_symbol' => $symbol, 'decimal_places' => $decimals), JSON_UNESCAPED_UNICODE));
+    }
+
+    if ($fieldType === 'percent') {
+        $decimals = (isset($extraPost['percent_decimal_places']) && ctype_digit((string) $extraPost['percent_decimal_places']))
+            ? min(6, max(0, (int) $extraPost['percent_decimal_places']))
+            : 0;
+
+        return array('ok' => true, 'options' => json_encode(array('decimal_places' => $decimals), JSON_UNESCAPED_UNICODE));
+    }
+
+    if ($fieldType === 'rating') {
+        $maxRating = (isset($extraPost['max_rating']) && ctype_digit((string) $extraPost['max_rating']))
+            ? min(10, max(1, (int) $extraPost['max_rating']))
+            : 5;
+
+        return array('ok' => true, 'options' => json_encode(array('max_rating' => $maxRating), JSON_UNESCAPED_UNICODE));
+    }
+
     if (!is_select_field_type($fieldType)) {
         return array('ok' => true, 'options' => null);
     }
@@ -556,7 +629,7 @@ function bcc_create_field($tableId, $teamId, $postData)
         return array('ok' => false, 'error' => 'Geçersiz alan tipi.');
     }
 
-    $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($postData['colors']) ? $postData['colors'] : null);
+    $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($postData['colors']) ? $postData['colors'] : null, $postData);
     if (!$optionsResult['ok']) {
         return array('ok' => false, 'error' => $optionsResult['error']);
     }
@@ -817,6 +890,18 @@ function cell_raw_value($fieldType, $cellRow)
             return (string) $cellRow['value_text'];
         case 'user':
             return $cellRow['value_number'] !== null ? (string) (int) $cellRow['value_number'] : '';
+        // currency: number ile AYNI — DB'deki ham sayı, edit kutusu bunu
+        // doğrudan gösterir (sembol/ondalık formatı SADECE cell_display_text()'te).
+        case 'currency':
+            return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
+        // percent: normalize_cell_value()'un TERSİ — DB'de 0.45 duruyor ama edit
+        // kutusu kullanıcının yazdığı "45"i göstermeli, ×100 burada yapılır.
+        case 'percent':
+            return $cellRow['value_number'] !== null ? (string) ((float) $cellRow['value_number'] * 100) : '';
+        // rating: düz tam sayı — yıldız widget'ının başlangıç durumunu (kaç
+        // yıldız dolu) belirlemek için JS bunu okuyup int'e çevirir.
+        case 'rating':
+            return $cellRow['value_number'] !== null ? (string) (int) round((float) $cellRow['value_number']) : '';
         // created_time/created_by/last_modified_time/last_modified_by:
         // bcc_cell_row_for_field() bu $cellRow'u records'tan taklit ediyor
         // (last_modified_by'ın "hiç düzenlenmemişse created_by'a düş" kuralı DAHİL,
@@ -836,12 +921,26 @@ function cell_raw_value($fieldType, $cellRow)
 
 // Grid hücresinde salt-okunur görüntülenecek metni üretir (htmlspecialchars çağıran taraf yapar).
 // $usersById: bcc_team_users_by_id() ile hazırlanmış id => full_name haritası —
-// yalnızca 'user' tipi için kullanılır, diğer tüm tipler bu parametreyi görmezden
-// gelir (opsiyonel, geriye dönük uyumlu — mevcut 3 çağrı yeri dışında imza değişmedi).
-function cell_display_text($fieldType, $cellRow, $usersById = array())
+// yalnızca 'user'/'created_by'/'last_modified_by' tipleri için kullanılır.
+// $options: fields.options JSON'unun ÇÖZÜLMÜŞ (json_decode edilmiş) hâli — SADECE
+// currency/percent/rating için (sembol/ondalık basamak/max yıldız), diğer TÜM
+// tipler bu parametreyi görmezden gelir. Grup C1'de eklendi (Grup B1/B2'de HİÇ
+// gerekmemişti) — backward-compatible: 9 çağrı yerinden yalnızca $options'ı
+// gerçekten geçirenler currency/percent/rating'i doğru formatlar, geçirmeyenler
+// (varsa) o üç tip için formatsız/boş dönebilir ama mevcut number/date/vb.
+// case'lerin DAVRANIŞI hiç değişmedi.
+function cell_display_text($fieldType, $cellRow, $usersById = array(), $options = null)
 {
     if ($cellRow === null) {
         return '';
+    }
+
+    // Çağıranlar $field['options']'ı (fields.options — ham JSON string veya
+    // NULL) OLDUĞU GİBİ geçirebilir — select_choices_from_options()'ın AYNI
+    // deseni, ikinci bir "önce sen decode et" yükü çağırana binmez.
+    if (is_string($options)) {
+        $decodedOptions = json_decode($options, true);
+        $options = is_array($decodedOptions) ? $decodedOptions : null;
     }
 
     switch ($fieldType) {
@@ -851,6 +950,40 @@ function cell_display_text($fieldType, $cellRow, $usersById = array())
             return (string) $cellRow['value_text'];
         case 'number':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
+        // currency: sembol + Türkçe sayı formatı (binlik nokta, ondalık virgül —
+        // projenin geri kalanıyla AYNI Türkçe yerelleştirme). $options yoksa
+        // (eski/formatsız çağrı) makul varsayılanlara düşer, hata VERMEZ.
+        case 'currency':
+            if ($cellRow['value_number'] === null) {
+                return '';
+            }
+            $curOpts = is_array($options) ? $options : array();
+            $symbol = isset($curOpts['currency_symbol']) && $curOpts['currency_symbol'] !== '' ? $curOpts['currency_symbol'] : '₺';
+            $decimals = isset($curOpts['decimal_places']) ? (int) $curOpts['decimal_places'] : 2;
+            return $symbol . number_format((float) $cellRow['value_number'], $decimals, ',', '.');
+        // percent: normalize_cell_value()'un TERSİ — DB'deki ondalık (0.45) ×100
+        // yapılıp "%" ile gösterilir (Airtable paritesi, araştırılıp netleştirilen karar).
+        case 'percent':
+            if ($cellRow['value_number'] === null) {
+                return '';
+            }
+            $pctOpts = is_array($options) ? $options : array();
+            $decimals = isset($pctOpts['decimal_places']) ? (int) $pctOpts['decimal_places'] : 0;
+            // "%45" — Türkçe yazımda işaret sayının ÖNÜNE gelir (İngilizce "45%"
+            // değil); bu case'in geri kalanı (binlik nokta, ondalık virgül) zaten
+            // Türkçe yerelleştirme, işaretin yeri de ona uyuyor.
+            return '%' . number_format((float) $cellRow['value_number'] * 100, $decimals, ',', '.');
+        // rating: dolu/boş yıldız karakterleriyle salt-okunur gösterim (tıklanabilir
+        // widget AYRI — grid.js/grid-row-detail.js, bu yalnızca METİN üretir; ör.
+        // grup başlığı/Excel export/Slack gibi salt-metin bağlamlar için).
+        case 'rating':
+            if ($cellRow['value_number'] === null) {
+                return '';
+            }
+            $ratingOpts = is_array($options) ? $options : array();
+            $maxRating = isset($ratingOpts['max_rating']) ? (int) $ratingOpts['max_rating'] : 5;
+            $val = max(0, min($maxRating, (int) round((float) $cellRow['value_number'])));
+            return str_repeat('★', $val) . str_repeat('☆', max(0, $maxRating - $val));
         case 'checkbox':
             // grid.php'nin bcc_build_grouped_tree()'sindeki AYNI etiketler —
             // eskiden bu case burada yoktu (bulunan gerçek bug), grid.php grup
@@ -984,6 +1117,13 @@ function bcc_render_grid_row_fields_json($allFields, $record, $cellsByRecord, $u
             $choices = select_choices_from_options($f['options']);
         } elseif ($f['field_type'] === 'user') {
             $choices = bcc_user_choices_from_map($usersById);
+        } elseif ($f['field_type'] === 'rating') {
+            // Detay panelindeki yıldız widget'ı (grid-row-detail.js) max_rating'i
+            // buradan okur — select'in choices listesinden FARKLI bir şekil
+            // ({"max_rating": N}, dizi değil) ama AYNI 'options' anahtarını kullanır,
+            // JS tarafı field_type'a göre yorumlar.
+            $ratingJsonOpts = is_string($f['options']) ? json_decode($f['options'], true) : null;
+            $choices = array('max_rating' => (is_array($ratingJsonOpts) && isset($ratingJsonOpts['max_rating'])) ? (int) $ratingJsonOpts['max_rating'] : 5);
         } else {
             $choices = array();
         }
@@ -1042,7 +1182,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
         <?php foreach ($visibleFields as $f):
             $cellRow = bcc_cell_row_for_field($f['field_type'], $record, $cellsByRecord, $f['id']);
             $rawValue = cell_raw_value($f['field_type'], $cellRow);
-            $displayText = cell_display_text($f['field_type'], $cellRow, $usersById);
+            $displayText = cell_display_text($f['field_type'], $cellRow, $usersById, $f['options']);
             $isSelectType = is_select_field_type($f['field_type']);
             // created_time/created_by: Airtable'daki gibi kullanıcı tarafından
             // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
@@ -1053,6 +1193,12 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                 $choices = select_choices_from_options($f['options']);
             } elseif ($f['field_type'] === 'user') {
                 $choices = bcc_user_choices_from_map($usersById);
+            } elseif ($f['field_type'] === 'rating') {
+                // data-options="{"max_rating":N}" — select/user ile AYNI mekanizma,
+                // detay panelinin (grid-row-detail.js) liveTd varsa buradan, yoksa
+                // data-fields JSON'undan (bcc_render_grid_row_fields_json, AYNI şekil) okuması için.
+                $ratingJsonOptsForTd = is_string($f['options']) ? json_decode($f['options'], true) : null;
+                $choices = array('max_rating' => (is_array($ratingJsonOptsForTd) && isset($ratingJsonOptsForTd['max_rating'])) ? (int) $ratingJsonOptsForTd['max_rating'] : 5);
             } else {
                 $choices = array();
             }
@@ -1095,6 +1241,21 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                        ile temizlenmiş HTML — htmlspecialchars UYGULANMAZ (uygulansaydı <b>
                        literal &lt;b&gt; olarak görünürdü). Tek istisna, bkz. bcc_sanitize_rich_text(). */ ?>
                     <div class="cell-view rich-text-view"><?php echo $displayText; ?></div>
+                <?php elseif ($f['field_type'] === 'rating'): ?>
+                    <?php
+                        // checkbox İLE AYNI desen: her zaman görünür/tıklanabilir gerçek
+                        // elemanlar (girmeden-tıkla-kaydet) — startEdit()'in "önce input aç,
+                        // sonra blur'da kaydet" akışına GİRMEZ (grid.js'te AYRI bir click
+                        // dinleyicisi, checkbox'ın kendi 'change' dinleyicisiyle AYNI ruhta).
+                        $ratingDecodedOpts = is_array($f['options']) ? $f['options'] : (json_decode((string) $f['options'], true) ?: array());
+                        $ratingMax = isset($ratingDecodedOpts['max_rating']) ? (int) $ratingDecodedOpts['max_rating'] : 5;
+                        $ratingVal = $rawValue !== '' ? (int) $rawValue : 0;
+                    ?>
+                    <div class="cell-view rating-view<?php echo $canEdit ? ' rating-view-editable' : ''; ?>">
+                        <?php for ($ratingI = 1; $ratingI <= $ratingMax; $ratingI++): ?>
+                            <span class="rating-star<?php echo $ratingI <= $ratingVal ? ' rating-star-filled' : ''; ?>" data-rating-star="<?php echo $ratingI; ?>">★</span>
+                        <?php endfor; ?>
+                    </div>
                 <?php elseif ($isAttachmentType): ?>
                     <div class="cell-view attachment-cell-view">
                         <?php foreach ($attachmentFiles as $file):
@@ -1329,7 +1490,10 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
         case 'long_text':
             return array('ok' => true, 'column' => $column, 'value' => bcc_sanitize_rich_text($rawValue));
 
+        // currency: number ile BİREBİR AYNI doğrulama — format (sembol/ondalık
+        // basamak) yalnızca GÖRÜNTÜLEMEYİ etkiler, DB'ye ham sayı olarak yazılır.
         case 'number':
+        case 'currency':
             $raw = trim((string) $rawValue);
 
             if ($raw === '') {
@@ -1340,6 +1504,47 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
             }
 
             return array('ok' => true, 'column' => $column, 'value' => (float) $raw);
+
+        // percent: Airtable paritesi (araştırılıp netleştirilen karar) —
+        // kullanıcı "45" yazar (%45 niyetiyle), DB'ye ONDALIK (0.45) yazılır.
+        // cell_display_text() bunun TERSİNİ yapıp ×100 + "%" ile gösterir.
+        case 'percent':
+            $raw = trim((string) $rawValue);
+
+            if ($raw === '') {
+                return array('ok' => true, 'column' => $column, 'value' => null);
+            }
+            if (!is_numeric($raw)) {
+                return array('ok' => false, 'error' => 'Geçersiz sayı.');
+            }
+
+            return array('ok' => true, 'column' => $column, 'value' => ((float) $raw) / 100);
+
+        // rating: number'dan FARKLI — [0, max_rating] aralığına sınırlı, tam
+        // sayıya yuvarlanır. max_rating $optionsJson'dan okunur (fonksiyon
+        // zaten alıyor — 'user' tipi $usersById'i nasıl kullanıyorsa AYNI şekilde).
+        case 'rating':
+            $raw = trim((string) $rawValue);
+
+            if ($raw === '') {
+                return array('ok' => true, 'column' => $column, 'value' => null);
+            }
+            if (!is_numeric($raw)) {
+                return array('ok' => false, 'error' => 'Geçersiz değerlendirme.');
+            }
+
+            $maxRating = 5;
+            $decodedOptions = ($optionsJson !== null && $optionsJson !== '') ? json_decode($optionsJson, true) : null;
+            if (is_array($decodedOptions) && isset($decodedOptions['max_rating'])) {
+                $maxRating = (int) $decodedOptions['max_rating'];
+            }
+
+            $rounded = (int) round((float) $raw);
+            if ($rounded < 0 || $rounded > $maxRating) {
+                return array('ok' => false, 'error' => 'Değerlendirme 0 ile ' . $maxRating . ' arasında olmalı.');
+            }
+
+            return array('ok' => true, 'column' => $column, 'value' => $rounded);
 
         case 'checkbox':
             return array('ok' => true, 'column' => $column, 'value' => ($rawValue === '1' || $rawValue === 1) ? 1 : 0);
@@ -1570,6 +1775,13 @@ function parse_grid_group_rules($params, $fieldsById)
             'field_type' => $fieldType,
             'dir' => $dir,
             'column' => $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType],
+            // 'options': grup başlığı render'ının (grid.php bcc_build_grouped_tree)
+            // cell_display_text()'e Currency/Percent/Rating (Grup C1) formatı için
+            // geçirmesi gerekiyor — bcc_build_grouped_tree()'nin imzasına YENİ bir
+            // $fieldsById parametresi eklemek yerine, zaten var olan bu rule
+            // dizisi bir anahtar daha taşıyor (field_type'ın Grup B2'de eklenme
+            // deseniyle AYNI).
+            'options' => $fieldsById[$fieldId]['options'],
         );
         $usedFieldIds[$fieldId] = true;
     }
@@ -1821,7 +2033,12 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
 
     $raw = trim((string) $rawValue);
 
-    if ($fieldType === 'number') {
+    // currency/rating: number ile BİREBİR AYNI karşılaştırma (DB'deki ham sayı
+    // ile). percent İSTİSNAİ: kullanıcı filtre kutusuna "50" yazınca (%50
+    // niyetiyle) bunu da normalize_cell_value() ile AYNI kuralla 100'e bölüp
+    // DB'deki ondalıkla (0.5) karşılaştırıyoruz — aksi halde kullanıcı hücreye
+    // yazarken "50", filtrelerken "0.5" yazmak zorunda kalırdı (tutarsız UX).
+    if ($fieldType === 'number' || $fieldType === 'currency' || $fieldType === 'percent' || $fieldType === 'rating') {
         if ($raw === '' || !is_numeric($raw)) {
             return null;
         }
@@ -1832,6 +2049,9 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         }
 
         $value = (float) $raw;
+        if ($fieldType === 'percent') {
+            $value = $value / 100;
+        }
 
         if ($operator === 'neq') {
             return array('sql' => "({$alias}.{$column} <> {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $value));

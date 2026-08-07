@@ -51,6 +51,33 @@ if (!isset($fieldWizardShowRequired)) {
     <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
         <textarea name="options_text" rows="4"></textarea>
     </label>
+    <!-- Currency/Percent/Rating (Grup C1) — field-type-wizard.js seçilen tipe göre
+         gösterir/gizler, select'in #new-field-options-row'uyla AYNI desen.
+         Bulunan gerçek bug (önce fark edilip düzeltildi): currency VE percent'in
+         ondalık basamak input'ları AYNI name="decimal_places" kullansaydı, biri
+         hidden olsa bile İKİSİ DE forma dahil olurdu (hidden yalnızca GÖRÜNÜRLÜĞÜ
+         etkiler, form gönderimini DEĞİL) — hangisinin $_POST'a gireceği belirsiz
+         olurdu. Bu yüzden İKİSİNİN de kendi tipine özgü, benzersiz adı var.
+         Varsayılan değerler bcc_build_field_options()'taki (₺, 2/0 ondalık basamak,
+         5 max yıldız) AYNI varsayılanlarla eşleşiyor. -->
+    <div id="new-field-currency-row" hidden>
+        <label>Para birimi sembolü
+            <input type="text" name="currency_symbol" maxlength="5" value="₺">
+        </label>
+        <label>Ondalık basamak
+            <input type="number" name="currency_decimal_places" min="0" max="6" value="2">
+        </label>
+    </div>
+    <div id="new-field-percent-row" hidden>
+        <label>Ondalık basamak
+            <input type="number" name="percent_decimal_places" min="0" max="6" value="0">
+        </label>
+    </div>
+    <div id="new-field-rating-row" hidden>
+        <label>Maksimum yıldız
+            <input type="number" name="max_rating" min="1" max="10" value="5">
+        </label>
+    </div>
     <?php if ($fieldWizardShowRequired): ?>
         <label>
             <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">

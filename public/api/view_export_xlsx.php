@@ -71,7 +71,7 @@ foreach ($records as $rec) {
         }
 
         $cellRow = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
-        $displayText = cell_display_text($f['field_type'], $cellRow, $usersById);
+        $displayText = cell_display_text($f['field_type'], $cellRow, $usersById, $f['options']);
         // long_text'in salt-okunur çıktısı sanitize edilmiş HTML — düz metin
         // istediği için strip_tags ile metne indirgeniyor.
         if ($f['field_type'] === 'long_text') {

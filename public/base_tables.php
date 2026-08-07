@@ -93,16 +93,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (mb_strlen($description, 'UTF-8') > 500) {
                 $error = 'Açıklama en fazla 500 karakter olabilir.';
             } else {
-                bcc_execute(
-                    'UPDATE tables_meta SET name = :name, description = :description WHERE id = :id',
-                    array(
-                        'name' => $name,
-                        'description' => $description !== '' ? $description : null,
-                        'id' => $table['id'],
-                    )
-                );
-                log_audit('table.update', 'table', $table['id'], array('name' => $name), $base['team_id']);
-                $success = 'Tablo güncellendi: ' . $name;
+                // UPDATE + log_audit AYNI transaction'da — create_table/
+                // delete_table ile AYNI gerekçe.
+                try {
+                    bcc_begin_transaction();
+
+                    bcc_execute(
+                        'UPDATE tables_meta SET name = :name, description = :description WHERE id = :id',
+                        array(
+                            'name' => $name,
+                            'description' => $description !== '' ? $description : null,
+                            'id' => $table['id'],
+                        )
+                    );
+                    log_audit('table.update', 'table', $table['id'], array('name' => $name), $base['team_id']);
+
+                    bcc_commit();
+                    $success = 'Tablo güncellendi: ' . $name;
+                } catch (Throwable $e) {
+                    bcc_rollback();
+                    $error = 'Tablo güncellenemedi (veritabanı hatası).';
+                }
             }
         } elseif ($action === 'delete_table') {
             // DELETE + log_audit AYNI transaction'da (create_table ile AYNI
@@ -125,10 +136,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'move_table') {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $moved = bcc_reorder_sibling('tables_meta', 'base_id', $base['id'], $table['id'], $direction);
+            // İKİ UPDATE + log_audit TEK transaction'da. bcc_reorder_sibling()
+            // artık kendi transaction'ını AÇMIYOR (iç içe transaction mysqli'de
+            // desteklenmiyor, içteki commit dıştakini erkenden commit ederdi) —
+            // sözleşme gereği transaction'ı ÇAĞIRAN açar.
+            //
+            // Kritik senaryo: takasın iki UPDATE'i yarım kalırsa iki satır AYNI
+            // position'da kalırdı. Ayrıca eskiden log_audit() commit'ten SONRA
+            // çalışıyordu, yani "sırası değişmiş ama hiçbir izi olmayan" satır
+            // mümkündü. İkisi de artık aynı sınırın içinde.
+            try {
+                bcc_begin_transaction();
 
-            if ($moved) {
-                log_audit('table.reorder', 'table', $table['id'], array('direction' => $direction), $base['team_id']);
+                $moved = bcc_reorder_sibling('tables_meta', 'base_id', $base['id'], $table['id'], $direction);
+
+                if ($moved) {
+                    log_audit('table.reorder', 'table', $table['id'], array('direction' => $direction), $base['team_id']);
+                }
+
+                bcc_commit();
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Tablo taşınamadı (veritabanı hatası).';
             }
         }
     }

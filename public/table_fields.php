@@ -134,10 +134,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            $moved = bcc_reorder_sibling('fields', 'table_id', $table['id'], $field['id'], $direction);
+            // İKİ UPDATE + log_audit TEK transaction'da — bcc_reorder_sibling()
+            // artık transaction'ı ÇAĞIRANDAN bekliyor (bkz. o fonksiyonun
+            // sözleşmesi; iç içe transaction mysqli'de desteklenmiyor).
+            try {
+                bcc_begin_transaction();
 
-            if ($moved) {
-                log_audit('field.reorder', 'field', $field['id'], array('direction' => $direction), $table['team_id']);
+                $moved = bcc_reorder_sibling('fields', 'table_id', $table['id'], $field['id'], $direction);
+
+                if ($moved) {
+                    log_audit('field.reorder', 'field', $field['id'], array('direction' => $direction), $table['team_id']);
+                }
+
+                bcc_commit();
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Alan taşınamadı (veritabanı hatası).';
             }
         }
     }

@@ -33,25 +33,36 @@ try {
 
     require_role($view['team_id'], 'editor');
 
-    $moved = bcc_reorder_sibling('views', 'table_id', $view['table_id'], $view['id'], $direction);
-} catch (Throwable $e) {
-    json_fail(500, 'Veritabanı hatası.');
-}
+    // ⚠️ Transaction, yetki/varlık kontrollerinden SONRA açılıyor: yukarıdaki
+    // json_fail() çağrıları exit ediyor ve açık bir transaction'ı rollback
+    // ETMEDEN çıkarlardı. Açık transaction'lı bir betiğin sonlanması InnoDB'de
+    // örtük rollback ile biter (veri bozulmaz) ama bağlantıyı gereksiz yere
+    // kilit tutarak bırakır — kontroller önce, transaction sonra.
+    bcc_begin_transaction();
 
-if ($moved) {
-    // bcc_reorder_sibling() KENDİ transaction'ını açıp commit ediyor (iki UPDATE'i
-    // sarmalıyor, table_fields.php/base_tables.php ile PAYLAŞILAN bir fonksiyon —
-    // burada genişletilemez). log_audit() bu commit'ten SONRA, ayrı bir çağrı —
-    // bulunan gerçek risk: burada bir istisna atarsa, sıralama zaten kalıcı
-    // olarak değişmiş olur ama eski kodda istemci yine de "Veritabanı hatası"
-    // görüp az önce olmuş bir işlemi başarısız sanırdı. Audit kaydı burada
-    // BİLEREK sessizce yutulur — geç kalan bir istisna, zaten gerçekleşmiş bir
-    // kullanıcı eylemini yanlışlıkla "başarısız" göstermemeli.
-    try {
+    // İKİ UPDATE + log_audit TEK transaction'da. bcc_reorder_sibling() artık
+    // KENDİ transaction'ını açmıyor — sözleşme gereği çağıran açar (iç içe
+    // transaction mysqli'de desteklenmiyor, içteki commit dıştakini erkenden
+    // commit ederdi).
+    //
+    // ⚠️ ÖNCEKİ TASARIM KARARI DEĞİŞTİ, BİLEREK: log_audit() eskiden commit'ten
+    // SONRA çağrılıyor ve istisnası SESSİZCE YUTULUYORDU ("zaten gerçekleşmiş
+    // bir eylemi yanlışlıkla başarısız gösterme" gerekçesiyle). O gerekçe,
+    // sıralamanın audit'ten ÖNCE kalıcılaştığı bir dünyada geçerliydi. Artık
+    // ikisi aynı transaction'da: audit yazılamazsa sıralama da GERİ ALINIYOR,
+    // yani "başarılı dedik ama iz yok" durumu hiç oluşmuyor ve istemciye 500
+    // dönmek DOĞRU cevap — kullanıcı tekrar deneyince tutarlı bir durumdan
+    // başlar. Diğer üç çağrı yeriyle de tutarlı.
+    $moved = bcc_reorder_sibling('views', 'table_id', $view['table_id'], $view['id'], $direction);
+
+    if ($moved) {
         log_audit('view.reorder', 'view', $view['id'], array('direction' => $direction), $view['team_id']);
-    } catch (Throwable $e) {
-        // Kasıtlı: aşağıya devam, istemciye yine de ok:true dönülür.
     }
+
+    bcc_commit();
+} catch (Throwable $e) {
+    bcc_rollback();
+    json_fail(500, 'Veritabanı hatası.');
 }
 
 echo json_encode(array('ok' => true, 'moved' => $moved), JSON_UNESCAPED_UNICODE);

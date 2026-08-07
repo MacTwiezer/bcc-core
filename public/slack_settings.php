@@ -191,10 +191,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             log_audit('slack.routing_rule_toggle', 'table', $table['id'], array('rule_id' => $rule['id'], 'is_active' => $newActive), $table['team_id']);
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
-            $moved = bcc_reorder_sibling('slack_routing_rules', 'table_id', $table['id'], $rule['id'], $direction);
 
-            if ($moved) {
-                log_audit('slack.routing_rule_reorder', 'table', $table['id'], array('rule_id' => $rule['id'], 'direction' => $direction), $table['team_id']);
+            // İKİ UPDATE + log_audit TEK transaction'da — bcc_reorder_sibling()
+            // artık transaction'ı ÇAĞIRANDAN bekliyor (bkz. o fonksiyonun
+            // sözleşmesi; iç içe transaction mysqli'de desteklenmiyor).
+            try {
+                bcc_begin_transaction();
+
+                $moved = bcc_reorder_sibling('slack_routing_rules', 'table_id', $table['id'], $rule['id'], $direction);
+
+                if ($moved) {
+                    log_audit('slack.routing_rule_reorder', 'table', $table['id'], array('rule_id' => $rule['id'], 'direction' => $direction), $table['team_id']);
+                }
+
+                bcc_commit();
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Kural taşınamadı (veritabanı hatası).';
             }
         }
     }

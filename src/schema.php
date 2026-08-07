@@ -55,6 +55,34 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
 
+// Kayıt çoğaltmada (record_duplicate.php) BİRİNCİL ALANIN sonuna " copy" eklenen
+// tipler — Airtable'daki "Kayıt copy" davranışı.
+//
+// ⚠️ BU BİR WHITELIST: yalnızca burada AÇIKÇA sayılan tipler ek alır, diğer HER
+// ŞEY (bugünküler ve gelecekte eklenecek olanlar) değeri OLDUĞU GİBİ kopyalar.
+// Yeni bir SERBEST METİN tipi eklenirse buraya ELLE eklenmesi gerekir — kasıtlı
+// olarak "unutulunca ek almaz" tarafına düşüyor, çünkü yanlış ek eklemek
+// (aşağıdaki bug'lar) eksik ek eklemekten çok daha zararlı.
+//
+// NEDEN KOLON DEĞİL TİP: eskiden karar "değer kolonu value_text mi" diye
+// veriliyordu. Ama value_text'i YEDİ tip paylaşıyor ve bunların çoğunun bir
+// BİÇİM SÖZLEŞMESİ var — serbest metne " copy" eklemek zararsızken, biçimli bir
+// değere eklemek onu BOZUYORDU (teşhis turunda canlı ölçüldü):
+//   * url    — "https://example.com copy" linkleştirme regex'ine (^https?://,
+//              yalnızca BAŞA çapalı) HÂLÂ uyuyordu, yani link ÜRETİLİYOR ama
+//              tarayıcı boşluğu %20 olarak HOST'a katıyordu
+//              (host = "example.com%20copy") -> kullanıcı sessizce VAR OLMAYAN
+//              bir alan adına gidiyordu. En zararlı vaka: hata görünmüyor.
+//   * email  — "user@example.com copy" FILTER_VALIDATE_EMAIL'i geçemiyor,
+//              mailto: linki tamamen kayboluyordu.
+//   * single_select — "Seçenek copy" alanın choices listesinde OLMAYAN bir değer;
+//              DB'ye geçersiz bir seçim yazılıyordu.
+//   * time   — "14:30 copy" geçerli bir saat değil.
+//   * phone  — tek zararsız olanı (rakam indirgemesi " copy"yi zaten atıyor,
+//              tel: href'i değişmiyordu) ama tutarlılık için o da ek ALMIYOR.
+// Bu yüzden karar artık "hangi kolonda duruyor" değil, "biçim sözleşmesi var mı".
+$GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES'] = array('single_line_text', 'long_text');
+
 // Grup A — hücresi linkleştirilebilen tipler. Bir alan tipinin bu listede olması
 // YALNIZCA "değeri linke çevrilebilir" demektir; değer yine düz metindir ve
 // cell_display_text() bu tipler için de DÜZ METİN döndürmeye devam eder.

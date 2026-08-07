@@ -23,10 +23,16 @@
 //     paylaşırsa "tekil kimlik" amacı bozulur). Bu yüzden $excludeIds'e eklenip
 //     kopya sonrası bcc_assign_autonumbers() ile taze numara veriliyor.
 //
-// BİRİNCİL ALAN: index 0 (position sıralı) — değeri value_text kolonunu
-// kullanan bir tipse (single_line_text/long_text/single_select/time —
-// pratikte hep budur) sonuna " copy" eklenir; nadir durumda (sayı/tarih/
-// kullanıcı tipi birincil alan) değer AYNEN kopyalanır, ek yapılmaz.
+// BİRİNCİL ALAN: index 0 (position sıralı). Sonuna " copy" eklenip eklenmeyeceği
+// bir TİP WHITELIST'inden okunur: $GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES']
+// (src/schema.php) — şu an yalnızca single_line_text ve long_text, yani biçim
+// sözleşmesi OLMAYAN serbest metin tipleri. Diğer TÜM tipler değeri AYNEN
+// kopyalar.
+//
+// Bu yorum eskiden "değeri value_text kolonunu kullanan bir tipse ... pratikte
+// hep budur" diyordu ve karar gerçekten KOLON bazlıydı; value_text'i yedi tip
+// paylaştığı için url/email/single_select/time'ın değerini bozuyordu (ayrıntılı
+// gerekçe whitelist'in yanında, src/schema.php).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -126,12 +132,12 @@ try {
         );
     }
 
-    // Birincil alan — " copy" eki yalnızca value_text kullanan tiplerde.
+    // Birincil alan — " copy" eki BCC_DUPLICATE_SUFFIX_FIELD_TYPES whitelist'ine göre.
     // ERKEN ÇIKIŞ: birincil alan autonumber ise bu dal HİÇ çalışmamalı. Yukarıda
     // $excludeIds'e girmesi onu yalnızca TOPLU kopyadan çıkarır; buradaki tekil
-    // INSERT ise orijinalin value_number'ını AYNEN kopyalardı (" copy" eki
-    // $primaryColumn === 'value_text' kontrolüne takılıp eklenmezdi, ama NUMARA
-    // yine de taşınırdı — tam da önlemek istediğimiz şey). Numara aşağıda
+    // INSERT ise orijinalin value_number'ını AYNEN kopyalardı (autonumber zaten
+    // whitelist'te olmadığı için " copy" eki almazdı, ama NUMARA yine de
+    // taşınırdı — tam da önlemek istediğimiz şey). Numara aşağıda
     // bcc_assign_autonumbers() ile taze veriliyor.
     if ($primaryFieldId !== null && $primaryFieldType !== 'autonumber') {
         $origPrimaryCell = bcc_fetch_one(
@@ -140,12 +146,22 @@ try {
         );
 
         if ($origPrimaryCell) {
-            $primaryColumn = isset($GLOBALS['BCC_FIELD_VALUE_COLUMN'][$primaryFieldType])
-                ? $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$primaryFieldType]
-                : null;
-
+            // " copy" eki KOLONA değil TİPE bakar (whitelist:
+            // BCC_DUPLICATE_SUFFIX_FIELD_TYPES, src/schema.php).
+            //
+            // Bulunan gerçek buglar — eskiden koşul "$primaryColumn === 'value_text'"
+            // idi ve value_text'i YEDİ tip paylaştığı için biçim sözleşmesi OLAN
+            // tiplerin değerini bozuyordu: url'de link üretilmeye devam ediyor ama
+            // boşluk HOST'a karışıp kullanıcıyı var olmayan bir alan adına
+            // gönderiyordu (en zararlısı — hata görünmüyordu), email'de mailto
+            // linki tamamen kayboluyordu, single_select'te choices listesinde
+            // OLMAYAN bir değer yazılıyordu, time'da geçerli olmayan bir saat
+            // oluşuyordu. Ayrıntılı gerekçe whitelist'in yanında.
+            //
+            // Whitelist yaklaşımı bu dört bug'ı TEK kod yoluyla çözüyor — tipe
+            // özel dal YAZILMADI.
             $newValueText = $origPrimaryCell['value_text'];
-            if ($primaryColumn === 'value_text') {
+            if (in_array($primaryFieldType, $GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES'], true)) {
                 $newValueText = ($newValueText === null || $newValueText === '')
                     ? 'copy'
                     : $newValueText . ' copy';

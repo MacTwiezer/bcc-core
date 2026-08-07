@@ -1,0 +1,72 @@
+-- Form görünümü (Grup View-Form): herkese açık form linki için tahmin edilemez
+-- token + formu kapatma anahtarı.
+--
+-- ===========================================================================
+-- NEDEN form_token ŞART (güvenlik gerekçesi — bu kolonsuz özellik YAPILAMAZ)
+-- ===========================================================================
+-- Form, bu projedeki İLK kimlik doğrulaması OLMAYAN yazma uç noktası. Linkin
+-- views.id ile kurulması (ör. /form.php?view_id=406) KVKK ekip izolasyonunu
+-- DOĞRUDAN delerdi: id ardışık bir AUTO_INCREMENT, yani 405/404/403 denemek
+-- BAŞKA TAKIMLARIN formlarını bulmak için yeterli olurdu. Tahmin edilemez bir
+-- token bunu kapatan tek mekanizma.
+--
+-- Token neden views.config JSON'una DEĞİL, ayrı kolona: token ile SATIR ARANACAK
+-- (WHERE form_token = ?). JSON içindeki bir anahtar indekslenemez, yani herkese
+-- açık her istek tüm views tablosunu taratırdı. Ayrı kolon + UNIQUE index bunu
+-- tek satır aramasına indiriyor.
+--
+-- CHAR(32) ascii_bin, neden:
+--   * 32 = bin2hex(random_bytes(16)) çıktısının SABİT uzunluğu -> VARCHAR'ın
+--     uzunluk baytına gerek yok.
+--   * ascii: hex zaten ASCII; tablonun utf8mb4'ü karakter başına 4 bayt ayırıp
+--     index'i gereksiz şişirirdi.
+--   * _bin: TAM eşleşme. Tablonun varsayılan utf8mb4_unicode_ci'si harf
+--     büyüklüğünü yok sayar; token karşılaştırmasının belirsizliğe yer
+--     bırakmaması için ikili karşılaştırma tercih edildi.
+--
+-- NULL neden serbest: yalnızca view_type='form' satırlarında dolu. MySQL/MariaDB
+-- UNIQUE index'i ÇOKLU NULL'a izin verir, bu yüzden 10 mevcut grid görünümü
+-- (hepsi NULL kalacak) birbiriyle ÇAKIŞMAZ. UNIQUE yine de gerekli: token
+-- üretimi CSPRNG olsa da çakışma ihtimaline karşı son savunma katmanı, ve
+-- "iki view aynı token" durumunda hangisinin açılacağı belirsiz olurdu.
+--
+-- FOREIGN KEY YOK: token bir referans değil, bir sır. (014'teki autonumber_next
+-- ile AYNI gerekçe.)
+--
+-- ===========================================================================
+-- NEDEN form_enabled AYRI BİR KOLON — ve neden bu sefer ölü kolon OLMAYACAK
+-- ===========================================================================
+-- ⚠️ Bu tabloda TAM OLARAK bu hata bir kez yapıldı: views.is_published eklendi,
+-- hiçbir yerden okunmadı/yazılmadı ve migrations/009 ile SİLİNDİ. Bu yüzden
+-- form_enabled'ın gerçekten kullanıldığını burada kanıtlamak zorundayım —
+-- ÜÇ ayrı yerde okunuyor:
+--   1. form.php          — 0 ise anonim doldurucuya 404 (form hiç render edilmez)
+--   2. form_submit.php   — 0 ise gönderim reddedilir (istemci engeli bypass edilse bile)
+--   3. form_edit.php     — tasarımcının aç/kapat anahtarının DURUMU
+-- İhtiyaç: linki iptal etmeden (token'ı değiştirmeden) formu ACİLEN durdurabilmek.
+-- Spam gelirse tek tıkla kapatılır, token korunur, sorun geçince tekrar açılır.
+-- Token'ı NULL'lamak bunu yapardı ama linki KALICI olarak öldürürdü.
+--
+-- DEFAULT 0 (fail-closed): bir satır bir şekilde token alıp form_enabled
+-- ayarlanmadan kalırsa form KAPALI olur. Yeni form görünümü oluşturulurken
+-- view_create.php bunu AÇIKÇA 1 yapar.
+-- Form OLMAYAN (grid) satırlarda anlamsız ama zararsız — hep 0 kalır.
+--
+-- ===========================================================================
+-- Idempotent (IF NOT EXISTS) — 008/012/013/014 ile AYNI gerekçe: bu projede
+-- migration'ların hangisinin uygulandığını takip eden ayrı bir mekanizma YOK,
+-- bu yüzden dosya ikinci kez çalıştırılırsa hata vermeden no-op olmalı.
+-- MariaDB 10.4 hem ADD COLUMN hem ADD INDEX için IF NOT EXISTS destekler
+-- (canlı sürüm doğrulandı: 10.4.32-MariaDB).
+--
+-- 013'teki "DROP FOREIGN KEY IF EXISTS + yeniden ADD CONSTRAINT" desenine burada
+-- GEREK YOK — o desen yalnızca FK'ler için gerekliydi (ADD CONSTRAINT ... IF NOT
+-- EXISTS diye bir sözdizimi yok); UNIQUE INDEX'in kendi IF NOT EXISTS'i var.
+-- ===========================================================================
+
+ALTER TABLE views
+    ADD COLUMN IF NOT EXISTS form_token CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL AFTER view_type,
+    ADD COLUMN IF NOT EXISTS form_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER form_token;
+
+ALTER TABLE views
+    ADD UNIQUE INDEX IF NOT EXISTS uq_views_form_token (form_token);

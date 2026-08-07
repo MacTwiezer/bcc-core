@@ -137,20 +137,38 @@
         // ---- Sol panel: "+ Yeni oluştur..." — view_duplicate.php ile AYNI
         // ekleme/yönlendirme deseni, yalnızca kaynak view'ı kopyalamak yerine
         // view_create.php boş bir view oluşturuyor.
-        var createBtn = document.querySelector('.gs-view-drawer-create');
-        if (createBtn) {
-            createBtn.addEventListener('click', function () {
+        // Tek buton yerine artık TİP SEÇİCİ var (grid.php, BCC_VIEW_TYPES'tan
+        // dinamik üretiliyor) — her seçenek kendi data-view-type'ını gönderir.
+        // Tek dinleyici, panele delegasyonla: yeni bir görünüm türü eklendiğinde
+        // bu JS'e DOKUNMAK GEREKMEZ.
+        var createPanel = document.querySelector('.gs-view-create-panel');
+        if (createPanel) {
+            createPanel.addEventListener('click', function (e) {
+                var option = e.target.closest('.gs-view-create-option');
+                if (!option) {
+                    return;
+                }
+
                 var tableId = new URLSearchParams(window.location.search).get('table_id');
-                createBtn.disabled = true;
-                post('/api/view_create.php', { csrf_token: CSRF, table_id: tableId }).then(function (result) {
-                    createBtn.disabled = false;
+                var viewType = option.getAttribute('data-view-type');
+                option.disabled = true;
+
+                post('/api/view_create.php', {
+                    csrf_token: CSRF,
+                    table_id: tableId,
+                    view_type: viewType,
+                }).then(function (result) {
+                    option.disabled = false;
                     if (result.httpOk && result.data && result.data.ok) {
-                        window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.view_id);
+                        // Hedef adresi SUNUCU belirliyor (bcc_view_route_for) —
+                        // istemci '/grid.php?...' dizgisini artık kendi kurmuyor,
+                        // yoksa her yeni tür için burası da güncellenmek zorunda kalırdı.
+                        window.location.href = result.data.redirect_url;
                     } else {
                         window.alert((result.data && result.data.error) || 'Görünüm oluşturulamadı.');
                     }
                 }).catch(function () {
-                    createBtn.disabled = false;
+                    option.disabled = false;
                     window.alert('Görünüm oluşturulamadı (bağlantı hatası).');
                 });
             });

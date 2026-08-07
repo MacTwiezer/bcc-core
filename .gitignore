@@ -8,6 +8,9 @@
 config/database.local.php
 config/mail.local.php
 config/mail_record_send.local.php
+# Herkese açık form nonce'larının HMAC anahtarı — ilk kullanımda otomatik üretilir
+# (src/form_security.php). Makineye özel, asla commit edilmez.
+config/form_secret.local.php
 
 # Composer bağımlılıkları (composer.json/composer.lock commit edilir, vendor/ değil)
 /vendor/

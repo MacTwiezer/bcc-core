@@ -65,6 +65,20 @@ if (!$view) {
     $view = bcc_get_or_create_default_view($table['id']);
 }
 
+// GÖRÜNÜM TÜRÜ YÖNLENDİRMESİ (Grup View-Form) — view_type'ın OKUNUP dallandığı
+// İLK nokta. Bu dosyanın geri kalanının tamamı tablo varsayımı üzerine kurulu
+// (sort/filter/group panelleri, dondurulmuş sütunlar, satır yüksekliği), bu
+// yüzden başka türler için erken dal DEĞİL, ayrı sayfaya YÖNLENDİRME yapılıyor.
+// Böylece kullanıcının elindeki eski bir grid linki (ya da bir yer imi) doğru
+// sayfaya düşer, "form görünümünü tablo olarak render etmeye çalışma" durumu
+// hiç oluşmaz.
+// ⚠️ POST istekleri (kayıt ekle vb.) YÖNLENDİRİLMEZ — 302 gövdeyi düşürürdü;
+// zaten form görünümünde bu formlar hiç render edilmiyor.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($view['view_type']) && $view['view_type'] !== 'grid') {
+    header('Location: ' . bcc_view_route_for($view['view_type'], $table['id'], $view['id']));
+    exit;
+}
+
 // Sol Views paneli: tablonun TÜM view'ları (favoriler önce) — aynı sorgu,
 // paralel bir "view listesi" mantığı yazılmadı.
 $allViews = bcc_list_table_views($table['id'], $user ? $user['id'] : null);
@@ -1175,7 +1189,26 @@ $gridUser = current_user();
     <div class="gs-body-row">
         <div class="gs-view-drawer" id="gs-view-drawer">
             <?php if ($canEdit): ?>
-            <button type="button" class="gs-view-drawer-create">+ Yeni oluştur...</button>
+            <?php /* Tip seçici — liste BCC_VIEW_TYPES'tan DÖNER, elle yazılmaz
+                     (alan tipi sihirbazının $fieldTypeLabels döngüsüyle AYNI
+                     desen): Kanban/Calendar eklenince menü kendiliğinden büyür.
+                     <details name="gs-table-tab-menu">: projedeki diğer popover'larla
+                     AYNI ad, böylece biri açılınca diğerleri otomatik kapanır. */ ?>
+            <details class="gs-view-create-menu" name="gs-table-tab-menu">
+                <summary class="gs-view-drawer-create">+ Yeni oluştur...</summary>
+                <div class="gs-view-create-panel">
+                    <?php foreach ($GLOBALS['BCC_VIEW_TYPES'] as $viewTypeKey => $viewTypeLabel): ?>
+                        <button
+                            type="button"
+                            class="gs-view-create-option"
+                            data-view-type="<?php echo htmlspecialchars($viewTypeKey, ENT_QUOTES, 'UTF-8'); ?>"
+                        >
+                            <span class="view-type-badge view-type-badge--<?php echo htmlspecialchars($viewTypeKey, ENT_QUOTES, 'UTF-8'); ?>"></span>
+                            <span class="view-type-label"><?php echo htmlspecialchars($viewTypeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </details>
             <?php endif; ?>
             <div class="gs-view-drawer-search">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -1208,8 +1241,12 @@ $gridUser = current_user();
                         >
                             <svg width="13" height="13" viewBox="0 0 20 20" class="gs-view-star-icon"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke-width="1.3" stroke-linejoin="round"/></svg>
                         </button>
-                        <a class="gs-view-drawer-view" href="/grid.php?table_id=<?php echo (int) $table['id']; ?>&amp;view_id=<?php echo (int) $v['id']; ?>">
-                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#1a73e8" stroke-width="1.4"/><path d="M3 8h14M8 3v14" stroke="#1a73e8" stroke-width="1.2"/></svg>
+                        <?php /* Hedef adres TEK yönlendirme noktasından (bcc_view_route_for)
+                                 gelir — sabit '/grid.php?...' değil, çünkü form
+                                 görünümleri form_edit.php'ye gitmeli. Rozet de türe
+                                 göre (view-type-badge--<tür>), sabit tablo ikonu değil. */ ?>
+                        <a class="gs-view-drawer-view" href="<?php echo htmlspecialchars(bcc_view_route_for($v['view_type'], $table['id'], $v['id']), ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="view-type-badge view-type-badge--<?php echo htmlspecialchars($v['view_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
                             <span data-view-sync-id="<?php echo (int) $v['id']; ?>"><?php echo htmlspecialchars($v['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </a>
                         <?php if ($canEdit): ?>

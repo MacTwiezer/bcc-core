@@ -55,6 +55,127 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
 
+// Kullanıcının ASLA yazamadığı, sunucunun doldurduğu alan tipleri.
+// TEK KAYNAK — bu dizi eskiden bcc_render_grid_data_row() içinde satır içi bir
+// literal olarak duruyordu; form görünümü (Grup View-Form) aynı listeye ikinci
+// bir yerden ihtiyaç duyunca buraya çıkarıldı. Kopyalanmadı: iki ayrı liste
+// olsaydı yeni bir otomatik tip eklenince biri güncellenip diğeri unutulurdu —
+// bu projede TAM OLARAK bu sınıf hata dört kez yaşandı (bkz. BCC_GROUP_DIR_LABELS).
+//
+// Okuyanlar:
+//   1. bcc_render_grid_data_row()  — 'editable' class'ını HİÇ eklemez
+//   2. form_edit.php / form.php    — bu tipler forma HİÇ girmez (doldurulamaz)
+//   3. form_submit.php             — gelen değer bu tipteyse SESSİZCE atlanır
+// (normalize_cell_value()'nun kendi red bloğu AYRI ve BİLEREK öyle: orada her
+// tipin kendi hata mesajı var, tek bir in_array'e indirgemek mesajı kaybederdi.)
+$GLOBALS['BCC_READONLY_FIELD_TYPES'] = array(
+    'created_time', 'created_by', 'last_modified_time', 'last_modified_by', 'autonumber',
+);
+
+// Görünüm türleri. BCC_FIELD_TYPES ile AYNI desen: views.view_type ENUM DEĞİL
+// VARCHAR, geçerli değerler burada whitelist'lenir — yeni tür eklemek DDL
+// gerektirmez.
+//
+// ⚠️ SIRA ÖNEMLİ: bu dizinin sırası "+ Yeni oluştur..." tip seçici menüsünün
+// sırasıdır (alan tipi sihirbazının $fieldTypeLabels'tan sırayla basılmasıyla
+// AYNI mekanizma — liste elle YAZILMAZ, buradan döner).
+//
+// Yol haritası: Form (bu adım) -> Kanban -> Calendar -> diğerleri.
+// ⚠️ YENİ BİR TÜR EKLERKEN ATLANMAMASI GEREKEN DÖRT YER (alan tiplerinde aynı
+// sınıf hata dört kez yaşandı, o yüzden burada baştan yazılı):
+//   1. bu dizi
+//   2. theme.css'te .view-type-badge--<tür> ikonu (--view-icon tanımsızsa rozet
+//      BOŞ kutu çizilir — background-image'ın yedeği YOK, C1'in düştüğü tuzak)
+//   3. bcc_view_route_for() — türün hangi sayfaya gittiği
+//   4. view_create.php'nin tür-özel kurulum dalı (Form'daki token üretimi gibi)
+$GLOBALS['BCC_VIEW_TYPES'] = array(
+    'grid' => 'Tablo',
+    'form' => 'Form',
+);
+
+// Bir görünümün açılacağı sayfa — TEK yönlendirme noktası. grid.php'nin erken
+// yönlendirmesi, view_create.php'nin redirect_url'i ve görünüm panelindeki
+// bağlantılar ÜÇÜ DE buradan geçer, ikinci bir eşleme YOK.
+//
+// Bilinmeyen/bozuk bir view_type 'grid'e düşer (fail-safe): elle kurcalanmış ya
+// da gelecekte eklenip burada unutulmuş bir değer beyaz ekran yerine tabloyu
+// gösterir.
+function bcc_view_route_for($viewType, $tableId, $viewId)
+{
+    $page = ($viewType === 'form') ? '/form_edit.php' : '/grid.php';
+
+    return $page . '?table_id=' . (int) $tableId . '&view_id=' . (int) $viewId;
+}
+
+// Form görünümünde GÖSTERİLEBİLECEK alanlar. Üç katmanlı filtrenin BİRİNCİ
+// katmanı (tip bazlı) — tasarımcının bile açamayacağı tipler.
+// Salt-okunur tiplere EK olarak BİLEREK kapsam dışı bırakılanlar:
+//   * attachment — anonim dosya yükleme AYRI ve çok daha riskli bir iş
+//   * long_text  — sanitize edilmiş HTML saklıyor; anonim girdiden gelen içerik
+//                  ekip üyelerinin gridine düşeceği için depolanmış XSS yüzeyi
+//   * user       — KVKK: değeri bir users.id ve normalize_cell_value() onu
+//                  EKİBİN ÜYE LİSTESİNE karşı doğruluyor. Anonim bir doldurucuya
+//                  seçenek sunmak, ekip üyelerinin adlarını ve id'lerini
+//                  kimliği doğrulanmamış birine SIZDIRMAK olurdu. Bu proje
+//                  ekip izolasyonu üzerine kurulu; form bunu delmemeli.
+// Üçü de ileride ayrı bir turda, kendi güvenlik tasarımlarıyla açılabilir.
+function bcc_field_allowed_in_form($fieldType)
+{
+    if (in_array($fieldType, $GLOBALS['BCC_READONLY_FIELD_TYPES'], true)) {
+        return false;
+    }
+
+    return !in_array($fieldType, array('attachment', 'long_text', 'user'), true);
+}
+
+// Form ayarlarını views.config JSON'undan güvenli varsayılanlarla çözer.
+// ÜÇ okuyucu paylaşır (form_edit.php, form.php, form_submit.php) — üçü ayrı ayrı
+// json_decode edip kendi varsayılanını uydurursa biri değiştiğinde diğerleri
+// sessizce ayrışırdı.
+//
+// ⚠️ form_fields her zaman int dizisi olarak döner: form_submit.php'nin
+// whitelist'i BUNA güveniyor, yani buradaki tip zorlaması bir güvenlik
+// kontrolüdür — config elle kurcalanmış olsa bile string/nested değer geçmez.
+function bcc_form_config_from_view($view)
+{
+    $config = array();
+    if (isset($view['config']) && $view['config'] !== null && $view['config'] !== '') {
+        $decoded = json_decode($view['config'], true);
+        $config = is_array($decoded) ? $decoded : array();
+    }
+
+    $fieldIds = array();
+    if (isset($config['form_fields']) && is_array($config['form_fields'])) {
+        foreach ($config['form_fields'] as $rawId) {
+            // is_scalar: dizi/nesne gelirse (int) cast'i 1 üretirdi — o da
+            // gerçek bir field_id'ye denk gelebilirdi. Sessizce atlanır.
+            if (!is_scalar($rawId)) {
+                continue;
+            }
+            $fid = (int) $rawId;
+            if ($fid > 0 && !in_array($fid, $fieldIds, true)) {
+                $fieldIds[] = $fid;
+            }
+        }
+    }
+
+    $str = function ($key, $default) use ($config) {
+        return (isset($config[$key]) && is_string($config[$key]) && trim($config[$key]) !== '')
+            ? $config[$key]
+            : $default;
+    };
+
+    return array(
+        'form_fields' => $fieldIds,
+        'form_title' => $str('form_title', ''),
+        'form_description' => $str('form_description', ''),
+        'form_success_message' => $str('form_success_message', 'Teşekkürler, kaydınız alındı.'),
+        // Slack bildirimi VARSAYILAN KAPALI — anonim spam ekibin kanalına
+        // taşmasın diye tasarımcı açıkça açmalı (güvenlik kararı).
+        'form_slack_notify' => !empty($config['form_slack_notify']) ? 1 : 0,
+    );
+}
+
 // Kayıt çoğaltmada (record_duplicate.php) BİRİNCİL ALANIN sonuna " copy" eklenen
 // tipler — Airtable'daki "Kayıt copy" davranışı.
 //
@@ -446,7 +567,10 @@ function find_table_or_404($tableId)
 // hiçbir çağıran "az önce ben oluşturdum" varsayımıyla ikinci bir satır üretmez.
 function bcc_get_or_create_default_view($tableId)
 {
-    $sql = 'SELECT v.id, v.name, v.description, v.config, v.created_by, u.full_name AS created_by_name
+    // bcc_find_view() ile AYNI kolon listesi — grid.php ikisinden hangisi
+    // dönerse dönsün $view['view_type']'a güvenebilmeli (erken yönlendirme).
+    $sql = 'SELECT v.id, v.name, v.description, v.config, v.created_by, v.view_type,
+                   v.form_token, v.form_enabled, u.full_name AS created_by_name
             FROM views v
             LEFT JOIN users u ON u.id = v.created_by
             WHERE v.table_id = :table_id ORDER BY v.id ASC LIMIT 1';
@@ -483,7 +607,11 @@ function bcc_get_or_create_default_view($tableId)
 function bcc_find_view($viewId, $tableId)
 {
     return bcc_fetch_one(
-        'SELECT v.id, v.name, v.description, v.config, v.created_by, u.full_name AS created_by_name
+        // view_type/form_token/form_enabled (Grup View-Form): grid.php'nin erken
+        // yönlendirmesi ve form_edit.php bu kolonları okur — ikinci bir sorgu
+        // yazmak yerine zaten var olan tekil view sorgusu genişletildi.
+        'SELECT v.id, v.name, v.description, v.config, v.created_by, v.view_type,
+                v.form_token, v.form_enabled, u.full_name AS created_by_name
          FROM views v
          LEFT JOIN users u ON u.id = v.created_by
          WHERE v.id = :id AND v.table_id = :table_id LIMIT 1',
@@ -497,7 +625,10 @@ function bcc_find_view($viewId, $tableId)
 function bcc_list_table_views($tableId, $userId = null)
 {
     return bcc_fetch_all(
-        'SELECT v.id, v.name, v.description, v.position, v.created_by, u.full_name AS created_by_name,
+        // view_type: sol paneldeki her satırın hem ROZETİ hem HEDEF ADRESİ
+        // (bcc_view_route_for) türe bağlı — form görünümleri form_edit.php'ye gider.
+        'SELECT v.id, v.name, v.description, v.position, v.created_by, v.view_type,
+                u.full_name AS created_by_name,
                 (ufv.id IS NOT NULL) AS is_favorite
          FROM views v
          LEFT JOIN users u ON u.id = v.created_by
@@ -1283,9 +1414,10 @@ function bcc_touch_record_modified($recordId)
 
 // Autonumber (Grup C2, migrations/014) — $tableId'deki TÜM autonumber alanları
 // için birer numara ayırır ve $recordId'ye yazar. bcc_touch_record_modified()
-// ile AYNI felsefe: TEK ortak fonksiyon, DÖRT çağrı yeri (record_add.php,
+// ile AYNI felsefe: TEK ortak fonksiyon, BEŞ çağrı yeri (record_add.php,
 // record_duplicate.php, table_import_xlsx.php, grid.php'nin create_record
-// aksiyonu), ikinci bir kopya YOK.
+// aksiyonu ve — Grup View-Form ile eklenen BEŞİNCİSİ — api/form_submit.php),
+// ikinci bir kopya YOK.
 //
 // Bir tabloda BİRDEN FAZLA autonumber alanı olabilir ve her birinin sayacı
 // BAĞIMSIZDIR (fields.autonumber_next, alan başına) — bu yüzden döngü.
@@ -1309,15 +1441,16 @@ function bcc_touch_record_modified($recordId)
 // OTURUMUN last-insert-id'sini EZER. bcc_last_insert_id() (config/database.php,
 // mysqli->insert_id okur) bu fonksiyondan SONRA çağrılırsa yeni kaydın id'sini
 // DEĞİL, son ayrılan autonumber'ı döndürür. Çağıran taraf $recordId'yi
-// bcc_last_insert_id() ile ALMIŞ OLMALI. Dört çağrı yerinin dördünde de
+// bcc_last_insert_id() ile ALMIŞ OLMALI. Beş çağrı yerinin BEŞİNDE de
 // bcc_last_insert_id() INSERT'in HEMEN ardından çağrılıyor — araya kod sokan
 // biri bu sırayı bozmasın diye burada açıkça yazılı.
 //
 // ⚠️ TRANSACTION: çağıran taraf bcc_begin_transaction() açmış OLMALI. Sayaç
 // UPDATE'i ile cell_values INSERT'i ayrı commit edilirse araya düşen bir hata
-// numarayı "yakar" (sayaç ilerlemiş ama kayıtta numara yok). Dört çağrı yerinin
-// üçünde transaction zaten vardı; grid.php'nin create_record dalına bu turda
-// EKLENDİ (öncesinde hiç transaction'ı yoktu).
+// numarayı "yakar" (sayaç ilerlemiş ama kayıtta numara yok). İlk dört çağrı
+// yerinin üçünde transaction zaten vardı; grid.php'nin create_record dalına
+// Grup C2 turunda EKLENDİ (öncesinde hiç transaction'ı yoktu). Beşinci çağrı
+// yeri (form_submit.php) kendi transaction'ıyla yazıldı.
 function bcc_assign_autonumbers($tableId, $recordId)
 {
     $autoFields = bcc_fetch_all(
@@ -1520,7 +1653,10 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
             // 'editable' class'ına bakıyor (bkz. grid.js td.editable), bu class
             // hiç eklenmezse ikinci bir JS kontrolüne gerek kalmaz.
-            $isReadOnlyFieldType = in_array($f['field_type'], array('created_time', 'created_by', 'last_modified_time', 'last_modified_by', 'autonumber'), true);
+            // Liste artık BCC_READONLY_FIELD_TYPES'ta (yukarıda) — form görünümü
+            // de AYNI listeyi okuduğu için satır içi literal tek kaynağa taşındı.
+            // Davranış birebir aynı: aynı beş tip.
+            $isReadOnlyFieldType = in_array($f['field_type'], $GLOBALS['BCC_READONLY_FIELD_TYPES'], true);
             if ($isSelectType) {
                 $choices = select_choices_from_options($f['options']);
             } elseif ($f['field_type'] === 'user') {

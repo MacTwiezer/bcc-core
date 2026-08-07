@@ -2278,3 +2278,42 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
+
+/* ---------------------------------------------------------------------------
+   Form görünümü tasarımcısı (form_edit.php) — Grup View-Form.
+   Bu sayfa home kabuğunu (home_shell_top) kullanıyor, yani style.css YÜKLÜ
+   DEĞİL; grid.php'nin .share-popover-* kuralları burada geçerli olmaz. Bu
+   yüzden kopyalama kutusunun stili kendi (form-share-*) sınıflarıyla burada
+   tanımlanıyor. .share-popover-form sınıfı yalnızca share-popover.js'in
+   closest() kancası olarak duruyor, GÖRSEL bir kural taşımıyor.
+   --------------------------------------------------------------------------- */
+.form-share-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.form-share-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-size: 0.9rem;
+}
+
+/* Uyarı kutusu: projenin bugüne kadarki tek güvenlik sözünü ("yalnızca oturum
+   açmış takım üyeleri") tersine çeviren yer — görsel olarak da ayrışmalı ki
+   kullanıcı linki paylaşmadan önce fark etsin. */
+.form-share-warning {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid #d98324;
+    border-radius: 4px;
+    background: rgba(217, 131, 36, 0.1);
+    color: var(--bcc-text);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}

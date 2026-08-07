@@ -1,0 +1,93 @@
+/* Herkese açık form sayfası (public/form.php) — Grup View-Form.
+   login.css'in .login-card kabuğunu ödünç alır (o da oturumsuz bir sayfa için
+   yazılmıştı), yalnızca forma özgü kurallar burada. */
+
+.public-form-card {
+    max-width: 560px;
+}
+
+.public-form-desc {
+    margin: 0 0 1.25rem;
+    color: var(--bcc-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.public-form-note {
+    color: var(--bcc-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.public-form-field {
+    margin-bottom: 1rem;
+}
+
+.public-form-field > label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--bcc-text);
+}
+
+.public-form-field input[type="text"],
+.public-form-field input[type="number"],
+.public-form-field input[type="date"],
+.public-form-field input[type="time"],
+.public-form-field input[type="url"],
+.public-form-field input[type="email"],
+.public-form-field input[type="tel"],
+.public-form-field select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-size: 0.95rem;
+}
+
+.public-form-field input[type="checkbox"] {
+    width: auto;
+}
+
+.public-form-field .req-mark {
+    color: #d93025;
+    margin-left: 0.15rem;
+}
+
+/* HONEYPOT — insan GÖRMEMELİ.
+   display:none KULLANILMADI: bazı botlar display:none alanları bilerek atlar,
+   çünkü bu en bilinen honeypot işareti. Bunun yerine alan görsel akıştan
+   çıkarılıyor ama teknik olarak "görünür" kalıyor; ekran okuyucu için de
+   aria-hidden + tabindex=-1 ile (form.php'de) kapatıldı. */
+.public-form-hp {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.public-form-message {
+    margin-bottom: 1rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.public-form-message.is-error {
+    border-left: 3px solid #d93025;
+    background: rgba(217, 48, 37, 0.1);
+    color: var(--bcc-text);
+}
+
+.public-form-message.is-success {
+    border-left: 3px solid #1e8e3e;
+    background: rgba(30, 142, 62, 0.1);
+    color: var(--bcc-text);
+}

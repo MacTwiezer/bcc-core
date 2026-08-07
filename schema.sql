@@ -256,17 +256,28 @@ CREATE TABLE IF NOT EXISTS views (
     table_id       INT UNSIGNED NOT NULL,
     name           VARCHAR(150) NOT NULL,
     description    VARCHAR(500) DEFAULT NULL,
-    -- Şu an SADECE 'grid' yazılıyor/okunuyor (Airtable'daki Calendar/Gallery/Kanban/
-    -- Form gibi diğer görünüm tiplerinin karşılığı henüz YAZILMADI) — bilerek
-    -- bırakılmış ileriye dönük kolon, kaldırılırsa o özellikler yazılınca yeniden
-    -- eklenip tüm mevcut satırlara varsayılan değer taşınması gerekirdi.
+    -- Geçerli değerler kod tarafında whitelist'lenir ($GLOBALS['BCC_VIEW_TYPES'],
+    -- src/schema.php) — ENUM DEĞİL, yeni tür eklemek DDL gerektirmez
+    -- (fields.field_type ile AYNI ilke). Şu an 'grid' ve 'form' uygulandı;
+    -- Kanban/Calendar sıradaki adımlar, güncel liste her zaman BCC_VIEW_TYPES'tadır.
     view_type      VARCHAR(30) NOT NULL DEFAULT 'grid',
+    -- form_token/form_enabled (migrations/015): YALNIZCA view_type='form' için
+    -- anlamlı. form_token herkese açık form linkinin SIRRIdır — views.id ardışık
+    -- olduğu için link olarak kullanılamaz (başka takımların formları tahmin
+    -- edilebilirdi, KVKK izolasyonu delinirdi). ascii_bin: hex zaten ASCII, ikili
+    -- karşılaştırma tam eşleşme verir. NULL serbest + UNIQUE: MySQL/MariaDB çoklu
+    -- NULL'a izin verdiği için form OLMAYAN görünümler çakışmaz.
+    -- form_enabled: linki iptal ETMEDEN formu acilen kapatma anahtarı; DEFAULT 0
+    -- (fail-closed). Ayrıntılı gerekçe migration dosyasında.
+    form_token     CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    form_enabled   TINYINT(1) NOT NULL DEFAULT 0,
     position       INT NOT NULL DEFAULT 0,
     config         JSON DEFAULT NULL,
     created_by     INT UNSIGNED DEFAULT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    UNIQUE KEY uq_views_form_token (form_token),
     KEY idx_views_table (table_id),
     CONSTRAINT fk_views_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
     CONSTRAINT fk_views_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

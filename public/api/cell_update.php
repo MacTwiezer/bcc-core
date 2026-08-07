@@ -104,4 +104,22 @@ if (is_select_field_type($field['field_type'])) {
     $response['display_chips'] = bcc_choice_chip_data($selectedValues, $choiceColorMap);
 }
 
+// Grup A (url/email/phone): display_chips ile BİREBİR AYNI desen — anahtar VARSA
+// grid.js hücreyi özel render eder, YOKSA her zamanki düz metne düşer.
+//
+// ⚠️ Şema whitelist'i SUNUCUDA uygulanır (bcc_cell_link_href yalnızca
+// http/https/mailto/tel üretir) — istemciye YALNIZCA zaten güvenli bir href
+// gider, grid.js'in ayrıca şema kontrolü yapması gerekmez.
+//
+// Değer linkleştirilemiyorsa anahtar null olarak YİNE gönderilir, hiç
+// gönderilmemesi bug olurdu: geçerli bir URL'yi "abc" yapan kullanıcıda
+// eski ikon ekranda asılı kalırdı (grid.js null'ı görünce ikonu SİLER).
+if (in_array($field['field_type'], $GLOBALS['BCC_LINKIFIED_FIELD_TYPES'], true)) {
+    $linkHref = bcc_cell_link_href($field['field_type'], $response['display']);
+
+    $response['display_link'] = ($linkHref !== null)
+        ? array('href' => $linkHref, 'text' => $response['display'])
+        : null;
+}
+
 echo json_encode($response, JSON_UNESCAPED_UNICODE);

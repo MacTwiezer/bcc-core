@@ -40,9 +40,32 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     // (aşağıda) — yeni değer kolonu YOK. Kullanıcı tarafından ASLA düzenlenemez
     // (B1/B2 ile AYNI üç katmanlı salt-okunur zorlaması).
     'autonumber' => 'Otomatik numara',
+    // Grup A — URL/E-posta/Telefon: DDL YOK, üçü de value_text'i
+    // single_line_text ile PAYLAŞIYOR (aşağıda). Grup B/C'nin aksine bunlar
+    // NORMAL DÜZENLENEBİLİR alanlar — salt-okunur zorlaması YOK, kullanıcı
+    // serbestçe yazar. Tek fark GÖRÜNTÜLEMEDE: değer linkleştirilebiliyorsa
+    // hücrede hover'da bir "yeni sekmede aç" ikonu belirir
+    // (bcc_render_linkified_cell). Doğrulama YUMUŞAK — hiçbir giriş
+    // reddedilmez, kontroller yalnızca linkleştirme kapısıdır
+    // (bkz. bcc_cell_link_href).
+    'url' => 'URL',
+    'email' => 'E-posta',
+    'phone' => 'Telefon numarası',
 );
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
+
+// Grup A — hücresi linkleştirilebilen tipler. Bir alan tipinin bu listede olması
+// YALNIZCA "değeri linke çevrilebilir" demektir; değer yine düz metindir ve
+// cell_display_text() bu tipler için de DÜZ METİN döndürmeye devam eder.
+// Linkleştirme SADECE gerçekten HTML üreten iki noktada olur: grid <td>'si
+// (bcc_render_linkified_cell) ve cell_update.php'nin display_link yanıtı.
+$GLOBALS['BCC_LINKIFIED_FIELD_TYPES'] = array('url', 'email', 'phone');
+
+// Hücre linklerinin izinli şemaları. Zengin metnin (long_text) varsayılanından
+// (yalnızca http/https) FARKLI: mailto/tel de var, çünkü bu href'leri kullanıcı
+// DEĞİL bcc_cell_link_href() kurar — kullanıcının yazdığı şey yalnızca ham metin.
+define('BCC_CELL_LINK_SCHEMES', '#^(https?://|mailto:|tel:)#i');
 
 // Bir alan tipinin değeri cell_values'ta hangi kolonda saklanır (Faz 3).
 // 'attachment' BİLEREK burada YOK — bir hücrede birden fazla dosya olabildiği
@@ -89,6 +112,13 @@ $GLOBALS['BCC_FIELD_VALUE_COLUMN'] = array(
     // GİRMEZ). Yeni olan tek şey fields.autonumber_next SAYACI (migrations/014),
     // değerin saklandığı yer değil.
     'autonumber' => 'value_number',
+    // url/email/phone (Grup A): single_line_text ile AYNI kolon — saklanan şey
+    // düpedüz metin. Linkleştirme yalnızca RENDER katmanında olur, DB'de bir izi
+    // yoktur; bu yüzden sıralama/filtre/gruplama single_line_text ile birebir
+    // aynı yolu (value_text) kullanır ve ekstra hiçbir şey gerektirmez.
+    'url' => 'value_text',
+    'email' => 'value_text',
+    'phone' => 'value_text',
 );
 
 // created_time/created_by/last_modified_time/last_modified_by gibi "records
@@ -125,6 +155,12 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
     'rating' => '★',
     // autonumber: 'number' ile AYNI rozeti paylaşır — yeni bir simge çizilmedi.
     'autonumber' => '#',
+    // Grup A. (Bu dizi yalnızca /api/field_create.php'nin JSON yanıtında
+    // kullanılıyor — gridde ve sihirbazda görünen rozet theme.css'teki
+    // .field-badge--<tip> / .field-type-badge--<tip> SVG ikonudur.)
+    'url' => '🔗',
+    'email' => '✉',
+    'phone' => '☎',
 );
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
@@ -141,6 +177,26 @@ $GLOBALS['BCC_FILTER_OPERATORS'] = array(
         'empty' => 'boş', 'not_empty' => 'boş değil',
     ),
     'single_select' => array(
+        'contains' => 'içerir', 'not_contains' => 'içermez',
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    // url/email/phone (Grup A): single_line_text ile BİREBİR AYNI set — değer
+    // düz metin olarak saklanıyor, filtre de düz metin üzerinde çalışıyor.
+    // ('empty'/'not_empty'nin doğru çalışması için filter_condition_sql()'in
+    // $isTextLike dizisine de eklenmeleri ŞART — aksi halde yalnızca IS NULL
+    // bakılır ve '' hücreleri kaçırılır.)
+    'url' => array(
+        'contains' => 'içerir', 'not_contains' => 'içermez',
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    'email' => array(
+        'contains' => 'içerir', 'not_contains' => 'içermez',
+        'equals' => 'eşittir', 'not_equals' => 'eşit değil',
+        'empty' => 'boş', 'not_empty' => 'boş değil',
+    ),
+    'phone' => array(
         'contains' => 'içerir', 'not_contains' => 'içermez',
         'equals' => 'eşittir', 'not_equals' => 'eşit değil',
         'empty' => 'boş', 'not_empty' => 'boş değil',
@@ -246,6 +302,33 @@ $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
     // Ada göre değil, alttaki id'ye göre (görüntü adı değil ham değer sıralanır —
     // diğer tüm tiplerle aynı kural, bkz. bcc_build_grouped_tree segmentasyon notu).
     'user' => array('asc' => 'Küçük → Büyük', 'desc' => 'Büyük → Küçük'),
+    // Bulunan gerçek bug (Grup A turunda yakalandı): Grup B1/B2/C1/C2 ile SEKİZ
+    // yeni tip eklendi ama bu dizi hiç güncellenmedi. Gruplama paneli yalnızca
+    // 'attachment'ı eliyor (public/grid.php), yani bu tiplerden birine göre
+    // gruplamak ERİŞİLEBİLİR bir yol — ve grid.php'nin okuması KORUMASIZDI:
+    // "Undefined index" notice'ı + yön dropdown'ında BOŞ etiketler.
+    // İki katmanlı düzeltme: (1) eksik girişler burada tamamlandı,
+    // (2) grid.php'deki okuma isset() ile korundu — gelecekte eklenecek bir tip
+    // bu diziye yazılmayı unutursa notice yerine makul bir varsayılana düşsün.
+    // created_time/created_by/last_modified_* BİLEREK YOK: bu dört tip
+    // BCC_RECORD_COLUMN_FIELD_TYPES'ta ve gruplama panelinde zaten seçilebilir
+    // olsalar da 'time'/'user' etiketleriyle örtüşürler — aşağıda ayrıca eklendi
+    // ki hiçbir tip açıkta kalmasın.
+    'created_time' => array('asc' => 'Erken → Geç', 'desc' => 'Geç → Erken'),
+    'last_modified_time' => array('asc' => 'Erken → Geç', 'desc' => 'Geç → Erken'),
+    'created_by' => array('asc' => 'Küçük → Büyük', 'desc' => 'Büyük → Küçük'),
+    'last_modified_by' => array('asc' => 'Küçük → Büyük', 'desc' => 'Büyük → Küçük'),
+    // C1/C2 — sayısal tipler, 'number' ile AYNI desen.
+    'currency' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
+    'percent' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
+    'autonumber' => array('asc' => '1 → 9', 'desc' => '9 → 1'),
+    // rating: sayısal ama kullanıcı yıldız olarak görüyor — "1 → 9" yanıltıcı
+    // olurdu (maksimum alan başına 1-10 arasında ayarlanabiliyor).
+    'rating' => array('asc' => 'Az → Çok', 'desc' => 'Çok → Az'),
+    // Grup A — metin tipleri, single_line_text ile AYNI desen.
+    'url' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'email' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
+    'phone' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
 );
 
 // Tekli/çoklu seçim seçeneklerinin renk paleti (Color): serbest hex DEĞİL, sabit
@@ -943,6 +1026,12 @@ function cell_raw_value($fieldType, $cellRow)
         case 'single_line_text':
         case 'long_text':
         case 'single_select':
+        // url/email/phone (Grup A): ham değer kullanıcının yazdığının AYNISI —
+        // linkleştirme yalnızca görüntülemede olur, edit kutusuna hep ham metin
+        // döner (percent'in ×100 gibi bir dönüşümü YOK).
+        case 'url':
+        case 'email':
+        case 'phone':
             return (string) $cellRow['value_text'];
         case 'number':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
@@ -1018,6 +1107,17 @@ function cell_display_text($fieldType, $cellRow, $usersById = array(), $options 
         case 'single_line_text':
         case 'long_text':
         case 'single_select':
+        // url/email/phone (Grup A): DÜZ METİN döner — HTML/link DEĞİL. Bu
+        // BİLEREK böyle: bu fonksiyonun çıktısı Excel'e (view_export_xlsx.php),
+        // Slack mesajına (src/slack.php), grup başlığına (grid.php) ve çöp
+        // kutusu listesine (trash_records_list.php) de gidiyor — oralara HTML
+        // sızmamalı. Linkleştirme SADECE gerçekten HTML üreten iki noktada
+        // yapılır: bcc_render_linkified_cell() (grid <td>) ve cell_update.php'nin
+        // display_link yanıtı. Bu yüzden imza da GENİŞLEMEDİ, 9 çağrı yerinin
+        // hiçbirine dokunulmadı.
+        case 'url':
+        case 'email':
+        case 'phone':
             return (string) $cellRow['value_text'];
         case 'number':
             return $cellRow['value_number'] !== null ? (string) (float) $cellRow['value_number'] : '';
@@ -1480,6 +1580,14 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                             </a>
                         <?php endforeach; ?>
                     </div>
+                <?php elseif (in_array($f['field_type'], $GLOBALS['BCC_LINKIFIED_FIELD_TYPES'], true)): ?>
+                    <?php /* Grup A (url/email/phone): metin + (linkleştirilebiliyorsa)
+                       hover'da beliren "yeni sekmede aç" ikonu. Kaçırma
+                       bcc_render_linkified_cell()'in İÇİNDE yapılır — burada
+                       htmlspecialchars UYGULANMAZ (uygulansaydı ikonun kendi
+                       <svg>'si literal metne dönerdi). Değerin kendisi orada
+                       htmlspecialchars'tan geçiyor, href ise whitelist'ten. */ ?>
+                    <?php echo bcc_render_linkified_cell($f['field_type'], $displayText); ?>
                 <?php else: ?>
                     <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
@@ -1571,6 +1679,133 @@ function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $dir
 // sadakati düşer. Gerçek yol (grid.js'in contenteditable düzenleyicisi) bu
 // karakterleri tarayıcı serileştirmesi sayesinde zaten &lt;/&gt; olarak
 // kaçırılmış gönderir, bu yüzden pratikte karşılaşılmaz.
+// PROJEDEKİ TEK <a> KURMA NOKTASI. İki farklı çağıran var ve ikisi de buradan
+// geçer — Grup A'da hücre linkleri eklenirken zengin metnin link bloğu
+// KOPYALANMADI, bu fonksiyona çıkarıldı:
+//   (1) bcc_sanitize_rich_text_node()  — long_text'in kullanıcı yazdığı <a>'ları
+//   (2) bcc_render_linkified_cell()    — url/email/phone hücrelerinin ikonu
+//
+// $labelHtml: <a> içine GİRECEK içerik. ÇAĞIRAN tarafından zaten güvenli hale
+//   getirilmiş HTML olmalı — düz metinse htmlspecialchars'tan GEÇMİŞ olmalı.
+//   Bu fonksiyon $labelHtml'i KAÇIRMAZ (zengin metinde içerik sanitize edilmiş
+//   alt HTML olabiliyor, tekrar kaçırmak <b>'yi &lt;b&gt; yapardı).
+// $schemeRegex: izin verilen şemalar. VARSAYILAN yalnızca http/https — zengin
+//   metinde href'i KULLANICI yazdığı için whitelist dar tutulur. Hücre linkleri
+//   (BCC_CELL_LINK_SCHEMES) mailto/tel'i de içerir, çünkü orada href'i kullanıcı
+//   değil bcc_cell_link_href() KURAR.
+// $extraAttrHtml: <a>'ya eklenecek ham attribute metni. SABİT LİTERAL OLMALI —
+//   buraya ASLA kullanıcı verisi geçirilmez (kaçırılmaz).
+//
+// Şema whitelist'ten geçmezse null döner; çağıran linki soyup düz metne döner.
+function bcc_build_safe_link($href, $labelHtml, $schemeRegex = '#^https?://#i', $extraAttrHtml = '')
+{
+    if (!preg_match($schemeRegex, (string) $href)) {
+        return null;
+    }
+
+    return '<a ' . ($extraAttrHtml !== '' ? $extraAttrHtml . ' ' : '')
+        . 'href="' . htmlspecialchars((string) $href, ENT_QUOTES, 'UTF-8') . '"'
+        . ' target="_blank" rel="noopener noreferrer">' . $labelHtml . '</a>';
+}
+
+// Grup A — bir url/email/phone hücresinin href'ini üretir; linkleştirilemiyorsa null.
+//
+// ⚠️ Bu bir DOĞRULAYICI DEĞİL. Değer HER ZAMAN saklanır (normalize_cell_value()
+// bu üç tipi single_line_text ile aynı dalda işler, hiçbir giriş reddedilmez) —
+// buradaki kontroller yalnızca "bu metin linke çevrilebilir mi" sorusunu
+// yanıtlar. Çevrilemiyorsa hücre düz metin olarak, ikonsuz görünür.
+function bcc_cell_link_href($fieldType, $text)
+{
+    $text = trim((string) $text);
+    if ($text === '') {
+        return null;
+    }
+
+    if ($fieldType === 'url') {
+        // Çıplak alan adına ("ornek.com") otomatik https:// EKLENMEZ — kapsam
+        // dışı bırakılan bilinçli bir karar; eşleşmeyen değer düz metin kalır.
+        return preg_match('#^https?://#i', $text) === 1 ? $text : null;
+    }
+
+    if ($fieldType === 'email') {
+        // filter_var YALNIZCA linkleştirme kapısı — yazmayı ASLA reddetmez.
+        return filter_var($text, FILTER_VALIDATE_EMAIL) !== false ? 'mailto:' . $text : null;
+    }
+
+    if ($fieldType === 'phone') {
+        // Serbest format kabul edilir ("0212 555 00 00", "+90 (212) 555-0000").
+        // tel: hedefi için YALNIZCA + ve rakamlar bırakılır; SAKLANAN değer
+        // kullanıcının yazdığı hâliyle kalır (bu indirgeme sadece href içindir).
+        // 7 rakam eşiği: "555" gibi anlamsız kısa girdiler linkleşmesin diye.
+        $digits = preg_replace('/[^0-9]/', '', $text);
+        if (strlen($digits) < 7) {
+            return null;
+        }
+
+        return 'tel:' . (substr($text, 0, 1) === '+' ? '+' : '') . $digits;
+    }
+
+    return null;
+}
+
+// Grup A — grid <td>'sinin HTML gövdesi (dıştaki <div class="cell-view"> DAHİL).
+//
+// ⚠️ YALNIZCA GERÇEKTEN HTML ÜRETEN YERDEN ÇAĞRILIR (bcc_render_grid_data_row).
+// view_export_xlsx.php / src/slack.php / grid.php'nin grup başlığı /
+// trash_records_list.php cell_display_text()'in DÜZ METİN çıktısını kullanmaya
+// DEVAM EDER — Excel'e ve Slack'e HTML gitmemeli. Bu ayrım bu grubun mimari
+// ucuzluğunun sebebi: cell_display_text() imzası hiç değişmedi.
+//
+// TASARIM: metnin KENDİSİ <a> DEĞİL, link ayrı bir ikon olarak sağda durur.
+// Böylece hücreye tıklamak HER ZAMAN düzenlemeyi açar (diğer tüm hücrelerle
+// tutarlı) — metin <a> olsaydı tıklama linke gider, hücre düzenlenemez olurdu.
+// İkon normalde görünmez (CSS visibility:hidden), td hover'ında belirir.
+function bcc_render_linkified_cell($fieldType, $displayText)
+{
+    $escaped = htmlspecialchars((string) $displayText, ENT_QUOTES, 'UTF-8');
+    $href = bcc_cell_link_href($fieldType, $displayText);
+
+    if ($href === null) {
+        // Linkleştirilemiyor ("abc", "javascript:alert(1)", boş) -> ikon YOK,
+        // sıradan bir metin hücresi. XSS yolu burada kapanır: değer hiçbir
+        // zaman href'e girmez, yalnızca kaçırılmış metin olarak basılır.
+        return '<div class="cell-view">' . $escaped . '</div>';
+    }
+
+    // $extraAttrHtml sabit literal — kullanıcı verisi İÇERMEZ (bkz. bcc_build_safe_link).
+    $link = bcc_build_safe_link(
+        $href,
+        bcc_external_link_icon_svg(),
+        BCC_CELL_LINK_SCHEMES,
+        'class="cell-link-icon" title="Yeni sekmede aç" aria-label="Yeni sekmede aç"'
+    );
+
+    if ($link === null) {
+        // bcc_cell_link_href() zaten yalnızca whitelist'teki şemaları üretiyor,
+        // yani buraya normalde hiç düşülmez — ikinci savunma katmanı.
+        return '<div class="cell-view">' . $escaped . '</div>';
+    }
+
+    return '<div class="cell-view cell-view-linkified">'
+        . '<span class="cell-link-text">' . $escaped . '</span>'
+        . $link
+        . '</div>';
+}
+
+// "Yeni sekmede aç" ikonu — mevcut ikon setiyle AYNI çizim dili (24x24 viewBox,
+// fill=none, stroke=currentColor, stroke-width=2, yuvarlak uçlar; theme.css'teki
+// alan tipi ikonlarıyla aynı aile). Yeni bir kütüphane/ikon fontu EKLENMEDİ.
+// Sabit literal — hiçbir kullanıcı verisi içermez.
+function bcc_external_link_icon_svg()
+{
+    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+        . ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        . '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+        . '<polyline points="15 3 21 3 21 9"/>'
+        . '<line x1="10" y1="14" x2="21" y2="3"/>'
+        . '</svg>';
+}
+
 function bcc_sanitize_rich_text($html)
 {
     $html = trim((string) $html);
@@ -1646,12 +1881,14 @@ function bcc_sanitize_rich_text_node($node, $allowedTags)
     }
 
     if ($tag === 'a') {
-        $href = $node->getAttribute('href');
-        if (!preg_match('#^https?://#i', $href)) {
-            return $childrenHtml; // güvensiz şema (javascript:, data: vb.) -> link soyulur
-        }
+        // Link kurma tek yerde (bcc_build_safe_link) — Grup A'da hücre linkleri
+        // eklenirken bu blok KOPYALANMADI, ortak fonksiyona çıkarıldı.
+        // VARSAYILAN şema whitelist'i (yalnızca http/https) BİLEREK korundu:
+        // burada href'i KULLANICI yazıyor, bu yüzden mailto/tel'e izin verilmez.
+        $link = bcc_build_safe_link($node->getAttribute('href'), $childrenHtml);
 
-        return '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">' . $childrenHtml . '</a>';
+        // null = güvensiz şema (javascript:, data: vb.) -> link soyulur, metin kalır.
+        return $link === null ? $childrenHtml : $link;
     }
 
     if ($tag === 'span') {
@@ -1686,7 +1923,33 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
     $column = $columnMap[$fieldType];
 
     switch ($fieldType) {
+        // url/email/phone (Grup A): single_line_text ile BİREBİR AYNI işlem —
+        // YUMUŞAK doğrulama, hiçbir giriş REDDEDİLMEZ. Bilinçli karar:
+        //   * Katı doğrulamanın bedeli import'a biner — table_import_xlsx.php
+        //     normalize reddini "N hücre atlandı" diye SESSİZCE düşürür; makul
+        //     görünen veriyi kullanıcıya sormadan kaybetmek en kötü sonuç.
+        //   * Güvenlik için de gerekmez: linkleştirme WHITELIST tabanlı
+        //     (bcc_cell_link_href + bcc_build_safe_link), yani "javascript:..."
+        //     metin olarak saklansa bile ASLA href olmaz, düz metin kalır.
+        //   * filter_var(FILTER_VALIDATE_EMAIL) IDN/Unicode adresleri
+        //     ("üye@örnek.com") reddeder — Türkçe bir üründe gerçek bir kayıp.
+        //     Bu yüzden yalnızca LİNKLEŞTİRME kapısı olarak kullanılıyor.
+        // Telefonda ayrıca fazla boşluklar sadeleştirilir (yalnızca kozmetik
+        // normalizasyon; "0212  555" -> "0212 555", hiçbir karakter ATILMAZ —
+        // tel: linki için rakam indirgemesi bcc_cell_link_href()'te ve SADECE
+        // link için yapılır, saklanan değer kullanıcının yazdığıdır).
+        case 'phone':
+            // ⚠️ /u modifikatörü GEÇERSİZ UTF-8 girdide preg_replace()'i null
+            // döndürür (PREG_BAD_UTF8_ERROR). Null'a düşülürse trim((string) null)
+            // = '' olur ve kullanıcının değeri SESSİZCE SİLİNİRDİ. Bu yüzden
+            // dönüş null ise ham değer olduğu gibi korunur — sadeleştirme
+            // kozmetik bir iyileştirme, veri kaybetme gerekçesi değil.
+            $phoneNormalized = preg_replace('/\s+/u', ' ', (string) $rawValue);
+            $rawValue = ($phoneNormalized === null) ? (string) $rawValue : $phoneNormalized;
+            // devam: aşağıdaki ortak metin dalı
         case 'single_line_text':
+        case 'url':
+        case 'email':
             $text = trim((string) $rawValue);
 
             return array('ok' => true, 'column' => $column, 'value' => $text === '' ? null : $text);
@@ -2219,7 +2482,10 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
     $column = isset($GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType])
         ? $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType]
         : $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType];
-    $isTextLike = in_array($fieldType, array('single_line_text', 'long_text', 'single_select'), true);
+    // url/email/phone (Grup A) de metin benzeri — bu diziye EKLENMEZSE
+    // 'empty'/'not_empty' yalnızca IS NULL bakar ve boş string ('') olarak
+    // kaydedilmiş hücreleri SESSİZCE kaçırırdı.
+    $isTextLike = in_array($fieldType, array('single_line_text', 'long_text', 'single_select', 'url', 'email', 'phone'), true);
 
     if (in_array($operator, $GLOBALS['BCC_FILTER_NO_VALUE_OPS'], true)) {
         switch ($operator) {
@@ -2336,7 +2602,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         return null;
     }
 
-    // Metin benzeri: single_line_text, long_text, single_select
+    // Metin benzeri: single_line_text, long_text, single_select, url, email, phone
     if ($raw === '' && $operator !== 'equals' && $operator !== 'not_equals') {
         return null;
     }

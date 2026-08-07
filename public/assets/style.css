@@ -1278,6 +1278,53 @@ td.editable {
     cursor: text;
 }
 
+/* Grup A (url/email/phone) — hücrede metin + hover'da beliren "yeni sekmede aç"
+   ikonu. .cell-view'ın nowrap/ellipsis'i flex ile devralınır (.attachment-cell-view
+   ile AYNI desen) — metin yine kırpılır, ikon kırpılmaz.
+   Metnin KENDİSİ link DEĞİL: hücreye tıklamak her zaman düzenlemeyi açar,
+   yalnızca ikona tıklamak linke gider (bkz. grid.js .cell-link-icon dalı). */
+.cell-view-linkified {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.cell-view-linkified .cell-link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* visibility (display DEĞİL): ikon gizliyken de yer kaplar, böylece hover'da
+   metin yana KAYMAZ — rating yıldızlarındaki "genişlik kaymasın" kararıyla aynı. */
+.cell-link-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    visibility: hidden;
+    color: var(--bcc-text-muted);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+td:hover .cell-link-icon,
+.cell-link-icon:focus-visible {
+    visibility: visible;
+}
+
+.cell-link-icon:hover {
+    color: var(--bcc-accent-strong);
+}
+
+/* Detay panelinin salt-okunur görünümü canlı <td>'nin innerHTML'ini AYNEN
+   kopyalıyor (grid-row-detail.js) — orada hover edilecek bir <td> olmadığı için
+   ikon her zaman görünür olmalı, aksi halde link hiç erişilemezdi. */
+.grid-detail-field-value-readonly .cell-link-icon {
+    visibility: visible;
+}
+
 /* Color: tekli/çoklu seçim hücrelerindeki renkli "chip"ler. */
 
 .choice-chip {

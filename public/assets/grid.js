@@ -49,6 +49,65 @@
         });
     }
 
+    // Grup A (url/email/phone): "yeni sekmede aç" ikonu. Sunucudaki
+    // bcc_external_link_icon_svg() ile AYNI çizim — innerHTML KULLANILMAZ,
+    // createElementNS ile gerçek SVG düğümleri kurulur (bu turda güvenlik
+    // gözden geçirmesi yapıldığı için hiçbir yerde string->HTML yolu bırakılmadı).
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function svgChild(tag, attrs) {
+        var el = document.createElementNS(SVG_NS, tag);
+        Object.keys(attrs).forEach(function (k) {
+            el.setAttribute(k, attrs[k]);
+        });
+        return el;
+    }
+
+    function buildExternalLinkIcon() {
+        var svg = svgChild('svg', {
+            width: '13', height: '13', viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', 'stroke-width': '2',
+            'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true',
+        });
+        svg.appendChild(svgChild('path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }));
+        svg.appendChild(svgChild('polyline', { points: '15 3 21 3 21 9' }));
+        svg.appendChild(svgChild('line', { x1: '10', y1: '14', x2: '21', y2: '3' }));
+        return svg;
+    }
+
+    // Grup A hücresini yeniden çizer. $link null ise (değer artık
+    // linkleştirilemiyor) ikon SİLİNİR — sunucu bu yüzden anahtarı null olarak
+    // da gönderiyor, hiç göndermeseydi eski ikon ekranda asılı kalırdı.
+    //
+    // GÜVENLİK: link.href sunucudaki whitelist'ten (bcc_cell_link_href +
+    // BCC_CELL_LINK_SCHEMES) geçmiş olarak gelir — "javascript:..." bu noktaya
+    // ASLA ulaşamaz, sunucu o değeri linkleştirilemez sayıp null döndürür.
+    // Metin her zaman textContent ile yazılır, innerHTML YOK.
+    function renderLinkifiedCell(view, displayText, link) {
+        view.textContent = '';
+        view.classList.toggle('cell-view-linkified', !!link);
+
+        if (!link) {
+            view.textContent = displayText;
+            return;
+        }
+
+        var text = document.createElement('span');
+        text.className = 'cell-link-text';
+        text.textContent = link.text;
+        view.appendChild(text);
+
+        var a = document.createElement('a');
+        a.className = 'cell-link-icon';
+        a.href = link.href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.title = 'Yeni sekmede aç';
+        a.setAttribute('aria-label', 'Yeni sekmede aç');
+        a.appendChild(buildExternalLinkIcon());
+        view.appendChild(a);
+    }
+
     // Ek dosya listesini (küçük resim ya da rozet+ad "chip"leri, hepsi kendi
     // dosyasına indirme linki) çizer — sunucu tarafındaki bcc_render_grid_data_row()
     // ile AYNI DOM yapısı (aynı sınıf adları, style.css/grid-shell.css'teki
@@ -162,6 +221,11 @@
         if (view) {
             if (data.display_chips) {
                 renderChips(view, data.display_chips);
+            } else if (Object.prototype.hasOwnProperty.call(data, 'display_link')) {
+                // Grup A: anahtarın VARLIĞINA bakılır, değerine değil —
+                // display_link null olabilir ("link yapılamaz" demek) ve o durumda
+                // da bu dala girip mevcut ikonun SİLİNMESİ gerekir.
+                renderLinkifiedCell(view, data.display, data.display_link);
             } else if (td.getAttribute('data-field-type') === 'long_text') {
                 // GÜVENLİ: data.display burada sunucuda bcc_sanitize_rich_text()
                 // ile temizlenmiş HTML — ham kullanıcı girdisi DEĞİL, innerHTML
@@ -354,6 +418,16 @@
             input = document.createElement('input');
             input.type = 'number';
             input.step = 'any';
+            input.value = raw;
+        } else if (type === 'url' || type === 'email' || type === 'phone') {
+            // Grup A: native input tipi YALNIZCA mobil klavyeyi doğru açmak için
+            // (url -> ".com" tuşu, email -> "@", phone -> tuş takımı). Tarayıcının
+            // KENDİ doğrulaması devreye GİRMEZ: bunlar <form> içinde değil,
+            // hücreye eklenen serbest input'lar — submit/validity kontrolü yok,
+            // değer blur'da olduğu gibi gönderilir. Doğrulamanın yumuşak kalması
+            // bilinçli (bkz. normalize_cell_value, src/schema.php).
+            input = document.createElement('input');
+            input.type = (type === 'phone') ? 'tel' : type;
             input.value = raw;
         } else if (type === 'date') {
             input = document.createElement('input');
@@ -926,6 +1000,15 @@
                 var currentValue = parseInt(ratingTd.getAttribute('data-value'), 10) || 0;
                 var nextValue = (clickedValue === currentValue) ? 0 : clickedValue;
                 saveCell(ratingTd, String(nextValue));
+                return;
+            }
+            // Grup A: "yeni sekmede aç" ikonuna tıklama düzenlemeyi AÇMAZ —
+            // tarayıcı <a>'nın kendi navigasyonunu yapar, biz sadece bu
+            // dinleyicinin devamını (startEdit) durdururuz. Hücrenin GERİ KALANINA
+            // tıklamak her zamanki gibi düzenlemeyi açar; bu yüzden metnin kendisi
+            // bilerek <a> DEĞİL (bkz. bcc_render_linkified_cell yorumu).
+            if (e.target.closest('.cell-link-icon')) {
+                e.stopPropagation();
                 return;
             }
             var td = e.target.closest('td.editable');

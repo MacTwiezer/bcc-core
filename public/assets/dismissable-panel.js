@@ -43,4 +43,89 @@
             }
         });
     };
+
+    // Ortak YÜZEN panel konumlandırması. Bu blok daha önce grid-add-field.js ve
+    // grid-column-menu.js'de BİREBİR kopyalanmıştı (ikisinin de yorumu "AYNI
+    // teknik" diyordu); "+ Yeni oluştur..." menüsü üçüncü kopyayı gerektirince
+    // buraya çıkarıldı.
+    //
+    // Neden position:fixed: bu panellerin atası .grid-wrap { overflow: auto }
+    // taşıyor — absolute konumlandırma panelin o kaydırma kutusuna kırpılmasına
+    // yol açardı. fixed viewport'a göre konumlanır, kırpılmaz; bedeli, konumun
+    // JS'te hesaplanması ve scroll/resize'da tazelenmesi.
+    //
+    // menu   : <details> (open özniteliği izlenir)
+    // panel  : konumlanacak kutu
+    // anchor : konumun hesaplanacağı eleman (genellikle <summary>)
+    // options.align : 'left' (varsayılan) | 'right' — panelin hangi kenarının
+    //                 anchor'a hizalanacağı
+    // options.gap   : anchor ile panel arası dikey boşluk (varsayılan 4px)
+    window.bcc_bindFloatingPanel = function (menu, panel, anchor, options) {
+        options = options || {};
+        var align = options.align === 'right' ? 'right' : 'left';
+        var gap = typeof options.gap === 'number' ? options.gap : 4;
+        var margin = 8; // viewport kenarlarına bırakılan pay
+
+        function position() {
+            var rect = anchor.getBoundingClientRect();
+            panel.style.top = (rect.bottom + gap) + 'px';
+
+            if (align === 'right') {
+                // Sağ kenarı anchor'ın sağına hizala. Dar ekranda panel sola
+                // taşarsa sol kenardan margin kadar içeri çekilir.
+                var rightOffset = window.innerWidth - rect.right;
+                var pw = panel.offsetWidth || 0;
+                if (rightOffset + pw > window.innerWidth - margin) {
+                    rightOffset = window.innerWidth - margin - pw;
+                }
+                if (rightOffset < margin) {
+                    rightOffset = margin;
+                }
+                panel.style.left = 'auto';
+                panel.style.right = rightOffset + 'px';
+                return;
+            }
+
+            // Sol hizalama + taşma koruması: grid-column-menu.js'de bulunmuş
+            // gerçek bug (en sağdaki sütunlarda panel viewport'un sağından
+            // taşıyordu) burada TÜM yüzen paneller için geçerli.
+            var left = rect.left;
+            var panelWidth = panel.offsetWidth || 0;
+            if (left + panelWidth > window.innerWidth - margin) {
+                left = window.innerWidth - margin - panelWidth;
+            }
+            if (left < margin) {
+                left = margin;
+            }
+            panel.style.right = 'auto';
+            panel.style.left = left + 'px';
+        }
+
+        // Bulunan gerçek bug (iki kopyada da vardı): konum yalnızca AÇILIŞTA
+        // hesaplanıyordu — panel açıkken sayfa kaydırılırsa anchor kayarken panel
+        // ekranda sabit kalıp butondan kopuyordu. scroll capture ile dinlenir
+        // (herhangi bir ATA kaydırma kutusu da yakalansın diye).
+        //
+        // ⚠️ resize dinleyicisi İKİ ESKİ KOPYADA DA YOKTU — pencere yeniden
+        // boyutlandırılınca panel yine kopuyordu. Ortak yardımcıya taşınırken
+        // eklendi, yani bu düzeltme her iki eski çağrı yerine de bedava geldi.
+        function attach() {
+            window.addEventListener('scroll', position, true);
+            window.addEventListener('resize', position);
+        }
+
+        function detach() {
+            window.removeEventListener('scroll', position, true);
+            window.removeEventListener('resize', position);
+        }
+
+        menu.addEventListener('toggle', function () {
+            if (!menu.open) {
+                detach();
+                return;
+            }
+            position();
+            attach();
+        });
+    };
 })();

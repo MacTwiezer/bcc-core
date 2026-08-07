@@ -841,6 +841,54 @@ html.is-mac .gs-kbd-other { display: none; }
 
 .gs-view-drawer-create:hover { background: var(--bcc-surface-hover); }
 
+/* Tip secici (Grup View-Form): '+ Yeni olustur...' artik bir <summary>.
+   Varsayilan ucgen isareti gizlenir — .gs-btn-ghost/.gs-table-tab-caret ile
+   AYNI iki satirlik desen. */
+.gs-view-drawer-create {
+    list-style: none;
+    display: block;
+}
+.gs-view-drawer-create::-webkit-details-marker { display: none; }
+
+/* YUZEN panel: position:fixed cunku sol panel (.gs-view-drawer) kendi kaydirma
+   kutusunu tasiyor — absolute konumlandirma paneli o kutuya kirpardi. Konum
+   JS'te hesaplanir (bcc_bindFloatingPanel). Gorunum .grid-th-menu-panel ile
+   AYNI dil (ayni golge/kenarlik/yaricap), ikinci bir popover stili icat
+   edilmedi. */
+.gs-view-create-panel {
+    position: fixed;
+    z-index: 30;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    padding: 0.35rem;
+    min-width: 200px;
+}
+
+.gs-view-create-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.88rem;
+    color: var(--bcc-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.gs-view-create-option:hover { background: var(--bcc-surface-hover); }
+
+.gs-view-create-option:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
 .gs-view-drawer-search {
     display: flex;
     align-items: center;

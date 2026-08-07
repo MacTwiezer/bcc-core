@@ -1894,12 +1894,27 @@ function bcc_group_cell_row($column, $rawValue)
     return $row;
 }
 
-// Kardeş kayıtlar arasında sıra değiştirme (yukarı/aşağı taşı) — base_tables.php
-// (move_table) ve table_fields.php (move_field) tarafından paylaşılır.
+// Kardeş kayıtlar arasında sıra değiştirme (yukarı/aşağı taşı) — DÖRT çağrı yeri:
+// base_tables.php (move_table), table_fields.php (move_field),
+// api/view_reorder.php (görünüm sırası), slack_settings.php (kural sırası).
+//
 // GÜVENLİK: $tableName ve $parentColumn prepared statement ile bağlanamaz, doğrudan
 // SQL'e gömülür — bu yüzden KESİNLİKLE aşağıdaki sabit whitelist'ten gelmeli, asla
 // kullanıcı girdisinden (ör. $_POST) türememeli. Uyuşmayan bir çift verilirse (kod
 // hatası anlamına gelir) istisna fırlatılır.
+//
+// ⚠️ TRANSACTION: bu fonksiyon ARTIK KENDİ transaction'ını AÇMAZ — çağıran taraf
+// bcc_begin_transaction() açmış OLMALI (bcc_assign_autonumbers() ile AYNI
+// sözleşme). Önceden içeride begin/commit vardı ve iki UPDATE'i doğru sarıyordu,
+// AMA çağıranların log_audit()'i o commit'ten SONRA kalıyordu: sıra kalıcı olarak
+// değişmiş ama audit yazması patlamışsa geriye "sırası değişmiş, hiçbir izi
+// olmayan" bir satır kalıyordu.
+// İçerideki commit KALDIRILMASAYDI çağıran bir transaction açtığında iç içe
+// transaction oluşurdu — mysqli bunu desteklemez, İÇTEKİ commit DIŞTAKİNİ
+// erkenden commit eder ve rollback koruması sessizce kaybolurdu (düzeltmeden
+// beter). Bu yüzden sorumluluk çağırana taşındı ve DÖRT çağrı yerinin dördü de
+// güncellendi.
+//
 // Dönüş: takas yapıldıysa true; ilk/son eleman, geçersiz yön ya da öge bulunamadıysa false.
 function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $direction)
 {
@@ -1936,10 +1951,12 @@ function bcc_reorder_sibling($tableName, $parentColumn, $parentId, $itemId, $dir
     $a = $siblings[$index];
     $b = $siblings[$swapWith];
 
-    bcc_begin_transaction();
+    // İki UPDATE, çağıranın transaction'ı İÇİNDE (yukarıdaki sözleşmeye bkz.).
+    // Yarım kalan bir takas iki satırı AYNI position'da bırakırdı — bu ikilinin
+    // atomikliği hâlâ garanti, yalnızca garantiyi sağlayan transaction artık
+    // çağıranın (böylece log_audit() de aynı sınırın içinde kalıyor).
     bcc_execute("UPDATE {$tableName} SET position = :pos WHERE id = :id", array('pos' => $b['position'], 'id' => $a['id']));
     bcc_execute("UPDATE {$tableName} SET position = :pos WHERE id = :id", array('pos' => $a['position'], 'id' => $b['id']));
-    bcc_commit();
 
     return true;
 }

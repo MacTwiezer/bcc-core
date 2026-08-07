@@ -60,19 +60,10 @@ try {
         $frozenCount = $maxAllowed;
     }
 
-    $config = array();
-    if ($view['config'] !== null && $view['config'] !== '') {
-        $decoded = json_decode($view['config'], true);
-        if (is_array($decoded)) {
-            $config = $decoded;
-        }
-    }
-    $config['frozen_column_count'] = $frozenCount;
-
-    bcc_execute(
-        'UPDATE views SET config = :config WHERE id = :id',
-        array(':config' => json_encode($config, JSON_UNESCAPED_UNICODE), ':id' => $view['id'])
-    );
+    // Oku-değiştir-yaz ortak yardımcıya taşındı (bcc_update_view_config) —
+    // form_edit.php ve kanban_config_update.php AYNI diski paylaştığı için
+    // "diğer anahtarları ezme" disiplini tek yerde.
+    bcc_update_view_config($view['id'], array('frozen_column_count' => $frozenCount));
 
     log_audit('view.config_update', 'view', $view['id'], array('frozen_column_count' => $frozenCount), $view['team_id']);
 } catch (Throwable $e) {

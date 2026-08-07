@@ -103,25 +103,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             bcc_begin_transaction();
 
-            // read-modify-write: views.config'te grid tarafına ait anahtarlar
-            // (frozen_column_count, grid_state) EZİLMEZ — view_save_state.php ile
-            // AYNI desen.
-            $config = array();
-            if ($view['config'] !== null && $view['config'] !== '') {
-                $decoded = json_decode($view['config'], true);
-                $config = is_array($decoded) ? $decoded : array();
-            }
-            foreach ($newConfig as $k => $v) {
-                $config[$k] = $v;
-            }
+            // Oku-değiştir-yaz ortak yardımcıda (bcc_update_view_config):
+            // views.config'te grid'e (frozen_column_count, grid_state) ve
+            // Kanban'a (kanban_*) ait anahtarlar EZİLMEZ.
+            bcc_update_view_config($view['id'], $newConfig);
 
+            // form_enabled ayrı bir KOLON (config JSON'unda değil) — bu yüzden
+            // ayrı UPDATE. Aynı transaction içinde.
             bcc_execute(
-                'UPDATE views SET config = :config, form_enabled = :enabled WHERE id = :id',
-                array(
-                    ':config' => json_encode($config, JSON_UNESCAPED_UNICODE),
-                    ':enabled' => $formEnabled,
-                    ':id' => $view['id'],
-                )
+                'UPDATE views SET form_enabled = :enabled WHERE id = :id',
+                array(':enabled' => $formEnabled, ':id' => $view['id'])
             );
 
             log_audit('view.form_config', 'view', $view['id'], array('table_id' => $table['id'], 'field_count' => count($selected), 'enabled' => $formEnabled), $table['team_id']);

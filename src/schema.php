@@ -80,17 +80,31 @@ $GLOBALS['BCC_READONLY_FIELD_TYPES'] = array(
 // sırasıdır (alan tipi sihirbazının $fieldTypeLabels'tan sırayla basılmasıyla
 // AYNI mekanizma — liste elle YAZILMAZ, buradan döner).
 //
-// Yol haritası: Form (bu adım) -> Kanban -> Calendar -> diğerleri.
+// Yol haritası: Form -> Kanban (bu adım) -> Calendar -> diğerleri.
 // ⚠️ YENİ BİR TÜR EKLERKEN ATLANMAMASI GEREKEN DÖRT YER (alan tiplerinde aynı
 // sınıf hata dört kez yaşandı, o yüzden burada baştan yazılı):
 //   1. bu dizi
 //   2. theme.css'te .view-type-badge--<tür> ikonu (--view-icon tanımsızsa rozet
-//      BOŞ kutu çizilir — background-image'ın yedeği YOK, C1'in düştüğü tuzak)
-//   3. bcc_view_route_for() — türün hangi sayfaya gittiği
-//   4. view_create.php'nin tür-özel kurulum dalı (Form'daki token üretimi gibi)
+//      BOŞ kutu çizilir — background-image'ın yedeği YOK, C1'in düştüğü tuzak;
+//      Form turunda da bu yüzden ayrıca kontrol edildi)
+//   3. BCC_VIEW_ROUTES (aşağıda) — türün hangi sayfaya gittiği
+//   4. view_create.php'nin tür-özel kurulum dalı (Form'da token üretimi,
+//      Kanban'da varsayılan kanban_field_id seçimi)
 $GLOBALS['BCC_VIEW_TYPES'] = array(
     'grid' => 'Tablo',
     'form' => 'Form',
+    'kanban' => 'Kanban',
+);
+
+// Görünüm türü -> sayfa. TEK yönlendirme kaynağı; bcc_view_route_for()'un
+// gövdesi eskiden iki değerli bir ternary'di ("form ise şu, değilse grid"),
+// üçüncü tür ile ternary zinciri okunaksızlaşacaktı. Harita hem BCC_VIEW_TYPES
+// ile aynı "whitelist" felsefesini sürdürüyor hem de dördüncü türü (Calendar)
+// saf veri eklemesine indiriyor — fonksiyon gövdesine bir daha dokunulmaz.
+$GLOBALS['BCC_VIEW_ROUTES'] = array(
+    'grid' => '/grid.php',
+    'form' => '/form_edit.php',
+    'kanban' => '/kanban.php',
 );
 
 // Bir görünümün açılacağı sayfa — TEK yönlendirme noktası. grid.php'nin erken
@@ -98,11 +112,13 @@ $GLOBALS['BCC_VIEW_TYPES'] = array(
 // bağlantılar ÜÇÜ DE buradan geçer, ikinci bir eşleme YOK.
 //
 // Bilinmeyen/bozuk bir view_type 'grid'e düşer (fail-safe): elle kurcalanmış ya
-// da gelecekte eklenip burada unutulmuş bir değer beyaz ekran yerine tabloyu
+// da BCC_VIEW_ROUTES'a yazılmayı unutmuş bir değer beyaz ekran yerine tabloyu
 // gösterir.
 function bcc_view_route_for($viewType, $tableId, $viewId)
 {
-    $page = ($viewType === 'form') ? '/form_edit.php' : '/grid.php';
+    $page = isset($GLOBALS['BCC_VIEW_ROUTES'][$viewType])
+        ? $GLOBALS['BCC_VIEW_ROUTES'][$viewType]
+        : '/grid.php';
 
     return $page . '?table_id=' . (int) $tableId . '&view_id=' . (int) $viewId;
 }
@@ -144,20 +160,11 @@ function bcc_form_config_from_view($view)
         $config = is_array($decoded) ? $decoded : array();
     }
 
-    $fieldIds = array();
-    if (isset($config['form_fields']) && is_array($config['form_fields'])) {
-        foreach ($config['form_fields'] as $rawId) {
-            // is_scalar: dizi/nesne gelirse (int) cast'i 1 üretirdi — o da
-            // gerçek bir field_id'ye denk gelebilirdi. Sessizce atlanır.
-            if (!is_scalar($rawId)) {
-                continue;
-            }
-            $fid = (int) $rawId;
-            if ($fid > 0 && !in_array($fid, $fieldIds, true)) {
-                $fieldIds[] = $fid;
-            }
-        }
-    }
+    // Alan-id listesi çözümü ortak yardımcıya taşındı (bcc_config_field_id_list)
+    // — Kanban'ın kanban_card_fields'ı AYNI çözümü gerektirince, ikinci kopya
+    // yazmak yerine tek yere alındı. Davranış birebir aynı (is_scalar süzgeci
+    // dahil, bu bir güvenlik kontrolü).
+    $fieldIds = bcc_config_field_id_list($config, 'form_fields');
 
     $str = function ($key, $default) use ($config) {
         return (isset($config[$key]) && is_string($config[$key]) && trim($config[$key]) !== '')
@@ -174,6 +181,119 @@ function bcc_form_config_from_view($view)
         // taşmasın diye tasarımcı açıkça açmalı (güvenlik kararı).
         'form_slack_notify' => !empty($config['form_slack_notify']) ? 1 : 0,
     );
+}
+
+// views.config'ten SAF int dizisi cikarir — bcc_form_config_from_view() ve
+// bcc_kanban_config_from_view() ORTAK yardimcisi (ikisinde de ayni alan-id
+// listesi cozumu vardi, ikinci kopya yazilmadi).
+//
+// ⚠️ Bu bir GUVENLIK kontrolu: form_submit.php'nin ve kanban'in whitelist'leri
+// buna guveniyor. is_scalar suzgeci sart — dizi/nesne gelirse (config elle
+// kurcalanmis) (int) cast'i 1 uretir ve bu GERCEK bir field_id'ye denk gelebilir.
+function bcc_config_field_id_list($config, $key)
+{
+    if (!isset($config[$key]) || !is_array($config[$key])) {
+        return array();
+    }
+
+    $ids = array();
+    foreach ($config[$key] as $rawId) {
+        if (!is_scalar($rawId)) {
+            continue;
+        }
+        $fid = (int) $rawId;
+        if ($fid > 0 && !in_array($fid, $ids, true)) {
+            $ids[] = $fid;
+        }
+    }
+
+    return $ids;
+}
+
+// Kanban ayarlarini views.config'ten guvenli varsayilanlarla cozer —
+// bcc_form_config_from_view() ile AYNI aile, ikinci bir JSON-cozme mantigi YOK.
+// UC okuyucu paylasir: kanban.php (render), view_config_update.php (kaydetme),
+// view_create.php (varsayilan kurulum).
+//
+// kanban_field_id 0 ise "henuz secilmemis" demektir (bos durum) — tabloda hic
+// single_select alani yokken Kanban olusturulabilir, kanban.php yonlendirici bir
+// bos ekran gosterir.
+function bcc_kanban_config_from_view($view)
+{
+    $config = array();
+    if (isset($view['config']) && $view['config'] !== null && $view['config'] !== '') {
+        $decoded = json_decode($view['config'], true);
+        $config = is_array($decoded) ? $decoded : array();
+    }
+
+    return array(
+        'kanban_field_id' => (isset($config['kanban_field_id']) && is_scalar($config['kanban_field_id']))
+            ? (int) $config['kanban_field_id']
+            : 0,
+        // Kartta birincil alanin ALTINDA gosterilecek EK alanlar. Birincil alan
+        // her zaman basilir ve bu listede YER ALMAZ (grid'in $fields[0] kurali).
+        'kanban_card_fields' => bcc_config_field_id_list($config, 'kanban_card_fields'),
+    );
+}
+
+// Kanban sutunlamasi icin UYGUN alan tipleri.
+//
+// ILK TURDA YALNIZCA single_select — gerekce koda dayali: sonlu+sirali liste
+// (select_choices_from_options), uyelik dogrulamasi (normalize_cell_value bir
+// choices uyesi olmayan degeri 422 ile reddeder, yani surukle-birak sunucuda
+// KENDILIGINDEN dogrulanir) ve renk haritasi (bcc_build_choice_color_map) —
+// ucu de HAZIR, yeni mekanizma gerekmiyor.
+//
+// BILEREK DISARIDA:
+//   * multiple_select — bir kayit BIRDEN FAZLA sutunda gorunurdu; "karti tasi"
+//     hangi degeri degistirecegi belirsiz kalirdi (davranissal olarak bozuk)
+//   * checkbox — teknik olarak iki sutun mumkun ama value_number kullaniyor ve
+//     iki sutunlu bir tahtanin degeri dusuk
+//   * user — sutunlar takim uyeleri olurdu (dinamik liste, choices mekanizmasi yok)
+//   * date — bu Calendar'in isi
+function bcc_field_allowed_for_kanban($fieldType)
+{
+    return $fieldType === 'single_select';
+}
+
+// views.config'e "oku-degistir-yaz": YALNIZCA $changes'teki anahtarlar
+// guncellenir, geri kalan (frozen_column_count, grid_state, form_*, kanban_*)
+// EZILMEZ.
+//
+// Bu blok view_config_update.php ve form_edit.php'de BIREBIR kopyalanmisti;
+// Kanban ucuncusunu gerektirince tek yere alindi. Ayni JSON'a dort ayri ozellik
+// yazdigi icin buradaki "ezme" disiplini kritik: kopyalardan biri unutulsaydi
+// bir ozellik digerinin ayarlarini sessizce silerdi.
+//
+// $changes'te degeri null olan anahtar SILINIR (ornegin kanban_field_id'yi
+// temizlemek icin) — bu, "0 yaz" ile "anahtari kaldir" arasindaki farki
+// cagirana birakir.
+function bcc_update_view_config($viewId, array $changes)
+{
+    $current = bcc_fetch_column('SELECT config FROM views WHERE id = :id', array(':id' => $viewId));
+
+    $config = array();
+    if ($current !== false && $current !== null && $current !== '') {
+        $decoded = json_decode($current, true);
+        if (is_array($decoded)) {
+            $config = $decoded;
+        }
+    }
+
+    foreach ($changes as $key => $value) {
+        if ($value === null) {
+            unset($config[$key]);
+            continue;
+        }
+        $config[$key] = $value;
+    }
+
+    bcc_execute(
+        'UPDATE views SET config = :config WHERE id = :id',
+        array(':config' => json_encode($config, JSON_UNESCAPED_UNICODE), ':id' => $viewId)
+    );
+
+    return $config;
 }
 
 // Kayıt çoğaltmada (record_duplicate.php) BİRİNCİL ALANIN sonuna " copy" eklenen

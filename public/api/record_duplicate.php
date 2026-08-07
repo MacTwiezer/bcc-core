@@ -7,11 +7,21 @@
 //
 // KOPYALANAN: normal alan değerleri (cell_values, dosya ekleri HARİÇ).
 // KOPYALANMAYAN: dosya ekleri (attachments tablosu, bu turda BİLEREK boş
-// bırakılıyor), yorumlar (comments — hiç dokunulmuyor, yeni kayıt zaten
-// temiz), "otomatik" alanlar — projede böyle bir FIELD TİPİ yok (yalnızca
-// 10 gerçek tip var, $GLOBALS['BCC_FIELD_TYPES']), tek "otomatik" şey
-// records.created_by/created_at kolonları ki onlar zaten YENİ INSERT'te
-// (orijinalden kopyalanmadan) oturumdaki kullanıcı + o anki zamanla dolar.
+// bırakılıyor), yorumlar (comments — hiç dokunulmuyor, yeni kayıt zaten temiz)
+// ve OTOMATİK alan tipleri.
+//
+// Bu yorum eskiden "'otomatik' alanlar — projede böyle bir FIELD TİPİ yok
+// (yalnızca 10 gerçek tip var)" diyordu; bu varsayım Grup B1/B2/C2 ile ÜÇ KEZ
+// yanlışlandı, güncellendi. Otomatik tiplerin durumu:
+//   * created_time/created_by/last_modified_time/last_modified_by — değerleri
+//     cell_values'ta HİÇ YOK (records kolonlarından türetiliyor), bu yüzden
+//     aşağıdaki toplu kopyaya doğal olarak GİRMEZLER, ekstra kod gerekmez.
+//     Yeni satırın kendi created_by/created_at'i INSERT'te zaten tazedir.
+//   * autonumber (Grup C2) — değeri cell_values'ta GERÇEKTEN var, yani toplu
+//     kopya onu SESSİZCE TAŞIRDI. Kasıtlı karar: kopya YENİ bir numara alır
+//     (Airtable "her kayıt kendine özgü" mantığı; iki kayıt aynı autonumber'ı
+//     paylaşırsa "tekil kimlik" amacı bozulur). Bu yüzden $excludeIds'e eklenip
+//     kopya sonrası bcc_assign_autonumbers() ile taze numara veriliyor.
 //
 // BİRİNCİL ALAN: index 0 (position sıralı) — değeri value_text kolonunu
 // kullanan bir tipse (single_line_text/long_text/single_select/time —
@@ -58,9 +68,16 @@ try {
     $primaryFieldType = !empty($fields) ? $fields[0]['field_type'] : null;
 
     $attachmentFieldIds = array();
+    // autonumber (Grup C2): kopya YENİ numara alacağı için orijinalin numarası
+    // toplu kopyadan DIŞLANIR — attachment ile AYNI mekanizma ($excludeIds),
+    // ikinci bir dışlama yolu açılmadı.
+    $autonumberFieldIds = array();
     foreach ($fields as $f) {
         if ($f['field_type'] === 'attachment') {
             $attachmentFieldIds[] = (int) $f['id'];
+        }
+        if ($f['field_type'] === 'autonumber') {
+            $autonumberFieldIds[] = (int) $f['id'];
         }
     }
 
@@ -87,7 +104,7 @@ try {
     // Genel alan kopyası — birincil alan ve dosya-eki alanları HARİÇ, tek
     // INSERT...SELECT (tip bilgisine gerek yok, 4 değer kolonu olduğu gibi
     // taşınır; attachment zaten cell_values'ta hiç yoktur, bu filtre ek güvence).
-    $excludeIds = $attachmentFieldIds;
+    $excludeIds = array_merge($attachmentFieldIds, $autonumberFieldIds);
     if ($primaryFieldId !== null) {
         $excludeIds[] = $primaryFieldId;
     }
@@ -110,7 +127,13 @@ try {
     }
 
     // Birincil alan — " copy" eki yalnızca value_text kullanan tiplerde.
-    if ($primaryFieldId !== null) {
+    // ERKEN ÇIKIŞ: birincil alan autonumber ise bu dal HİÇ çalışmamalı. Yukarıda
+    // $excludeIds'e girmesi onu yalnızca TOPLU kopyadan çıkarır; buradaki tekil
+    // INSERT ise orijinalin value_number'ını AYNEN kopyalardı (" copy" eki
+    // $primaryColumn === 'value_text' kontrolüne takılıp eklenmezdi, ama NUMARA
+    // yine de taşınırdı — tam da önlemek istediğimiz şey). Numara aşağıda
+    // bcc_assign_autonumbers() ile taze veriliyor.
+    if ($primaryFieldId !== null && $primaryFieldType !== 'autonumber') {
         $origPrimaryCell = bcc_fetch_one(
             'SELECT value_text, value_number, value_date, value_json FROM cell_values WHERE record_id = :rid AND field_id = :fid LIMIT 1',
             array(':rid' => $recordId, ':fid' => $primaryFieldId)
@@ -142,6 +165,11 @@ try {
             );
         }
     }
+
+    // Autonumber (Grup C2): kopya orijinalin numarasını TAŞIMAZ, TAZE numara alır.
+    // ⚠️ bcc_last_insert_id() çağrısından SONRA (satır ~90) — bu fonksiyon
+    // LAST_INSERT_ID(expr) ile oturumun last-insert-id'sini ezer.
+    bcc_assign_autonumbers($tableId, $newRecordId);
 
     log_audit('record.duplicate', 'record', $newRecordId, array('table_id' => $tableId, 'source_record_id' => $recordId), $record['team_id']);
 
@@ -175,7 +203,14 @@ foreach ($fields as $f) {
     }
 }
 
-$newRecord = array('id' => $newRecordId);
+// record_add.php ile AYNI düzeltme: eskiden array('id' => ...) idi, ama
+// bcc_cell_row_for_field() created_time/created_by/last_modified_* için
+// $record['created_at'] vb.'ye korumasız erişiyor — o dört tipten biri olan
+// bir tabloda yeni satır "Undefined index" ile boş render ediliyordu.
+$newRecord = bcc_fetch_one(
+    'SELECT id, created_at, created_by, updated_at, updated_by FROM records WHERE id = :id',
+    array(':id' => $newRecordId)
+);
 ob_start();
 bcc_render_grid_data_row($newRecord, 0, $visibleFields, $cellsByRecord, true, $tableId, $stateQueryString, null, $usersById, $fields, $attachmentsByRecord);
 $rowHtml = ob_get_clean();

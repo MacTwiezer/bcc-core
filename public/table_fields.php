@@ -36,7 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_field') {
         $name = isset($_POST['name']) ? trim($_POST['name']) : '';
         $fieldType = isset($_POST['field_type']) ? $_POST['field_type'] : '';
-        $isRequired = !empty($_POST['is_required']) ? 1 : 0;
+        // autonumber'da her zaman 0 — bcc_create_field()'ın kullandığı AYNI
+        // kural, tek fonksiyondan (bkz. bcc_normalize_is_required, src/schema.php).
+        $isRequired = bcc_normalize_is_required($fieldType, isset($_POST['is_required']) ? $_POST['is_required'] : null);
         $optionsText = isset($_POST['options_text']) ? $_POST['options_text'] : '';
 
         if ($name === '') {
@@ -71,17 +73,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     die('Bu alan bu tabloya ait değil.');
                 }
 
-                bcc_execute(
-                    'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
-                    array(
-                        'name' => $name,
-                        'field_type' => $fieldType,
-                        'options' => $optionsResult['options'],
-                        'is_required' => $isRequired,
-                        'id' => $fieldId,
-                    )
-                );
-                log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
+                // Transaction (Grup C2): bcc_create_field() ile AYNI gerekçe —
+                // tip autonumber'a çevrildiğinde UPDATE + backfill + sayaç
+                // güncellemesi ATOMİK olmalı.
+                try {
+                    bcc_begin_transaction();
+
+                    bcc_execute(
+                        'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
+                        array(
+                            'name' => $name,
+                            'field_type' => $fieldType,
+                            'options' => $optionsResult['options'],
+                            'is_required' => $isRequired,
+                            'id' => $fieldId,
+                        )
+                    );
+
+                    // Mevcut bir alanın TİPİ autonumber'a çevrildiğinde de backfill
+                    // şart — atlanırsa alan var ama tüm kayıtlar boş görünürdü.
+                    // bcc_backfill_autonumber_field() yalnızca NUMARASI OLMAYAN
+                    // kayıtları doldurur ve sayacı GERİ SARMAZ, bu yüzden
+                    // autonumber -> number -> autonumber çevriminde eski numaralar
+                    // KORUNUR (tasarım kararı) ve bu çağrı zararsız bir no-op olur.
+                    if ($fieldType === 'autonumber') {
+                        bcc_backfill_autonumber_field($fieldId, (int) $table['id']);
+                    }
+
+                    log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
+
+                    bcc_commit();
+                } catch (Throwable $e) {
+                    bcc_rollback();
+                    throw $e;
+                }
+
                 $success = 'Alan güncellendi: ' . $name;
             }
         }
@@ -298,10 +324,19 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <label class="settings-field settings-field-checkbox">
-                            <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?>>
-                            Zorunlu alan
-                        </label>
+                        <?php /* autonumber'da "Zorunlu alan" gizlenir — alan ekleme
+                                sihirbazının (field-type-wizard.js) AYNI davranışı.
+                                Gönderilse bile bcc_normalize_is_required() 0'a
+                                zorluyor; bu yalnızca anlamsız bir kutuyu ekrandan
+                                kaldırıyor. Burada sunucu tarafında yapılıyor çünkü
+                                bu form, tipi seçildikten SONRA yeniden render edilen
+                                tam sayfa formu (sihirbazın canlı JS geçişi yok). */ ?>
+                        <?php if ($editField['field_type'] !== 'autonumber'): ?>
+                            <label class="settings-field settings-field-checkbox">
+                                <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?>>
+                                Zorunlu alan
+                            </label>
+                        <?php endif; ?>
                         <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
                     </form>
                 </div>

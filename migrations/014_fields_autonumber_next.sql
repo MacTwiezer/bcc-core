@@ -1,0 +1,47 @@
+-- Autonumber (Airtable paritesi, Grup C2): her autonumber ALANININ kendi
+-- bağımsız sayacı.
+--
+-- Neden yeni bir sayaç kolonu gerekiyor (önceki teşhis turunda kanıtlandı):
+--   * records.id KULLANILAMAZ — global AUTO_INCREMENT, tüm tablolar arasında
+--     paylaşılıyor; bir tablonun ilk kaydı 1 değil, örn. 1307 olurdu.
+--   * records.position KULLANILAMAZ — sürükle-bırak/araya ekleme ile kayar
+--     (bkz. record_add.php'nin "position + 1" UPDATE'i), autonumber ise bir
+--     kayda BİR KEZ atanıp asla değişmemeli.
+--   * MAX(value_number) + 1 KULLANILAMAZ — kayıt silinince numara geri sarar
+--     ve iki eşzamanlı okuma aynı MAX'ı görür (yarış durumu).
+--
+-- Sayaç neden fields'te, tables_meta'da değil: bir tabloda BİRDEN FAZLA
+-- autonumber alanı olabilir ve her birinin sayacı BAĞIMSIZ olmalı (alan
+-- silinip yeniden eklenirse yeni alan 1'den başlar, diğerini etkilemez).
+-- fields.id bazlı olmak bunu bedava sağlıyor; ayrı bir "yalnızca autonumber
+-- alanları" tablosu ise JOIN maliyeti ve ikinci bir yaşam döngüsü (alan
+-- silinince satır temizleme) getirirdi — fields'e ON DELETE CASCADE ile bağlı
+-- olmak bunu da bedava çözüyor.
+--
+-- Anlamı: "BİR SONRAKİ kayda verilecek numara" (verilmiş SON numara DEĞİL).
+-- Bu yüzden DEFAULT 1 — henüz kayıt almamış bir alan ilk kaydına 1 verir.
+--
+-- NOT NULL neden şart: bu kurulumun sql_mode'unda STRICT_TRANS_TABLES YOK
+-- (canlı doğrulandı: NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION).
+-- NULL bir sayaç, NULL aritmetiğiyle (NULL + 1 = NULL) hata VERMEDEN sessizce
+-- bozulurdu; kolonun kendisi buna izin vermemeli.
+--
+-- Autonumber OLMAYAN alanlarda bu kolon anlamsız ama zararsız (hep 1 kalır) —
+-- bcc_assign_autonumbers() yalnızca field_type = 'autonumber' satırlarına
+-- dokunur.
+--
+-- FOREIGN KEY YOK: kolon bir referans değil, bir sayaç. Bu yüzden 008/012/013'
+-- teki "DROP FOREIGN KEY IF EXISTS + yeniden ADD CONSTRAINT" idempotentlik
+-- desenine burada GEREK YOK (o desen yalnızca FK'ler için gerekliydi, çünkü
+-- ADD CONSTRAINT ... IF NOT EXISTS diye bir MariaDB sözdizimi yok).
+--
+-- INDEX YOK: bu kolon hiçbir WHERE/ORDER BY/JOIN'de geçmiyor; yalnızca birincil
+-- anahtarla (fields.id) tek satır olarak okunup yazılıyor. Gereksiz index her
+-- INSERT/UPDATE'e maliyet bindirirdi.
+--
+-- Idempotent (IF NOT EXISTS) — 008/012/013'teki AYNI gerekçeyle: bu projede
+-- migration'ların hangisinin uygulandığını takip eden ayrı bir mekanizma YOK,
+-- bu yüzden dosya ikinci kez çalıştırılırsa hata vermeden no-op olmalı.
+
+ALTER TABLE fields
+    ADD COLUMN IF NOT EXISTS autonumber_next INT UNSIGNED NOT NULL DEFAULT 1 AFTER is_required;

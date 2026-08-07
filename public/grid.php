@@ -106,12 +106,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'create_record') {
+        // Bu, kayıt oluşturmanın DÖRDÜNCÜ noktası (JS'siz form yolu — diğer üçü
+        // record_add.php / record_duplicate.php / table_import_xlsx.php).
+        // Grup C2'ye kadar transaction'ı YOKTU: tek bir INSERT olduğu için
+        // sorun değildi, ama bcc_assign_autonumbers() artık sayaç UPDATE'i +
+        // hücre INSERT'i de ekliyor — üçü ayrı ayrı commit edilirse araya düşen
+        // bir hata numarayı "yakar" (sayaç ilerlemiş, kayıtta numara yok).
+        // Diğer üç nokta ile TUTARLI hale getirildi.
         $nextPos = (int) bcc_fetch_column('SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM records WHERE table_id = :table_id', array(':table_id' => $table['id']));
 
         $user = current_user();
-        bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:table_id, :position, :created_by)', array(':table_id' => $table['id'], ':position' => $nextPos, ':created_by' => $user['id']));
-        $newId = bcc_last_insert_id();
-        log_audit('record.create', 'record', $newId, array('table_id' => $table['id']), $table['team_id']);
+        try {
+            bcc_begin_transaction();
+            bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:table_id, :position, :created_by)', array(':table_id' => $table['id'], ':position' => $nextPos, ':created_by' => $user['id']));
+            $newId = bcc_last_insert_id();
+            // ⚠️ bcc_last_insert_id() çağrısından SONRA — LAST_INSERT_ID(expr) onu ezer.
+            bcc_assign_autonumbers($table['id'], $newId);
+            // log_audit() commit'TEN ÖNCE, AYNI transaction içinde —
+            // record_add.php'deki AYNI gerekçe (orada "bulunan gerçek bug"
+            // olarak belgelenmiş: audit yazması patlarsa kayıt DB'de kalmasın).
+            log_audit('record.create', 'record', $newId, array('table_id' => $table['id']), $table['team_id']);
+            bcc_commit();
+        } catch (Throwable $e) {
+            bcc_rollback();
+            throw $e;
+        }
+
+        // Slack bildirimi commit'ten SONRA (DB mutasyonu değil, kendi try/catch'i
+        // zaten var) — record_add.php ile AYNI sıra.
         bcc_notify_slack_new_record($table['id'], $newId, $user['full_name']);
         $success = 'Kayıt eklendi.';
     }

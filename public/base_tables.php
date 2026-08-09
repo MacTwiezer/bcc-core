@@ -182,10 +182,20 @@ if (!empty($teamIdsForStar)) {
 
 $homeActiveNav = 'bases';
 $homePageTitle = 'BCC-Core — ' . $base['name'];
+// Sayfaya özel stylesheet. Bu ekranın .settings-* sınıfları sekiz başka sayfayla
+// PAYLAŞILIYOR (admin/*, bases, form_edit, kanban, slack_settings) — home.css'i
+// değiştirmek hepsini yeniden tasarlardı. Tüm yeni kurallar
+// assets/settings-page.css'te (table_fields.php ile PAYLAŞILAN ortak iskelet,
+// ikinci bir kopya YOK) ve .sp-page altına kapsanmış durumda.
+$homeExtraCss = array('settings-page.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
+<div class="sp-page">
         <div class="settings-breadcrumb">
-            <a href="/bases.php">&larr; Base'lere dön</a>
+            <a href="/bases.php">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 5l-5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Base'ler
+            </a>
         </div>
         <div class="home-main-header">
             <h1><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
@@ -197,10 +207,13 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
         <div class="settings-card">
-            <h2>Tablolar (<?php echo count($tables); ?>)</h2>
+            <h2>Tablolar <span class="sp-count"><?php echo count($tables); ?></span></h2>
 
             <?php if (empty($tables)): ?>
-                <p class="settings-empty">Bu base'de henüz tablo yok.</p>
+                <p class="settings-empty">
+                    <strong>Bu base'de henüz tablo yok.</strong>
+                    <span class="sp-muted">Aşağıdaki formdan ilk tablonuzu oluşturun.</span>
+                </p>
             <?php else: ?>
                 <div class="settings-table-wrap">
                     <table class="settings-table">
@@ -208,33 +221,56 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <tbody>
                         <?php foreach ($tables as $i => $t): ?>
                             <tr>
-                                <td><a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></a></td>
-                                <td><?php echo htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <?php // Tablo adı sayfanın BİRİNCİL gezinme öğesi: satırın ana
+                                      // bilgisi olarak ağırlaştırıldı ve hover'da bir "git" oku
+                                      // beliriyor (table_fields.php'deki .sp-primary-name ile
+                                      // AYNI ortak sınıf, ikinci bir stil YAZILMADI). ?>
+                                <td class="sp-primary-name">
+                                    <a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>">
+                                        <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </a>
+                                </td>
+                                <td class="<?php echo ((string) $t['description'] !== '') ? '' : 'sp-muted'; ?>"><?php echo ((string) $t['description'] !== '') ? htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8') : '—'; ?></td>
                                 <?php if ($canEdit): ?>
+                                <?php // Aksiyonlar: dolu zeminli metin butonları yerine eşit ölçülü
+                                      // HAYALET ikon butonları (table_fields.php ile AYNI .sp-icon-btn).
+                                      // POST mekanizması DEĞİŞMEDİ — her biri hâlâ kendi csrf'li
+                                      // <form>'u; yalnızca görünüm ve erişilebilir ad değişti. ?>
                                 <td class="settings-row-actions">
-                                    <form method="post" action="/base_tables.php">
-                                        <?php echo csrf_field(); ?>
-                                        <input type="hidden" name="action" value="move_table">
-                                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                                        <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                        <input type="hidden" name="direction" value="up">
-                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
-                                    </form>
-                                    <form method="post" action="/base_tables.php">
-                                        <?php echo csrf_field(); ?>
-                                        <input type="hidden" name="action" value="move_table">
-                                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                                        <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                        <input type="hidden" name="direction" value="down">
-                                        <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === count($tables) - 1 ? 'disabled' : ''; ?>>&darr;</button>
-                                    </form>
-                                    <a class="settings-btn settings-btn-sm" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>">Düzenle</a>
+                                    <span class="sp-move-group">
+                                        <form method="post" action="/base_tables.php">
+                                            <?php echo csrf_field(); ?>
+                                            <input type="hidden" name="action" value="move_table">
+                                            <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                                            <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
+                                            <input type="hidden" name="direction" value="up">
+                                            <button type="submit" class="sp-icon-btn" title="Yukarı taşı" aria-label="Yukarı taşı" <?php echo $i === 0 ? 'disabled' : ''; ?>>
+                                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 15V5m0 0l-4 4m4-4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="/base_tables.php">
+                                            <?php echo csrf_field(); ?>
+                                            <input type="hidden" name="action" value="move_table">
+                                            <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+                                            <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
+                                            <input type="hidden" name="direction" value="down">
+                                            <button type="submit" class="sp-icon-btn" title="Aşağı taşı" aria-label="Aşağı taşı" <?php echo $i === count($tables) - 1 ? 'disabled' : ''; ?>>
+                                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 5v10m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
+                                        </form>
+                                    </span>
+                                    <a class="sp-icon-btn" title="Düzenle" aria-label="Tabloyu düzenle" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>">
+                                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                                    </a>
                                     <form method="post" action="/base_tables.php" onsubmit="return confirm('Bu tabloyu ve içindeki tüm alanları silmek istediğinize emin misiniz?');">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="delete_table">
                                         <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
                                         <input type="hidden" name="table_id" value="<?php echo (int) $t['id']; ?>">
-                                        <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Sil</button>
+                                        <button type="submit" class="sp-icon-btn sp-icon-btn--danger" title="Sil" aria-label="Tabloyu sil">
+                                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
                                     </form>
                                 </td>
                                 <?php endif; ?>
@@ -284,10 +320,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <input type="hidden" name="action" value="create_table">
                     <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
                     <label class="settings-field">Tablo adı
-                        <input type="text" name="name" required>
+                        <input type="text" name="name" placeholder="Örn. Müşteriler" required>
                     </label>
                     <label class="settings-field">Açıklama (opsiyonel)
-                        <input type="text" name="description">
+                        <input type="text" name="description" placeholder="Bu tablonun ne tuttuğunu kısaca yazın">
                     </label>
                     <button type="submit" class="settings-btn settings-btn-primary">Tablo Oluştur</button>
                 </form>
@@ -295,4 +331,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php else: ?>
             <p class="settings-hint">Bu ekipte tablo oluşturmak/düzenlemek için owner rolü gerekir.</p>
         <?php endif; ?>
+</div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

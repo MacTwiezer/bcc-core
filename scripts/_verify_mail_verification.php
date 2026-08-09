@@ -156,11 +156,25 @@ check('E) baglanti bcc_app_base_url() uzerinden kuruluyor',
     strpos(file_get_contents(__DIR__ . '/../public/register.php'), 'bcc_app_base_url()') !== false);
 check('E) register.php artik HTTP_HOST kullanmiyor',
     strpos(php_code_without_comments(__DIR__ . '/../public/register.php'), 'HTTP_HOST') === false);
+// Baglantinin KAYNAGINI da soyle: "localhost" iki farkli sebepten cikabilir ve
+// ikisi ayni sey DEGIL. Ilk surum her iki durumda da "$APP_BASE_URL bos" diyordu;
+// deger doldurulduktan sonra bu mesaj YANLIS oldu.
+global $APP_BASE_URL;
+$configured = (is_string($APP_BASE_URL) && $APP_BASE_URL !== '');
 $isLocal = strpos($verifyLink, 'localhost') !== false;
+
 echo '        > Uretilen baglanti: ' . $verifyLink . "\n";
+echo '        > Kaynak: ' . ($configured
+    ? 'config/app.local.php ($APP_BASE_URL = ' . $APP_BASE_URL . ')'
+    : "yapilandirma BOS -> \$_SERVER['HTTP_HOST']'a dusuldu") . "\n";
+
+check('E) baglanti yapilandirmadan geliyor (HTTP_HOST tan DEGIL)', $configured,
+    'config/app.local.php yok ya da $APP_BASE_URL bos');
+
 if ($isLocal) {
-    echo "        > UYARI: \$APP_BASE_URL bos oldugu icin baglanti localhost'a cikiyor.\n";
-    echo "          Canliya cikarken config/app.local.php olusturup gercek adresi yazin.\n";
+    echo "        > UYARI: baglanti localhost'a cikiyor — YEREL TEST icin dogru, ama\n";
+    echo "          disariya gercek mail gonderilecekse ALICI bu adrese ERISEMEZ.\n";
+    echo "          Canliya cikarken config/app.local.php'ye gercek adresi yazin.\n";
 }
 
 // --- HTML onizleme dosyasi --------------------------------------------------

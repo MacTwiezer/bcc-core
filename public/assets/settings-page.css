@@ -349,6 +349,66 @@
     color: var(--bcc-success);
 }
 
+/* ---------- Rol hapı ---------- */
+
+/* Dört rolün (viewer / commenter / editor / owner) her biri ayrı tonda.
+   `.ws-collab-role` BİLEREK kullanılmadı: o sınıf team_members.php ve
+   grid/interface popover'larıyla paylaşılıyor, değiştirmek onları da etkilerdi.
+   Owner rengi theme.css'e EKLENEN --bcc-role-owner ikilisinden; diğerleri
+   mevcut token'lardan (editor=accent, commenter=success, viewer=sunken). */
+.sp-page .sp-role {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    padding: 0.16rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.71rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.sp-page .sp-role--owner {
+    border-color: var(--bcc-role-owner-soft);
+    background: var(--bcc-role-owner-soft);
+    color: var(--bcc-role-owner);
+}
+
+.sp-page .sp-role--editor {
+    border-color: var(--bcc-accent-soft);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .sp-role--commenter {
+    border-color: var(--bcc-success-soft);
+    background: var(--bcc-success-soft);
+    color: var(--bcc-success);
+}
+
+/* viewer taban stilde kalır (slate) — ayrı kural gereksiz. */
+
+/* ---------- Avatar ---------- */
+
+/* `.ws-collab-avatar` DEĞİL: o sınıf grid.php, interface.php, team_members.php
+   ve grid-row-detail.js tarafından da kullanılıyor. */
+.sp-page .sp-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
 /* ---------- Toggle anahtarı ---------- */
 
 /* Tasarım sistemine ait ORTAK bileşen. Not: style.css'te "Kaydı gönder"

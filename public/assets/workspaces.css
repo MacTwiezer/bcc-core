@@ -1,0 +1,409 @@
+/* workspaces.php'ye ÖZGÜ kurallar: iki sütunlu yerleşim, çalışma alanı seçici
+ * kartları ve katılımcı ızgarası.
+ *
+ * ORTAK iskelet (sayfa kabı, kart, başlık tipografisi, ikon butonları, sayaç
+ * rozeti, boş durum) VE ortak bileşenler (.sp-role rol hapı, .sp-avatar,
+ * .sp-note bilgi kutusu, .sp-count) assets/settings-page.css'te — burada
+ * KOPYASI YOK.
+ *
+ * ⚠️ Kapsam `.sp-page`. Bu sayfanın `.ws-*` sınıflarının bir kısmı
+ * PAYLAŞILIYOR: `.ws-collab-avatar` grid.php / interface.php /
+ * team_members.php / grid-row-detail.js tarafından, `.ws-collab-role`
+ * team_members.php tarafından, `.ws-detail` team_members.php tarafından.
+ * Bu yüzden onlar YENİDEN TANIMLANMADI — yeni görünüm kendi sınıflarını
+ * (.sp-avatar, .sp-role, .wsx-*) kullanıyor.
+ */
+
+/* ---------- İki sütunlu yerleşim ---------- */
+
+/* Sağdaki ölü alanın kök nedeni: sayfa tek dar sütundu (kartlar üstte, detay
+   altta) ve .home-main'in genişliğini dolduramıyordu. Sol: çalışma alanı
+   seçici. Sağ: seçili alanın başlığı, aksiyonları ve katılımcıları. */
+.sp-page.wsx-page { max-width: 1240px; }
+
+.sp-page .wsx-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 1.15rem;
+    align-items: start;
+}
+
+@media (max-width: 980px) {
+    .sp-page .wsx-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Sol: çalışma alanı seçici ---------- */
+
+.sp-page .wsx-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: sticky;
+    top: 1rem;
+}
+
+@media (max-width: 980px) {
+    .sp-page .wsx-side {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .sp-page .wsx-side .wsx-card { flex: 1 1 220px; }
+}
+
+.sp-page .wsx-side-label {
+    margin: 0 0 0.1rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+}
+
+@media (max-width: 980px) {
+    .sp-page .wsx-side-label { flex: 1 0 100%; }
+}
+
+.sp-page .wsx-card {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 12px;
+    background: var(--bcc-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    color: var(--bcc-text);
+    text-decoration: none;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+
+.sp-page .wsx-card:hover {
+    border-color: var(--bcc-border-strong);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+/* Seçili kart: accent kenarlık + sol şerit. */
+.sp-page .wsx-card.is-active {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+}
+
+.sp-page .wsx-card.is-active .wsx-card-name { color: var(--bcc-accent-strong); }
+
+.sp-page .wsx-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .wsx-card.is-active .wsx-card-icon {
+    background: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+}
+
+.sp-page .wsx-card-body { min-width: 0; }
+
+.sp-page .wsx-card-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .wsx-card-meta {
+    font-size: 0.76rem;
+    color: var(--bcc-text-muted);
+}
+
+/* "Yeni çalışma alanı" kartı — YALNIZCA platform admini görür (çalışma alanı =
+   takım, oluşturma admin/create_team.php'nin işi). Kesikli çerçeve, gerçek bir
+   hedefe giden link. */
+.sp-page .wsx-card-new {
+    justify-content: center;
+    gap: 0.45rem;
+    border-style: dashed;
+    border-color: var(--bcc-border-strong);
+    background: transparent;
+    box-shadow: none;
+    color: var(--bcc-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.sp-page .wsx-card-new:hover {
+    border-color: var(--bcc-accent);
+    color: var(--bcc-accent-strong);
+    background: var(--bcc-surface);
+}
+
+/* ---------- Sağ: seçili çalışma alanı ---------- */
+
+.sp-page .wsx-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
+.sp-page .wsx-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.1rem;
+    margin-bottom: 1.15rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .wsx-head-id {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.sp-page .wsx-head-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .wsx-head-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--bcc-text);
+}
+
+.sp-page .wsx-head-sub {
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .wsx-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+/* İkon + metin butonlar. Birincil = gerçek eylem; ikincil = gerçek ama
+   ikincil; disabled = HENÜZ YOK olan özellik (bilerek soluk ve tıklanamaz —
+   çalışıyormuş gibi göstermek yanıltıcı olurdu). */
+.sp-page .wsx-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 550;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+
+.sp-page .wsx-btn:hover { background: var(--bcc-surface-hover); border-color: var(--bcc-text-muted); }
+.sp-page .wsx-btn:active { transform: translateY(1px); }
+
+.sp-page .wsx-btn--primary {
+    border-color: var(--bcc-accent-strong);
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-on-accent);
+}
+
+.sp-page .wsx-btn--primary:hover {
+    background: var(--bcc-accent-strong);
+    border-color: var(--bcc-accent-strong);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.sp-page .wsx-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--bcc-surface-sunken);
+}
+
+.sp-page .wsx-btn:disabled:hover {
+    background: var(--bcc-surface-sunken);
+    border-color: var(--bcc-border-strong);
+}
+
+/* ---------- Katılımcılar ---------- */
+
+.sp-page .wsx-collab-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0 0 0.9rem;
+}
+
+.sp-page .wsx-collab-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+/* Arama kutusu — workspaces.js tarafından çalışma anında eklenir (yalnızca
+   liste uzunsa). Başlık satırının sağına yaslanır. */
+.sp-page .wsx-search {
+    position: relative;
+    margin-left: auto;
+}
+
+.sp-page .wsx-search svg {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--bcc-text-muted);
+    pointer-events: none;
+}
+
+.sp-page .wsx-search input {
+    box-sizing: border-box;
+    width: 220px;
+    max-width: 100%;
+    padding: 0.42rem 0.65rem 0.42rem 2rem;
+    font: inherit;
+    font-size: 0.84rem;
+    color: var(--bcc-text);
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sp-page .wsx-search input:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+/* SONSUZ DİKEY LİSTE YERİNE ÇOK SÜTUNLU IZGARA — sayfanın sonsuz uzamasının
+   ve sağdaki boşluğun ikinci nedeni buydu. */
+.sp-page .wsx-collab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.5rem;
+}
+
+.sp-page .wsx-member {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+    transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.sp-page .wsx-member:hover {
+    border-color: var(--bcc-border-strong);
+    background: var(--bcc-surface);
+}
+
+.sp-page .wsx-member-info { flex: 1; min-width: 0; }
+
+.sp-page .wsx-member-name {
+    font-size: 0.86rem;
+    font-weight: 550;
+    color: var(--bcc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .wsx-member-mail {
+    font-size: 0.76rem;
+    color: var(--bcc-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .wsx-member-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: none;
+}
+
+/* Pasif kullanıcı işareti — danger tonunda, rol hapından ayrı. */
+.sp-page .wsx-inactive {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    padding: 0.16rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-danger-soft);
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* Satır üstünde beliren "yönet" kısayolu. Rol değiştirme/çıkarma bu sayfada
+   YOK — team_members.php'nin işi; bu yüzden kısayol oraya, kullanıcının
+   satırına götürüyor. */
+.sp-page .wsx-member-manage {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    color: var(--bcc-text-muted);
+    opacity: 0;
+    transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.sp-page .wsx-member:hover .wsx-member-manage { opacity: 1; }
+
+.sp-page .wsx-member-manage:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-accent-strong);
+}
+
+/* Klavye kullanıcıları için: odaklanınca da görünür. */
+.sp-page .wsx-member-manage:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 1px;
+}
+
+/* Arama filtresiyle elenen kartlar — [hidden] değil ayrı sınıf, çünkü grid
+   öğesine uygulanan display [hidden]'ın display:none'ını ezer. */
+.sp-page .wsx-member.wsx-hidden { display: none; }
+
+.sp-page .wsx-collab-empty {
+    margin: 0.4rem 0 0;
+    color: var(--bcc-text-muted);
+    font-size: 0.86rem;
+}

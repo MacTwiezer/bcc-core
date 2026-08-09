@@ -1,179 +1,24 @@
-/* table_fields.php — "Alanlar" ekranının modern görünümü.
+/* table_fields.php'ye ÖZGÜ kurallar.
  *
- * ⚠️ HER KURAL `.tf-page` ALTINA KAPSANMIŞTIR — BU BİLİNÇLİ.
- * Sayfa `.settings-card` / `.settings-table` / `.settings-btn` /
- * `.settings-breadcrumb` sınıflarını kullanıyor ama bunlar PAYLAŞILAN sınıflar:
- * admin/index.php, admin/create_user.php, admin/create_team.php,
- * admin/assign_team.php, bases.php, base_tables.php, form_edit.php, kanban.php
- * ve slack_settings.php da aynı sınıfları kullanıyor. home.css'teki tanımları
- * değiştirmek o dokuz sayfayı da sessizce yeniden tasarlardı. Kapsam sınıfı
- * sayesinde bu dosya YALNIZCA table_fields.php'yi etkiliyor.
+ * ORTAK iskelet (sayfa kabı, breadcrumb, kart, veri tablosu, hayalet ikon
+ * butonları, sayaç rozeti, form alanları, birincil buton, boş durum)
+ * assets/settings-page.css'te ve base_tables.php ile PAYLAŞILIYOR — burada
+ * KOPYASI YOK. Bu dosyada yalnızca alan tipi kavramına ait olanlar var:
+ * tip hapı, "zorunlu" rozeti ve alan tipi seçicisi.
+ *
+ * ⚠️ Kapsam yine `.sp-page` (ortak dosyayla AYNI sarmalayıcı) — gerekçe için
+ * settings-page.css başlığına bakın.
  *
  * ⚠️ ALAN TİPİ GRID'İ (.field-type-grid / .field-type-option) src/partials/
  * field_type_wizard_fields.php'den geliyor ve grid.php'nin "+" POPUP'IYLA
  * PAYLAŞILIYOR (dar, ~260px'lik bir popover). Bu yüzden o sınıfların
  * theme.css'teki taban stilleri DEĞİŞTİRİLMEDİ; buradaki iyileştirmeler de
- * `.tf-page` altında kalıyor, popup eski görünümünü koruyor.
- *
- * Renkler: yalnızca mevcut --bcc-* token'ları. Yeni sabit renk YOK, böylece
- * koyu tema kendiliğinden çalışıyor.
+ * `.sp-page` altında kalıyor, popup eski görünümünü koruyor.
  */
-
-/* ---------- Sayfa kabı ---------- */
-
-/* Sağdaki geniş ölü alanın kök nedeni: .home-main flex:1 ile tüm genişliği
-   kaplıyor ama içerik (5 sütunlu bir tablo) onu dolduramıyor. İçerik ölçülü
-   bir okuma genişliğine oturtuluyor ve ortalanıyor. */
-.tf-page {
-    max-width: 1080px;
-    margin: 0 auto;
-}
-
-/* ---------- Üst gezinme ---------- */
-
-.tf-page .settings-breadcrumb {
-    gap: 0.15rem;
-    margin-bottom: 1.15rem;
-    font-size: 0.82rem;
-}
-
-/* Bağlantılar artık vurgu mavisi DEĞİL: bunlar sayfanın birincil eylemi değil,
-   ikincil gezinme. Sessiz gri + hover'da yüzey — Airtable/Linear'daki aynı
-   "breadcrumb sakin durur" davranışı. */
-.tf-page .settings-breadcrumb a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.32rem;
-    padding: 0.24rem 0.5rem;
-    border-radius: 6px;
-    color: var(--bcc-text-muted);
-    font-weight: 500;
-    transition: background-color 0.12s ease, color 0.12s ease;
-}
-
-.tf-page .settings-breadcrumb a:hover {
-    background: var(--bcc-surface-hover);
-    color: var(--bcc-text);
-    text-decoration: none;
-}
-
-.tf-page .settings-breadcrumb a svg {
-    flex: none;
-    opacity: 0.75;
-}
-
-/* Ayraç noktaları: eskiden "·" metin düğümleriydi ve link'lerle aynı hizada
-   durmuyordu. */
-.tf-page .settings-breadcrumb > span {
-    color: var(--bcc-border-strong);
-    user-select: none;
-}
-
-/* ---------- Başlık ---------- */
-
-.tf-page .home-main-header {
-    margin-bottom: 1.35rem;
-}
-
-.tf-page .home-main-header h1 {
-    margin: 0 0 0.3rem;
-    font-size: 1.45rem;
-    letter-spacing: -0.01em;
-}
-
-.tf-page .home-main-header .settings-hint {
-    margin: 0;
-    max-width: 62ch;
-}
-
-/* ---------- Kartlar ---------- */
-
-.tf-page .settings-card {
-    border-radius: 12px;
-    padding: 1.25rem 1.35rem 1.35rem;
-    border-color: var(--bcc-border);
-    /* İki katmanlı yumuşak gölge: tek katman ya çok sert ya görünmez oluyordu. */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05);
-    margin-bottom: 1.15rem;
-}
-
-.tf-page .settings-card > h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 0 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: -0.005em;
-}
-
-/* Başlıktaki sayaç ("Alanlar (7)") ayrı bir sessiz rozete taşındı. */
-.tf-page .tf-count {
-    display: inline-flex;
-    align-items: center;
-    min-width: 1.35rem;
-    height: 1.35rem;
-    padding: 0 0.4rem;
-    justify-content: center;
-    border-radius: 999px;
-    background: var(--bcc-surface-sunken);
-    border: 1px solid var(--bcc-border);
-    color: var(--bcc-text-muted);
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-
-/* ---------- Alanlar tablosu ---------- */
-
-.tf-page .settings-table-wrap {
-    border-radius: 10px;
-    border-color: var(--bcc-border);
-    overflow: hidden; /* köşe yarıçapı satır zeminlerini kırpsın */
-}
-
-/* Yatay kaydırma yalnızca GEREKTİĞİNDE: overflow-x:auto sabitken dar
-   ekranlarda bile kaydırma çubuğu yer ayırıyordu. */
-.tf-page .settings-table-wrap { overflow-x: auto; }
-
-.tf-page .settings-table {
-    font-size: 0.86rem;
-}
-
-.tf-page .settings-table thead th {
-    padding: 0.6rem 0.85rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-    background: var(--bcc-surface-sunken);
-    border-bottom: 1px solid var(--bcc-border);
-}
-
-.tf-page .settings-table td {
-    padding: 0.7rem 0.85rem;
-    border-bottom: 1px solid var(--bcc-border);
-}
-
-.tf-page .settings-table tbody tr:last-child td { border-bottom: none; }
-
-.tf-page .settings-table tbody tr {
-    transition: background-color 0.1s ease;
-}
-
-.tf-page .settings-table tbody tr:hover {
-    background: var(--bcc-surface-hover);
-}
-
-/* Alan adı satırın birincil bilgisi — biraz daha ağır. */
-.tf-page .tf-field-name {
-    font-weight: 550;
-    color: var(--bcc-text);
-}
-
-/* Seçenek listesi ve "—" boşlukları sessizleşiyor. */
-.tf-page .tf-muted { color: var(--bcc-text-muted); }
 
 /* ---------- Alan tipi rozeti (hap) ---------- */
 
-.tf-page .tf-type-pill {
+.sp-page .tf-type-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -188,7 +33,7 @@
 
 /* İkon .field-type-badge'den (theme.css, background-image) geliyor — burada
    yalnızca hap içindeki ölçüsü ayarlanıyor, ikon tanımı KOPYALANMIYOR. */
-.tf-page .tf-type-pill .field-type-badge {
+.sp-page .tf-type-pill .field-type-badge {
     width: 0.95rem;
     height: 0.95rem;
     background-size: 13px 13px;
@@ -197,7 +42,7 @@
 
 /* ---------- Zorunlu sütunu ---------- */
 
-.tf-page .tf-required-yes {
+.sp-page .tf-required-yes {
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
@@ -206,98 +51,31 @@
     font-weight: 600;
 }
 
-/* ---------- Satır aksiyonları (hayalet ikon butonlar) ---------- */
-
-.tf-page .settings-row-actions {
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-    gap: 0.15rem;
-}
-
-/* Eski hâl: dolu zeminli, metinli "Düzenle"/"Sil" butonları + ↑/↓ karakterleri
-   satırın yarısını kaplıyordu. Artık hepsi aynı ölçüde, zeminsiz ikon butonu;
-   zemin yalnızca hover'da beliriyor. */
-.tf-page .tf-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--bcc-text-muted);
-    cursor: pointer;
-    font: inherit;
-    line-height: 0;
-    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.tf-page .tf-icon-btn:hover:not(:disabled) {
-    background: var(--bcc-surface);
-    border-color: var(--bcc-border-strong);
-    color: var(--bcc-text);
-}
-
-.tf-page .tf-icon-btn:focus-visible {
-    outline: 2px solid var(--bcc-accent);
-    outline-offset: 1px;
-}
-
-.tf-page .tf-icon-btn:disabled {
-    opacity: 0.28;
-    cursor: default;
-}
-
-.tf-page .tf-icon-btn--danger:hover:not(:disabled) {
-    background: var(--bcc-danger-soft);
-    border-color: var(--bcc-danger);
-    color: var(--bcc-danger);
-}
-
-/* Sıralama okları görsel olarak tek bir kümede toplansın. */
-.tf-page .tf-move-group {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 0.2rem;
-}
-
 /* ---------- "Yeni Alan": tip seçici ---------- */
 
 /* KÖK NEDEN — sayfanın sonsuz uzamasının sebebi buydu: #new-field-form
    `.settings-form-stacked` sınıfını taşıyor ve o sınıfın `max-width: 420px`i
    VAR. Tip grid'i formun İÇİNDE olduğu için 420px'e sıkışıyor, auto-fill
-   minmax(150px) iki sütuna düşüyor ve ~20 tip alt alta uzuyordu. Tip adımı
-   tam genişliğe açılıyor; ikinci adım (isim/seçenekler) dar kalıyor, çünkü
-   uzun form alanları geniş satırlarda okunmaz. */
-.tf-page #new-field-form { max-width: none; }
-.tf-page #new-field-details-step { max-width: 460px; }
+   minmax(150px) iki sütuna düşüyor ve ~21 tip alt alta uzuyordu. Tip adımı tam
+   genişliğe açılıyor; ikinci adım (isim/seçenekler) dar kalıyor, çünkü uzun
+   form alanları geniş satırlarda okunmaz.
+   (Aynı sınıfın flex-wrap tuzağı ORTAK dosyada düzeltildi — bkz.
+   settings-page.css `.sp-page .settings-form-stacked`.) */
+.sp-page #new-field-form { max-width: none; }
+.sp-page #new-field-details-step { max-width: 460px; }
 
-/* İKİNCİ KÖK NEDEN — kartın altındaki ~800px'lik ölü alan.
-   `.settings-form` `flex-wrap: wrap` taşıyor (yatay formlarda satır kaydırmak
-   için doğru), `.settings-form-stacked` ise yönü `column`a çeviriyor. SÜTUN
-   yönlü bir flex container'da `wrap`, tarayıcının sarmak için KESİN bir ana
-   eksen (yükseklik) ölçüsüne ihtiyaç duymasına yol açıyor; Chromium bunu ana
-   bloktan devraldığı boş alandan türetiyor ve kap, içeriğinden ÇOK daha uzun
-   oluyordu. Ölçüldü: içerik toplamı 358px iken form 1157px; `nowrap` verilince
-   383px'e (doğru değere) düştü.
-   Yalnızca bu formda düzeltiliyor — paylaşılan `.settings-form` kuralına
-   dokunmak, ondan satır kaydırma bekleyen yatay formları bozardı. */
-.tf-page #new-field-form { flex-wrap: nowrap; }
-
-.tf-page #new-field-type-step > .hint {
+.sp-page #new-field-type-step > .hint {
     margin: 0 0 0.7rem;
 }
 
 /* Arama kutusu — table-fields.js tarafından ÇALIŞMA ANINDA ekleniyor
-   (paylaşılan partial'a dokunmamak için, bkz. dosya başlığı). */
-.tf-page .tf-type-search {
+   (paylaşılan partial'a dokunmamak için, bkz. o dosyanın başlığı). */
+.sp-page .tf-type-search {
     position: relative;
     margin: 0 0 0.85rem;
 }
 
-.tf-page .tf-type-search svg {
+.sp-page .tf-type-search svg {
     position: absolute;
     left: 0.65rem;
     top: 50%;
@@ -306,7 +84,7 @@
     pointer-events: none;
 }
 
-.tf-page .tf-type-search input {
+.sp-page .tf-type-search input {
     box-sizing: border-box;
     width: 100%;
     max-width: 320px;
@@ -320,26 +98,26 @@
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.tf-page .tf-type-search input:focus {
+.sp-page .tf-type-search input:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
 
-.tf-page .tf-type-empty {
+.sp-page .tf-type-empty {
     margin: 0.2rem 0 0;
     color: var(--bcc-text-muted);
     font-size: 0.85rem;
 }
 
 /* Tip kartları */
-.tf-page .field-type-grid {
+.sp-page .field-type-grid {
     grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: 0.5rem;
     margin-top: 0;
 }
 
-.tf-page .field-type-option {
+.sp-page .field-type-option {
     gap: 0.6rem;
     padding: 0.6rem 0.75rem;
     border-radius: 10px;
@@ -348,13 +126,13 @@
     transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.tf-page .field-type-option:hover {
+.sp-page .field-type-option:hover {
     border-color: var(--bcc-accent);
     background: var(--bcc-surface);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.tf-page .field-type-option:focus-visible {
+.sp-page .field-type-option:focus-visible {
     outline: 2px solid var(--bcc-accent);
     outline-offset: 1px;
 }
@@ -363,49 +141,10 @@
    girmemek için ayrı bir sınıf kullanılıyor (projede daha önce birkaç kez
    yaşanan ders) — .field-type-grid display:grid olduğu için [hidden]'ın
    display:none'ı zaten ezilirdi. */
-.tf-page .field-type-option.tf-hidden { display: none; }
+.sp-page .field-type-option.tf-hidden { display: none; }
 
-.tf-page .field-type-option .field-type-label {
+.sp-page .field-type-option .field-type-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-/* ---------- Düzenleme formu ---------- */
-
-.tf-page .settings-field input[type="text"],
-.tf-page .settings-field input[type="number"],
-.tf-page .settings-field textarea,
-.tf-page .settings-field select {
-    max-width: 100%;
-    border-radius: 8px;
-    padding: 0.5rem 0.65rem;
-    transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-
-.tf-page .settings-field input:focus,
-.tf-page .settings-field textarea:focus,
-.tf-page .settings-field select:focus {
-    outline: none;
-    border-color: var(--bcc-accent);
-    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
-}
-
-.tf-page .settings-btn-primary {
-    border-radius: 8px;
-}
-
-/* ---------- Boş durum ---------- */
-
-.tf-page .settings-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 2rem 1rem;
-    margin: 0;
-    border: 1px dashed var(--bcc-border-strong);
-    border-radius: 10px;
-    background: var(--bcc-surface-sunken);
-    text-align: center;
 }

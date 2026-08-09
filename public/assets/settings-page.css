@@ -1,0 +1,330 @@
+/* Ayar/yönetim sayfalarının ORTAK tasarım sistemi (.sp-page).
+ *
+ * Tüketiciler: table_fields.php, base_tables.php.
+ * (Bu dosya önce table-fields.css olarak yazıldı; base_tables.php aynı iskeleti
+ * — breadcrumb → sayaçlı kart → satır aksiyonları → düzenle/oluştur formu —
+ * paylaştığı için kurallar KOPYALANMADI, buraya çıkarıldı. Sayfaya ÖZGÜ olanlar
+ * kendi dosyalarında kaldı, bkz. table-fields.css.)
+ *
+ * ⚠️ HER KURAL `.sp-page` ALTINA KAPSANMIŞTIR — BU BİLİNÇLİ.
+ * Bu sayfalar `.settings-card` / `.settings-table` / `.settings-btn` /
+ * `.settings-breadcrumb` sınıflarını kullanıyor ama bunlar PAYLAŞILAN sınıflar:
+ * admin/index.php, admin/create_user.php, admin/create_team.php,
+ * admin/assign_team.php, bases.php, form_edit.php, kanban.php ve
+ * slack_settings.php da aynı sınıfları kullanıyor. home.css'teki tanımları
+ * değiştirmek o sayfaları da sessizce yeniden tasarlardı. Kapsam sınıfı
+ * sayesinde bu dosya YALNIZCA `.sp-page` saran sayfaları etkiliyor.
+ *
+ * Renkler: yalnızca mevcut --bcc-* token'ları. Yeni sabit renk YOK, böylece
+ * koyu tema kendiliğinden çalışıyor.
+ */
+
+/* ---------- Sayfa kabı ---------- */
+
+/* Sağdaki geniş ölü alanın kök nedeni: .home-main flex:1 ile tüm genişliği
+   kaplıyor ama içerik (birkaç sütunlu bir tablo) onu dolduramıyor. İçerik
+   ölçülü bir okuma genişliğine oturtuluyor ve ortalanıyor. */
+.sp-page {
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+/* ---------- Üst gezinme ---------- */
+
+.sp-page .settings-breadcrumb {
+    gap: 0.15rem;
+    margin-bottom: 1.15rem;
+    font-size: 0.82rem;
+}
+
+/* Bağlantılar artık vurgu mavisi DEĞİL: bunlar sayfanın birincil eylemi değil,
+   ikincil gezinme. Sessiz gri + hover'da yüzey. */
+.sp-page .settings-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0.24rem 0.5rem;
+    border-radius: 6px;
+    color: var(--bcc-text-muted);
+    font-weight: 500;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sp-page .settings-breadcrumb a:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+    text-decoration: none;
+}
+
+.sp-page .settings-breadcrumb a svg {
+    flex: none;
+    opacity: 0.75;
+}
+
+.sp-page .settings-breadcrumb > span {
+    color: var(--bcc-border-strong);
+    user-select: none;
+}
+
+/* ---------- Başlık ---------- */
+
+.sp-page .home-main-header {
+    margin-bottom: 1.35rem;
+}
+
+.sp-page .home-main-header h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.45rem;
+    letter-spacing: -0.01em;
+}
+
+.sp-page .home-main-header .settings-hint {
+    margin: 0;
+    max-width: 62ch;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+/* ---------- Kartlar ---------- */
+
+.sp-page .settings-card {
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem 1.35rem;
+    border-color: var(--bcc-border);
+    /* İki katmanlı yumuşak gölge: tek katman ya çok sert ya görünmez oluyordu. */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.15rem;
+}
+
+.sp-page .settings-card > h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+}
+
+/* Başlıktaki sayaç ("Tablolar (7)") ayrı bir sessiz rozete taşındı. */
+.sp-page .sp-count {
+    display: inline-flex;
+    align-items: center;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.4rem;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--bcc-surface-sunken);
+    border: 1px solid var(--bcc-border);
+    color: var(--bcc-text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+/* ---------- Veri tablosu ---------- */
+
+.sp-page .settings-table-wrap {
+    border-radius: 10px;
+    border-color: var(--bcc-border);
+    overflow: hidden; /* köşe yarıçapı satır zeminlerini kırpsın */
+    overflow-x: auto;
+}
+
+.sp-page .settings-table {
+    font-size: 0.86rem;
+}
+
+.sp-page .settings-table thead th {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    background: var(--bcc-surface-sunken);
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .settings-table td {
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .settings-table tbody tr:last-child td { border-bottom: none; }
+
+.sp-page .settings-table tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+.sp-page .settings-table tbody tr:hover {
+    background: var(--bcc-surface-hover);
+}
+
+/* Satırın birincil bilgisi (alan adı / tablo adı) — biraz daha ağır. */
+.sp-page .sp-primary-name {
+    font-weight: 550;
+    color: var(--bcc-text);
+}
+
+/* Tıklanabilir birincil ad (base_tables: tabloya git). Gezinme olduğu belli
+   olsun ama satırı mavi bir link tarlasına çevirmesin: normalde metin rengi,
+   hover'da vurgu + alt çizgi. */
+.sp-page .sp-primary-name a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--bcc-text);
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.sp-page .sp-primary-name a:hover {
+    color: var(--bcc-accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.sp-page .sp-primary-name a svg {
+    flex: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.sp-page .settings-table tbody tr:hover .sp-primary-name a svg { opacity: 0.6; }
+
+/* Boş hücreler ve ikincil metin sessizleşiyor. */
+.sp-page .sp-muted { color: var(--bcc-text-muted); }
+
+/* ---------- Satır aksiyonları (hayalet ikon butonlar) ---------- */
+
+.sp-page .settings-row-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.15rem;
+}
+
+/* Eski hâl: dolu zeminli, metinli "Düzenle"/"Sil" butonları + ↑/↓ karakterleri
+   satırın yarısını kaplıyordu. Artık hepsi aynı ölçüde, zeminsiz ikon butonu;
+   zemin yalnızca hover'da beliriyor. */
+.sp-page .sp-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    font: inherit;
+    line-height: 0;
+    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.sp-page .sp-icon-btn:hover:not(:disabled) {
+    background: var(--bcc-surface);
+    border-color: var(--bcc-border-strong);
+    color: var(--bcc-text);
+}
+
+.sp-page .sp-icon-btn:focus-visible {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 1px;
+}
+
+.sp-page .sp-icon-btn:disabled {
+    opacity: 0.28;
+    cursor: default;
+}
+
+.sp-page .sp-icon-btn--danger:hover:not(:disabled) {
+    background: var(--bcc-danger-soft);
+    border-color: var(--bcc-danger);
+    color: var(--bcc-danger);
+}
+
+/* Sıralama okları görsel olarak tek bir kümede toplansın. */
+.sp-page .sp-move-group {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.2rem;
+}
+
+/* ---------- Formlar ---------- */
+
+/* BULUNAN GERÇEK YERLEŞİM HATASI: `.settings-form` `flex-wrap: wrap` taşıyor
+   (yatay formlarda satır kaydırmak için doğru), `.settings-form-stacked` ise
+   yönü `column`a çeviriyor. SÜTUN yönlü bir flex container'da `wrap`,
+   tarayıcının sarmak için KESİN bir ana eksen (yükseklik) ölçüsüne ihtiyaç
+   duymasına yol açıyor; Chromium bunu ana bloktan devraldığı boş alandan
+   türetiyor ve kap içeriğinden ÇOK daha uzun oluyordu. table_fields.php'de
+   ölçüldü: içerik toplamı 358px iken form 1157px; `nowrap` verilince 383px.
+   Yalnızca `.sp-page` altında düzeltiliyor — paylaşılan `.settings-form`
+   kuralına dokunmak, ondan satır kaydırma bekleyen yatay formları bozardı. */
+.sp-page .settings-form-stacked {
+    flex-wrap: nowrap;
+    gap: 1rem;
+}
+
+.sp-page .settings-field {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    letter-spacing: 0.01em;
+}
+
+.sp-page .settings-field input[type="text"],
+.sp-page .settings-field input[type="number"],
+.sp-page .settings-field textarea,
+.sp-page .settings-field select {
+    max-width: 100%;
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sp-page .settings-field input:focus,
+.sp-page .settings-field textarea:focus,
+.sp-page .settings-field select:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.sp-page .settings-field input::placeholder,
+.sp-page .settings-field textarea::placeholder {
+    color: var(--bcc-text-muted);
+    opacity: 0.7;
+}
+
+/* Birincil eylem butonu */
+.sp-page .settings-btn-primary {
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    font-weight: 600;
+    transition: background-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+
+.sp-page .settings-btn-primary:hover {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+.sp-page .settings-btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+/* ---------- Boş durum ---------- */
+
+.sp-page .settings-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 2rem 1rem;
+    margin: 0;
+    border: 1px dashed var(--bcc-border-strong);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+    text-align: center;
+}

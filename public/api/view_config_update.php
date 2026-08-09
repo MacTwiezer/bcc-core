@@ -1,9 +1,17 @@
 <?php
-// AJAX uçnoktası: aktif görünümün config JSON'ındaki frozen_column_count anahtarını
-// günceller (sütun dondurma sürükleme, grid.php / assets/grid-freeze-columns.js).
-// Diğer config anahtarları (varsa, ileride) EZİLMEZ — oku, tek anahtarı değiştir,
-// geri yaz. Güvenlik: CSRF + require_role('editor') + view_id'nin var olduğu ve
-// team_id'nin ondan geldiği kontrolü (view_rename.php ile aynı desen).
+// AJAX uçnoktası: aktif görünümün config JSON'ındaki SÜTUN YERLEŞİMİ anahtarlarını
+// günceller — frozen_column_count (sütun dondurma sürükleme,
+// assets/grid-freeze-columns.js) ve column_widths (sütun genişliği sürükleme,
+// assets/grid-column-resize.js). Diğer config anahtarları EZİLMEZ — oku, ilgili
+// anahtarı değiştir, geri yaz. Güvenlik: CSRF + require_role('editor') +
+// view_id'nin var olduğu ve team_id'nin ondan geldiği kontrolü (view_rename.php
+// ile aynı desen).
+//
+// İKİ AYRI ÖZELLİK, TEK UÇ NOKTA — her anahtar YALNIZCA gönderildiğinde yazılır.
+// Bulunan gerçek bug (sütun genişliği eklenirken ortaya çıktı): $frozenCount
+// isset kontrolü olmadan `: 1` varsayılanına düşüyor ve HER İSTEKTE yazılıyordu.
+// Yalnızca column_widths gönderen bir istek, kullanıcının dondurulmuş sütun
+// sayısını SESSİZCE 1'e geri alırdı. Artık ikisi de isset() ile korunuyor.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -12,7 +20,9 @@ api_require_login();
 api_require_csrf();
 
 $viewId = isset($_POST['view_id']) ? (int) $_POST['view_id'] : 0;
-$frozenCount = isset($_POST['frozen_column_count']) ? (int) $_POST['frozen_column_count'] : 1;
+$hasFrozenCount = isset($_POST['frozen_column_count']);
+$frozenCount = $hasFrozenCount ? (int) $_POST['frozen_column_count'] : null;
+$hasColumnWidths = isset($_POST['column_widths']);
 $stateQueryString = isset($_POST['state_query_string']) ? (string) $_POST['state_query_string'] : '';
 
 try {
@@ -53,21 +63,51 @@ try {
 
     $maxAllowed = bcc_max_frozen_columns($visibleFieldCount);
 
-    if ($frozenCount < 1) {
-        $frozenCount = 1;
+    $changes = array();
+
+    if ($hasFrozenCount) {
+        if ($frozenCount < 1) {
+            $frozenCount = 1;
+        }
+        if ($frozenCount > $maxAllowed) {
+            $frozenCount = $maxAllowed;
+        }
+        $changes['frozen_column_count'] = $frozenCount;
     }
-    if ($frozenCount > $maxAllowed) {
-        $frozenCount = $maxAllowed;
+
+    $columnWidths = null;
+    if ($hasColumnWidths) {
+        // İstemci JSON dizgisi gönderir ({"row":219,"f12":320}) — düz bir POST
+        // dizisi yerine, çünkü değer bir HARİTA ve anahtarları sunucuda
+        // whitelist'ten geçiyor. Bozuk JSON sessizce boş haritaya düşer.
+        $rawWidths = json_decode((string) $_POST['column_widths'], true);
+        $columnWidths = bcc_sanitize_column_widths($rawWidths, $fieldsById);
+
+        // Boş harita = "genişlikleri sıfırla, otomatik yerleşime dön":
+        // bcc_update_view_config'te null, anahtarı SİLMEK demek.
+        $changes['column_widths'] = empty($columnWidths) ? null : $columnWidths;
+    }
+
+    if (empty($changes)) {
+        json_fail(400, 'Güncellenecek bir ayar gönderilmedi.');
     }
 
     // Oku-değiştir-yaz ortak yardımcıya taşındı (bcc_update_view_config) —
     // form_edit.php ve kanban_config_update.php AYNI diski paylaştığı için
     // "diğer anahtarları ezme" disiplini tek yerde.
-    bcc_update_view_config($view['id'], array('frozen_column_count' => $frozenCount));
+    bcc_update_view_config($view['id'], $changes);
 
-    log_audit('view.config_update', 'view', $view['id'], array('frozen_column_count' => $frozenCount), $view['team_id']);
+    log_audit('view.config_update', 'view', $view['id'], $changes, $view['team_id']);
 } catch (Throwable $e) {
     json_fail(500, 'Veritabanı hatası.');
 }
 
-echo json_encode(array('ok' => true, 'frozen_column_count' => $frozenCount), JSON_UNESCAPED_UNICODE);
+$response = array('ok' => true);
+if ($hasFrozenCount) {
+    $response['frozen_column_count'] = $frozenCount;
+}
+if ($hasColumnWidths) {
+    $response['column_widths'] = (object) $columnWidths;
+}
+
+echo json_encode($response, JSON_UNESCAPED_UNICODE);

@@ -86,10 +86,15 @@ function grid_record_ids($html)
 }
 
 // grid.php HTML'inden GORUNUR sutun basliklarini SIRASIYLA cikarir.
+// Hedef ALAN sutunlari: data-col-key="f<id>" (sutun genisligi turunda eklendi,
+// grid-column-resize.js de ayni kancayi kullaniyor). Onceki surum duz "<th>"
+// ariyordu; o oznitelik gelince eslesme sifira dustu ve bu YARDIMCI kirildi --
+// urun tarafi degil (ayni turdeki .xlsx ve kayit karsilastirmalari gecmisti).
+// Satir no ve "+" sutunlari zaten alan degil, artik acikca disarida kaliyor.
 function grid_header_names($html)
 {
     if (!preg_match('#<thead>(.*?)</thead>#s', $html, $th)) { return array(); }
-    preg_match_all('#<th>(.*?)</th>#s', $th[1], $m);
+    preg_match_all('#<th data-col-key="f\d+">(.*?)</th>#s', $th[1], $m);
     $names = array();
     foreach ($m[1] as $cell) {
         // <span class="field-badge...">, <span class="req-mark">*</span> ve

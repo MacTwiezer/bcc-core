@@ -795,6 +795,115 @@ function bcc_get_frozen_column_count($configJson, $maxAllowed = null)
     return $count;
 }
 
+// ---- Sütun genişliği (sürükle-boyutlandır) --------------------------------
+//
+// Sınırlar TEK yerde: grid.php (ilk render), grid-column-resize.js (sürükleme
+// sırasında canlı kırpma, değerleri BCC_* global'leriyle sunucudan alır) ve
+// view_config_update.php (kaydederken sunucu tarafı kırpma) AYNI üç sabiti
+// paylaşır — istemciye güvenilmez, ama istemci de aynı davranışı gösterir.
+$GLOBALS['BCC_MIN_COLUMN_WIDTH'] = 80;   // okunmaz hale gelmesin
+$GLOBALS['BCC_MAX_COLUMN_WIDTH'] = 800;  // tek sütun tabloyu yutmasın
+// Kaydedilmiş genişlikler VARKEN sonradan eklenen/görünür olan bir alanın
+// genişliği (o alan haritada yok) — tablo `table-layout: fixed` moduna geçmiş
+// olduğu için her sütunun bir genişliği OLMAK ZORUNDA.
+$GLOBALS['BCC_DEFAULT_COLUMN_WIDTH'] = 180;
+
+// views.config JSON'ından sütun genişliklerini SAVUNMACI biçimde okur
+// (bcc_get_frozen_column_count ile AYNI disiplin: NULL/bozuk JSON/eksik anahtar/
+// beklenmedik tip -> sessizce boş dizi, hata fırlatmaz).
+//
+// Anahtar biçimi: 'row' (satır no sütunu — bir alan DEĞİL ama genişliği
+// korunmalı) ve 'f<field_id>'. Düz {field_id: px} yerine önekli anahtar
+// seçildi çünkü (a) satır no sütununun bir field_id'si yok, (b)
+// json_decode(..., true) sayısal string anahtarları int'e çeviriyor ve
+// 'row' ile karışık int/string anahtarlı bir dizi üretirdi.
+//
+// $visibleFields verilirse sonuç YALNIZCA o an görünür olan alanlara indirgenir:
+// silinmiş ya da gizlenmiş bir alanın eski genişliği colgroup'u kaydırmasın.
+// Dönüş boş dizi ise çağıran ESKİ (otomatik) yerleşimde kalır — bu, özelliğin
+// "opt-in" olmasını sağlayan şeydir.
+function bcc_get_column_widths($configJson, $visibleFields = null)
+{
+    if ($configJson === null || $configJson === '') {
+        return array();
+    }
+
+    $decoded = json_decode($configJson, true);
+    if (!is_array($decoded) || !isset($decoded['column_widths']) || !is_array($decoded['column_widths'])) {
+        return array();
+    }
+
+    $allowed = null;
+    if ($visibleFields !== null) {
+        $allowed = array('row' => true);
+        foreach ($visibleFields as $f) {
+            $allowed['f' . (int) $f['id']] = true;
+        }
+    }
+
+    $out = array();
+    foreach ($decoded['column_widths'] as $key => $value) {
+        $key = (string) $key;
+        if ($allowed !== null && !isset($allowed[$key])) {
+            continue;
+        }
+        if (!is_int($value) && !(is_float($value) && $value == (int) $value)) {
+            continue;
+        }
+        $out[$key] = bcc_clamp_column_width((int) $value);
+    }
+
+    return $out;
+}
+
+function bcc_clamp_column_width($width)
+{
+    $width = (int) $width;
+
+    if ($width < $GLOBALS['BCC_MIN_COLUMN_WIDTH']) {
+        return $GLOBALS['BCC_MIN_COLUMN_WIDTH'];
+    }
+    if ($width > $GLOBALS['BCC_MAX_COLUMN_WIDTH']) {
+        return $GLOBALS['BCC_MAX_COLUMN_WIDTH'];
+    }
+
+    return $width;
+}
+
+// İstemciden gelen ham column_widths dizisini kabul edilebilir hâle indirger:
+// yalnızca 'row' ve BU TABLOYA ait alan anahtarları, yalnızca sayısal değerler,
+// hepsi min/max'a kırpılmış. Whitelist kaynağı $fieldsById — parse_grid_*()
+// ailesiyle AYNI "istekten gelen id'ye güvenme" deseni.
+function bcc_sanitize_column_widths($raw, $fieldsById)
+{
+    if (!is_array($raw)) {
+        return array();
+    }
+
+    $out = array();
+    foreach ($raw as $key => $value) {
+        $key = (string) $key;
+
+        if ($key !== 'row') {
+            if (strpos($key, 'f') !== 0) {
+                continue;
+            }
+            $fieldId = (int) substr($key, 1);
+            if ($fieldId <= 0 || !isset($fieldsById[$fieldId])) {
+                continue;
+            }
+        }
+
+        if (!is_numeric($value)) {
+            continue;
+        }
+
+        $out[$key] = bcc_clamp_column_width((int) round((float) $value));
+    }
+
+    return $out;
+}
+
 // Bir base'e ait tüm tabloları (id + name) position,id sırasına göre döndürür.
 // Sekme şeridi (grid.php) ve base.php köprü sayfası (ilk tabloyu bulmak için) aynı
 // sorguyu paylaşır — iki yerde ayrı ayrı yazılmaz.

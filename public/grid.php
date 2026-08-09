@@ -185,6 +185,16 @@ foreach ($fields as $f) {
 $maxFrozenColumns = bcc_max_frozen_columns(count($visibleFields));
 $frozenColumnCount = bcc_get_frozen_column_count($view['config'], $maxFrozenColumns);
 
+// Sütun genişliği (sürükle-boyutlandır) — OPT-IN: harita BOŞSA tablo bugünkü
+// otomatik yerleşiminde (`width:auto; min-width:100%`, table-layout auto) kalır
+// ve hiçbir görünüm değişmez. Kullanıcı bir kenarı ilk kez sürüklediğinde
+// grid-column-resize.js o anki TÜM genişlikleri ölçüp kaydeder; bundan sonra
+// burası `table-layout: fixed` + <colgroup> üretir ve sütunlar birebir
+// kaydedilen piksel değerinde olur (auto layout'ta bir <th> width'i yalnızca
+// ÖNERİdir — min-width:100% esnemesi onu ezerdi).
+$columnWidths = bcc_get_column_widths($view['config'], $visibleFields);
+$hasColumnWidths = !empty($columnWidths);
+
 // Sıralama (Faz 4): sort_field_1..3 / sort_dir_1..3 GET parametreleri, yalnızca bu
 // tabloya ait alanlar kabul edilir. Kalıcılık henüz yok — durum URL'de taşınıyor.
 $sortRules = parse_grid_sort_rules($_GET, $fieldsById);
@@ -1308,7 +1318,39 @@ $gridUser = current_user();
             </div>
         <?php else: ?>
             <div class="grid-wrap">
-                <table class="grid row-h-<?php echo htmlspecialchars($rowHeight, ENT_QUOTES, 'UTF-8'); ?> <?php echo $wrapHeaders ? 'wrap-headers' : ''; ?>">
+                <?php
+                // Kaydedilmiş genişlikler VARSA: table-layout:fixed + her sütun için
+                // bir <col>. Toplam genişlik tabloya inline yazılır ve `min-width:100%`
+                // devre dışı kalır (.grid-has-col-widths) — aksi hâlde tablo
+                // kapsayıcıya esner ve fixed layout artan alanı sütunlara oransal
+                // dağıtarak sürüklenen değeri BOZARDI.
+                $colWidthFor = function ($key) use ($columnWidths) {
+                    return isset($columnWidths[$key]) ? (int) $columnWidths[$key] : (int) $GLOBALS['BCC_DEFAULT_COLUMN_WIDTH'];
+                };
+                $addFieldColWidth = 40; // "+" sütunu: ikon genişliği, kullanıcı ayarlayamaz
+                $totalColWidth = 0;
+                if ($hasColumnWidths) {
+                    $totalColWidth = $colWidthFor('row');
+                    foreach ($visibleFields as $f) {
+                        $totalColWidth += $colWidthFor('f' . (int) $f['id']);
+                    }
+                    if ($isOwner) {
+                        $totalColWidth += $addFieldColWidth;
+                    }
+                }
+                ?>
+                <table class="grid row-h-<?php echo htmlspecialchars($rowHeight, ENT_QUOTES, 'UTF-8'); ?> <?php echo $wrapHeaders ? 'wrap-headers' : ''; ?> <?php echo $hasColumnWidths ? 'grid-has-col-widths' : ''; ?>"<?php echo $hasColumnWidths ? ' style="width: ' . $totalColWidth . 'px;"' : ''; ?>>
+                    <?php if ($hasColumnWidths): ?>
+                    <colgroup>
+                        <col style="width: <?php echo $colWidthFor('row'); ?>px;">
+                        <?php foreach ($visibleFields as $f): ?>
+                        <col data-col-key="f<?php echo (int) $f['id']; ?>" style="width: <?php echo $colWidthFor('f' . (int) $f['id']); ?>px;">
+                        <?php endforeach; ?>
+                        <?php if ($isOwner): ?>
+                        <col style="width: <?php echo $addFieldColWidth; ?>px;">
+                        <?php endif; ?>
+                    </colgroup>
+                    <?php endif; ?>
                     <thead>
                         <tr>
                             <th class="grid-rownum">
@@ -1319,9 +1361,15 @@ $gridUser = current_user();
                                 $thSortable = $f['field_type'] !== 'attachment';
                                 $thCanHide = (int) $f['id'] !== $primaryFieldId;
                             ?>
-                                <th>
+<?php // data-col-key: grid-column-resize.js sürüklenen başlığı <col>'una ve
+                                      // kaydedilecek anahtara bağlar (colgroup'taki data-col-key ile AYNI değer),
+                                      // DOM sırasına/index'e güvenmeden. ?>
+                                <th data-col-key="f<?php echo (int) $f['id']; ?>">
                                     <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
-                                    <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
+<?php // .grid-th-label: sabit-genişlik modunda kırpma HÜCREYE değil ADA
+                                          // uygulanıyor (th'ye overflow:hidden vermek, kenardan dışarı taşan
+                                          // dondurma/genişlik tutamaçlarını yarıdan keserdi — bkz. style.css). ?>
+                                    <span class="grid-th-label"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
                                     <?php if ($thSortable || $thCanHide): ?>
                                     <details class="grid-th-menu" name="gs-table-tab-menu">
@@ -1441,6 +1489,12 @@ $gridUser = current_user();
     // dahil); yalnızca sürükleme tutamacı BCC_CAN_EDIT'e bağlıdır.
     var BCC_FROZEN_COLUMN_COUNT = <?php echo (int) $frozenColumnCount; ?>;
     var BCC_MAX_FROZEN_COLUMNS = <?php echo (int) $maxFrozenColumns; ?>;
+    // Sütun genişliği sürükleme — sınırlar SUNUCUDAN geliyor (src/schema.php),
+    // istemcide ikinci bir sabit YOK: view_config_update.php aynı değerlerle
+    // yeniden kırpıyor, yani istemci yalnızca aynı davranışı ÖNCEDEN gösteriyor.
+    var BCC_MIN_COLUMN_WIDTH = <?php echo (int) $GLOBALS['BCC_MIN_COLUMN_WIDTH']; ?>;
+    var BCC_MAX_COLUMN_WIDTH = <?php echo (int) $GLOBALS['BCC_MAX_COLUMN_WIDTH']; ?>;
+    var BCC_HAS_COLUMN_WIDTHS = <?php echo $hasColumnWidths ? 'true' : 'false'; ?>;
     var BCC_VIEW_ID = <?php echo (int) $view['id']; ?>;
     var BCC_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
     var BCC_CAN_COMMENT = <?php echo $canComment ? 'true' : 'false'; ?>;
@@ -1457,6 +1511,10 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-column-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-freeze-columns.js'); ?>" defer></script>
+<?php // Sütun genişliği sürükleme — grid-freeze-columns.js'ten SONRA yükleniyor:
+      // ikisi de aynı <th>'lere tutamaç ekliyor ve boyutlandırma bittiğinde
+      // window.BCC_reapplyFreeze() (freeze dosyasının açtığı kanca) çağrılıyor. ?>
+<script src="<?php echo bcc_asset_url('grid-column-resize.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="<?php echo bcc_asset_url('grid.js'); ?>" defer></script>

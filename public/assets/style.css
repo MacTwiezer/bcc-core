@@ -1256,6 +1256,81 @@ table.grid tbody tr:hover td.grid-frozen-cell {
 
 .grid-freeze-handle.is-dragging { cursor: grabbing; }
 
+/* ---- Sütun genişliği sürükleme (grid-column-resize.js) -------------------
+   Dondurma tutamacıyla (yukarıda) AYNI görsel bölgede duruyor ama BAŞKA bir iş
+   yapıyor; ayırt edilebilir olması bilinçli bir gereklilik:
+
+     dondurma  : 12px şerit, cursor:grab,        MAVİ  (--bcc-accent) çizgi, tabloda TEK
+     genişlik  :  7px şerit, cursor:col-resize,  GRİ   (--bcc-border-strong) çizgi, HER başlıkta
+
+   İkisi aynı hücrede buluştuğunda (donmuş kenar sütunu) üst üste binmesinler
+   diye genişlik tutamacı orada 12px sola kaydırılıyor ve z-index'i altta
+   kalıyor — böylece imleç/çizgi rengi hangisinin sürükleneceğini belirsiz
+   bırakmıyor. grid-freeze-columns.js'e ve .grid-freeze-handle kurallarına
+   DOKUNULMADI. */
+.grid-col-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -3px;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 9;
+}
+
+.grid-col-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 2px;
+    background: var(--bcc-border-strong);
+    opacity: 0;
+}
+
+.grid-col-resize-handle:hover::after,
+.grid-col-resize-handle.is-dragging::after {
+    opacity: 1;
+}
+
+.grid-frozen-edge .grid-col-resize-handle { right: 9px; }
+
+/* Kaydedilmiş genişlik VARKEN: sütunlar <colgroup>'tan gelir ve içerik onları
+   genişletemez. `min-width: 100%` BURADA KAPATILMAK ZORUNDA — açık kalsaydı
+   tablo kapsayıcıya esner, fixed layout artan alanı sütunlara oransal dağıtır
+   ve kullanıcının sürüklediği piksel değeri BOZULURDU. Toplam genişlik
+   grid.php'de (ilk render) / grid-column-resize.js'te (sürüklerken) inline
+   yazılıyor. Harita boşken bu sınıf HİÇ eklenmez ve tablo bugünkü otomatik
+   yerleşiminde kalır — özellik opt-in. */
+table.grid.grid-has-col-widths {
+    table-layout: fixed;
+    min-width: 0;
+}
+
+/* Sabit yerleşimde içerik sütunu artık GENİŞLETEMEZ, yani dar bir sütunda
+   taşar — kırpmak gerekiyor. Ama kırpma yerini seçmek gerekti:
+
+   (a) <th>'ye overflow:hidden VERİLEMEZ — hem dondurma hem genişlik tutamacı
+       hücrenin sağ kenarından DIŞARI taşan (right:-6px / right:-3px) mutlak
+       konumlu çocuklar; th kırpılsaydı ikisi de yarıdan kesilirdi. Bunun
+       yerine yalnızca ALAN ADI (.grid-th-label) kırpılıyor, hücre değil.
+   (b) <td> kırpılabilir, ÇÜNKÜ tek mutlak konumlu çocuğu olan dosya-eki
+       popover'ı (.attachment-popover, grid.js td.appendChild) hücrenin
+       ALTINA sarkıyor ve kırpılırdı — bu yüzden düzenleme hâlindeki hücre
+       (.editing, tüm düzenleme yolları bu sınıfı ekliyor) muaf tutuluyor.
+       Zengin metin popover'ı position:fixed olduğu için zaten etkilenmiyor. */
+table.grid.grid-has-col-widths .grid-th-label {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+table.grid.grid-has-col-widths td { overflow: hidden; }
+table.grid.grid-has-col-widths td.editing { overflow: visible; }
+
 .grid-empty {
     color: var(--bcc-text-muted);
     padding: 1rem !important;

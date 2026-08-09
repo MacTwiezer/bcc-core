@@ -46,7 +46,14 @@
 .grid-add-row,
 .grid-row-expand,
 .grid-rownum-selectall,
-.grid-row-select {
+.grid-row-select,
+/* Sütun genişliği tutamacı (grid-column-resize.js) — dondurma tutamacı gibi
+   yalnızca etkileşim öğesi. AYRICA kırpılmaması ZORUNLU: hücreden dışarı taşan
+   mutlak konumlu bir kutu ve PNG tarafında th'nin position'ı static'e
+   çekildiği için (aşağıdaki kural) en yakın konumlu ataya kaçıp çıktının
+   ortasında bir çizgi olarak belirirdi. */
+.grid-col-resize-handle,
+.grid-freeze-handle {
     display: none !important;
 }
 

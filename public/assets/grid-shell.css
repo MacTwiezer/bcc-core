@@ -1213,6 +1213,21 @@ html.is-mac .gs-kbd-other { display: none; }
         max-width: 100% !important;
     }
 
+    /* Kullanıcının sürükleyerek ayarladığı sütun genişlikleri (colgroup +
+       table-layout:fixed, bkz. style.css .grid-has-col-widths) KAĞITTA
+       ÇÖZÜLÜR: piksel genişlikler ekran için ölçüldü, sayfa genişliğiyle
+       ilgisi yok — sabit kalsalardı yukarıdaki "width:100%" bir işe yaramaz,
+       tablo yine taşardı. Otomatik yerleşime dönüldüğü için sütunlar sayfaya
+       göre yeniden dağılıyor. PNG'ye BİLEREK uygulanmıyor (o ekranı
+       yansıtıyor) — bu yüzden kural grid-export.css'te DEĞİL burada. */
+    table.grid.grid-has-col-widths {
+        table-layout: auto !important;
+    }
+
+    table.grid col {
+        width: auto !important;
+    }
+
     table.grid {
         font-size: 7.5pt;
     }

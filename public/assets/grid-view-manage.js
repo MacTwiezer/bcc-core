@@ -223,7 +223,59 @@
             });
         }
 
-        // ---- Print view ----
+        // ---- PDF olarak indir (window.print()) ----
+        // Çıktının BİÇİMİ tamamen CSS'te: ortak kurallar assets/grid-export.css
+        // (sayfaya media="print" ile bağlı, PNG ile PAYLAŞILIYOR), kâğıda özgü
+        // olanlar grid-shell.css @media print. Burada JS'in tek işi SAYFA YÖNÜ —
+        // çünkü @page bir sınıfa/medya sorgusuna göre şartlanamıyor, tek yolu
+        // kuralı çalışma anında enjekte etmek.
+        //
+        // Sayfa yönü sütun SAYISINA göre veriliyor, ölçülen genişliğe göre
+        // DEĞİL: table.grid'in `min-width:100%`i (style.css) tabloyu her zaman
+        // sarmalayıcı kadar geniş gösterir, yani scrollWidth dar bir tabloda da
+        // ~1400px okur ve HER tabloyu landscape yapardı (denendi, ölçü bu yüzden
+        // kullanılamıyor). Sütun sayısı ekran genişliğinden bağımsız ve
+        // deterministik.
+        var PRINT_LANDSCAPE_MIN_COLUMNS = 6;
+
+        function syncPrintOrientation() {
+            var table = document.querySelector('table.grid');
+            if (!table) {
+                return;
+            }
+            // Veri sütunları: satır numarası sütunu ve (owner'da) "+" yeni alan
+            // sütunu sayılmaz — ikisi de çıktıda gizli (grid-export.css).
+            var headCells = table.querySelectorAll('thead th');
+            var dataColumns = headCells.length - 1;
+            if (table.querySelector('thead th.grid-add-field-th')) {
+                dataColumns -= 1;
+            }
+
+            var styleEl = document.getElementById('gs-print-orientation');
+            if (dataColumns < PRINT_LANDSCAPE_MIN_COLUMNS) {
+                if (styleEl) {
+                    styleEl.parentNode.removeChild(styleEl);
+                }
+                return;
+            }
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'gs-print-orientation';
+                document.head.appendChild(styleEl);
+            }
+            // Kenar boşluğu grid-shell.css @media print'teki @page ile AYNI —
+            // `size` verilirken margin tekrar yazılmazsa tarayıcı varsayılana döner.
+            styleEl.textContent = '@media print { @page { size: landscape; margin: 12mm 10mm; } }';
+        }
+
+        // Hem açılışta hem yazdırmadan hemen önce: "Alanları gizle" sayfayı
+        // yeniden yüklediği için açılış zaten yeterli, ama beforeprint Ctrl+P
+        // dahil HER yazdırma yolunda tetiklendiğinden karar güncel kalır.
+        // Desteklenmediği durumda en kötü ihtimalle dikey basılır — çıktı
+        // BOZULMAZ, çünkü gizleme/kırpma kuralları JS'e bağlı değil.
+        syncPrintOrientation();
+        window.addEventListener('beforeprint', syncPrintOrientation);
+
         var printItem = document.getElementById('gs-view-print-item');
         if (printItem) {
             printItem.addEventListener('click', function () {

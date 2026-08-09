@@ -540,6 +540,12 @@ $gridUser = current_user();
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
+<?php // Dışa aktarma (PDF + PNG) ORTAK kuralları. media="print" olduğu için
+      // yazdırmada tarayıcı kendiliğinden uygular (JS'e bağımlı DEĞİL); "PNG
+      // olarak indir" ise html2canvas'ın onclone KOPYASINDA bu link'in
+      // media'sını "all"a çevirerek AYNI kuralları kullanır — bu yüzden
+      // data-grid-export-css kancası var (bkz. grid-export.css başlığı). ?>
+<link rel="stylesheet" href="<?php echo bcc_asset_url('grid-export.css'); ?>" media="print" data-grid-export-css>
 </head>
 <body class="gs-body">
 
@@ -770,9 +776,23 @@ $gridUser = current_user();
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                         Excel indir
                     </button>
+<?php // Etiket "Görünümü yazdır" DEĞİL "PDF olarak indir": aksiyon (window.print())
+                          // ve id AYNEN korundu, ikinci bir kalem EKLENMEDİ — tarayıcının print
+                          // diyaloğunda varsayılan hedef zaten "PDF olarak kaydet", etiket
+                          // kullanıcının gördüğü sonucu anlatıyor. Excel/PNG kardeşleriyle de
+                          // artık aynı "<format> olarak indir" kalıbında. ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-print-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="3" width="10" height="5" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="8" width="14" height="6" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="6" y="12" width="8" height="5" stroke="#5f6368" stroke-width="1.3"/></svg>
-                        Görünümü yazdır
+                        PDF olarak indir
+                    </button>
+<?php // html2canvas YEREL dosya (assets/vendor/, MIT 1.4.1) — CDN YOK. Yol
+                          // buradan veriliyor: bcc_asset_url mtime cache-bust'ını üretsin ve
+                          // istemci '/assets/...' dizgisini kendi kurmasın. Kütüphane sayfa
+                          // açılışında DEĞİL, ilk tıklamada yükleniyor (bkz. grid-export-png.js). ?>
+                    <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-png-item"
+                            data-html2canvas-src="<?php echo htmlspecialchars(bcc_asset_url('vendor/html2canvas.min.js'), ENT_QUOTES, 'UTF-8'); ?>">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><circle cx="7.5" cy="8.5" r="1.3" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 14l4-4 3.5 3.5L13.5 11l3 3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        PNG olarak indir
                     </button>
                     <?php if ($canEdit): ?>
                     <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" id="gs-view-delete-item">
@@ -1598,6 +1618,7 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-tabs.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-view-manage.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
 <!-- Bildirim paneli JS'i home.js'de yaşıyor (#home-notif elemanına bağlanır) —

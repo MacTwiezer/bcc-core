@@ -1166,24 +1166,61 @@ html.is-mac .gs-kbd-other { display: none; }
     color: #c62828;
 }
 
-/* ---------- Yazdırma ---------- */
+/* ---------- Grid dışa aktarma: PDF (yazdır) + PNG ---------- */
 
+/* DİKKAT — bu bloğun ORTAK yarısı burada DEĞİL: assets/grid-export.css.
+   O dosya grid.php'ye media="print" ile bağlanıyor, yani yazdırmada JS'SİZ
+   çalışıyor; "PNG olarak indir" ise html2canvas'ın onclone KOPYASINDA aynı
+   link'in media'sını "all"a çevirerek AYNI kuralları kullanıyor (bkz.
+   grid-export-png.js). Böylece liste tek yerde duruyor ve print yolu bir JS
+   olayına (beforeprint) BAĞIMLI DEĞİL — JS hiç çalışmasa bile PDF doğru çıkar.
+
+   Aşağıda yalnızca GERÇEKTEN print'e özgü olanlar var: @page, sayfa bölme ve
+   sayfaya sığdırma. Bunlar PNG'ye bilerek uygulanmıyor (bkz. sığdırma notu). */
 @media print {
-    .gs-rail,
-    .gs-topbar,
-    .gs-view-toolbar,
-    .gs-view-drawer,
-    .gs-grid-footer,
-    .grid-add-row-plus,
-    .gs-view-desc-overlay {
-        display: none !important;
+    @page {
+        margin: 12mm 10mm;
     }
 
-    .gs-body-row,
-    .gs-main {
-        overflow: visible !important;
-        height: auto !important;
+    /* Tablo başlığı HER sayfada tekrarlasın. thead'in varsayılan display'i
+       zaten table-header-group ama style.css `thead th`'ye position:sticky
+       veriyor ve sticky bir başlık grubu tekrarlanmıyor — bu kural TEK BAŞINA
+       YETMEZ, sticky'yi grid-export.css kaldırdığı için iş görüyor. */
+    table.grid thead {
+        display: table-header-group;
     }
 
-    table.grid .grid-rownum { position: static; }
+    /* Satırlar sayfa sınırında ORTADAN bölünmesin. */
+    table.grid tr,
+    table.grid td,
+    table.grid th {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Yatay sığdırma — SADECE print. PNG'de uygulanmaz, çünkü PNG'nin sözleşmesi
+       "ekranda ne görünüyorsa o": burada sütunlar daraltılıp metin sarılıyor,
+       PNG'de ise ekrandaki genişlikler korunuyor.
+       Genişliği kâğıda kilitlemek şart: table.grid'in min-width:100% + nowrap
+       başlıkları (style.css) sayfadan taşan bir tabloyu kırpılmaya bırakırdı.
+       Çok sütunlu tablolarda buna EK olarak landscape devreye giriyor —
+       grid-view-manage.js ölçüyle karar verip @page'i enjekte ediyor
+       (@page bir sınıfa göre şartlanamıyor, bu yüzden CSS'te değil JS'te). */
+    .grid-wrap,
+    table.grid {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    table.grid {
+        font-size: 7.5pt;
+    }
+
+    table.grid thead th,
+    table.grid tbody td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        padding: 0.25rem 0.35rem;
+    }
 }

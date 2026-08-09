@@ -1,0 +1,89 @@
+/* Grid dışa aktarma — PDF (yazdır) ve PNG için ORTAK kural listesi.
+ *
+ * Bu dosya grid.php'ye `media="print"` ile bağlanıyor. İKİ tüketicisi var ve
+ * liste ikisi için de TEK yerde duruyor (ikinci bir kopya YOK):
+ *
+ *   1) PDF / yazdırma — "PDF olarak indir" menü kalemi (window.print()) ve düz
+ *      Ctrl+P. media="print" olduğu için tarayıcı bunu KENDİLİĞİNDEN uyguluyor:
+ *      bu yol hiçbir JS'e bağımlı DEĞİL (grid-view-manage.js hiç çalışmasa bile
+ *      çıktı doğru olur — yalnızca landscape kararı JS'ten gelir).
+ *
+ *   2) PNG — grid-export-png.js, html2canvas'ın onclone KOPYASINDA bu link'in
+ *      media'sını "all"a çevirir (`[data-grid-export-css]`). html2canvas klonu
+ *      `screen` medyasında render edildiği için, kurallar @media print içine
+ *      hapsedilseydi PNG'ye hiç uygulanmaz ve aynı liste ikinci kez yazılmak
+ *      zorunda kalırdı. CANLI DOM'a dokunulmuyor — ekranda titreme yok.
+ *
+ * Buraya YALNIZCA iki çıktının da paylaştığı kurallar girer. Yalnızca kâğıda
+ * özgü olanlar (@page, sayfa bölme, sayfaya sığdırma) grid-shell.css'in
+ * @media print bloğunda — oraya konmaları PNG'yi ekrandaki görünümden
+ * uzaklaştırırdı.
+ *
+ * NOT: "Kaydı yazdır" (tek kayıt, .grid-detail-overlay) AYRI bir akış ve
+ * style.css'teki kendi @media print bloğunda yaşıyor; oradaki kuralların
+ * tamamı `.grid-detail-overlay:not([hidden])` ile şartlı, bu dosya ise overlay
+ * KAPALIYKEN geçerli olan grid akışını hedefliyor — ikisi çakışmıyor.
+ */
+
+/* Etkileşim kabuğu: sol şerit, üst bar, tablo sekmeleri, görünüm araç çubuğu,
+   görünüm paneli, satır sayacı, "Alanları yönet" bağlantısı, açıklama modalı. */
+.gs-rail,
+.gs-topbar,
+.gs-table-tabs,
+.gs-view-toolbar,
+.gs-view-drawer,
+.gs-grid-footer,
+.gs-fields-link,
+.gs-view-desc-overlay,
+/* Tablo içindeki etkileşim öğeleri: sütun başlığı "▾" menüsü, "+" (yeni alan)
+   sütunu, taban "+" satırı, satır genişlet butonu, seçim kutuları. Kâğıtta ve
+   PNG'de hiçbirinin karşılığı yok.
+   Bulunan gerçek bug: önceki print bloğu bunlardan yalnızca `.grid-add-row-plus`ı
+   gizliyordu — o bir <td> olduğu için satırın KENDİSİ ("Shift-Enter'a basarak…"
+   ipucu satırı) basılmaya devam ediyordu. Artık `.grid-add-row` (tr) gizleniyor. */
+.grid-th-menu,
+.grid-add-field-th,
+.grid-add-row,
+.grid-row-expand,
+.grid-rownum-selectall,
+.grid-row-select {
+    display: none !important;
+}
+
+/* Kırpmayı aç. `.grid-wrap` DA listede olmak ZORUNDA: kendi overflow:auto'su
+   var, `.gs-main`/`.gs-body-row` açılsa bile tabloyu KENDİSİ kırpıyordu —
+   "Kaydı yazdır" turunda bulunan sarmalayıcı bug'ının (kendi border/radius'u
+   dahil) grid kardeşi. */
+.gs-body-row,
+.gs-main,
+.grid-wrap {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+.grid-wrap {
+    border: 0;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+/* position:sticky (style.css: thead th, .grid-rownum, .grid-frozen-cell)
+   yazdırmada ölü — başlık sayfa başına tutunmaz, üstelik `display:
+   table-header-group` ile HER SAYFADA TEKRARLAMASINI da engeller. html2canvas
+   ise sticky öğeleri o anki scroll ofsetiyle yanlış yere çiziyor. İki tüketici
+   için de normal akışa döndürülüyor. */
+table.grid thead th,
+table.grid .grid-rownum,
+.grid-frozen-cell {
+    position: static;
+}
+
+/* Zemin: dondurulmuş/numara hücreleri ekranda değişken zeminli; çıktıda düz
+   beyaz. Arka plan grafikleri kapalıyken de basılsın diye print-color-adjust
+   (style.css'teki .field-badge kuralıyla AYNI gerekçe). */
+table.grid {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}

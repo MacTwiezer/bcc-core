@@ -10,9 +10,18 @@
 //   $starredBases   - array, [['id'=>.., 'name'=>..], ...] (team-scoped, alfabetik)
 //   $homeActiveNav  - 'home' | 'starred' | 'workspaces'
 //   $homePageTitle  - <title> metni
+//   $homeExtraCss   - (opsiyonel) sayfaya ÖZEL stylesheet adları, ör.
+//                     array('table-fields.css'). Tanımsızsa hiçbir şey basılmaz;
+//                     bu kabuğu paylaşan diğer sayfalar etkilenmez. Sayfaya özel
+//                     CSS'i <body> içine <link> ile koymak yerine buraya
+//                     alınıyor: gövdedeki stylesheet, kart/tablo yeniden
+//                     boyanırken kısa bir FOUC üretir.
 
 if (!isset($homeActiveNav)) {
     $homeActiveNav = 'home';
+}
+if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {
+    $homeExtraCss = array();
 }
 ?>
 <!doctype html>
@@ -25,6 +34,9 @@ if (!isset($homeActiveNav)) {
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
+<?php foreach ($homeExtraCss as $bccExtraCssFile): ?>
+<link rel="stylesheet" href="<?php echo bcc_asset_url($bccExtraCssFile); ?>">
+<?php endforeach; ?>
 <script>
 // Sayfa boyanmadan ÖNCE çalışır (senkron, defer değil) — localStorage'daki
 // görünüm tercihini burada okuyup doğrulamak, .home-base-grid henüz DOM'da

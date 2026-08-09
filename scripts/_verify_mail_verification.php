@@ -131,7 +131,12 @@ check('C) MAILDE localhost adresi YOK (footer/logo tarafinda)',
 // D) UZAKTAN KAYNAKLAR GERCEKTEN ERISILEBILIR MI
 // =====================================================================
 echo "\n--- D) Uzak kaynaklar ---\n";
-function head_status($url)
+// Tek denemede BIR KEZ yeniden dener. Gerekce: bu iki kontrol gercek aga
+// cikiyor ve gecici bir DNS/baglanti kesintisi testi HATALI yere dusuruyordu
+// (bir taramada 24/25, hemen ardindan 25/25 — ayni gun `git push` de ayni
+// kesintiyi yasadi). Kontrol ZAYIFLATILMADI: hala gercek 200 bekliyor,
+// yalnizca tek seferlik ag gurultusu elenir.
+function head_status($url, $attempt = 1)
 {
     $ctx = stream_context_create(array('http' => array('method' => 'GET', 'timeout' => 20, 'ignore_errors' => true)));
     $body = @file_get_contents($url, false, $ctx);
@@ -141,6 +146,13 @@ function head_status($url)
             if (preg_match('#^HTTP/\S+\s+(\d{3})#', $h, $m)) { $status = (int) $m[1]; }
         }
     }
+
+    if ($status !== 200 && $attempt < 2) {
+        sleep(2);
+
+        return head_status($url, $attempt + 1);
+    }
+
     return array($status, $body === false ? 0 : strlen($body));
 }
 list($st, $len) = head_status($GLOBALS['BCC_MAIL_LOGO_URL']);

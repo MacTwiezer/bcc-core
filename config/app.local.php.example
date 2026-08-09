@@ -1,0 +1,10 @@
+<?php
+// Bu makineye/sunucuya özel uygulama ayarları — örnek şablon (git'e girebilir).
+// Gerçek ayarlar için bu dosyayı config/app.local.php olarak kopyalayın
+// (o dosya .gitignore'dadır).
+//
+// $APP_BASE_URL: e-postalara gömülen bağlantıların tabanı. Uygulamanın
+// DIŞARIDAN erişilebilen adresi olmalı — "http://localhost" YAZMAYIN, mailin
+// alıcısı ona erişemez. Sonunda / OLMASIN.
+
+$APP_BASE_URL = 'https://uygulama.ornek.com';

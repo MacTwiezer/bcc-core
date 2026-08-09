@@ -8,6 +8,9 @@
 config/database.local.php
 config/mail.local.php
 config/mail_record_send.local.php
+# Makineye/sunucuya özel uygulama ayarları (e-posta bağlantılarının taban URL'i).
+# Sır içermez ama ortama özeldir; şablonu config/app.local.php.example commit edilir.
+config/app.local.php
 # Herkese açık form nonce'larının HMAC anahtarı — ilk kullanımda otomatik üretilir
 # (src/form_security.php). Makineye özel, asla commit edilmez.
 config/form_secret.local.php

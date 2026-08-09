@@ -18,6 +18,11 @@
     --bcc-accent-soft: #e8f0fe;
     --bcc-danger: #c62828;
     --bcc-danger-soft: #fdecea;
+    /* Durum yesili — "aktif/etkin" gostergeleri icin (ilk tuketici:
+       slack_settings.php durum haplari). danger ikilisiyle AYNI desende
+       EKLENDI: mevcut hicbir token degistirilmedi, yalnizca ikisi yeni. */
+    --bcc-success: #1b7e3c;
+    --bcc-success-soft: #e6f4ea;
     /* Renkli (accent/danger) zeminler üzerindeki metin/ikon için — BİLEREK
        koyu temada da AYNI (#fff) kalır, :root[data-theme="dark"] altında
        YENİDEN TANIMLANMAZ. Bulunan gerçek bug: birçok yerde bunun yerine
@@ -44,6 +49,8 @@
     --bcc-accent-soft: #1c2b4d;
     --bcc-danger: #e57373;
     --bcc-danger-soft: #3a1f1f;
+    --bcc-success: #6cc17e;
+    --bcc-success-soft: #1d3324;
 }
 
 /* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
@@ -62,6 +69,8 @@
         --bcc-accent-soft: #1c2b4d;
         --bcc-danger: #e57373;
         --bcc-danger-soft: #3a1f1f;
+    --bcc-success: #6cc17e;
+    --bcc-success-soft: #1d3324;
     }
 }
 

@@ -1,0 +1,134 @@
+/* slack_settings.php'ye ÖZGÜ kurallar: satır içi kural formu ve alt bölüm
+ * başlıkları.
+ *
+ * ORTAK iskelet (sayfa kabı, breadcrumb, kart, veri tablosu, hayalet ikon
+ * butonları, sayaç rozeti, form alanları, birincil buton, boş durum) VE bu
+ * turda tasarım sistemine eklenen bileşenler (.sp-status durum hapı,
+ * .sp-toggle anahtarı, .sp-note bilgi kutusu, .sp-code maskeli sır)
+ * assets/settings-page.css'te — burada KOPYASI YOK. Bu dosyada yalnızca bu
+ * sayfanın kendi yerleşimi var.
+ *
+ * ⚠️ Kapsam `.sp-page` (ortak dosyayla AYNI sarmalayıcı) — gerekçe için
+ * settings-page.css başlığına bakın: `.settings-*` sınıfları sekiz başka
+ * sayfayla paylaşılıyor.
+ */
+
+/* Kart içi alt başlıklar ("Webhook'u Düzenle", "+ Yeni webhook ekle"). */
+.sp-page .sl-subhead {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 1.5rem 0 0.85rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--bcc-border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.sp-page .sl-subhead svg { color: var(--bcc-text-muted); flex: none; }
+
+/* Kartın ilk çocuğuysa üstteki ayraç gereksiz. */
+.sp-page .settings-card > .sl-subhead:first-of-type { margin-top: 1.25rem; }
+
+/* ---------- Webhook formu ---------- */
+
+/* Webhook URL geniş, kanal adı dar — tek satırda ikisi. Dar ekranda alt alta. */
+.sp-page .sl-webhook-form {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 0.85rem 1rem;
+    align-items: start;
+    max-width: none;
+}
+
+.sp-page .sl-webhook-form .sl-form-footer {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+    .sp-page .sl-webhook-form { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Mevcut URL ipucu etiketin altına, sessiz. */
+.sp-page .sl-current-url {
+    display: block;
+    margin-top: 0.3rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ---------- Kural ekleme: SATIR İÇİ ---------- */
+
+/* Eskiden dört alan (Alan / Koşul / Değer / Hedef webhook) `settings-form-stacked`
+   ile ALT ALTA diziliyordu ve form ekranın yarısını kaplıyordu. Artık tek
+   satırda yatay grid — kural eklemek belirgin biçimde hızlı. Sığmayınca
+   sırayla iki sütuna, sonra tek sütuna iner. */
+.sp-page .sl-rule-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    gap: 0.75rem;
+    align-items: end;
+    max-width: none;
+}
+
+@media (max-width: 1000px) {
+    .sp-page .sl-rule-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sp-page .sl-rule-form .sl-rule-submit { grid-column: 1 / -1; justify-self: start; }
+}
+
+@media (max-width: 560px) {
+    .sp-page .sl-rule-form { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Grid hücresi içinde select'ler tam genişlik almalı; settings-page.css'teki
+   taban `max-width: 100%` yetiyor ama minimum genişlik burada sıfırlanmalı
+   yoksa uzun seçenek metni sütunu şişirir. */
+.sp-page .sl-rule-form .settings-field { min-width: 0; }
+.sp-page .sl-rule-form .settings-field select { min-width: 0; width: 100%; }
+
+/* Buton, hizalanmış son sütun. */
+.sp-page .sl-rule-submit { align-self: end; }
+
+/* ---------- Tablo hücreleri ---------- */
+
+/* Kanal adı satırın birincil bilgisi. Belirtilmemişse sessizleşir. */
+.sp-page .sl-channel {
+    font-weight: 550;
+    color: var(--bcc-text);
+}
+
+.sp-page .sl-channel-empty {
+    font-weight: 400;
+    color: var(--bcc-text-muted);
+    font-style: italic;
+}
+
+/* Koşul operatörü — kısa, sessiz bir etiket. */
+.sp-page .sl-operator {
+    color: var(--bcc-text-muted);
+    font-size: 0.82rem;
+}
+
+/* Kural değeri, seçim değeri olduğu için hafifçe vurgulanır. */
+.sp-page .sl-value {
+    font-weight: 550;
+    color: var(--bcc-text);
+}
+
+/* Salt-okunur (viewer) takım webhook özeti. */
+.sp-page .sl-readonly-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+    font-size: 0.88rem;
+}

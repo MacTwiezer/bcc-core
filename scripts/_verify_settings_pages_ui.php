@@ -35,6 +35,9 @@ $spCss = file_get_contents($root . '/public/assets/settings-page.css');
 $tfCss = file_get_contents($root . '/public/assets/table-fields.css');
 $acCss = file_get_contents($root . '/public/assets/account.css');
 $slCss = file_get_contents($root . '/public/assets/slack-settings.css');
+$wsCss = file_get_contents($root . '/public/assets/workspaces.css');
+$wsPage = file_get_contents($root . '/public/workspaces.php');
+$wsJs = file_get_contents($root . '/public/assets/workspaces.js');
 $slPage = file_get_contents($root . '/public/slack_settings.php');
 $routingJs = file_get_contents($root . '/public/assets/slack-routing.js');
 $acPage = file_get_contents($root . '/public/account.php');
@@ -83,6 +86,7 @@ $spRules = css_rules($spCss);
 $tfRules = css_rules($tfCss);
 $acRules = css_rules($acCss);
 $slRules = css_rules($slCss);
+$wsRules = css_rules($wsCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
@@ -102,7 +106,7 @@ function unscoped_selectors($rules)
     return $bad;
 }
 
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
     $bad = unscoped_selectors($rules);
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
@@ -158,7 +162,7 @@ check('D) kabuk yalnizca dizideki dosyalari basiyor',
 // NOT: slack_settings.php bu listeden CIKARILDI — artik kendisi de ortak
 // tasarim sistemini kullaniyor ($homeExtraCss atiyor). Liste, kabugu paylasan
 // ama YENIDEN TASARLANMAMIS sayfalari korumaya devam ediyor.
-foreach (array('dashboard.php', 'starred.php', 'workspaces.php', 'team_members.php', 'bases.php') as $other) {
+foreach (array('dashboard.php', 'starred.php', 'team_members.php', 'bases.php') as $other) {
     $src = @file_get_contents($root . '/public/' . $other);
     check("D) {$other} \$homeExtraCss ATAMIYOR", $src !== false && strpos($src, 'homeExtraCss') === false);
 }
@@ -189,7 +193,7 @@ check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.
 
 // =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
     check("G) {$name} icinde sabit HEX renk YOK", empty($hex[0]), implode(' ', array_unique($hex[0])));
 }
@@ -287,6 +291,63 @@ check('I) --bcc-success uc tema blogunda da tanimli',
 foreach (array('--bcc-accent: #2d7ff9', '--bcc-danger: #c62828', '--bcc-danger-soft: #fdecea') as $untouched) {
     check("I) mevcut token DEGISMEDI: {$untouched}", strpos($themeCss, $untouched) !== false);
 }
+
+// =====================================================================
+echo "\n--- J) workspaces.php ---\n";
+$wsCode = php_code_only($root . '/public/workspaces.php');
+
+check('J) ortak + sayfaya ozel CSS bagliyor',
+    strpos($wsPage, "array('settings-page.css', 'workspaces.css')") !== false);
+check('J) .sp-page sarmalayicisi aciyor',
+    substr_count($wsPage, '<div class="sp-page wsx-page">') === 1);
+
+// PAYLASILAN .ws-* siniflarina DOKUNULMADI: .ws-collab-avatar grid.php /
+// interface.php / team_members.php / grid-row-detail.js tarafindan,
+// .ws-collab-role ve .ws-detail team_members.php tarafindan kullaniliyor.
+foreach (array('ws-collab-avatar', 'ws-collab-role', 'ws-detail', 'ws-card', 'ws-grid') as $sharedWs) {
+    check("J) paylasilan '{$sharedWs}' workspaces.css'te YENIDEN TANIMLANMAMIS",
+        strpos($wsRules, '.' . $sharedWs) === false);
+    check("J) paylasilan '{$sharedWs}' markup'ta ARTIK KULLANILMIYOR",
+        preg_match('/class="[^"]*\b' . preg_quote($sharedWs, '/') . '\b/', $wsCode) === 0);
+}
+// Bu sayfa artik ortak bilesenleri kullaniyor.
+check('J) rol hapi ortak .sp-role kullaniyor', strpos($wsCode, 'sp-role sp-role--') !== false);
+check('J) avatar ortak .sp-avatar kullaniyor', strpos($wsCode, 'sp-avatar') !== false);
+foreach (array('.sp-role', '.sp-avatar') as $shared) {
+    check("J) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
+    check("J) '{$shared}' workspaces.css'te TEKRARLANMIYOR", strpos($wsRules, $shared) === false);
+}
+
+// UYDURMA OZELLIK KORUMASI. Bu sayfada rol degistirme/cikarma YOK
+// (team_members.php'nin isi) ve calisma alani olusturma admin'e ait.
+check('J) hover kisayolu SAHTE dropdown degil, GERCEK sayfaya link',
+    preg_match('/class="wsx-member-manage" href="\/team_members\.php\?team_id=/', $wsPage) === 1
+    && strpos($wsCode, '<select') === false);
+// Iki ayri kontrol: tek bir regex'te birlestirmek kirilgandi ([^)]* acgozlu
+// davranip "=== 1"i yutuyordu, dogru markup'ta bile KALDI veriyordu).
+check('J) "Yeni calisma alani" karti is_admin kosulunun ICINDE',
+    preg_match("/is_admin'\]\s*===\s*1\)\s*:\s*\?>\s*<a href=\"\/admin\/create_team\.php\"/s", $wsPage) === 1);
+check('J) kart gercek hedefe gidiyor ve markup\'ta TEK yerde',
+    substr_count($wsPage, 'href="/admin/create_team.php"') === 1);
+check('J) admin/create_team.php GERCEKTEN var', is_file($root . '/public/admin/create_team.php'));
+check('J) "Base olustur" gercek sayfaya gidiyor (olu buton degil)',
+    strpos($wsPage, 'href="/bases.php" class="wsx-btn"') !== false && is_file($root . '/public/bases.php'));
+// "Ayarlar" ozelligi YOK -> calisiyormus gibi gosterilmemeli.
+check('J) "Ayarlar" hala disabled (olmayan ozellik aktif gibi gosterilmiyor)',
+    preg_match('/<button type="button" class="wsx-btn" disabled title="[^"]*"/', $wsPage) === 1);
+
+// Uye listesi artik cok sutunlu izgara (sonsuz dikey liste degil).
+check('J) katilimci listesi cok sutunlu izgara',
+    preg_match('/\.sp-page \.wsx-collab-grid \{[^}]*grid-template-columns: repeat\(auto-fill, minmax\(280px, 1fr\)\);/s', $wsRules) === 1);
+check('J) arama kutusu sayfaya ozel js ile, kisa listede eklenmiyor',
+    strpos($wsJs, 'wsx-search') !== false && strpos($wsJs, 'members.length < 8') !== false);
+check('J) filtre [hidden] DEGIL ayri sinif kullaniyor (grid display tuzagi)',
+    strpos($wsJs, "classList.toggle('wsx-hidden'") !== false);
+
+// theme.css'e EKLENEN owner rengi: uc blokta da tanimli, mevcutlar degismemis.
+check('J) --bcc-role-owner uc tema blogunda da tanimli',
+    substr_count($themeCss, '--bcc-role-owner:') === 3 && substr_count($themeCss, '--bcc-role-owner-soft:') === 3,
+    substr_count($themeCss, '--bcc-role-owner:') . ' / ' . substr_count($themeCss, '--bcc-role-owner-soft:'));
 
 $passed = count(array_filter($results));
 $total = count($results);

@@ -23,6 +23,13 @@
        EKLENDI: mevcut hicbir token degistirilmedi, yalnizca ikisi yeni. */
     --bcc-success: #1b7e3c;
     --bcc-success-soft: #e6f4ea;
+    /* Owner rol rozeti — dort rolun (viewer/commenter/editor/owner) hap
+       renkleri birbirinden ayrilsin diye. Digerleri mevcut token'lardan
+       geliyor (editor=accent, commenter=success, viewer=sunken); yalnizca
+       owner icin palette karsilik yoktu. success ikilisiyle AYNI desende
+       EKLENDI: mevcut hicbir token degistirilmedi. */
+    --bcc-role-owner: #6b3fa0;
+    --bcc-role-owner-soft: #f1ebfa;
     /* Renkli (accent/danger) zeminler üzerindeki metin/ikon için — BİLEREK
        koyu temada da AYNI (#fff) kalır, :root[data-theme="dark"] altında
        YENİDEN TANIMLANMAZ. Bulunan gerçek bug: birçok yerde bunun yerine
@@ -51,6 +58,8 @@
     --bcc-danger-soft: #3a1f1f;
     --bcc-success: #6cc17e;
     --bcc-success-soft: #1d3324;
+    --bcc-role-owner: #b79ce0;
+    --bcc-role-owner-soft: #2b2140;
 }
 
 /* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
@@ -71,6 +80,8 @@
         --bcc-danger-soft: #3a1f1f;
     --bcc-success: #6cc17e;
     --bcc-success-soft: #1d3324;
+    --bcc-role-owner: #b79ce0;
+    --bcc-role-owner-soft: #2b2140;
     }
 }
 

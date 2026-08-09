@@ -93,59 +93,136 @@ if (!empty($teamIds)) {
 
 $homeActiveNav = 'workspaces';
 $homePageTitle = 'BCC-Core — Çalışma Alanları';
+// Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu yerleşim.
+// Rol hapı (.sp-role), avatar (.sp-avatar) ve bilgi kutusu (.sp-note) ORTAK
+// dosyada — burada kopyası yok.
+$homeExtraCss = array('settings-page.css', 'workspaces.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
+<div class="sp-page wsx-page">
         <div class="home-main-header">
             <h1>Çalışma Alanları</h1>
+            <p class="settings-hint">Üyesi olduğunuz çalışma alanlarını, katılımcılarını ve rollerini görün.</p>
         </div>
 
         <?php if (empty($teams)): ?>
-            <div class="home-empty">
-                <p>Henüz üyesi olduğunuz bir ekip yok.</p>
-            </div>
+            <p class="settings-empty">
+                <strong>Henüz üyesi olduğunuz bir ekip yok.</strong>
+                <span class="sp-muted">Bir çalışma alanına eklenmek için yöneticinizle iletişime geçin.</span>
+            </p>
         <?php else: ?>
-            <div class="ws-grid">
-                <?php foreach ($teams as $t):
-                    $tid = (int) $t['id'];
-                    $isActive = $tid === $selectedTeamId;
-                    $baseCount = isset($baseCounts[$tid]) ? $baseCounts[$tid] : 0;
-                ?>
-                    <a href="/workspaces.php?team_id=<?php echo $tid; ?>" class="ws-card<?php echo $isActive ? ' is-active' : ''; ?>">
-                        <div class="ws-card-icon">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="#fff" stroke-width="1.4"/><path d="M2.5 8h15" stroke="#fff" stroke-width="1.4"/></svg>
-                        </div>
-                        <div class="ws-card-name"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div class="ws-card-meta"><?php echo (int) $baseCount; ?> base</div>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+            <div class="wsx-layout">
 
-            <div class="ws-detail">
-                <div class="ws-detail-header">
-                    <h2 class="ws-detail-title"><?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <div class="ws-detail-actions">
-                        <button type="button" class="ws-detail-btn" disabled>Oluştur</button>
-                        <a href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" class="ws-detail-btn">Paylaş</a>
-                        <button type="button" class="ws-detail-btn" disabled>Ayarlar</button>
+                <?php // ---- SOL: çalışma alanı seçici -------------------------------- ?>
+                <aside class="wsx-side">
+                    <p class="wsx-side-label">Çalışma alanları (<?php echo count($teams); ?>)</p>
+                    <?php foreach ($teams as $t):
+                        $tid = (int) $t['id'];
+                        $isActive = $tid === $selectedTeamId;
+                        $baseCount = isset($baseCounts[$tid]) ? $baseCounts[$tid] : 0;
+                    ?>
+                        <a href="/workspaces.php?team_id=<?php echo $tid; ?>" class="wsx-card<?php echo $isActive ? ' is-active' : ''; ?>"<?php echo $isActive ? ' aria-current="page"' : ''; ?>>
+                            <span class="wsx-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
+                            </span>
+                            <span class="wsx-card-body">
+                                <span class="wsx-card-name"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <span class="wsx-card-meta"><?php echo (int) $baseCount; ?> base</span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+
+                    <?php // "Yeni çalışma alanı" YALNIZCA platform adminine gösteriliyor:
+                          // çalışma alanı = takım ve takım oluşturmak admin/create_team.php'nin
+                          // işi (bkz. o dosyanın require_admin()'i). Herkese gösterilen bir
+                          // kart, sıradan kullanıcıyı 403'e götüren ölü bir vaat olurdu. ?>
+                    <?php if ((int) $user['is_admin'] === 1): ?>
+                        <a href="/admin/create_team.php" class="wsx-card wsx-card-new">
+                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                            Yeni çalışma alanı
+                        </a>
+                    <?php endif; ?>
+                </aside>
+
+                <?php // ---- SAĞ: seçili çalışma alanı --------------------------------- ?>
+                <div class="wsx-main">
+                    <div class="settings-card">
+                        <div class="wsx-head">
+                            <div class="wsx-head-id">
+                                <span class="wsx-head-icon">
+                                    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </span>
+                                <div>
+                                    <h2 class="wsx-head-title"><?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?></h2>
+                                    <div class="wsx-head-sub">
+                                        <?php echo isset($baseCounts[$selectedTeamId]) ? (int) $baseCounts[$selectedTeamId] : 0; ?> base
+                                        · <?php echo count($collaborators); ?> katılımcı
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wsx-actions">
+                                <?php // "Paylaş" birincil eylem — GERÇEKTEN çalışan tek aksiyon
+                                      // buydu; etiketi ne yaptığını söyleyecek şekilde netleşti.
+                                      // "Oluştur" artık ÖLÜ DEĞİL: base oluşturmanın gerçek
+                                      // sayfası olan bases.php'ye gidiyor. "Ayarlar" ise HÂLÂ
+                                      // devre dışı — çalışma alanı ayarları diye bir özellik
+                                      // yok (bu dosyanın kendi başlık yorumundaki onaylanmış
+                                      // karar). Çalışıyormuş gibi göstermek yanıltıcı olurdu. ?>
+                                <a href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" class="wsx-btn wsx-btn--primary">
+                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                                    Katılımcıları yönet
+                                </a>
+                                <a href="/bases.php" class="wsx-btn">
+                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                    Base oluştur
+                                </a>
+                                <button type="button" class="wsx-btn" disabled title="Çalışma alanı ayarları henüz kullanılamıyor">
+                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m11.9-4.9l-1.4 1.4M6.5 13.5l-1.4 1.4m9.8 0l-1.4-1.4M6.5 6.5L5.1 5.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                                    Ayarlar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="wsx-collab-head" id="wsx-collab-head">
+                            <h3 class="wsx-collab-title">Katılımcılar <span class="sp-count"><?php echo count($collaborators); ?></span></h3>
+                        </div>
+
+                        <?php if (empty($collaborators)): ?>
+                            <p class="settings-empty"><strong>Bu çalışma alanında katılımcı yok.</strong></p>
+                        <?php else: ?>
+                            <?php // Sonsuz dikey liste yerine çok sütunlu ızgara. Rol hapları
+                                  // .sp-role--<rol> ile renkleniyor (owner/editor/commenter/viewer).
+                                  // .ws-collab-avatar / .ws-collab-role BİLEREK kullanılmadı:
+                                  // ikisi de grid/interface/team_members ile PAYLAŞILIYOR. ?>
+                            <div class="wsx-collab-grid" id="wsx-collab-grid">
+                                <?php foreach ($collaborators as $c): ?>
+                                    <div class="wsx-member">
+                                        <span class="sp-avatar"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <div class="wsx-member-info">
+                                            <div class="wsx-member-name"><?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div class="wsx-member-mail"><?php echo htmlspecialchars($c['email'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        </div>
+                                        <div class="wsx-member-badges">
+                                            <?php if ((int) $c['is_active'] !== 1): ?>
+                                                <span class="wsx-inactive">Pasif</span>
+                                            <?php endif; ?>
+                                            <span class="sp-role sp-role--<?php echo htmlspecialchars($c['role'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        </div>
+                                        <?php // Rol değiştirme / çıkarma bu sayfada YOK — team_members.php'nin
+                                              // işi (assign / remove aksiyonları orada). Bu yüzden hover
+                                              // kısayolu sahte bir dropdown değil, GERÇEK sayfaya giden link. ?>
+                                        <a class="wsx-member-manage" href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" title="Rolü değiştir veya çıkar" aria-label="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?> — rolü değiştir veya çıkar">
+                                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>
+                                        </a>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                <h3 class="ws-collab-heading">Katılımcılar (<?php echo count($collaborators); ?>)</h3>
-                <div class="ws-collab-list">
-                    <?php foreach ($collaborators as $c): ?>
-                        <div class="ws-collab-row">
-                            <div class="ws-collab-avatar"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="ws-collab-info">
-                                <div class="ws-collab-name"><?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="ws-collab-email"><?php echo htmlspecialchars($c['email'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            </div>
-                            <?php if ((int) $c['is_active'] !== 1): ?>
-                            <div class="ws-collab-role">Pasif</div>
-                            <?php endif; ?>
-                            <div class="ws-collab-role"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
             </div>
+            <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
         <?php endif; ?>
+</div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

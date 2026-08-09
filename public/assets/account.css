@@ -1,0 +1,598 @@
+/* account.php'ye ÖZGÜ kurallar: iki sütunlu pano yerleşimi, profil başlığı,
+ * ekip hapları, tehlike bölgesi ve sağ sütun widget'ları.
+ *
+ * ORTAK iskelet (sayfa kabı, başlık tipografisi, kart gölgesi/yarıçapı, form
+ * alanları, birincil buton) assets/settings-page.css'te ve table_fields.php /
+ * base_tables.php ile PAYLAŞILIYOR — burada KOPYASI YOK.
+ *
+ * ⚠️ Kapsam `.sp-page` (ortak dosyayla AYNI sarmalayıcı) + sayfa işareti
+ * `.ac-page`. `.account-*` sınıfları home.css'te tanımlı ve YALNIZCA bu sayfa
+ * ile assets/account-page.js tarafından kullanılıyor (kontrol edildi), yani
+ * onları burada ezmek başka bir sayfayı etkilemiyor — yine de kurallar
+ * kapsanmış durumda ki home.css'e sızma testi tek bir kuralda kalsın.
+ *
+ * ⚠️ `.ws-collab-role` KULLANILMADI: o sınıf team_members.php ve
+ * workspaces.php ile paylaşılıyor; buradaki rol hapı kendi sınıfını
+ * (.ac-role) kullanıyor.
+ *
+ * Renkler: yalnızca mevcut --bcc-* token'ları. Yeni sabit renk YOK.
+ */
+
+/* ---------- [hidden] KORUMASI (bu dosyada yaşanan gerçek bug) ----------
+ *
+ * account-page.js satır içi düzenlemeyi TAMAMEN `hidden` özniteliğiyle
+ * yönetiyor: tetiklendiğinde `display.hidden = true; form.hidden = false`.
+ * `hidden`'ın display:none'ı TARAYICI VARSAYILAN stil sayfasından gelir ve
+ * sınıf seçicili HER kural onu ezer. Aşağıda `.account-row-form`,
+ * `.account-row-display`, `.account-row-actions` gibi elemanlara `display:flex`
+ * verildiği için ilk sürümde TÜM düzenleme formları (şifre ve hesap silme
+ * formları dahil) sayfa açılır açılmaz AÇIK geliyordu.
+ *
+ * Bu, projede daha önce birkaç kez yaşanmış `[hidden]` + `display` çakışması.
+ * Tek ve kapsanmış bir koruma, her yeni `display` kuralında tekrar düşünmek
+ * zorunda kalmamak için: */
+.sp-page [hidden] { display: none !important; }
+
+/* ---------- İki sütunlu pano ---------- */
+
+/* Sağ yarının boş kalmasının kök nedeni: sayfa tek bir dar sütundu ve
+   .home-main'in tüm genişliğini dolduramıyordu. Ana ayarlar solda, özet
+   widget'ları sağda. minmax(0,1fr) ŞART — auto yerleşimde uzun bir e-posta
+   veya ekip adı sütunu şişirip sağ paneli ezerdi. */
+.sp-page.ac-page {
+    max-width: 1180px;
+}
+
+.sp-page .ac-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.15rem;
+    align-items: start;
+}
+
+/* Sağ sütunu taşımaya yer kalmayınca alta iner (tek sütun). */
+@media (max-width: 1080px) {
+    .sp-page .ac-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.sp-page .ac-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    /* Uzun sol sütunda widget'lar görüş alanında kalsın. */
+    position: sticky;
+    top: 1rem;
+}
+
+@media (max-width: 1080px) {
+    .sp-page .ac-side { position: static; }
+}
+
+/* ---------- Kartlar ---------- */
+
+.sp-page .account-card,
+.sp-page .ac-widget {
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem 1.35rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin-bottom: 0;
+}
+
+.sp-page .ac-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
+/* home.css `.account-card-profile { display:flex; gap:1.25rem }` veriyor —
+   avatar ile alan listesini YAN YANA koymak için. Yeni yerleşimde avatar artık
+   kartın ÜSTÜNDEKİ profil başlığının içinde; flex kalsaydı .ac-profile-head ile
+   .account-rows iki sütuna bölünür, avatar tek başına uzun bir sütunda dikey
+   ortalanırdı (ilk denemede tam olarak bu oldu). */
+.sp-page .account-card-profile {
+    display: block;
+}
+
+.sp-page .account-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+}
+
+/* ---------- Profil başlığı ---------- */
+
+.sp-page .ac-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1.1rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .account-avatar-lg {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    margin: 0;
+}
+
+.sp-page .ac-profile-id { min-width: 0; }
+
+.sp-page .ac-profile-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+    letter-spacing: -0.01em;
+}
+
+.sp-page .ac-profile-mail {
+    margin-top: 0.1rem;
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .ac-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+}
+
+.sp-page .ac-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+}
+
+.sp-page .ac-badge-ok {
+    border-color: var(--bcc-accent-soft);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .ac-badge-accent {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .ac-badge-warn {
+    border-color: var(--bcc-danger);
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+}
+
+/* ---------- Alan satırları (Ad Soyad / E-posta / Şifre) ---------- */
+
+.sp-page .account-row {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .account-rows > .account-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+.sp-page .account-row-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+    margin-bottom: 0.3rem;
+}
+
+.sp-page .account-row-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.sp-page .account-row-value {
+    font-size: 0.92rem;
+    color: var(--bcc-text);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Satır içi düzenleme tetikleyicisi: hayalet buton, satır hover'ında belirginleşir. */
+.sp-page .account-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    flex: none;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--bcc-text-muted);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.sp-page .account-row:hover .account-edit-btn { color: var(--bcc-text); }
+
+.sp-page .account-edit-btn:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-border-strong);
+    color: var(--bcc-accent-strong);
+}
+
+/* Tetikleyicinin içindeki kalem ikonu home.css'te SABİT #1a56db ile çizilmiş
+   (stroke özniteliği). Koyu temada da okunur kalsın diye currentColor'a
+   çekiliyor — markup'a dokunmadan. */
+.sp-page .account-edit-btn svg path { stroke: currentColor; }
+
+.sp-page .account-row-form {
+    margin-top: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    max-width: 420px;
+}
+
+.sp-page .account-row-form-inline { max-width: 420px; }
+
+.sp-page .account-field-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .account-input {
+    box-sizing: border-box;
+    width: 100%;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--bcc-text);
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sp-page .account-input:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.sp-page .account-row-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sp-page .account-btn-primary {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-on-accent);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: box-shadow 0.12s ease, transform 0.06s ease;
+}
+
+.sp-page .account-btn-primary:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.sp-page .account-btn-primary:active { transform: translateY(1px); box-shadow: none; }
+
+.sp-page .account-btn-secondary {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.sp-page .account-btn-secondary:hover { background: var(--bcc-surface-hover); }
+
+.sp-page .account-row-error {
+    color: var(--bcc-danger);
+    font-size: 0.82rem;
+}
+
+/* ---------- Ekipler ---------- */
+
+.sp-page .account-team-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sp-page .account-team-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+    transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.sp-page .account-team-row:hover {
+    border-color: var(--bcc-border-strong);
+    background: var(--bcc-surface);
+}
+
+.sp-page .ac-team-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .account-team-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    font-weight: 550;
+    color: var(--bcc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Rol hapı — role göre tonlanır. owner en belirgin, viewer en sessiz. */
+.sp-page .ac-role {
+    flex: none;
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface);
+    color: var(--bcc-text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sp-page .ac-role--owner {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .ac-role--editor {
+    border-color: var(--bcc-accent-soft);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .account-teams-empty {
+    margin: 0;
+    padding: 1.5rem 1rem;
+    border: 1px dashed var(--bcc-border-strong);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* ---------- Tehlikeli bölge ---------- */
+
+.sp-page .account-card-danger {
+    border-color: var(--bcc-danger);
+    background: var(--bcc-danger-soft);
+}
+
+.sp-page .account-section-heading-danger { color: var(--bcc-danger); }
+
+.sp-page .ac-danger-row { align-items: flex-start; }
+
+.sp-page .ac-danger-row .account-row-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.sp-page .ac-danger-sub {
+    font-size: 0.82rem;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .ac-btn-danger {
+    flex: none;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--bcc-danger);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-danger);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sp-page .ac-btn-danger:hover {
+    background: var(--bcc-danger);
+    color: var(--bcc-on-accent);
+}
+
+.sp-page .account-danger-warning {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--bcc-text);
+}
+
+.sp-page .account-btn-danger {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--bcc-danger);
+    color: var(--bcc-on-accent);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ---------- Sağ sütun widget'ları ---------- */
+
+.sp-page .ac-widget-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.sp-page .ac-widget-title svg { color: var(--bcc-text-muted); flex: none; }
+
+.sp-page .ac-stat-list { margin: 0; }
+
+.sp-page .ac-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .ac-stat-list > .ac-stat:last-child { border-bottom: none; padding-bottom: 0; }
+.sp-page .ac-stat-list > .ac-stat:first-child { padding-top: 0; }
+
+.sp-page .ac-stat dt {
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .ac-stat dd {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.sp-page .ac-stat-standalone {
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bcc-border);
+    border-bottom: none;
+}
+
+.sp-page .ac-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 0.3rem;
+    vertical-align: 1px;
+}
+
+.sp-page .ac-dot-ok { background: var(--bcc-accent); }
+.sp-page .ac-dot-warn { background: var(--bcc-danger); }
+
+.sp-page .ac-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.sp-page .ac-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.65rem 0.7rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 9px;
+    background: var(--bcc-surface-sunken);
+}
+
+.sp-page .ac-metric-value {
+    font-size: 1.15rem;
+    font-weight: 650;
+    color: var(--bcc-text);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.sp-page .ac-metric-label {
+    font-size: 0.72rem;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .ac-widget-note {
+    margin: 0.7rem 0 0;
+    font-size: 0.74rem;
+    color: var(--bcc-text-muted);
+}
+
+/* ---------- Hızlı erişim ---------- */
+
+.sp-page .ac-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.sp-page .ac-link {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    color: var(--bcc-text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: background-color 0.12s ease;
+}
+
+.sp-page .ac-link > svg:first-child { color: var(--bcc-text-muted); flex: none; }
+.sp-page .ac-link span { flex: 1; min-width: 0; }
+
+.sp-page .ac-link-arrow {
+    color: var(--bcc-text-muted);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.sp-page .ac-link:hover {
+    background: var(--bcc-surface-hover);
+}
+
+.sp-page .ac-link:hover .ac-link-arrow { opacity: 1; }

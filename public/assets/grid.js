@@ -677,10 +677,14 @@
         // tablonun alt/sağ kenarına yakınsa KIRPILIRDI (bkz. grid-shell.css'teki
         // .gs-view-row-menu-panel / .grid-add-field-panel'de uygulanan AYNI ders).
         // position:fixed + burada hesaplanan konum bunu atlıyor.
+        //
+        // Konum matematiği ORTAK yardımcıdan (bcc_positionFloating) geliyor —
+        // burada ikinci bir kopya YOK. Eskiden bu fonksiyon koşulsuz
+        // "tdRect.bottom + 4" yazıyordu; alt satırlardaki hücrelerde (8./9.)
+        // popover ekranın altından taşıyordu. Yardımcı aşağı sığmıyorsa YUKARI
+        // çeviriyor, sağa taşarsa içeri çekiyor.
         function positionPopover() {
-            var tdRect = td.getBoundingClientRect();
-            popover.style.top = (tdRect.bottom + 4) + 'px';
-            popover.style.left = tdRect.left + 'px';
+            window.bcc_positionFloating(popover, td.getBoundingClientRect());
         }
         positionPopover();
 
@@ -690,6 +694,9 @@
         // hücresinden tamamen kopuyordu. Scroll'da yeniden konumlandırılır
         // (capture: true — iç içe kaydırılabilir bir üst öğeden de yakalar).
         window.addEventListener('scroll', positionPopover, true);
+        // resize de gerekli: pencere küçülünce "aşağı sığıyor mu" kararı
+        // değişir, yeniden ölçülmezse popover yine ekran dışında kalırdı.
+        window.addEventListener('resize', positionPopover);
 
         editable.focus();
 
@@ -704,6 +711,7 @@
                 view.style.display = '';
             }
             window.removeEventListener('scroll', positionPopover, true);
+            window.removeEventListener('resize', positionPopover);
             document.removeEventListener('mousedown', outsideClickHandler, true);
         }
 
@@ -935,6 +943,18 @@
         }
         td.appendChild(popover);
 
+        // Ek dosya popover'ı da AYNI kırpılma bugunu taşıyordu: CSS'te
+        // position:absolute idi, yani .grid-wrap { overflow:auto } kutusuna
+        // kırpılıyordu — alt satırlarda ve en sağdaki sütunlarda görünmez
+        // oluyordu. Richtext popover'ıyla AYNI çözüme bağlandı (CSS artık
+        // position:fixed; konum ortak yardımcıdan).
+        function positionPopover() {
+            window.bcc_positionFloating(popover, td.getBoundingClientRect());
+        }
+        positionPopover();
+        window.addEventListener('scroll', positionPopover, true);
+        window.addEventListener('resize', positionPopover);
+
         var done = false;
 
         function endEdit() {
@@ -945,6 +965,8 @@
             if (view) {
                 view.style.display = '';
             }
+            window.removeEventListener('scroll', positionPopover, true);
+            window.removeEventListener('resize', positionPopover);
             document.removeEventListener('mousedown', outsideClickHandler, true);
         }
 

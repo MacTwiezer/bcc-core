@@ -416,6 +416,77 @@ try {
     check('E) kanban.js dokunulmadi',
         stripos(file_get_contents($assetsDir . '/kanban.js'), 'column_widths') === false);
 
+    // =====================================================================
+    // F) YAPISKAN ILK VERI SUTUNU (indekse dayali, alan adindan BAGIMSIZ)
+    // =====================================================================
+    echo "\n--- F) Yapiskan ilk veri sutunu ---\n";
+
+    // F1) Sunucu tarafi: varsayilan 2, ACIK secim korunuyor, bozuk girdi guvenli
+    check('F) varsayilan dondurma sayisi 2 (satir no + ilk VERI sutunu)',
+        bcc_get_frozen_column_count(null) === 2, bcc_get_frozen_column_count(null));
+    check('F) bos config de varsayilani veriyor',
+        bcc_get_frozen_column_count('') === 2);
+    check('F) ACIK secim 1 KORUNUYOR (varsayilan onu ezmiyor)',
+        bcc_get_frozen_column_count('{"frozen_column_count":1}') === 1);
+    check('F) ACIK secim 3 KORUNUYOR',
+        bcc_get_frozen_column_count('{"frozen_column_count":3}') === 3);
+    check('F) bozuk JSON varsayilana duser',
+        bcc_get_frozen_column_count('{bozuk') === 2);
+    check('F) yanlis tip (string) varsayilana duser',
+        bcc_get_frozen_column_count('{"frozen_column_count":"3"}') === 2);
+    check('F) 0/negatif deger 1 e sikistiriliyor',
+        bcc_get_frozen_column_count('{"frozen_column_count":0}') === 1
+        && bcc_get_frozen_column_count('{"frozen_column_count":-5}') === 1);
+    check('F) tek alanli tabloda maxAllowed a sikistiriliyor',
+        bcc_get_frozen_column_count(null, 1) === 1);
+
+    // F2) grid.php istemciye SAYIYI geciriyor; alan ADI hicbir yerde gecmiyor.
+    //     DIKKAT: B bolumu bu gorunume ACIKCA 1 yazdi. Once o ACIK secimin hala
+    //     saygi gordugunu, sonra config sifirlaninca varsayilanin 2 oldugunu
+    //     dogruluyoruz - ikisi ayni kodun iki ayri dali.
+    $g = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
+    check('F) ACIK secim 1 render a da yansiyor',
+        strpos($g['body'], 'var BCC_FROZEN_COLUMN_COUNT = 1;') !== false,
+        preg_match('/var BCC_FROZEN_COLUMN_COUNT = \d+;/', $g['body'], $fm) ? $fm[0] : 'YOK');
+
+    bcc_execute('UPDATE views SET config = NULL WHERE id = :v', array(':v' => $viewId));
+    $g = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
+    $html = $g['body'];
+    check('F) kaydedilmis secim YOKKEN varsayilan 2 istemciye geciyor',
+        strpos($html, 'var BCC_FROZEN_COLUMN_COUNT = 2;') !== false,
+        preg_match('/var BCC_FROZEN_COLUMN_COUNT = \d+;/', $html, $fm) ? $fm[0] : 'YOK');
+    // Sunucu HICBIR hucreye sabit sticky/left yazmamali - tumu JS te, indekse gore
+    check('F) sunucu hucrelere inline position:sticky YAZMIYOR',
+        stripos($html, 'position:sticky') === false && stripos($html, 'position: sticky') === false);
+    check('F) sunucu ILK ALAN ADINI dondurma icin OZEL-DURUM yapmiyor',
+        strpos(file_get_contents(__DIR__ . '/../public/grid.php'), 'grid-frozen-cell') === false);
+
+    // F3) Istemci: indekse dayali dondurma + ACIK cozme
+    check('F) JS dondurmayi INDEKSE gore uyguluyor (idx < frozenCount)',
+        strpos($freezeJs, 'if (idx < frozenCount)') !== false);
+    check('F) index 1 ve sonrasi ACIKCA cozuluyor (left temizlenip siniflar siliniyor)',
+        preg_match("/else \{\s*cell\.style\.left = '';\s*cell\.classList\.remove\('grid-frozen-cell', 'grid-frozen-edge'\);/s", $freezeJs) === 1);
+    check('F) JS hicbir ALAN ADINA / data-col-key e bagli degil',
+        stripos($freezeJs, 'data-col-key') === false && stripos($freezeJs, 'field_name') === false);
+    check('F) yeni satirlar da ayni fonksiyondan geciyor (ikinci mekanizma yok)',
+        strpos($freezeJs, 'window.BCC_reapplyFreeze = applyFreeze;') !== false);
+
+    // F4) Varsayilan 2 nin ortaya cikardigi IKI GORSEL KUSURUN duzeltmesi
+    //     (1) grup kenar cizgisi govde satirlarinda goze gorunur mu,
+    //     (2) satir no golgesi grubun ORTASINDA kalmiyor mu.
+    $styleNoComments = preg_replace('#/\*.*?\*/#s', '', $styleCss);
+    check('F) kenar cizgisi table.grid ile nitelendi (table.grid td yi YENIYOR)',
+        strpos($styleNoComments, 'table.grid .grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }') !== false);
+    check('F) ciplak .grid-frozen-edge kurali KALMADI (govdede eziliyordu)',
+        preg_match('/(^|\})\s*\.grid-frozen-edge\s*\{/m', $styleNoComments) === 0);
+    check('F) veri sutunu da donunca satir no golgesi kapatiliyor',
+        strpos($styleNoComments, 'table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }') !== false);
+    check('F) golge kuralini tetikleyen sinifi JS koyuyor',
+        strpos($freezeJs, "table.classList.toggle('grid-has-frozen-data', frozenCount > 1 && heads.length > 1);") !== false);
+    // Golge SADECE o sinifla kapanmali - kosulsuz silinmis olmamali
+    check('F) satir no golgesi KOSULSUZ silinmedi (frozen=1 de geri geliyor)',
+        preg_match('/table\.grid \.grid-rownum \{[^}]*box-shadow: 2px 0 4px -2px/s', $styleNoComments) === 1);
+
     $cleanup();
 } catch (Throwable $e) {
     echo "\nISTISNA: " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . "\n";

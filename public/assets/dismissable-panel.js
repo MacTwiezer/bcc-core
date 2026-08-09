@@ -60,45 +60,84 @@
     // options.align : 'left' (varsayılan) | 'right' — panelin hangi kenarının
     //                 anchor'a hizalanacağı
     // options.gap   : anchor ile panel arası dikey boşluk (varsayılan 4px)
-    window.bcc_bindFloatingPanel = function (menu, panel, anchor, options) {
+    // Yüzen bir kutuyu bir ANCHOR DİKDÖRTGENİNE göre konumlandırır ve viewport
+    // içinde tutar. bcc_bindFloatingPanel'in içinden çıkarıldı çünkü hücre
+    // düzenleme popover'ları (grid.js: richtext + ek dosya) <details> DEĞİL —
+    // zorunlu olarak yaratılıp yok ediliyorlar, yani toggle'a bağlı sarmalayıcıyı
+    // kullanamıyorlar ama AYNI konumlandırma matematiğine ihtiyaç duyuyorlar.
+    // Tek uygulama: buradaki bir düzeltme her iki çağrı yerine de gider.
+    //
+    // panel   : konumlanacak kutu (position: fixed olmalı)
+    // rect    : anchor'ın getBoundingClientRect()'i
+    // options : align ('left'|'right'), gap (px)
+    window.bcc_positionFloating = function (panel, rect, options) {
         options = options || {};
         var align = options.align === 'right' ? 'right' : 'left';
         var gap = typeof options.gap === 'number' ? options.gap : 4;
         var margin = 8; // viewport kenarlarına bırakılan pay
 
-        function position() {
-            var rect = anchor.getBoundingClientRect();
+        // ---- DİKEY: aşağı sığmıyorsa YUKARI ÇEVİR ----
+        // Bulunan gerçek bug: konum koşulsuz "anchor'ın ALTI" idi. Alt
+        // satırlardaki (ör. 8./9. satır) hücrelerde popover ekranın altından
+        // taşıp kırpılıyordu. Önce ölçüp hangi tarafta daha çok yer varsa
+        // oraya koyuyoruz; hiçbir tarafa tam sığmıyorsa yüksekliği kırpıp
+        // içeriği kaydırılabilir yapıyoruz (kırpmak yerine).
+        // max-height her seferinde SIFIRLANIR: aksi halde bir kez daralan
+        // panel, yer açıldığında dar kalırdı.
+        panel.style.maxHeight = '';
+        var panelHeight = panel.offsetHeight || 0;
+        var spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+        var spaceAbove = rect.top - gap - margin;
+
+        if (panelHeight <= spaceBelow || spaceBelow >= spaceAbove) {
+            if (panelHeight > spaceBelow) {
+                panel.style.maxHeight = Math.max(spaceBelow, 120) + 'px';
+            }
             panel.style.top = (rect.bottom + gap) + 'px';
+            panel.style.bottom = 'auto';
+        } else {
+            if (panelHeight > spaceAbove) {
+                panel.style.maxHeight = Math.max(spaceAbove, 120) + 'px';
+            }
+            panel.style.top = 'auto';
+            panel.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
+        }
 
-            if (align === 'right') {
-                // Sağ kenarı anchor'ın sağına hizala. Dar ekranda panel sola
-                // taşarsa sol kenardan margin kadar içeri çekilir.
-                var rightOffset = window.innerWidth - rect.right;
-                var pw = panel.offsetWidth || 0;
-                if (rightOffset + pw > window.innerWidth - margin) {
-                    rightOffset = window.innerWidth - margin - pw;
-                }
-                if (rightOffset < margin) {
-                    rightOffset = margin;
-                }
-                panel.style.left = 'auto';
-                panel.style.right = rightOffset + 'px';
-                return;
+        // ---- YATAY ----
+        if (align === 'right') {
+            // Sağ kenarı anchor'ın sağına hizala. Dar ekranda panel sola
+            // taşarsa sol kenardan margin kadar içeri çekilir.
+            var rightOffset = window.innerWidth - rect.right;
+            var pw = panel.offsetWidth || 0;
+            if (rightOffset + pw > window.innerWidth - margin) {
+                rightOffset = window.innerWidth - margin - pw;
             }
+            if (rightOffset < margin) {
+                rightOffset = margin;
+            }
+            panel.style.left = 'auto';
+            panel.style.right = rightOffset + 'px';
+            return;
+        }
 
-            // Sol hizalama + taşma koruması: grid-column-menu.js'de bulunmuş
-            // gerçek bug (en sağdaki sütunlarda panel viewport'un sağından
-            // taşıyordu) burada TÜM yüzen paneller için geçerli.
-            var left = rect.left;
-            var panelWidth = panel.offsetWidth || 0;
-            if (left + panelWidth > window.innerWidth - margin) {
-                left = window.innerWidth - margin - panelWidth;
-            }
-            if (left < margin) {
-                left = margin;
-            }
-            panel.style.right = 'auto';
-            panel.style.left = left + 'px';
+        // Sol hizalama + taşma koruması: grid-column-menu.js'de bulunmuş
+        // gerçek bug (en sağdaki sütunlarda panel viewport'un sağından
+        // taşıyordu) burada TÜM yüzen paneller için geçerli.
+        var left = rect.left;
+        var panelWidth = panel.offsetWidth || 0;
+        if (left + panelWidth > window.innerWidth - margin) {
+            left = window.innerWidth - margin - panelWidth;
+        }
+        if (left < margin) {
+            left = margin;
+        }
+        panel.style.right = 'auto';
+        panel.style.left = left + 'px';
+    };
+
+    window.bcc_bindFloatingPanel = function (menu, panel, anchor, options) {
+        function position() {
+            window.bcc_positionFloating(panel, anchor.getBoundingClientRect(), options);
         }
 
         // Bulunan gerçek bug (iki kopyada da vardı): konum yalnızca AÇILIŞTA

@@ -1226,7 +1226,22 @@ table.grid tbody tr:hover td.grid-frozen-cell {
     background: var(--bcc-surface-sunken);
 }
 
-.grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }
+/* Donuk grubun SAĞ KENARI — "buradan sonrası kayıyor" işareti.
+   `table.grid` öneki ŞART: çıplak `.grid-frozen-edge` (0,1,0) selector'ı
+   `table.grid td`'nin (0,1,1) `border-right: 1px solid var(--bcc-border)`
+   kuralına YENİLİYORDU, yani bu çizgi GÖVDE satırlarında hiç görünmüyordu.
+   Varsayılan dondurma 1 (yalnızca satır no) olduğu sürece hiçbir gövde
+   hücresi bu sınıfı almadığı için sorun gizli kalmıştı; varsayılan 2'ye
+   çıkınca ortaya çıktı. */
+table.grid .grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }
+
+/* Satır-no sütununun "kaldırma" gölgesi (yukarıda) donuk grubun SONUNU
+   işaretler. Bir VERİ sütunu da donduğunda (varsayılan durum) grup satır
+   no'da bitmiyor — gölge grubun ORTASINDA kalıp ikinci bir ayraç gibi
+   görünüyordu. Bu durumda gölge kapatılır; sınırı yukarıdaki
+   .grid-frozen-edge çizgisi taşır. Sınıfı grid-freeze-columns.js
+   frozenCount > 1 iken tabloya ekliyor. */
+table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
 
 .grid-freeze-handle {
     position: absolute;
@@ -1434,6 +1449,9 @@ td.editable.richtext-editing {
 
 .richtext-popover {
     position: fixed;
+    /* Yardımcı, ne yukarı ne aşağı tam sığmayan panele max-height verir;
+       overflow-y olmadan bu, içeriği kırpmak anlamına gelirdi. */
+    overflow-y: auto;
     z-index: 15;
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border-strong);
@@ -1567,10 +1585,15 @@ td.editable.attachment-editing {
 
 /* Beyaz arka plan + zayıf kenarlık/gölge grid zeminiyle neredeyse ayırt
    edilemiyordu, kullanıcıya "CSS'siz" bir ekran gibi görünüyordu. */
+/* position:fixed (eskiden absolute): absolute iken .grid-wrap { overflow:auto }
+   kutusuna KIRPILIYORDU — alt satırlardaki ve en sağdaki hücrelerde popover
+   görünmez oluyordu. Konumu artık grid.js hesaplıyor (bcc_positionFloating),
+   bu yüzden buradaki sabit top/left kaldırıldı; ikisi de JS'ten geliyor.
+   overflow-y: yardımcı hiçbir tarafa sığmayan panele max-height verir; onsuz
+   max-height içeriği kırpardı. */
 .attachment-popover {
-    position: absolute;
-    top: calc(100% + 0.35rem);
-    left: 0;
+    position: fixed;
+    overflow-y: auto;
     z-index: 15;
     background: var(--bcc-surface);
     border: 2px solid var(--bcc-accent);

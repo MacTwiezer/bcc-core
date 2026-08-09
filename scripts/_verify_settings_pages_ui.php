@@ -33,6 +33,9 @@ function check($label, $passed, $detail = null)
 $root = __DIR__ . '/..';
 $spCss = file_get_contents($root . '/public/assets/settings-page.css');
 $tfCss = file_get_contents($root . '/public/assets/table-fields.css');
+$acCss = file_get_contents($root . '/public/assets/account.css');
+$acPage = file_get_contents($root . '/public/account.php');
+$acJs = file_get_contents($root . '/public/assets/account-page.js');
 $tfJs = file_get_contents($root . '/public/assets/table-fields.js');
 $fieldsPage = file_get_contents($root . '/public/table_fields.php');
 $basePage = file_get_contents($root . '/public/base_tables.php');
@@ -50,8 +53,32 @@ function css_rules($css)
     return preg_replace('#/\*.*?\*/#s', '', $css);
 }
 
+// PHP yorumlarini soyar. GEREKLI: account.php'nin yorumlari, hangi widget'larin
+// BILEREK YAPILMADIGINI ("iki faktorlu dogrulama ... YOK", "API anahtarlari ...
+// YOK") ve hangi bug'in duzeltildigini ($user['email_verify_token']) ACIKCA
+// ANLATIYOR. Ham metinde aramak, aciklayici yorumu gercek bir kullanim sanip
+// yanlis KALDI verir — bu projede UCUNCU kez ayni tuzak (grid-export.css @media
+// ve mail.local.php gmail.com vakalari).
+function php_code_only($path)
+{
+    $code = '';
+    foreach (token_get_all(file_get_contents($path)) as $token) {
+        if (is_array($token)) {
+            if ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT) {
+                continue;
+            }
+            $code .= $token[1];
+            continue;
+        }
+        $code .= $token;
+    }
+    // HTML yorumlari (<!-- ... -->) T_INLINE_HTML icinde kalir, onlar da cikar.
+    return preg_replace('/<!--.*?-->/s', '', $code);
+}
+
 $spRules = css_rules($spCss);
 $tfRules = css_rules($tfCss);
+$acRules = css_rules($acCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
@@ -71,7 +98,7 @@ function unscoped_selectors($rules)
     return $bad;
 }
 
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules) as $name => $rules) {
     $bad = unscoped_selectors($rules);
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
@@ -155,12 +182,59 @@ check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.
 
 // =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
     check("G) {$name} icinde sabit HEX renk YOK", empty($hex[0]), implode(' ', array_unique($hex[0])));
 }
 check('G) renkler --bcc-* token\'larindan geliyor',
     substr_count($spRules, 'var(--bcc-') >= 20, substr_count($spRules, 'var(--bcc-') . ' kullanim');
+
+// =====================================================================
+echo "\n--- H) account.php: uydurma widget YOK, JS sozlesmesi korunuyor ---\n";
+// Asagidaki "olmamali" kontrolleri YORUMSUZ kod uzerinden yapilir — bkz.
+// php_code_only() basligi.
+$acCode = php_code_only($root . '/public/account.php');
+check('H) account.php ortak + sayfaya ozel CSS bagliyor',
+    strpos($acPage, "array('settings-page.css', 'account.css')") !== false);
+check('H) account.php .sp-page sarmalayicisi aciyor',
+    substr_count($acPage, '<div class="sp-page ac-page">') === 1);
+
+// UYDURMA WIDGET KORUMASI: bu uygulamada 2FA / oturum kaydi / API anahtari /
+// bildirim ayari YOK. Sahte gosterge ya da olu link basilmadigini dogrula.
+foreach (array('İki faktör', 'iki faktör', '2FA', 'Aktif oturum', 'API anahtar', 'Bildirim ayar') as $fake) {
+    check("H) uydurma widget YOK: '{$fake}'", stripos($acCode, $fake) === false);
+}
+// Hizli erisim linkleri GERCEKTEN VAR OLAN sayfalara gitmeli.
+preg_match_all('/class="ac-link"\s+href="([^"]+)"|href="([^"]+)"\s+class="ac-link"/', $acPage, $lm);
+$links = array_values(array_filter(array_merge($lm[1], $lm[2])));
+foreach ($links as $href) {
+    $file = $root . '/public' . parse_url($href, PHP_URL_PATH);
+    check("H) hizli erisim linki gercek bir sayfaya gidiyor: {$href}", is_file($file), $file);
+}
+check('H) en az uc hizli erisim linki var', count($links) >= 3, count($links) . ' link');
+
+// [hidden] KORUMASI: account-page.js satir ici duzenlemeyi TAMAMEN hidden ile
+// yonetiyor; CSS'te display verilen her eleman onu ezebilir. Ilk surumde tum
+// formlar acik geliyordu (bu tuzak projede daha once de yasandi).
+check('H) [hidden] korumasi var (display kurallari hidden\'i ezmesin)',
+    preg_match('/\.sp-page \[hidden\] \{ display: none !important; \}/', $acRules) === 1);
+check('H) account-page.js DEGISMEDI (sp-*/ac-* bilmiyor)',
+    strpos($acJs, 'ac-') === false && strpos($acJs, 'sp-') === false);
+// JS'in bagli oldugu kancalarin hepsi markup'ta durmali.
+foreach (array('data-account-field', 'data-account-display', 'data-account-edit-trigger',
+               'data-account-edit-form', 'data-account-edit-cancel', 'data-account-value',
+               'data-account-input', 'data-account-error', 'account-password-trigger',
+               'account-password-form', 'account-delete-trigger', 'account-delete-form') as $hook) {
+    check("H) JS kancasi korundu: {$hook}", strpos($acPage, $hook) !== false);
+}
+// current_user() created_at/email_verify_token DONDURMUYOR -> $user uzerinden
+// okumak rozeti HER ZAMAN "dogrulandi" yapardi (bulunan gercek bug).
+check('H) dogrulama rozeti $user yerine ACIK sorgudan okunuyor',
+    strpos($acCode, "\$user['email_verify_token']") === false
+    && strpos($acPage, "SELECT created_at, email_verify_token FROM users") !== false);
+// Paylasilan rol hapina dokunulmadi.
+check('H) .ws-collab-role (team_members/workspaces ile paylasilan) DEGISTIRILMEDI',
+    strpos($acRules, 'ws-collab-role') === false && strpos($acCode, 'ws-collab-role') === false);
 
 $passed = count(array_filter($results));
 $total = count($results);

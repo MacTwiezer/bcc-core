@@ -71,6 +71,12 @@
                 Array.prototype.forEach.call(tr.children, styleCell);
             });
 
+            // Satır no sütununun sağ gölgesi (style.css) donuk grubun SONUNU
+            // işaretler. Bir VERİ sütunu da donduğunda grup satır no'da bitmiyor;
+            // gölge grubun ORTASINDA kalıp sahte bir ayraç gibi görünüyor. O
+            // durumda gölgeyi CSS kapatır, sınırı .grid-frozen-edge çizgisi taşır.
+            table.classList.toggle('grid-has-frozen-data', frozenCount > 1 && heads.length > 1);
+
             if (handle) {
                 var edgeIdx = Math.min(frozenCount - 1, heads.length - 1);
                 var edgeCell = heads[edgeIdx];

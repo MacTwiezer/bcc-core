@@ -866,6 +866,17 @@ html.is-mac .gs-kbd-other { display: none; }
     min-width: 200px;
 }
 
+/* Menü başlığı: seçeneklerin yeni TABLO değil yeni GÖRÜNÜM açtığını söyler
+   (kullanıcılar "Tablo" seçeneğini yeni tablo sanıyordu). */
+.gs-view-create-hint {
+    margin: 0.15rem 0.35rem 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+}
+
 .gs-view-create-option {
     display: flex;
     align-items: center;

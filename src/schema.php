@@ -90,8 +90,18 @@ $GLOBALS['BCC_READONLY_FIELD_TYPES'] = array(
 //   3. BCC_VIEW_ROUTES (aşağıda) — türün hangi sayfaya gittiği
 //   4. view_create.php'nin tür-özel kurulum dalı (Form'da token üretimi,
 //      Kanban'da varsayılan kanban_field_id seçimi)
+// ⚠️ 'grid' etiketi "Tablo" DEĞİL "Tablo görünümü": "+ Yeni oluştur..." menüsü
+// bu listeden üretiliyor ve "Tablo" yazınca kullanıcılar YENİ BİR TABLO
+// oluşturduklarını sanıyordu. Oysa uçnokta (view_create.php) AYNI tablonun
+// yeni bir GÖRÜNÜMÜNÜ yaratır — aynı şema, aynı kayıtlar; birinde yapılan
+// düzenleme diğerinde de görünür. Bu "klonlama bugu" değil, görünümün tanımı;
+// bug ETİKETTEYDİ. Yeni tablo açma yolu ayrı: tablo sekmelerindeki "+"
+// (grid.php -> base_tables.php).
+// Yan fayda: yeni grid görünümleri artık "Tablo görünümü 2" olarak adlandırılıyor
+// (view_create.php ad sayacı bu etiketi kullanır) — varsayılan görünümün adı
+// zaten "Tablo görünümü" idi, isimlendirme tutarsızlığı da kapandı.
 $GLOBALS['BCC_VIEW_TYPES'] = array(
-    'grid' => 'Tablo',
+    'grid' => 'Tablo görünümü',
     'form' => 'Form',
     'kanban' => 'Kanban',
 );
@@ -769,14 +779,33 @@ function bcc_max_frozen_columns($visibleFieldCount)
     return max(1, (int) ceil($total / 2));
 }
 
+// Dondurulmuş sütun sayısının VARSAYILANI (satır no dahil).
+//
+// 2 = satır no + İLK VERİ SÜTUNU. Yani yatay kaydırmada ilk veri sütunu
+// yerinde kalır, ikinci sütundan itibaren hepsi onun arkasından kayar.
+// Airtable'ın varsayılan davranışı bu; önceki değer 1'di (yalnızca satır no
+// donuyordu, hiçbir veri sütunu donmuyordu).
+//
+// ⚠️ Bu YALNIZCA VARSAYILAN. Sayı hâlâ görünüm başına ayarlanabilir (sütun
+// başlığındaki dondurma tutamacı → views.config.frozen_column_count) ve
+// kullanıcının AÇIKÇA seçtiği değer bu değişiklikten ETKİLENMEZ: anahtar
+// yalnızca tutamaç sürüklendiğinde yazılıyor, bu yüzden aşağıdaki isset()
+// kontrolü "hiç ayarlanmamış" ile "elle 1 seçilmiş" durumlarını ayırıyor.
+$GLOBALS['BCC_DEFAULT_FROZEN_COLUMNS'] = 2;
+
+// Dondurulabilecek en fazla sütun sayısı — bkz. bcc_max_frozen_columns().
+// Tek görünür alanı olan bir tabloda üst sınır 1'dir, yani varsayılan 2 orada
+// 1'e kırpılır (donacak bir veri sütunu bırakıp kaydıracak hiçbir şey
+// bırakmamak anlamsız olurdu).
+
 // views.config JSON'ından dondurulmuş sütun sayısını SAVUNMACI biçimde okur:
 // NULL, bozuk JSON, eksik anahtar veya beklenmedik tip (ör. string/float) gelirse
-// sessizce varsayılana (1 — yalnızca satır no) düşer, hata fırlatmaz. $maxAllowed
-// verilirse üst sınıra da kırpılır (config'teki eski bir değer, sonradan alan
-// gizlenip görünür sütun sayısı azalınca render'ı bozmasın diye).
+// sessizce varsayılana düşer, hata fırlatmaz. $maxAllowed verilirse üst sınıra da
+// kırpılır (config'teki eski bir değer, sonradan alan gizlenip görünür sütun
+// sayısı azalınca render'ı bozmasın diye).
 function bcc_get_frozen_column_count($configJson, $maxAllowed = null)
 {
-    $count = 1;
+    $count = $GLOBALS['BCC_DEFAULT_FROZEN_COLUMNS'];
 
     if ($configJson !== null && $configJson !== '') {
         $decoded = json_decode($configJson, true);

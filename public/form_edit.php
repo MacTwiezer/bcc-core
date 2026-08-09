@@ -175,7 +175,7 @@ function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
               // Bu yüzden düz metin değil, amber uyarı kutusu. ?>
         <div class="sp-note sp-note--warn" style="margin: 0.85rem 0 0;">
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
-            <span><strong>Bu bağlantıya sahip herkes giriş yapmadan bu tabloya kayıt ekleyebilir.</strong> Yalnızca paylaşmak istediğiniz kişilere gönderin.</span>
+            <span><strong>Bu bağlantıya sahip HERKES giriş yapmadan bu tabloya kayıt ekleyebilir.</strong> Yalnızca paylaşmak istediğiniz kişilere gönderin.</span>
         </div>
 
         <div class="sp-note" style="margin: 0.5rem 0 0;">

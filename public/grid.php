@@ -1235,6 +1235,10 @@ $gridUser = current_user();
             <details class="gs-view-create-menu" name="gs-table-tab-menu">
                 <summary class="gs-view-drawer-create">+ Yeni oluştur...</summary>
                 <div class="gs-view-create-panel">
+                    <?php /* Başlık, menünün NE yarattığını söyler: bu seçenekler
+                             AYNI tablonun yeni görünümleridir, yeni tablo değil.
+                             Yeni tablo için tablo sekmelerindeki "+" var. */ ?>
+                    <p class="gs-view-create-hint">Bu tablonun yeni görünümü</p>
                     <?php foreach ($GLOBALS['BCC_VIEW_TYPES'] as $viewTypeKey => $viewTypeLabel): ?>
                         <button
                             type="button"

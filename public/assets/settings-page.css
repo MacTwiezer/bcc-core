@@ -314,6 +314,149 @@
     box-shadow: none;
 }
 
+/* ---------- Durum hapı ---------- */
+
+/* "aktif" / "pasif" gibi ikili durumlar. Yeşil, theme.css'e EKLENEN
+   --bcc-success / --bcc-success-soft ikilisinden gelir (danger ikilisiyle aynı
+   desende eklendi; mevcut hiçbir token değiştirilmedi), böylece koyu temada da
+   doğru tonlanır. */
+.sp-page .sp-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.18rem 0.6rem 0.18rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sp-page .sp-status::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+.sp-page .sp-status-on {
+    border-color: var(--bcc-success-soft);
+    background: var(--bcc-success-soft);
+    color: var(--bcc-success);
+}
+
+/* ---------- Toggle anahtarı ---------- */
+
+/* Tasarım sistemine ait ORTAK bileşen. Not: style.css'te "Kaydı gönder"
+   modalına ait `.grid-send-toggle-*` diye çalışan bir toggle daha var; o
+   sınıflar adlarıyla o modala bağlı olduğu için burada YENİDEN KULLANILMADI —
+   bunun yerine bileşen tasarım sistemine (.sp-toggle) taşındı, sonraki
+   sayfalar da buradan alsın diye.
+   <label class="sp-toggle"><input type="checkbox" ...><span class="sp-toggle-track"></span><span>Etiket</span></label> */
+.sp-page .sp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--bcc-text);
+    user-select: none;
+}
+
+/* Girdi görsel olarak gizlenir ama ERİŞİLEBİLİR kalır (display:none klavye
+   odağını ve ekran okuyucuyu keserdi). */
+.sp-page .sp-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.sp-page .sp-toggle-track {
+    position: relative;
+    flex: none;
+    width: 36px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--bcc-border-strong);
+    transition: background-color 0.15s ease;
+}
+
+.sp-page .sp-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bcc-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+}
+
+.sp-page .sp-toggle input:checked + .sp-toggle-track {
+    background: var(--bcc-accent);
+}
+
+.sp-page .sp-toggle input:checked + .sp-toggle-track::after {
+    transform: translateX(16px);
+}
+
+.sp-page .sp-toggle input:focus-visible + .sp-toggle-track {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
+}
+
+/* ---------- Bilgi kutusu ---------- */
+
+/* Açıklayıcı metin blokları için. Düz `.settings-hint` paragrafı yerine
+   ikonlu, sol şeritli sakin bir kutu — uzun açıklamalar okunur kalsın. */
+.sp-page .sp-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    margin: 0 0 1rem;
+    border: 1px solid var(--bcc-border);
+    border-left: 3px solid var(--bcc-accent);
+    border-radius: 8px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.83rem;
+    line-height: 1.5;
+}
+
+.sp-page .sp-note svg {
+    flex: none;
+    margin-top: 0.1rem;
+    color: var(--bcc-accent);
+}
+
+.sp-page .sp-note a { color: var(--bcc-accent-strong); }
+
+/* ---------- Maskeli sır / kod parçası ---------- */
+
+.sp-page .sp-code {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 5px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
 /* ---------- Boş durum ---------- */
 
 .sp-page .settings-empty {

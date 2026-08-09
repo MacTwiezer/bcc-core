@@ -282,7 +282,19 @@ if (!empty($teamIdsForStar)) {
 
 $homeActiveNav = 'fields';
 $homePageTitle = 'BCC-Core — ' . $table['name'] . ' — Slack';
+// Ortak tasarım sistemi (table_fields / base_tables / account ile PAYLAŞILAN) +
+// yalnızca bu sayfaya ait yerleşim. Durum hapı, toggle, bilgi kutusu ve
+// maskeli-sır rozeti ORTAK dosyada (settings-page.css) — burada kopyası yok.
+$homeExtraCss = array('settings-page.css', 'slack-settings.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
+
+// Küçük yardımcı: "aktif"/"pasif" durum hapı. Üç yerde (tablo webhook'ları,
+// takım webhook'u, yönlendirme kuralları) kullanılıyor — HTML üç kez yazılmıyor.
+function bcc_slack_status_pill($isActive)
+{
+    $on = ((int) $isActive === 1);
+    ?><span class="sp-status <?php echo $on ? 'sp-status-on' : ''; ?>"><?php echo $on ? 'aktif' : 'pasif'; ?></span><?php
+}
 
 // Bir webhook için tam form (yeni ekleme VEYA düzenleme — $webhook null ise yeni).
 // Tablo-özel VE ekip-geneli kapsam AYNI bu fonksiyonu kullanır, HTML iki kez yazılmaz.
@@ -290,48 +302,78 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
 {
     $masked = bcc_slack_masked_url($webhook);
     ?>
-    <form class="settings-form settings-form-stacked" method="post" action="/slack_settings.php">
+    <form class="settings-form sl-webhook-form" method="post" action="/slack_settings.php">
         <?php echo csrf_field(); ?>
         <input type="hidden" name="action" value="save_webhook">
         <input type="hidden" name="scope" value="<?php echo htmlspecialchars($scope, ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
         <input type="hidden" name="webhook_id" value="<?php echo $webhook ? (int) $webhook['id'] : ''; ?>">
-        <label class="settings-field">Webhook URL<?php if ($webhook): ?> (mevcut: <?php echo htmlspecialchars($masked, ENT_QUOTES, 'UTF-8'); ?> — değiştirmek için yeni URL girin, boş bırakırsanız korunur)<?php endif; ?>
+        <label class="settings-field">Webhook URL
+            <?php if ($webhook): ?>
+                <span class="sl-current-url">Mevcut: <span class="sp-code"><?php echo htmlspecialchars($masked, ENT_QUOTES, 'UTF-8'); ?></span> — boş bırakırsanız korunur.</span>
+            <?php endif; ?>
             <input type="url" name="webhook_url" placeholder="https://hooks.slack.com/services/...">
         </label>
-        <label class="settings-field">Kanal adı (yalnızca gösterim için, opsiyonel)
+        <label class="settings-field">Kanal adı <span class="sl-current-url">opsiyonel, yalnızca gösterim</span>
             <input type="text" name="channel_name" value="<?php echo $webhook ? htmlspecialchars((string) $webhook['channel_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="#trendyol-siparis">
         </label>
-        <label class="settings-field settings-field-checkbox">
-            <input type="checkbox" name="is_active" value="1" <?php echo (!$webhook || (int) $webhook['is_active'] === 1) ? 'checked' : ''; ?>>
-            Aktif
-        </label>
-        <button type="submit" class="settings-btn settings-btn-primary"><?php echo htmlspecialchars($submitLabel, ENT_QUOTES, 'UTF-8'); ?></button>
+        <div class="sl-form-footer">
+            <?php // Ham checkbox yerine tasarım sisteminin toggle'ı. name/value
+                  // AYNEN korundu (is_active=1) — sunucu tarafı değişmedi. ?>
+            <label class="sp-toggle">
+                <input type="checkbox" name="is_active" value="1" <?php echo (!$webhook || (int) $webhook['is_active'] === 1) ? 'checked' : ''; ?>>
+                <span class="sp-toggle-track"></span>
+                <span>Aktif</span>
+            </label>
+            <button type="submit" class="settings-btn settings-btn-primary"><?php echo htmlspecialchars($submitLabel, ENT_QUOTES, 'UTF-8'); ?></button>
+        </div>
     </form>
     <?php
 }
 ?>
+<div class="sp-page">
         <div class="settings-breadcrumb">
-            <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>">&larr; <?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?> tablolarına dön</a>
-            <span>·</span> <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">Grid'i görüntüle</a>
-            <span>·</span> <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">Alanları yönet</a>
+            <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 5l-5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?> tabloları
+            </a>
+            <span>·</span>
+            <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M3 8h14M8 8v8" stroke="currentColor" stroke-width="1.4"/></svg>
+                Grid'i görüntüle
+            </a>
+            <span>·</span>
+            <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Alanları yönet
+            </a>
         </div>
         <div class="home-main-header">
             <h1><?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?> — Slack bildirimleri</h1>
+            <p class="settings-hint">Bu tabloya yeni kayıt eklendiğinde hangi Slack kanalına bildirim gideceğini yönetin.</p>
         </div>
 
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
         <?php if (!$canEdit): ?>
-            <p class="settings-hint">Slack bildirimlerini ayarlamak için owner rolü gerekir.</p>
+            <div class="sp-note">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+                <span>Slack bildirimlerini ayarlamak için <strong>owner</strong> rolü gerekir. Bu sayfayı salt-okunur görüyorsunuz.</span>
+            </div>
         <?php endif; ?>
 
         <div class="settings-card">
-            <h2>Bu tabloya özel webhook'lar</h2>
-            <p class="settings-hint">Yalnızca "<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>" tablosuna yeni kayıt eklendiğinde tetiklenir. Aynı tabloda birden fazla webhook olabilir (ör. marka başına bir kanal) — hangisinin kullanılacağı aşağıdaki "Koşullu yönlendirme kuralları" ile belirlenir; hiç kural yoksa listedeki İLK aktif webhook kullanılır.</p>
+            <h2>Bu tabloya özel webhook'lar <span class="sp-count"><?php echo count($tableWebhooks); ?></span></h2>
+            <div class="sp-note">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+                <span>Yalnızca <strong>&ldquo;<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>&rdquo;</strong> tablosuna yeni kayıt eklendiğinde tetiklenir. Aynı tabloda birden fazla webhook olabilir (ör. marka başına bir kanal) — hangisinin kullanılacağı aşağıdaki <em>Koşullu yönlendirme kuralları</em> ile belirlenir; hiç kural yoksa listedeki <strong>ilk aktif</strong> webhook kullanılır.</span>
+            </div>
 
             <?php if (empty($tableWebhooks)): ?>
-                <p class="settings-empty">Bu tabloya özel webhook yok.</p>
+                <p class="settings-empty">
+                    <strong>Bu tabloya özel webhook yok.</strong>
+                    <span class="sp-muted">Aşağıdan bir Slack webhook URL'i ekleyin.</span>
+                </p>
             <?php else: ?>
                 <div class="settings-table-wrap">
                     <table class="settings-table">
@@ -339,18 +381,25 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         <tbody>
                         <?php foreach ($tableWebhooks as $w): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars((string) $w['channel_name'] ?: '(kanal adı belirtilmemiş)', ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo ((int) $w['is_active'] === 1) ? 'aktif' : 'pasif'; ?></td>
+                                <td class="sl-channel <?php echo ((string) $w['channel_name'] === '') ? 'sl-channel-empty' : ''; ?>"><?php echo htmlspecialchars((string) $w['channel_name'] ?: 'kanal adı belirtilmemiş', ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span></td>
+                                <td><?php bcc_slack_status_pill($w['is_active']); ?></td>
                                 <?php if ($canEdit): ?>
+                                <?php // Aksiyonlar: dolu zeminli metin butonları yerine ortak
+                                      // .sp-icon-btn hayalet ikon butonları. POST/CSRF formları
+                                      // AYNEN korundu — yalnızca görünüm + aria-label değişti. ?>
                                 <td class="settings-row-actions">
-                                    <a class="settings-btn settings-btn-sm" href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>&edit_webhook=<?php echo (int) $w['id']; ?>">Düzenle</a>
+                                    <a class="sp-icon-btn" title="Düzenle" aria-label="Webhook'u düzenle" href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>&edit_webhook=<?php echo (int) $w['id']; ?>">
+                                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                                    </a>
                                     <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="delete_webhook">
                                         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                                         <input type="hidden" name="webhook_id" value="<?php echo (int) $w['id']; ?>">
-                                        <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Sil</button>
+                                        <button type="submit" class="sp-icon-btn sp-icon-btn--danger" title="Sil" aria-label="Webhook'u sil">
+                                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
                                     </form>
                                 </td>
                                 <?php endif; ?>
@@ -362,51 +411,83 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
             <?php endif; ?>
 
             <?php if ($canEdit && $editWebhook): ?>
-                <h3>Webhook'u Düzenle</h3>
+                <h3 class="sl-subhead">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    Webhook'u düzenle
+                </h3>
                 <?php bcc_render_slack_webhook_form('table', $editWebhook, $table, 'Kaydet'); ?>
             <?php endif; ?>
 
             <?php if ($canEdit): ?>
-                <h3>+ Yeni webhook ekle</h3>
+                <h3 class="sl-subhead">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    Yeni webhook ekle
+                </h3>
                 <?php bcc_render_slack_webhook_form('table', null, $table, 'Ekle'); ?>
             <?php endif; ?>
         </div>
 
         <div class="settings-card">
             <h2>Takım-geneli webhook</h2>
-            <p class="settings-hint">Bu takımın TÜM tablolarında (bu tablo dahil, tablo-özel bir webhook/kural eşleşmemişse) yeni kayıt eklendiğinde tetiklenir.</p>
+            <div class="sp-note">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+                <span>Yedek kanal: bu takımın <strong>tüm</strong> tablolarında (bu tablo dahil), tablo-özel bir webhook veya kural eşleşmemişse tetiklenir.</span>
+            </div>
 
             <?php if (!$canEdit): ?>
                 <?php if ($teamWebhook): ?>
-                    <p>Aktif webhook: <?php echo htmlspecialchars((string) $teamWebhook['channel_name'] ?: '(kanal adı belirtilmemiş)', ENT_QUOTES, 'UTF-8'); ?> — <?php echo ((int) $teamWebhook['is_active'] === 1) ? 'aktif' : 'pasif'; ?></p>
+                    <div class="sl-readonly-row">
+                        <span class="sl-channel <?php echo ((string) $teamWebhook['channel_name'] === '') ? 'sl-channel-empty' : ''; ?>"><?php echo htmlspecialchars((string) $teamWebhook['channel_name'] ?: 'kanal adı belirtilmemiş', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <?php bcc_slack_status_pill($teamWebhook['is_active']); ?>
+                    </div>
                 <?php else: ?>
-                    <p class="settings-hint">Ayarlanmamış.</p>
+                    <p class="settings-empty"><strong>Ayarlanmamış.</strong></p>
                 <?php endif; ?>
             <?php else: ?>
                 <?php bcc_render_slack_webhook_form('team', $teamWebhook, $table, 'Kaydet'); ?>
                 <?php if ($teamWebhook): ?>
-                    <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="delete_webhook">
-                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                        <input type="hidden" name="webhook_id" value="<?php echo (int) $teamWebhook['id']; ?>">
-                        <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Webhook'u sil</button>
-                    </form>
+                    <h3 class="sl-subhead">Mevcut takım webhook'u</h3>
+                    <div class="sl-readonly-row">
+                        <span class="sl-channel <?php echo ((string) $teamWebhook['channel_name'] === '') ? 'sl-channel-empty' : ''; ?>"><?php echo htmlspecialchars((string) $teamWebhook['channel_name'] ?: 'kanal adı belirtilmemiş', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($teamWebhook), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <?php bcc_slack_status_pill($teamWebhook['is_active']); ?>
+                        <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');" style="margin-left:auto;">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="action" value="delete_webhook">
+                            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                            <input type="hidden" name="webhook_id" value="<?php echo (int) $teamWebhook['id']; ?>">
+                            <button type="submit" class="sp-icon-btn sp-icon-btn--danger" title="Webhook'u sil" aria-label="Takım webhook'unu sil">
+                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                        </form>
+                    </div>
                 <?php endif; ?>
             <?php endif; ?>
         </div>
 
         <div class="settings-card">
-            <h2>Koşullu yönlendirme kuralları</h2>
-            <p class="settings-hint">Bir alanın (yalnızca tekli seçim tipi) değerine göre farklı bir webhook'a yönlendirir — ör. "Marka" alanı "Trendyol" ise Trendyol kanalına, "Yves Rocher" ise başka bir kanala. Sıradaki İLK eşleşen kural kazanır; hiçbiri eşleşmezse yukarıdaki tablo-özel/ekip-geneli webhook kullanılır.</p>
+            <h2>Koşullu yönlendirme kuralları <span class="sp-count"><?php echo count($routingRules); ?></span></h2>
+            <div class="sp-note">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h5l3 5 4 0M4 15h5l1.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 3l2.5 2-2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Bir <strong>tekli seçim</strong> alanının değerine göre farklı bir webhook'a yönlendirir — ör. &ldquo;Marka&rdquo; alanı &ldquo;Trendyol&rdquo; ise Trendyol kanalına. Sıradaki <strong>ilk eşleşen</strong> kural kazanır; hiçbiri eşleşmezse yukarıdaki tablo-özel / takım-geneli webhook kullanılır.</span>
+            </div>
 
             <?php if (empty($singleSelectFields)): ?>
-                <p class="settings-hint">Bu tabloda tekli seçim alanı yok — koşullu yönlendirme kurulamaz. Önce <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">bir tekli seçim alanı ekleyin</a>.</p>
+                <p class="settings-empty">
+                    <strong>Bu tabloda tekli seçim alanı yok.</strong>
+                    <span class="sp-muted">Koşullu yönlendirme için önce <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">bir tekli seçim alanı ekleyin</a>.</span>
+                </p>
             <?php elseif (empty($availableWebhooksForRules)): ?>
-                <p class="settings-hint">Önce yukarıda en az bir webhook oluşturun.</p>
+                <p class="settings-empty">
+                    <strong>Henüz webhook yok.</strong>
+                    <span class="sp-muted">Kural kurabilmek için önce yukarıda en az bir webhook oluşturun.</span>
+                </p>
             <?php else: ?>
                 <?php if (empty($routingRules)): ?>
-                    <p class="settings-empty">Henüz kural yok.</p>
+                    <p class="settings-empty">
+                        <strong>Henüz kural yok.</strong>
+                        <span class="sp-muted">Aşağıdaki satırdan ilk kuralınızı ekleyin.</span>
+                    </p>
                 <?php else: ?>
                     <div class="settings-table-wrap">
                         <table class="settings-table">
@@ -414,42 +495,64 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                             <tbody>
                             <?php foreach ($routingRules as $i => $r): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($r['field_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($GLOBALS['BCC_SLACK_ROUTING_OPERATORS'][$r['operator']], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($r['value'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) $r['webhook_channel_name'] ?: bcc_slack_masked_url(array('webhook_url' => $r['webhook_url'])), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo ((int) $r['is_active'] === 1) ? 'aktif' : 'pasif'; ?></td>
+                                    <td class="sl-channel"><?php echo htmlspecialchars($r['field_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td class="sl-operator"><?php echo htmlspecialchars($GLOBALS['BCC_SLACK_ROUTING_OPERATORS'][$r['operator']], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td class="sl-value"><?php echo htmlspecialchars($r['value'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td><?php
+                                        // Kanal adı varsa düz metin; yoksa maskeli URL kod rozetiyle.
+                                        if ((string) $r['webhook_channel_name'] !== '') {
+                                            echo '<span class="sl-channel">' . htmlspecialchars((string) $r['webhook_channel_name'], ENT_QUOTES, 'UTF-8') . '</span>';
+                                        } else {
+                                            echo '<span class="sp-code">' . htmlspecialchars(bcc_slack_masked_url(array('webhook_url' => $r['webhook_url'])), ENT_QUOTES, 'UTF-8') . '</span>';
+                                        }
+                                    ?></td>
+                                    <td><?php bcc_slack_status_pill($r['is_active']); ?></td>
                                     <?php if ($canEdit): ?>
                                     <td class="settings-row-actions">
-                                        <form method="post" action="/slack_settings.php">
-                                            <?php echo csrf_field(); ?>
-                                            <input type="hidden" name="action" value="move_routing_rule">
-                                            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                            <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
-                                            <input type="hidden" name="direction" value="up">
-                                            <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === 0 ? 'disabled' : ''; ?>>&uarr;</button>
-                                        </form>
-                                        <form method="post" action="/slack_settings.php">
-                                            <?php echo csrf_field(); ?>
-                                            <input type="hidden" name="action" value="move_routing_rule">
-                                            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                                            <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
-                                            <input type="hidden" name="direction" value="down">
-                                            <button type="submit" class="settings-btn settings-btn-sm" <?php echo $i === count($routingRules) - 1 ? 'disabled' : ''; ?>>&darr;</button>
-                                        </form>
+                                        <span class="sp-move-group">
+                                            <form method="post" action="/slack_settings.php">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="hidden" name="action" value="move_routing_rule">
+                                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                                <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
+                                                <input type="hidden" name="direction" value="up">
+                                                <button type="submit" class="sp-icon-btn" title="Yukarı taşı" aria-label="Kuralı yukarı taşı" <?php echo $i === 0 ? 'disabled' : ''; ?>>
+                                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 15V5m0 0l-4 4m4-4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                </button>
+                                            </form>
+                                            <form method="post" action="/slack_settings.php">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="hidden" name="action" value="move_routing_rule">
+                                                <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                                <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
+                                                <input type="hidden" name="direction" value="down">
+                                                <button type="submit" class="sp-icon-btn" title="Aşağı taşı" aria-label="Kuralı aşağı taşı" <?php echo $i === count($routingRules) - 1 ? 'disabled' : ''; ?>>
+                                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 5v10m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                </button>
+                                            </form>
+                                        </span>
+                                        <?php $ruleOn = ((int) $r['is_active'] === 1); ?>
                                         <form method="post" action="/slack_settings.php">
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="toggle_routing_rule">
                                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                                             <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
-                                            <button type="submit" class="settings-btn settings-btn-sm"><?php echo ((int) $r['is_active'] === 1) ? 'Pasifleştir' : 'Aktifleştir'; ?></button>
+                                            <button type="submit" class="sp-icon-btn" title="<?php echo $ruleOn ? 'Pasifleştir' : 'Aktifleştir'; ?>" aria-label="<?php echo $ruleOn ? 'Kuralı pasifleştir' : 'Kuralı aktifleştir'; ?>">
+                                                <?php if ($ruleOn): ?>
+                                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.5v5M12 7.5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                                <?php else: ?>
+                                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 7l4.5 3-4.5 3V7z" fill="currentColor"/></svg>
+                                                <?php endif; ?>
+                                            </button>
                                         </form>
                                         <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu kuralı silmek istediğinize emin misiniz?');">
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_routing_rule">
                                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                                             <input type="hidden" name="rule_id" value="<?php echo (int) $r['id']; ?>">
-                                            <button type="submit" class="settings-btn settings-btn-danger settings-btn-sm">Sil</button>
+                                            <button type="submit" class="sp-icon-btn sp-icon-btn--danger" title="Sil" aria-label="Kuralı sil">
+                                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
                                         </form>
                                     </td>
                                     <?php endif; ?>
@@ -461,8 +564,16 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 <?php endif; ?>
 
                 <?php if ($canEdit): ?>
-                    <h3>+ Yeni kural ekle</h3>
-                    <form class="settings-form settings-form-stacked" method="post" action="/slack_settings.php">
+                    <h3 class="sl-subhead">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        Yeni kural ekle
+                    </h3>
+                    <?php // Dört alan artık ALT ALTA değil TEK SATIRDA (sl-rule-form,
+                          // yatay grid) — `settings-form-stacked` kaldırıldı. Dar
+                          // ekranda önce iki, sonra tek sütuna iner.
+                          // slack-routing.js'in bağlı olduğu id'ler (#routing-rule-field,
+                          // #routing-rule-value) AYNEN korundu. ?>
+                    <form class="settings-form sl-rule-form" method="post" action="/slack_settings.php">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="add_routing_rule">
                         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -494,10 +605,13 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <button type="submit" class="settings-btn settings-btn-primary">Kural Ekle</button>
+                        <div class="sl-rule-submit">
+                            <button type="submit" class="settings-btn settings-btn-primary">Kural Ekle</button>
+                        </div>
                     </form>
                     <script src="<?php echo bcc_asset_url('slack-routing.js'); ?>" defer></script>
                 <?php endif; ?>
             <?php endif; ?>
         </div>
+</div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

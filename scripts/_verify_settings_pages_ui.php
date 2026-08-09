@@ -34,6 +34,9 @@ $root = __DIR__ . '/..';
 $spCss = file_get_contents($root . '/public/assets/settings-page.css');
 $tfCss = file_get_contents($root . '/public/assets/table-fields.css');
 $acCss = file_get_contents($root . '/public/assets/account.css');
+$slCss = file_get_contents($root . '/public/assets/slack-settings.css');
+$slPage = file_get_contents($root . '/public/slack_settings.php');
+$routingJs = file_get_contents($root . '/public/assets/slack-routing.js');
 $acPage = file_get_contents($root . '/public/account.php');
 $acJs = file_get_contents($root . '/public/assets/account-page.js');
 $tfJs = file_get_contents($root . '/public/assets/table-fields.js');
@@ -79,6 +82,7 @@ function php_code_only($path)
 $spRules = css_rules($spCss);
 $tfRules = css_rules($tfCss);
 $acRules = css_rules($acCss);
+$slRules = css_rules($slCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
@@ -98,7 +102,7 @@ function unscoped_selectors($rules)
     return $bad;
 }
 
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules) as $name => $rules) {
     $bad = unscoped_selectors($rules);
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
@@ -151,7 +155,10 @@ check('D) $homeExtraCss tanimsizsa bos diziye dusuyor',
     strpos($shellTop, 'if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {') !== false);
 check('D) kabuk yalnizca dizideki dosyalari basiyor',
     preg_match('/foreach \(\$homeExtraCss as \$bccExtraCssFile\)/', $shellTop) === 1);
-foreach (array('dashboard.php', 'starred.php', 'workspaces.php', 'slack_settings.php', 'team_members.php', 'bases.php') as $other) {
+// NOT: slack_settings.php bu listeden CIKARILDI — artik kendisi de ortak
+// tasarim sistemini kullaniyor ($homeExtraCss atiyor). Liste, kabugu paylasan
+// ama YENIDEN TASARLANMAMIS sayfalari korumaya devam ediyor.
+foreach (array('dashboard.php', 'starred.php', 'workspaces.php', 'team_members.php', 'bases.php') as $other) {
     $src = @file_get_contents($root . '/public/' . $other);
     check("D) {$other} \$homeExtraCss ATAMIYOR", $src !== false && strpos($src, 'homeExtraCss') === false);
 }
@@ -182,7 +189,7 @@ check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.
 
 // =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
     check("G) {$name} icinde sabit HEX renk YOK", empty($hex[0]), implode(' ', array_unique($hex[0])));
 }
@@ -235,6 +242,51 @@ check('H) dogrulama rozeti $user yerine ACIK sorgudan okunuyor',
 // Paylasilan rol hapina dokunulmadi.
 check('H) .ws-collab-role (team_members/workspaces ile paylasilan) DEGISTIRILMEDI',
     strpos($acRules, 'ws-collab-role') === false && strpos($acCode, 'ws-collab-role') === false);
+
+// =====================================================================
+echo "\n--- I) slack_settings.php ---\n";
+$slCode = php_code_only($root . '/public/slack_settings.php');
+
+check('I) ortak + sayfaya ozel CSS bagliyor',
+    strpos($slPage, "array('settings-page.css', 'slack-settings.css')") !== false);
+check('I) .sp-page sarmalayicisi aciyor',
+    substr_count($slPage, '<div class="sp-page">') === 1);
+
+// Tasarim sistemine EKLENEN bilesenler ORTAK dosyada olmali, sayfaya ozel
+// dosyada TEKRARLANMAMALI.
+foreach (array('.sp-status', '.sp-toggle', '.sp-note', '.sp-code') as $shared) {
+    check("I) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
+    check("I) '{$shared}' slack-settings.css'te TEKRARLANMIYOR", strpos($slRules, $shared) === false);
+}
+
+// Eski "chunky" butonlar tamamen gitmis olmali.
+check('I) eski .settings-btn-sm butonlari KALMADI',
+    strpos($slCode, 'settings-btn-sm') === false);
+// Kural formu artik ALT ALTA degil.
+check('I) kural formu settings-form-stacked KULLANMIYOR (satir ici)',
+    strpos($slCode, 'sl-rule-form') !== false
+    && preg_match('/class="settings-form settings-form-stacked"[^>]*>\s*<\?php echo csrf_field\(\); \?>\s*<input type="hidden" name="action" value="add_routing_rule"/s', $slPage) === 0);
+check('I) kural formu 4 alan + buton olacak sekilde yatay grid',
+    preg_match('/\.sp-page \.sl-rule-form \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) auto;/s', $slRules) === 1);
+
+// slack-routing.js'in bagli oldugu id'ler korunmali.
+check('I) slack-routing.js kancalari korundu (#routing-rule-field / -value)',
+    strpos($slPage, 'id="routing-rule-field"') !== false && strpos($slPage, 'id="routing-rule-value"') !== false);
+check('I) slack-routing.js DEGISMEDI (sp-*/sl-* bilmiyor)',
+    strpos($routingJs, 'sp-') === false && strpos($routingJs, 'sl-') === false);
+
+// Toggle ham checkbox'in yerini aldi ama name/value AYNEN korundu.
+check('I) toggle name="is_active" value="1" sozlesmesini koruyor',
+    preg_match('/class="sp-toggle">\s*<input type="checkbox" name="is_active" value="1"/s', $slPage) === 1);
+
+// theme.css'e EKLENEN durum yesili: uc blokta da tanimli olmali (acik, koyu,
+// prefers-color-scheme) ve MEVCUT hicbir token degistirilmemis olmali.
+check('I) --bcc-success uc tema blogunda da tanimli',
+    substr_count($themeCss, '--bcc-success:') === 3 && substr_count($themeCss, '--bcc-success-soft:') === 3,
+    substr_count($themeCss, '--bcc-success:') . ' / ' . substr_count($themeCss, '--bcc-success-soft:'));
+foreach (array('--bcc-accent: #2d7ff9', '--bcc-danger: #c62828', '--bcc-danger-soft: #fdecea') as $untouched) {
+    check("I) mevcut token DEGISMEDI: {$untouched}", strpos($themeCss, $untouched) !== false);
+}
 
 $passed = count(array_filter($results));
 $total = count($results);

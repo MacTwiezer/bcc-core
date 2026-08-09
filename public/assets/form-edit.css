@@ -1,0 +1,297 @@
+/* form_edit.php'ye ÖZGÜ kurallar: iki sütunlu form oluşturucu yerleşimi,
+ * paylaşım kutusu ve alan seçim kartları.
+ *
+ * ORTAK iskelet (sayfa kabı, breadcrumb, kart, form alanları, birincil buton,
+ * boş durum) VE ortak bileşenler (.sp-status durum hapı, .sp-toggle anahtarı,
+ * .sp-note bilgi/uyarı kutusu, .sp-code) assets/settings-page.css'te —
+ * burada KOPYASI YOK.
+ *
+ * ⚠️ Kapsam `.sp-page`. Bu sayfanın `.share-popover-form` sınıfı PAYLAŞILIYOR
+ * (grid.php, interface.php, share-popover.js `btn.closest` ile onu ARIYOR) —
+ * bu yüzden sınıf markup'ta KORUNDU ama yeniden TANIMLANMADI; görünüm kendi
+ * `.fe-*` sınıflarından geliyor.
+ */
+
+/* ---------- İki sütunlu oluşturucu ---------- */
+
+.sp-page.fe-page { max-width: 1240px; }
+
+/* Sol: ayarlar. Sağ: forma girecek alanlar. Tek bir <form> içinde iki sütun —
+   "Kaydet" hepsini birlikte gönderiyor, ikinci bir form YOK. */
+.sp-page .fe-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    gap: 1.15rem;
+    align-items: start;
+    max-width: none;
+}
+
+@media (max-width: 1000px) {
+    .sp-page .fe-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.sp-page .fe-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    min-width: 0;
+}
+
+/* Sağ sütun uzun sol sütunda görüş alanında kalsın. */
+.sp-page .fe-col-right { position: sticky; top: 1rem; }
+
+@media (max-width: 1000px) {
+    .sp-page .fe-col-right { position: static; }
+}
+
+/* Kart içi bölüm ayracı. */
+.sp-page .fe-section {
+    padding-top: 1.15rem;
+    margin-top: 1.15rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.sp-page .fe-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.sp-page .fe-section-title svg { color: var(--bcc-text-muted); flex: none; }
+
+/* ---------- Paylaşım kutusu ---------- */
+
+.sp-page .fe-share-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.85rem;
+}
+
+.sp-page .fe-share-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.sp-page .fe-share-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0.55rem 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+    background: var(--bcc-surface-sunken);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sp-page .fe-share-input:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+    color: var(--bcc-text);
+}
+
+/* KOPYALA BUTONU — ikon CSS ::before MASKESİ ile veriliyor, <svg> ile DEĞİL.
+   Gerekçe: paylaşılan share-popover.js kopyalamada `btn.textContent`'i
+   "Kopyalandı" ile DEĞİŞTİRİYOR; bir <svg> çocuk olsaydı o anda SİLİNİRDİ.
+   Pseudo-element textContent'ten etkilenmez, ikon ayakta kalır ve o dosyaya
+   hiç dokunmak gerekmez. */
+.sp-page .fe-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: none;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.sp-page .fe-copy-btn::before {
+    content: '';
+    width: 15px;
+    height: 15px;
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask: var(--fe-copy-icon) no-repeat center / 15px 15px;
+    mask: var(--fe-copy-icon) no-repeat center / 15px 15px;
+}
+
+/* İkonlar data-URI SVG (currentColor mask ile boyanıyor, sabit renk YOK). */
+.sp-page .fe-copy-btn {
+    --fe-copy-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect x='7' y='7' width='9' height='9' rx='2'/><path d='M13 5.5A1.5 1.5 0 0011.5 4h-6A1.5 1.5 0 004 5.5v6A1.5 1.5 0 005.5 13'/></svg>");
+}
+
+.sp-page .fe-copy-btn:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-text-muted);
+}
+
+/* Kopyalandı geri bildirimi: paylaşılan JS yalnızca ETİKETİ değiştiriyor.
+   Yeşil parlama için form-edit.js AYNI butona ikinci (görsel-only) bir
+   dinleyici bağlıyor — kopyalama mantığı KOPYALANMADI. */
+.sp-page .fe-copy-btn.is-copied {
+    border-color: var(--bcc-success);
+    background: var(--bcc-success-soft);
+    color: var(--bcc-success);
+}
+
+.sp-page .fe-copy-btn.is-copied::before {
+    --fe-copy-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 10.5l3.5 3.5 7.5-8'/></svg>");
+}
+
+/* ---------- Alan seçim kartları ---------- */
+
+.sp-page .fe-field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+/* Düz checkbox listesi yerine seçilebilir kart.
+ *
+ * ⚠️ SEÇİLİ DURUM `:has()` İLE DEĞİL, KARDEŞ SEÇİCİYLE OKUNUYOR — ilk sürüm
+ * `.fe-field-card:has(input:checked)` kullanıyordu ve /browse'da ÇALIŞMADIĞI
+ * görüldü. Ölçümle daraltıldı: selector DOĞRU eşleşiyor
+ * (`el.matches(...)` === true), önceliği de yeterli — ama `checked`
+ * DEĞİŞTİĞİNDE stil geçersizleştirme TETİKLENMİYOR; eleman DOM'dan çıkarılıp
+ * geri konunca (tam yeniden hesap) kural anında uygulanıyordu. Yani
+ * `:has()` bu tarayıcıda DİNAMİK durum için güvenilir değil.
+ *
+ * Çözüm: kart görünümü <label>'ın kendisinde değil, girdinin HEMEN SONRAKİ
+ * KARDEŞİ olan .fe-field-inner'da. `input:checked + .fe-field-inner` klasik
+ * kardeş geçersizleştirmesini kullanır ve her yerde çalışır.
+ *
+ * Girdi görsel olarak gizli ama ERİŞİLEBİLİR (display:none klavye odağını ve
+ * ekran okuyucuyu keserdi). */
+.sp-page .fe-field-card {
+    display: block;
+    cursor: pointer;
+}
+
+.sp-page .fe-field-card input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.sp-page .fe-field-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    background: var(--bcc-surface);
+    transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sp-page .fe-field-card:hover .fe-field-inner {
+    border-color: var(--bcc-border-strong);
+    background: var(--bcc-surface-hover);
+}
+
+.sp-page .fe-field-card input:checked + .fe-field-inner {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+}
+
+.sp-page .fe-field-card input:focus-visible + .fe-field-inner {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 1px;
+}
+
+/* Onay kutucuğu — kart seçiliyken accent dolgu + tik. */
+.sp-page .fe-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--bcc-border-strong);
+    border-radius: 5px;
+    background: var(--bcc-surface);
+    color: transparent;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.sp-page .fe-field-card input:checked + .fe-field-inner .fe-check {
+    border-color: var(--bcc-accent-strong);
+    background: var(--bcc-accent-strong);
+    color: var(--bcc-on-accent);
+}
+
+/* Alan tipi ikonu — .field-type-badge'in KENDİ background-image'ından
+   (theme.css), ikon tanımı kopyalanmıyor.
+   ⚠️ .field-badge DEĞİL: o sınıf style.css'te tanımlı ve bu sayfa style.css'i
+   YÜKLEMİYOR (kabuk yalnızca theme.css + home.css + sayfaya özel dosyayı
+   basıyor). Devraldığım markup .field-badge kullanıyordu, yani ikonlar bu
+   sayfada ZATEN GÖRÜNMÜYORDU — /browse ekran görüntüsünde fark edildi. */
+.sp-page .fe-field-inner .field-type-badge {
+    width: 1rem;
+    height: 1rem;
+    background-size: 14px 14px;
+    margin: 0;
+    flex: none;
+}
+
+.sp-page .fe-field-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--bcc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-page .fe-field-card input:checked + .fe-field-inner .fe-field-name {
+    font-weight: 600;
+    color: var(--bcc-accent-strong);
+}
+
+/* Seçili alan sayacı. */
+.sp-page .fe-field-count {
+    margin: 0.75rem 0 0;
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+}
+
+/* ---------- Kaydet çubuğu ---------- */
+
+.sp-page .fe-save-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding-top: 1.15rem;
+    margin-top: 1.15rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.sp-page .fe-save-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+}

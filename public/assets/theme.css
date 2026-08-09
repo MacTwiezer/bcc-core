@@ -30,6 +30,12 @@
        EKLENDI: mevcut hicbir token degistirilmedi. */
     --bcc-role-owner: #6b3fa0;
     --bcc-role-owner-soft: #f1ebfa;
+    /* Uyari (amber) — HATA degil DIKKAT anlami tasiyan kutular icin
+       (ilk tuketici: form_edit.php "bu linke sahip herkes kayit
+       ekleyebilir" uyarisi). danger kirmizisi burada yanlis olurdu:
+       ortada bir hata yok, bilincli bir risk var. */
+    --bcc-warning: #8a5a00;
+    --bcc-warning-soft: #fff8e6;
     /* Renkli (accent/danger) zeminler üzerindeki metin/ikon için — BİLEREK
        koyu temada da AYNI (#fff) kalır, :root[data-theme="dark"] altında
        YENİDEN TANIMLANMAZ. Bulunan gerçek bug: birçok yerde bunun yerine
@@ -60,6 +66,8 @@
     --bcc-success-soft: #1d3324;
     --bcc-role-owner: #b79ce0;
     --bcc-role-owner-soft: #2b2140;
+    --bcc-warning: #e0b25c;
+    --bcc-warning-soft: #3a2f18;
 }
 
 /* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
@@ -82,6 +90,8 @@
     --bcc-success-soft: #1d3324;
     --bcc-role-owner: #b79ce0;
     --bcc-role-owner-soft: #2b2140;
+    --bcc-warning: #e0b25c;
+    --bcc-warning-soft: #3a2f18;
     }
 }
 

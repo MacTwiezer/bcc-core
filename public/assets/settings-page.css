@@ -502,6 +502,18 @@
 
 .sp-page .sp-note a { color: var(--bcc-accent-strong); }
 
+/* Uyarı tonu — HATA değil DİKKAT. `.sp-note--warn` amber, `.sp-note--danger`
+   kırmızı. Taban `.sp-note` accent (bilgi) olarak kalır. */
+.sp-page .sp-note--warn {
+    border-color: var(--bcc-warning-soft);
+    border-left-color: var(--bcc-warning);
+    background: var(--bcc-warning-soft);
+    color: var(--bcc-text);
+}
+
+.sp-page .sp-note--warn svg { color: var(--bcc-warning); }
+.sp-page .sp-note--warn strong { color: var(--bcc-warning); }
+
 /* ---------- Maskeli sır / kod parçası ---------- */
 
 .sp-page .sp-code {

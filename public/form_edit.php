@@ -131,20 +131,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Herkese açık form linki — grid.php'nin $bccShareOrigin deseniyle AYNI.
-$bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-$publicFormUrl = $bccShareScheme . '://' . $bccShareHost . '/form.php?t=' . rawurlencode((string) $view['form_token']);
+// Herkese açık form linki. $_SERVER['HTTP_HOST'] YERİNE bcc_app_base_url()
+// (config/app.php) — register.php'nin doğrulama linkinde yapılan AYNI düzeltme.
+// Gerekçe orada ayrıntılı: bu link DIŞARIYA paylaşılmak için üretiliyor, yani
+// istekten gelen host'a dayanması hem yanlış adres üretebilir hem host-header
+// enjeksiyonuna açık kapı bırakır. $APP_BASE_URL boşsa eski davranışa düşer,
+// dolayısıyla yerel kurulumda çıktı DEĞİŞMEZ.
+$publicFormUrl = bcc_app_base_url() . '/form.php?t=' . rawurlencode((string) $view['form_token']);
+
+$formIsOpen = ((int) $view['form_enabled'] === 1);
+
+// Paylaşım kutusu iki yerde gösteriliyor (editör: sol sütun, salt-okunur:
+// tek kart) — HTML iki kez yazılmasın diye küçük bir yardımcı.
+function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
+{
+    ?>
+    <div class="settings-card">
+        <div class="fe-share-head">
+            <h2 style="margin:0;">Form bağlantısı</h2>
+            <span class="sp-status <?php echo $formIsOpen ? 'sp-status-on' : ''; ?>"><?php echo $formIsOpen ? 'AÇIK' : 'KAPALI'; ?></span>
+        </div>
+
+        <?php // .share-popover-form sınıfı ŞART: paylaşılan share-popover.js
+              // kopyalama butonundan yukarı doğru bu sınıfı arıyor (btn.closest).
+              // Sınıf KORUNDU, görünüm kendi .fe-* sınıflarından geliyor. ?>
+        <div class="share-popover-form">
+            <div class="fe-share-row">
+                <input type="text" class="fe-share-input" data-share-url-input readonly
+                       value="<?php echo htmlspecialchars($publicFormUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                       aria-label="Herkese açık form bağlantısı"
+                       onclick="this.select()">
+                <?php // Buton İÇİNDE <svg> YOK — bilerek. share-popover.js kopyalamada
+                      // btn.textContent'i "Kopyalandı" ile değiştiriyor; bir svg çocuk
+                      // o anda silinirdi. İkon CSS ::before maskesiyle veriliyor
+                      // (bkz. assets/form-edit.css), textContent'ten etkilenmiyor. ?>
+                <button type="button" class="fe-copy-btn" data-share-copy-btn>Kopyala</button>
+            </div>
+        </div>
+
+        <?php // ⚠️ Bu uyarı, projenin bugüne kadarki tek güvenlik sözünü TERSİNE
+              // çeviren yer (grid.php'deki "yalnızca oturum açmış takım üyeleri"
+              // notunun tam tersi) — kullanıcı bunu görmeden link paylaşmamalı.
+              // Bu yüzden düz metin değil, amber uyarı kutusu. ?>
+        <div class="sp-note sp-note--warn" style="margin: 0.85rem 0 0;">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
+            <span><strong>Bu bağlantıya sahip herkes giriş yapmadan bu tabloya kayıt ekleyebilir.</strong> Yalnızca paylaşmak istediğiniz kişilere gönderin.</span>
+        </div>
+
+        <div class="sp-note" style="margin: 0.5rem 0 0;">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+            <span>Formu kapatmak bağlantıyı <strong>iptal etmez</strong> — tekrar açtığınızda aynı bağlantı çalışmaya devam eder.</span>
+        </div>
+    </div>
+    <?php
+}
 
 // Sayfa iskeleti: table_fields.php/slack_settings.php ile AYNI kabuk
 // (home_shell_top/bottom) — yeni bir sayfa şablonu YAZILMADI.
 $homeActiveNav = 'fields';
 $homePageTitle = 'BCC-Core — Form: ' . $table['name'];
+// Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu oluşturucu.
+$homeExtraCss = array('settings-page.css', 'form-edit.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
+<div class="sp-page fe-page">
         <div class="settings-breadcrumb">
-            <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">&larr; <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?> tablosuna dön</a>
-            <span>·</span> <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">Alanları yönet</a>
+            <a href="/grid.php?table_id=<?php echo (int) $table['id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 5l-5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>
+            </a>
+            <span>·</span>
+            <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Alanları yönet
+            </a>
         </div>
         <div class="home-main-header">
             <h1><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
@@ -153,98 +213,123 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
-    <?php /* Paylaşım kutusu — share-popover.js'in zaten var olan
-             data-share-url-input / data-share-copy-btn mekanizması yeniden
-             kullanılıyor, yeni JS YAZILMADI.
-             ⚠️ UYARI METNİ: grid.php'deki "yalnızca oturum açmış takım üyeleri
-             için çalışır" notunun TAM TERSİ. Bu, projenin bugüne kadarki tek
-             güvenlik sözünü tersine çeviren yer — kullanıcı bunu görmeden link
-             paylaşmamalı. */ ?>
-    <div class="settings-card">
-        <h2>Form bağlantısı</h2>
-        <?php /* .share-popover-form sınıfı ŞART: share-popover.js kopyalama
-                 butonundan yukarı doğru bu sınıfı arıyor (btn.closest). */ ?>
-        <div class="share-popover-form form-share-box">
-            <div class="form-share-row">
-                <input type="text" class="form-share-input" data-share-url-input readonly
-                       value="<?php echo htmlspecialchars($publicFormUrl, ENT_QUOTES, 'UTF-8'); ?>"
-                       onclick="this.select()">
-                <button type="button" class="settings-btn settings-btn-sm" data-share-copy-btn>Kopyala</button>
-            </div>
-        </div>
-        <p class="form-share-warning">
-            ⚠️ Bu bağlantıya sahip HERKES giriş yapmadan bu tabloya kayıt ekleyebilir.
-            Yalnızca paylaşmak istediğiniz kişilere gönderin.
-        </p>
-        <p class="settings-hint">
-            Form şu an <strong><?php echo ((int) $view['form_enabled'] === 1) ? 'AÇIK' : 'KAPALI'; ?></strong>.
-            Kapatmak bağlantıyı iptal etmez — tekrar açtığınızda aynı bağlantı çalışmaya devam eder.
-        </p>
-    </div>
-
     <?php if (!$canEdit): ?>
-        <p class="settings-hint">Bu formu düzenlemek için editör yetkisi gerekir.</p>
+        <?php bcc_render_form_share_card($publicFormUrl, $formIsOpen); ?>
+        <div class="sp-note">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+            <span>Bu formu düzenlemek için <strong>editör</strong> yetkisi gerekir. Sayfayı salt-okunur görüyorsunuz.</span>
+        </div>
     <?php else: ?>
-    <form method="post" class="settings-card">
+    <?php // TEK <form>, İKİ SÜTUN: sol ayarlar, sağ alan seçimi. "Kaydet"
+          // hepsini birlikte gönderiyor — ikinci bir form YOK, alan adları
+          // (form_enabled / form_title / form_description /
+          // form_success_message / form_slack_notify / form_fields[])
+          // AYNEN korundu, sunucu tarafı değişmedi. ?>
+    <form method="post" class="fe-grid">
         <?php echo csrf_field(); ?>
         <input type="hidden" name="action" value="save_form">
         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
         <input type="hidden" name="view_id" value="<?php echo (int) $view['id']; ?>">
 
-        <label class="settings-field settings-field-checkbox">
-            <input type="checkbox" name="form_enabled" value="1" <?php echo ((int) $view['form_enabled'] === 1) ? 'checked' : ''; ?>>
-            Form açık (kapalıyken bağlantı 404 döner)
-        </label>
+        <?php // ---- SOL: ayarlar --------------------------------------------- ?>
+        <div class="fe-col fe-col-left">
+            <?php bcc_render_form_share_card($publicFormUrl, $formIsOpen); ?>
 
-        <label class="settings-field">Form başlığı
-            <input type="text" name="form_title" maxlength="150"
-                   value="<?php echo htmlspecialchars($formConfig['form_title'], ENT_QUOTES, 'UTF-8'); ?>"
-                   placeholder="<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+            <div class="settings-card">
+                <h2>Form ayarları</h2>
 
-        <label class="settings-field">Açıklama (formun üstünde görünür)
-            <textarea name="form_description" rows="3" maxlength="1000"><?php echo htmlspecialchars($formConfig['form_description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-        </label>
-
-        <label class="settings-field">Gönderim sonrası teşekkür metni
-            <input type="text" name="form_success_message" maxlength="500"
-                   value="<?php echo htmlspecialchars($formConfig['form_success_message'], ENT_QUOTES, 'UTF-8'); ?>"
-                   placeholder="Teşekkürler, kaydınız alındı.">
-        </label>
-
-        <label class="settings-field settings-field-checkbox">
-            <input type="checkbox" name="form_slack_notify" value="1" <?php echo !empty($formConfig['form_slack_notify']) ? 'checked' : ''; ?>>
-            Her gönderimde Slack'e bildirim gönder
-        </label>
-        <p class="settings-hint">
-            Varsayılan KAPALI: form herkese açık olduğu için istenmeyen gönderimler
-            doğrudan Slack kanalınıza düşebilir.
-        </p>
-
-        <h2>Formda görünecek alanlar</h2>
-        <?php if (empty($formEligibleFields)): ?>
-            <p class="settings-hint">Bu tabloda forma konulabilecek alan yok.</p>
-        <?php else: ?>
-            <p class="settings-hint">
-                Otomatik alanlar (Oluşturulma zamanı, Oluşturan, Son değişiklik,
-                Son değiştiren, Otomatik numara) ile Dosya eki ve Uzun metin bu
-                listede BİLEREK yok — kullanıcı bunları dolduramaz.
-            </p>
-            <?php foreach ($formEligibleFields as $f):
-                $isSelected = in_array((int) $f['id'], $formConfig['form_fields'], true);
-            ?>
-                <label class="settings-field settings-field-checkbox">
-                    <input type="checkbox" name="form_fields[]" value="<?php echo (int) $f['id']; ?>" <?php echo $isSelected ? 'checked' : ''; ?>>
-                    <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
-                    <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
-                    <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
+                <label class="sp-toggle">
+                    <input type="checkbox" name="form_enabled" value="1" <?php echo $formIsOpen ? 'checked' : ''; ?>>
+                    <span class="sp-toggle-track"></span>
+                    <span>Form açık <span class="sp-muted">— kapalıyken bağlantı 404 döner</span></span>
                 </label>
-            <?php endforeach; ?>
-        <?php endif; ?>
 
-        <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
+                <div class="fe-section">
+                    <label class="settings-field">Form başlığı
+                        <input type="text" name="form_title" maxlength="150"
+                               value="<?php echo htmlspecialchars($formConfig['form_title'], ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                    </label>
+
+                    <label class="settings-field" style="margin-top:0.9rem;">Açıklama <span class="sp-muted">— formun üstünde görünür</span>
+                        <textarea name="form_description" rows="3" maxlength="1000"><?php echo htmlspecialchars($formConfig['form_description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                    </label>
+
+                    <label class="settings-field" style="margin-top:0.9rem;">Gönderim sonrası teşekkür metni
+                        <input type="text" name="form_success_message" maxlength="500"
+                               value="<?php echo htmlspecialchars($formConfig['form_success_message'], ENT_QUOTES, 'UTF-8'); ?>"
+                               placeholder="Teşekkürler, kaydınız alındı.">
+                    </label>
+                </div>
+
+                <div class="fe-section">
+                    <h3 class="fe-section-title">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 3v9a2 2 0 11-2-2h9a2 2 0 11-2 2V3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Slack bildirimi
+                    </h3>
+                    <label class="sp-toggle">
+                        <input type="checkbox" name="form_slack_notify" value="1" <?php echo !empty($formConfig['form_slack_notify']) ? 'checked' : ''; ?>>
+                        <span class="sp-toggle-track"></span>
+                        <span>Her gönderimde Slack'e bildirim gönder</span>
+                    </label>
+                    <div class="sp-note sp-note--warn" style="margin: 0.75rem 0 0;">
+                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
+                        <span>Varsayılan <strong>kapalı</strong>: form herkese açık olduğu için istenmeyen gönderimler doğrudan Slack kanalınıza düşebilir.</span>
+                    </div>
+                </div>
+
+                <div class="fe-save-row">
+                    <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
+                    <p class="fe-save-hint">Sağdaki alan seçimi de bu düğmeyle kaydedilir.</p>
+                </div>
+            </div>
+        </div>
+
+        <?php // ---- SAĞ: forma girecek alanlar -------------------------------- ?>
+        <div class="fe-col fe-col-right">
+            <div class="settings-card">
+                <h2>Formda görünecek alanlar <span class="sp-count"><?php echo count($formEligibleFields); ?></span></h2>
+
+                <?php if (empty($formEligibleFields)): ?>
+                    <p class="settings-empty">
+                        <strong>Forma konulabilecek alan yok.</strong>
+                        <span class="sp-muted">Önce tabloya doldurulabilir bir alan ekleyin.</span>
+                    </p>
+                <?php else: ?>
+                    <div class="sp-note">
+                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
+                        <span>Otomatik alanlar (oluşturulma/değişiklik zamanı, oluşturan, otomatik numara) ile dosya eki ve uzun metin bu listede <strong>bilerek yok</strong> — kullanıcı bunları dolduramaz.</span>
+                    </div>
+
+                    <?php // Düz checkbox listesi yerine seçilebilir kart. Girdi adı
+                          // (form_fields[]) ve değeri AYNEN korundu; seçili görünüm
+                          // CSS :has(input:checked) ile, ek JS olmadan. ?>
+                    <div class="fe-field-list">
+                        <?php foreach ($formEligibleFields as $f):
+                            $isSelected = in_array((int) $f['id'], $formConfig['form_fields'], true);
+                        ?>
+                            <label class="fe-field-card">
+                                <input type="checkbox" name="form_fields[]" value="<?php echo (int) $f['id']; ?>" <?php echo $isSelected ? 'checked' : ''; ?>>
+                                <span class="fe-field-inner">
+                                <span class="fe-check" aria-hidden="true">
+                                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <span class="field-type-badge field-type-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                <span class="fe-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="fe-field-count" id="fe-field-count"></p>
+                <?php endif; ?>
+            </div>
+        </div>
     </form>
     <?php endif; ?>
-
+</div>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
+<?php // Yalnızca GÖRSEL: kopyalandı parlaması + seçili alan sayacı. Panoya
+      // yazma işi paylaşılan share-popover.js'te KALDI, kopyalanmadı. ?>
+<script src="<?php echo bcc_asset_url('form-edit.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

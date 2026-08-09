@@ -38,6 +38,10 @@ $slCss = file_get_contents($root . '/public/assets/slack-settings.css');
 $wsCss = file_get_contents($root . '/public/assets/workspaces.css');
 $wsPage = file_get_contents($root . '/public/workspaces.php');
 $wsJs = file_get_contents($root . '/public/assets/workspaces.js');
+$feCss = file_get_contents($root . '/public/assets/form-edit.css');
+$fePage = file_get_contents($root . '/public/form_edit.php');
+$feJs = file_get_contents($root . '/public/assets/form-edit.js');
+$shareJs = file_get_contents($root . '/public/assets/share-popover.js');
 $slPage = file_get_contents($root . '/public/slack_settings.php');
 $routingJs = file_get_contents($root . '/public/assets/slack-routing.js');
 $acPage = file_get_contents($root . '/public/account.php');
@@ -87,6 +91,7 @@ $tfRules = css_rules($tfCss);
 $acRules = css_rules($acCss);
 $slRules = css_rules($slCss);
 $wsRules = css_rules($wsCss);
+$feRules = css_rules($feCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
@@ -106,7 +111,7 @@ function unscoped_selectors($rules)
     return $bad;
 }
 
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules, 'form-edit.css' => $feRules) as $name => $rules) {
     $bad = unscoped_selectors($rules);
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
@@ -193,7 +198,7 @@ check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.
 
 // =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules, 'form-edit.css' => $feRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
     check("G) {$name} icinde sabit HEX renk YOK", empty($hex[0]), implode(' ', array_unique($hex[0])));
 }
@@ -348,6 +353,76 @@ check('J) filtre [hidden] DEGIL ayri sinif kullaniyor (grid display tuzagi)',
 check('J) --bcc-role-owner uc tema blogunda da tanimli',
     substr_count($themeCss, '--bcc-role-owner:') === 3 && substr_count($themeCss, '--bcc-role-owner-soft:') === 3,
     substr_count($themeCss, '--bcc-role-owner:') . ' / ' . substr_count($themeCss, '--bcc-role-owner-soft:'));
+
+// =====================================================================
+echo "\n--- K) form_edit.php ---\n";
+$feCode = php_code_only($root . '/public/form_edit.php');
+
+check('K) ortak + sayfaya ozel CSS bagliyor',
+    strpos($fePage, "array('settings-page.css', 'form-edit.css')") !== false);
+check('K) .sp-page sarmalayicisi aciyor',
+    substr_count($fePage, '<div class="sp-page fe-page">') === 1);
+
+// PAYLASILAN share-popover.js'e DOKUNULMADI ve sozlesmesi korundu.
+check('K) share-popover.js DEGISMEDI (fe-*/sp-* bilmiyor)',
+    strpos($shareJs, 'fe-') === false && strpos($shareJs, 'sp-') === false);
+foreach (array('share-popover-form', 'data-share-url-input', 'data-share-copy-btn') as $hook) {
+    check("K) paylasilan kopyalama kancasi korundu: {$hook}", strpos($feCode, $hook) !== false);
+}
+// Kopyala butonunun ICINDE <svg> OLMAMALI: share-popover.js kopyalamada
+// btn.textContent'i degistiriyor, bir svg cocuk O ANDA SILINIRDI. Ikon CSS
+// ::before maskesiyle veriliyor.
+check('K) kopyala butonunun icinde <svg> YOK (textContent tuzagi)',
+    preg_match('/<button type="button" class="fe-copy-btn" data-share-copy-btn>[^<]*<\/button>/', $fePage) === 1);
+check('K) kopyala ikonu ::before maskesiyle veriliyor',
+    preg_match('/\.sp-page \.fe-copy-btn::before \{[^}]*mask: var\(--fe-copy-icon\)/s', $feRules) === 1);
+check('K) form-edit.js kopyalama mantigini KOPYALAMIYOR (yalnizca gorsel)',
+    strpos($feJs, 'clipboard') === false && strpos($feJs, 'execCommand') === false
+    && strpos($feJs, "classList.add('is-copied')") !== false);
+
+// SECILI DURUM :has() ILE DEGIL kardes seciciyle. Gerekce: /browse'da olculdu —
+// :has() eslesiyor ve onceligi yeterli ama `checked` degisiminde stil
+// gecersizlestirme TETIKLENMIYOR (eleman DOM'dan cikarilip geri konunca
+// uygulaniyordu). Dinamik durum icin guvenilir degil.
+check('K) form-edit.css KURALLARINDA :has() YOK',
+    strpos($feRules, ':has(') === false);
+check('K) secili durum kardes seciciyle okunuyor',
+    strpos($feRules, 'input:checked + .fe-field-inner') !== false);
+/* [^>]* KULLANILMAZ: girdi etiketinin icinde bir PHP echo blogu var ve o blok
+   ">" iceriyor, kalip orada duruyordu (dogru markup'ta bile KALDI veriyordu).
+   NOT: bu aciklama BLOK yorum — tek satirlik "//" yorumunun ICINDE bile bir
+   PHP kapanis etiketi yazmak PHP modunu KAPATIR ve dosyanin kalani duz metin
+   olarak basilir (ilk yazimda tam olarak bu oldu). */
+check('K) markup girdiden SONRA .fe-field-inner kardesini iceriyor',
+    preg_match('/name="form_fields\[\]".{0,240}?<span class="fe-field-inner">/s', $fePage) === 1);
+
+// Alan tipi ikonu: .field-badge style.css'te tanimli ve bu sayfa style.css
+// YUKLEMIYOR -> devralinan markup'ta ikonlar GORUNMUYORDU. theme.css'te
+// tanimli .field-type-badge kullaniliyor.
+check('K) alan ikonu .field-type-badge (theme.css) kullaniyor, .field-badge DEGIL',
+    strpos($feCode, 'field-type-badge field-type-badge--') !== false
+    && preg_match('/class="field-badge/', $feCode) === 0);
+check('K) .field-type-badge gercekten theme.css\'te tanimli',
+    strpos($themeCss, '.field-type-badge {') !== false);
+
+// Form alan adlari DEGISMEDI (sunucu tarafi ayni).
+foreach (array('form_enabled', 'form_title', 'form_description', 'form_success_message', 'form_slack_notify') as $n) {
+    check("K) form alani korundu: {$n}", strpos($fePage, 'name="' . $n . '"') !== false);
+}
+check('K) form_fields[] korundu', strpos($fePage, 'name="form_fields[]"') !== false);
+check('K) TEK <form> (iki sutun onun icinde)',
+    substr_count($fePage, '<form method="post"') === 1);
+
+// Herkese acik link artik HTTP_HOST'tan DEGIL yapilandirmadan.
+check('K) form linki bcc_app_base_url() kullaniyor',
+    strpos($feCode, 'bcc_app_base_url()') !== false && strpos($feCode, 'HTTP_HOST') === false);
+
+// theme.css'e EKLENEN uyari (amber) tonu: uc blokta da tanimli.
+check('K) --bcc-warning uc tema blogunda da tanimli',
+    substr_count($themeCss, '--bcc-warning:') === 3 && substr_count($themeCss, '--bcc-warning-soft:') === 3,
+    substr_count($themeCss, '--bcc-warning:') . ' / ' . substr_count($themeCss, '--bcc-warning-soft:'));
+check('K) uyari kutusu ORTAK dosyada, sayfaya ozelde TEKRARLANMIYOR',
+    strpos($spRules, '.sp-note--warn') !== false && strpos($feRules, '.sp-note--warn') === false);
 
 $passed = count(array_filter($results));
 $total = count($results);

@@ -23,6 +23,7 @@ require_once __DIR__ . '/csv.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/slack.php';
 require_once __DIR__ . '/validation.php';
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/mailer.php';
 
 // public/assets/*.css|js dosyalarını mtime tabanlı sürüm sorgu string'iyle

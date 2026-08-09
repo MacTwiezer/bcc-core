@@ -66,17 +66,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($error === null) {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-            $verifyLink = $scheme . '://' . $host . '/verify_email.php?token=' . $token;
+            // Bağlantının tabanı ARTIK $_SERVER['HTTP_HOST']'tan kurulmuyor:
+            // bcc_app_base_url() önce config/app.local.php'deki $APP_BASE_URL'e
+            // bakar, yoksa eski davranışa (istek host'u) düşer. Gerekçe
+            // config/app.php'de: localhost'ta çalışan uygulamada mail'e giden
+            // link ALICI İÇİN ERİŞİLEMEZ oluyordu, ayrıca HTTP_HOST istemciden
+            // gelen bir başlık olduğu için e-postaya gömmek host-header
+            // enjeksiyonuna açık kapı bırakıyordu.
+            $verifyLink = bcc_app_base_url() . '/verify_email.php?token=' . $token;
 
-            $body = "Merhaba {$fullName},\n\n"
-                . "BCC-Core hesabınızı doğrulamak ve şifrenizi oluşturmak için aşağıdaki bağlantıya tıklayın:\n\n"
+            // Düz metin parçası ELLE yazılıyor (HTML'den strip_tags ile
+            // türetilmiyor) — multipart'ın text/plain tarafı da okunaklı olsun.
+            // Sadece-HTML mail spam puanını yükseltiyor, bu yüzden ikisi de var.
+            $bodyText = "Merhaba {$fullName},\n\n"
+                . "BCC-Core hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
                 . $verifyLink . "\n\n"
                 . "Bu bağlantı 24 saat geçerlidir.\n\n"
-                . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.";
+                . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
+                . bcc_mail_text_footer();
 
-            bcc_send_mail($email, 'BCC-Core — e-postanızı doğrulayın', $body);
+            $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
+            $safeLink = htmlspecialchars($verifyLink, ENT_QUOTES, 'UTF-8');
+
+            $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
+                . '<p style="margin: 0 0 14px;">BCC-Core hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
+                . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
+
+            // Buton çalışmazsa (bazı istemciler <a>'yı düz metne çevirir) diye
+            // altında ham bağlantı da duruyor — word-break, uzun token'ın
+            // kutuyu yatay taşırmaması için.
+            $noteHtml = '<p style="margin: 12px 0 0;">Buton çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>'
+                . '<a href="' . $safeLink . '" style="color: #2d7ff9; word-break: break-all;">' . $safeLink . '</a></p>'
+                . '<p style="margin: 12px 0 0;">Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>';
+
+            $bodyHtml = bcc_mail_html_shell(
+                'Hesabınızı etkinleştirin',
+                $introHtml,
+                'Hesabımı Etkinleştir',
+                $verifyLink,
+                $noteHtml
+            );
+
+            // Konu sade ve net: eski "BCC-Core — e-postanızı doğrulayın"daki
+            // uzun tire ve ürün öneki spam filtrelerinde gereksiz gürültüydü.
+            bcc_send_mail($email, 'BCC-Core hesabınızı etkinleştirin', $bodyText, $bodyHtml);
 
             header('Location: /login.php?registered=1');
             exit;

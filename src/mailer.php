@@ -1,10 +1,72 @@
 <?php
-// Basit e-posta gönderici — dış kütüphane YOK (projedeki xlsx_writer.php/csv.php
-// ile AYNI ilke). config/mail.php'deki $MAIL_MODE'a göre üç modda çalışır:
+// E-posta gönderici. config/mail.php'deki $MAIL_MODE'a göre üç modda çalışır:
 // 'log' (varsayılan, storage/mail/ altına dosya yazar), 'native' (PHP mail())
-// veya 'smtp' (aşağıdaki elle yazılmış istemci — STARTTLS + AUTH LOGIN).
+// veya 'smtp'.
+//
+// 'smtp' MODU ARTIK PHPMailer KULLANIYOR (aşağıdaki elle yazılmış istemci
+// DEĞİL). Gerekçe ve sonuçları:
+//
+//   * TEK KURUMSAL GÖNDEREN. Önceden bu dosya kendi Gmail hesabından
+//     (config/mail.local.php), record_send.php ise Office 365'ten
+//     (config/mail_record_send.local.php) gönderiyordu. Aynı üründen iki farklı
+//     alan adıyla mail çıkması spam açısından en kötü kombinasyondu: görünen ad
+//     kurumsal ("BCC-Core"), adres kişisel bir Gmail — alıcı sunucular bunu
+//     "display name spoofing" kalıbı olarak puanlar. Artık ikisi de AYNI dosyayı
+//     (mail_record_send.local.php) okuyor, yani aynı kutudan çıkıyor.
+//     Dosya adı tarihsel: o config artık "kaydı gönder"e değil, PROJENİN TEK
+//     SMTP HESABINA ait. record_send.php'ye bu turda DOKUNULMADI — zaten aynı
+//     dosyayı okuduğu için hesap birliği kendiliğinden sağlandı.
+//
+//   * MULTIPART. Sadece-HTML mailler spam puanını yükseltir; PHPMailer
+//     Body + AltBody ile text/plain parçasını da ekliyor. Elle yazılmış
+//     istemciye MIME multipart eklemek yeni ve gereksiz bir hata yüzeyiydi
+//     (PHPMailer bu projede record_send'de zaten kanıtlanmış durumda).
+//
+//   * Reply-To (config/mail.php $MAIL_REPLY_TO) desteği bedava geldi.
+//
+// Elle yazılmış SMTP istemcisi (bcc_smtp_send, dosyanın altında) SİLİNMEDİ:
+// bağımlılıksız bir yedek olarak duruyor ve $MAIL_SMTP_* ile yapılandırılmış
+// eski bir kurulumda hâlâ devreye girer (bkz. bcc_smtp_config()).
 
 require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/mail_template.php';
+
+/**
+ * Projenin SMTP hesabını döndürür (host/port/encryption/username/password/
+ * from_email/from_name) ya da yapılandırılmamışsa null.
+ *
+ * Tek kaynak: config/mail_record_send.local.php. Bulunamazsa, GERİYE DÖNÜK
+ * UYUMLULUK için config/mail.local.php'deki eski $MAIL_SMTP_* değişkenlerine
+ * düşer — böylece bu değişiklik, o dosyayı hâlâ eski biçimde tutan bir
+ * kurulumu bozmaz.
+ */
+function bcc_smtp_config()
+{
+    $path = __DIR__ . '/../config/mail_record_send.local.php';
+
+    if (is_file($path)) {
+        $config = require $path;
+        if (is_array($config) && !empty($config['password']) && $config['password'] !== 'BURAYA_SIFRE') {
+            return $config;
+        }
+    }
+
+    global $MAIL_SMTP_HOST, $MAIL_SMTP_PORT, $MAIL_SMTP_USER, $MAIL_SMTP_PASS, $MAIL_FROM_EMAIL, $MAIL_FROM_NAME;
+    if (!empty($MAIL_SMTP_HOST) && !empty($MAIL_SMTP_USER)) {
+        return array(
+            'host' => $MAIL_SMTP_HOST,
+            'port' => $MAIL_SMTP_PORT,
+            'encryption' => 'tls',
+            'username' => $MAIL_SMTP_USER,
+            'password' => $MAIL_SMTP_PASS,
+            'from_email' => $MAIL_FROM_EMAIL,
+            'from_name' => $MAIL_FROM_NAME,
+            'legacy' => true,
+        );
+    }
+
+    return null;
+}
 
 function bcc_mail_storage_dir()
 {
@@ -17,38 +79,88 @@ function bcc_mail_storage_dir()
 }
 
 /**
+ * @param string      $toEmail
+ * @param string      $subject
+ * @param string      $bodyText Düz metin gövde — HER ZAMAN gönderilir
+ *                              (multipart'ın text/plain parçası).
+ * @param string|null $bodyHtml Verilirse mail multipart HTML olur; verilmezse
+ *                              yalnızca düz metin gider (eski davranış).
  * @return bool gönderim (ya da 'log' modunda dosyaya yazma) başarılı mı
  */
-function bcc_send_mail($toEmail, $subject, $bodyText)
+function bcc_send_mail($toEmail, $subject, $bodyText, $bodyHtml = null)
 {
-    global $MAIL_MODE, $MAIL_FROM_EMAIL, $MAIL_FROM_NAME;
+    global $MAIL_MODE, $MAIL_FROM_EMAIL, $MAIL_FROM_NAME, $MAIL_REPLY_TO;
 
     if ($MAIL_MODE === 'smtp') {
-        global $MAIL_SMTP_HOST, $MAIL_SMTP_PORT, $MAIL_SMTP_USER, $MAIL_SMTP_PASS;
+        $config = bcc_smtp_config();
 
-        $transcript = '';
-        $ok = bcc_smtp_send(
-            $MAIL_SMTP_HOST,
-            $MAIL_SMTP_PORT,
-            $MAIL_SMTP_USER,
-            $MAIL_SMTP_PASS,
-            $MAIL_FROM_EMAIL,
-            $MAIL_FROM_NAME,
-            $toEmail,
-            $subject,
-            $bodyText,
-            $transcript
-        );
+        if ($config === null) {
+            $dir = bcc_mail_storage_dir();
+            $fileName = date('Y-m-d_His') . '_' . bin2hex(random_bytes(4)) . '_SMTP_CONFIG_MISSING.txt';
+            file_put_contents($dir . '/' . $fileName, "Kime: {$toEmail}\nKonu: {$subject}\n\nSMTP yapilandirmasi bulunamadi (config/mail_record_send.local.php).\n");
 
-        if (!$ok) {
+            return false;
+        }
+
+        require_once __DIR__ . '/../vendor/autoload.php';
+
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+        try {
+            $mail->isSMTP();
+            $mail->Host = $config['host'];
+            $mail->Port = $config['port'];
+            $mail->SMTPAuth = true;
+            $mail->Username = $config['username'];
+            $mail->Password = $config['password'];
+            $mail->SMTPSecure = isset($config['encryption']) ? $config['encryption'] : 'tls';
+            $mail->CharSet = 'UTF-8';
+
+            // From ADRESİ config'ten gelmek ZORUNDA: Office 365 (ve çoğu
+            // sağlayıcı) kimlik doğrulanan kutudan farklı bir From'u reddeder.
+            // GÖRÜNEN AD ise uygulamadan geliyor ($MAIL_FROM_NAME) — böylece
+            // "BCC İletişim" gibi kurumsal bir isim, record_send'in kendi
+            // gönderen adına (o dosya bu turda değişmedi) dokunmadan
+            // kullanılabiliyor.
+            $fromName = ($MAIL_FROM_NAME !== null && $MAIL_FROM_NAME !== '')
+                ? $MAIL_FROM_NAME
+                : (isset($config['from_name']) ? $config['from_name'] : '');
+            $mail->setFrom($config['from_email'], $fromName);
+            $mail->addAddress($toEmail);
+
+            if (!empty($MAIL_REPLY_TO)) {
+                $mail->addReplyTo($MAIL_REPLY_TO);
+            }
+
+            $mail->Subject = $subject;
+
+            if ($bodyHtml !== null) {
+                // Sadece-HTML mail spam puanını yükseltir — text/plain parçası
+                // her zaman ekleniyor (çağıranın verdiği düz metin, HTML'den
+                // strip_tags ile TÜRETİLMİŞ bir yaklaşık DEĞİL).
+                $mail->isHTML(true);
+                $mail->Body = $bodyHtml;
+                $mail->AltBody = $bodyText;
+            } else {
+                $mail->isHTML(false);
+                $mail->Body = $bodyText;
+            }
+
+            $mail->send();
+
+            return true;
+        } catch (Throwable $e) {
             // Sessizce yutmak yerine 'log' moduyla aynı yere, insan-okunur bir
             // hata kaydı bırakır — gönderim neden başarısız oldu görülebilsin.
             $dir = bcc_mail_storage_dir();
             $fileName = date('Y-m-d_His') . '_' . bin2hex(random_bytes(4)) . '_SMTP_ERROR.txt';
-            file_put_contents($dir . '/' . $fileName, "Kime: {$toEmail}\nKonu: {$subject}\n\n--- SMTP transcript ---\n{$transcript}");
-        }
+            file_put_contents(
+                $dir . '/' . $fileName,
+                "Kime: {$toEmail}\nKonu: {$subject}\n\n--- PHPMailer hatasi ---\n" . $mail->ErrorInfo . "\n" . $e->getMessage() . "\n"
+            );
 
-        return $ok;
+            return false;
+        }
     }
 
     if ($MAIL_MODE === 'native') {
@@ -70,6 +182,13 @@ function bcc_send_mail($toEmail, $subject, $bodyText)
         . "Konu: {$subject}\n"
         . 'Tarih: ' . date('Y-m-d H:i:s') . "\n\n"
         . $bodyText . "\n";
+
+    // HTML gövde varsa AYRI bir .html dosyası olarak da yazılır — 'log' modunda
+    // tasarımı tarayıcıda açıp gözle kontrol edebilmek için (gerçek gönderim
+    // yapmadan). .txt her zaman yazılır, çünkü asıl doğrulanan şey linktir.
+    if ($bodyHtml !== null) {
+        file_put_contents($dir . '/' . $fileName . '.html', $bodyHtml);
+    }
 
     return file_put_contents($dir . '/' . $fileName, $content) !== false;
 }

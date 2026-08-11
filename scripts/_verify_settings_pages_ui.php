@@ -323,11 +323,29 @@ foreach (array('.sp-role', '.sp-avatar') as $shared) {
     check("J) '{$shared}' workspaces.css'te TEKRARLANMIYOR", strpos($wsRules, $shared) === false);
 }
 
-// UYDURMA OZELLIK KORUMASI. Bu sayfada rol degistirme/cikarma YOK
-// (team_members.php'nin isi) ve calisma alani olusturma admin'e ait.
+// UYDURMA OZELLIK KORUMASI. Katilimci SATIRLARINDA rol degistirme/cikarma
+// hala YOK (team_members.php'nin isi) ve calisma alani olusturma admin'e ait.
 check('J) hover kisayolu SAHTE dropdown degil, GERCEK sayfaya link',
-    preg_match('/class="wsx-member-manage" href="\/team_members\.php\?team_id=/', $wsPage) === 1
-    && strpos($wsCode, '<select') === false);
+    preg_match('/class="wsx-member-manage" href="\/team_members\.php\?team_id=/', $wsPage) === 1);
+
+// Sayfadaki TEK <select> hizli davet kutusunun ROL secicisidir.
+//
+// Bu kontrol eskiden "sayfada hic <select> yok" diyordu; hizli davet kutusu
+// eklenince premis degisti. Korunan sey AYNI: burada "calisiyormus gibi duran"
+// bir kontrol olmamali. Bu yuzden select'in (a) tek oldugunu, (b) davet
+// kutusunun icinde oldugunu ve (c) GERCEK bir uc noktaya baglandigini
+// dogruluyoruz -- katilimci satirlarinda hala satir ici rol dropdown'u YOK.
+check('J) sayfadaki tek <select> davet kutusunun rol secicisi',
+    substr_count($wsCode, '<select') === 1
+    && strpos($wsCode, 'data-ws-invite-role') !== false);
+check('J) davet kutusu GERCEK uc noktaya bagli (kendi mantigini yazmiyor)',
+    strpos(file_get_contents($root . '/public/assets/workspaces.js'), '/api/team_member_assign.php') !== false
+    && is_file($root . '/public/api/team_member_assign.php'));
+check('J) katilimci SATIRLARINDA satir ici rol dropdown\'u YOK',
+    preg_match('/wsx-member-badges.*?<select/s', $wsCode) === 0);
+// Davet kutusu yalnizca yetkiliye basiliyor (CSS ile gizlenmiyor).
+check('J) davet kutusu $canManageMembers kosulunun ICINDE',
+    preg_match('/if\s*\(\$canManageMembers\s*&&\s*!empty\(\$wsInviteRoles\)\)\s*:\s*\?>/', $wsCode) === 1);
 // Iki ayri kontrol: tek bir regex'te birlestirmek kirilgandi ([^)]* acgozlu
 // davranip "=== 1"i yutuyordu, dogru markup'ta bile KALDI veriyordu).
 check('J) "Yeni calisma alani" karti is_admin kosulunun ICINDE',

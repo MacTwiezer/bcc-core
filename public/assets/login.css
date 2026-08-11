@@ -186,3 +186,101 @@
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
 }
+
+/* ---------------------------------------------------------------------------
+   Hızlı Demo Girişi — YALNIZCA $BCC_DEMO_LOGIN açıkken basılan blok
+   (bkz. config/app.php, public/login.php, assets/demo-login.js).
+   Kasıtlı olarak SÖNÜK: giriş formunun kendisiyle yarışmayan, "bu bir
+   geliştirme yardımcısı" izlenimi veren bir kutu.
+   --------------------------------------------------------------------------- */
+
+.login-demo {
+    margin-top: 1.4rem;
+    padding: 0.85rem 0.9rem 0.9rem;
+    border: 1px dashed var(--bcc-border-strong);
+    border-radius: 10px;
+    background: var(--bcc-surface-sunken);
+}
+
+.login-demo-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.login-demo-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+}
+
+.login-demo-badge {
+    flex: none;
+    padding: 0.1rem 0.42rem;
+    border-radius: 999px;
+    background: var(--bcc-warning-soft);
+    color: var(--bcc-warning);
+    font-size: 0.66rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.login-demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
+.login-demo-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.login-demo-btn:hover {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+}
+
+/* Tıklanan rol — alanlara bakmadan hangi hesabın dolu olduğu görünsün. */
+.login-demo-btn.is-selected {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--bcc-accent);
+}
+
+.login-demo-btn-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.login-demo-btn-hint {
+    font-size: 0.66rem;
+    line-height: 1.25;
+    color: var(--bcc-text-muted);
+}
+
+.login-demo-btn.is-selected .login-demo-btn-label,
+.login-demo-btn:hover .login-demo-btn-label { color: var(--bcc-accent-strong); }
+
+.login-demo-note {
+    margin: 0.6rem 0 0;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--bcc-text-muted);
+    text-align: center;
+}

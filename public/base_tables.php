@@ -12,7 +12,7 @@ $base = find_base_or_404($baseId);
 require_team_access($base['team_id']);
 
 $role = current_user_role_in_team($base['team_id']);
-$canEdit = ($role === 'owner');
+$canEdit = bcc_can_manage_schema($role);  // tablo şeması — src/auth.php
 
 $error = null;
 $success = null;
@@ -67,6 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 log_audit('table.create', 'table', $newId, array('name' => $name, 'base_id' => $base['id']), $base['team_id']);
 
                 bcc_commit();
+
+                // Slack bildirimi — COMMIT'TEN SONRA, transaction'ın DIŞINDA
+                // (bcc_create_field()'daki AYNI gerekçe: geri alınmış bir tablo
+                // için bildirim gitmesin, Slack yavaşsa transaction açık kalmasın,
+                // gönderim hatası tablo oluşturmayı başarısız saymasın).
+                bcc_notify_slack_new_table((int) $newId, $user['full_name']);
+
                 $success = 'Tablo oluşturuldu: ' . $name;
             } catch (Throwable $e) {
                 bcc_rollback();

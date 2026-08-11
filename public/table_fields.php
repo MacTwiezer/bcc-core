@@ -12,7 +12,7 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = ($role === 'owner');
+$canEdit = bcc_can_manage_schema($role);  // alan şeması — src/auth.php
 
 $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
 

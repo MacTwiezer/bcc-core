@@ -24,6 +24,9 @@ require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/slack.php';
 require_once __DIR__ . '/validation.php';
 require_once __DIR__ . '/../config/app.php';
+// config/app.php'den SONRA: bcc_demo_login_enabled() oradaki $BCC_DEMO_LOGIN
+// bayrağını okur (yerel override config/app.local.php'den gelir).
+require_once __DIR__ . '/demo_accounts.php';
 require_once __DIR__ . '/mailer.php';
 
 // public/assets/*.css|js dosyalarını mtime tabanlı sürüm sorgu string'iyle

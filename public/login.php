@@ -85,11 +85,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="/register.php">Kayıt ol</a>
         </p>
 
+        <?php if (bcc_demo_login_enabled()): ?>
+            <?php
+            // Hızlı Demo Girişi — YALNIZCA $BCC_DEMO_LOGIN açıkken basılır
+            // (varsayılan false, bkz. config/app.php). Kapalıyken bu blok hiç
+            // çalışmaz: sabit şifreler sayfa kaynağında GÖRÜNMEZ.
+            //
+            // Butonlar oturum AÇMAZ, yalnızca yukarıdaki iki alanı doldurur —
+            // giriş yine normal POST + CSRF + attempt_login() yolundan geçer,
+            // yani kimlik doğrulamayı atlayan ikinci bir kapı açılmaz. Bu,
+            // bilinçli bir tercih (kullanıcı onayladı): yeni bir uç nokta
+            // eklemek, canlıda unutulursa gerçek bir güvenlik açığı olurdu.
+            //
+            // Kimlik bilgileri src/demo_accounts.php'den gelir — seed betiği
+            // (scripts/seed_demo_users.php) DE aynı listeyi kullanır, ikinci
+            // bir kopya YOK.
+            ?>
+            <div class="login-demo">
+                <div class="login-demo-head">
+                    <span class="login-demo-title">Hızlı Demo Girişi</span>
+                    <span class="login-demo-badge">yalnızca yerel test</span>
+                </div>
+
+                <div class="login-demo-grid">
+                    <?php foreach (bcc_demo_accounts() as $demo): ?>
+                        <button
+                            type="button"
+                            class="login-demo-btn"
+                            data-demo-email="<?php echo htmlspecialchars($demo['email'], ENT_QUOTES, 'UTF-8'); ?>"
+                            data-demo-password="<?php echo htmlspecialchars($demo['password'], ENT_QUOTES, 'UTF-8'); ?>"
+                            title="<?php echo htmlspecialchars($demo['email'] . ' — ' . $demo['hint'], ENT_QUOTES, 'UTF-8'); ?>"
+                        >
+                            <span class="login-demo-btn-label"><?php echo htmlspecialchars($demo['label'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="login-demo-btn-hint"><?php echo htmlspecialchars($demo['hint'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+
+                <p class="login-demo-note" id="login-demo-note">Bir rol seçin, alanlar dolsun — sonra “Giriş yap”.</p>
+            </div>
+        <?php endif; ?>
+
         <div class="login-legal">
             <p class="login-tagline">BCC-Core — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>
 <script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
+<?php if (bcc_demo_login_enabled()): ?>
+<script src="<?php echo bcc_asset_url('demo-login.js'); ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

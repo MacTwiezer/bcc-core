@@ -85,6 +85,16 @@
                     edgeCell.appendChild(handle);
                 }
             }
+
+            // Sütun genişliği şeritleri (grid-column-resize.js) tablonun DIŞINDA,
+            // mutlak konumlu bir katmanda duruyor: donmuş sınır değiştiğinde
+            // yalnızca SINIFLAR değişiyor (boyut değil), yani o dosyanın
+            // ResizeObserver'ı bunu göremez — hangi şeridin pinlendiğini ve
+            // hangisinin donmuş grubun altında kaldığını yeniden hesaplaması için
+            // kendi açtığı kanca çağrılıyor (BCC_reapplyFreeze'in simetriği).
+            if (window.BCC_relayoutColumnResize) {
+                window.BCC_relayoutColumnResize();
+            }
         }
 
         // grid.js (kayıt ekleme) yeni bir satır DOM'a eklediğinde bu satırın da

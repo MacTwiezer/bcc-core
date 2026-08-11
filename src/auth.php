@@ -146,6 +146,77 @@ function bcc_assignable_roles($myRank)
     return $roles;
 }
 
+// ---------------------------------------------------------------------------
+// YETENEK (capability) haritası — RBAC'in TEK KAYNAĞI
+// ---------------------------------------------------------------------------
+// Kural: hiçbir sayfa/uçnokta "role === 'owner'" veya
+// "in_array($role, array('editor','owner'))" gibi bir kontrolü KENDİ İÇİNDE
+// YAZMAZ; hepsi aşağıdaki fonksiyonlardan birini çağırır. Böylece bir yeteneğin
+// eşiği değiştiğinde arayüzdeki gizleme ile sunucudaki reddetme ASLA ayrışamaz —
+// bu dosyada yaşanan asıl kusur buydu (bkz. bcc_can_manage_members notu).
+//
+// Rol rütbeleri: viewer(1) < commenter(2) < editor(3) < owner(4).
+//
+// Airtable eşlemesi (support.airtable.com/docs/workspace-permissions):
+//   Owner + Creator -> bizde 'owner'   (ayrı bir 'creator' rolü YOK; bkz.
+//                                       src/demo_accounts.php'deki uzun not)
+//   Editor          -> 'editor'
+//   Commenter       -> 'commenter'
+//   Read-only       -> 'viewer'
+
+// Base EKLEME/SİLME. Airtable izin matrisi:
+//   "Add and delete bases in the shared workspace" → Owner ✅ Creator ✅
+//                                                    Editor ✗ Commenter ✗ Read-only ✗
+//   "Access all bases ... at your assigned permission level" → BEŞ rolde de ✅
+// Yani base'i GÖRMEK üyelikle gelir (require_team_access + dashboard.php'nin
+// team_id IN (...) süzgeci), OLUŞTURMAK/SİLMEK en üst iki role aittir.
+// Çağıranlar: dashboard.php, bases.php, api/base_create.php, api/base_delete.php.
+function bcc_can_manage_bases($role)
+{
+    return $role === 'owner';
+}
+
+// ÜYE yönetimi: ekibe kullanıcı ekleme, rol atama/değiştirme, üyeyi çıkarma.
+//
+// DİKKAT — bu, Airtable'ın kendi matrisinden BİLEREK DAHA KATI: orada "Invite
+// users at the same or below your permission level" satırı BEŞ rolde de ✅'dir
+// (bir Read-only bile kendi seviyesinde davet edebilir). Bu uygulamada ürün
+// kararı olarak üye yönetimi YALNIZCA Owner'a bırakıldı (kullanıcı talebi).
+//
+// Bulunan gerçek açık (bu fonksiyon eklenmeden önce): team_members.php sayfası
+// require_role('viewer') ile herkese açıktı ve assign/remove POST'ları yalnızca
+// "rank(hedef) <= rank(ben)" hiyerarşi kontrolünden geçiyordu. Sonuç: viewer
+// rolündeki bir kullanıcı, ekibe İSTEDİĞİ aktif kullanıcıyı viewer olarak
+// EKLEYEBİLİYOR ve diğer viewer'ları ekipten ÇIKARABİLİYORDU (canlı olarak
+// doğrulandı: POST -> 200 + "Atama kaydedildi" + team_members satırı oluştu).
+// Editor için de aynısı, üstelik commenter/editor rollerini de atayabiliyordu.
+function bcc_can_manage_members($role)
+{
+    return $role === 'owner';
+}
+
+// ŞEMA değişikliği: alan (field) ve tablo oluşturma/silme/düzenleme.
+// Airtable'da Editor kayıt düzenler ama şemaya dokunamaz — bu uygulamada zaten
+// owner-only'di (table_fields.php, base_tables.php, api/field_create.php);
+// burası o dağınık kontrolleri tek isim altında toplar.
+function bcc_can_manage_schema($role)
+{
+    return $role === 'owner';
+}
+
+// KAYIT düzenleme: satır ekleme/güncelleme/silme, içe aktarma, görünüm
+// yapılandırması. Airtable: Editor ve üzeri.
+function bcc_can_edit_records($role)
+{
+    return $role === 'editor' || $role === 'owner';
+}
+
+// YORUM yazma. Airtable: Commenter ve üzeri (Read-only hariç).
+function bcc_can_comment($role)
+{
+    return $role === 'commenter' || $role === 'editor' || $role === 'owner';
+}
+
 // Bir ekibin verisine (base/tablo/kayıt) erişen HER sorgudan önce çağrılmalı.
 function require_team_access($teamId)
 {

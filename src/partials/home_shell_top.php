@@ -59,27 +59,25 @@ if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {
         <button type="button" class="home-icon-btn" id="home-sidebar-toggle" aria-label="Menüyü aç/kapat">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 5h16M2 10h16M2 15h16" stroke="#5f6368" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <a href="/dashboard.php" class="home-logo"><img src="/assets/logo.png" alt="BCC-Core"></a>
+        <?php
+        // Üst barın sol köşesi: SABİT "Ana sayfa" düğmesi (eski bcc logosunun
+        // yerine). grid.php'nin sol şeridindeki .gs-rail-home ile AYNI simge ve
+        // AYNI davranış — uygulamanın her yerinde sol üst köşe aynı şeyi yapar.
+        // Marka logosu KALDIRILMADI, yalnızca gezinme rolünden çıkarıldı:
+        // login/register/verify_email sayfalarında kimlik olarak duruyor.
+        ?>
+        <a href="/dashboard.php" class="home-logo" title="Ana sayfa" aria-label="Ana sayfa">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
+                <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            </svg>
+        </a>
     </div>
 
     <div class="home-topbar-center">
-        <details class="home-search" id="home-search">
-            <summary class="home-search-trigger">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="#8a8a8e" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
-                <span class="home-search-trigger-label">Ara...</span>
-                <span class="home-search-kbd">Ctrl K</span>
-            </summary>
-            <div class="home-search-overlay"></div>
-            <div class="home-search-popover">
-                <div class="home-search-popover-inputwrap">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="#8a8a8e" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
-                    <input type="text" id="home-search-input" placeholder="Ara..." aria-label="Ara" autocomplete="off">
-                </div>
-                <div class="home-search-results" id="home-search-results"></div>
-                <div class="home-search-empty" id="home-search-empty" hidden>Aramanızla eşleşen base bulunamadı.</div>
-                <div class="home-search-hint">Aramak için istediğiniz zaman Ctrl K'ya basın</div>
-            </div>
-        </details>
+        <?php // Arama markup'ı ORTAK partial'da — grid.php de AYNI dosyayı
+              // include eder, ikinci bir kopya YOK (bkz. global_search.php). ?>
+        <?php require __DIR__ . '/global_search.php'; ?>
     </div>
 
     <div class="home-topbar-right">

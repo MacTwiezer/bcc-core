@@ -16,32 +16,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
     $description = isset($_POST['description']) ? trim($_POST['description']) : '';
 
-    // require_role hem üyeliği (KVKK izolasyonu) hem de editor+ rolünü doğrular.
-    require_role($teamId, 'editor');
+    // require_role hem üyeliği (KVKK izolasyonu) hem de rolü doğrular. Eşik
+    // 'editor' DEĞİL 'owner': Airtable'ın izin matrisinde "Add and delete bases
+    // in the shared workspace" satırı yalnızca Owner ve Creator'a açık, Editor'a
+    // kapalıdır (bkz. src/auth.php bcc_can_manage_bases()). Aynı eşik Home'daki
+    // "+ Yeni Base Oluştur" kutucuğunu ve api/base_create.php'yi de yönetir —
+    // üç giriş noktası tek kaynaktan beslenir.
+    require_role($teamId, 'owner');
 
-    if ($name === '') {
-        $error = 'Base adı boş olamaz.';
-    } elseif (mb_strlen($name, 'UTF-8') > 150) {
-        // bases.name VARCHAR(150) — base_tables.php'deki AYNI gerekçe: bu kontrol
-        // olmadan uzun bir base adı sql_mode'da STRICT_TRANS_TABLES kapalı olduğu
-        // için hatasız sessizce kırpılıyordu.
-        $error = 'Base adı en fazla 150 karakter olabilir.';
-    } elseif (mb_strlen($description, 'UTF-8') > 500) {
-        // bases.description VARCHAR(500) — aynı sessiz kırpılma riski.
-        $error = 'Açıklama en fazla 500 karakter olabilir.';
-    } else {
-        bcc_execute(
-            'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)',
-            array(
-                'team_id' => $teamId,
-                'name' => $name,
-                'description' => $description !== '' ? $description : null,
-                'created_by' => $user['id'],
-            )
-        );
-        $newId = bcc_last_insert_id();
-        log_audit('base.create', 'base', $newId, array('name' => $name), $teamId);
+    // Doğrulama + INSERT + audit: bcc_create_base() (bkz. src/schema.php) —
+    // api/base_create.php ile ORTAK, ikinci bir kopya yok.
+    $result = bcc_create_base($teamId, $name, $description, $user['id']);
+
+    if ($result['ok']) {
         $success = 'Base oluşturuldu: ' . $name;
+    } else {
+        $error = $result['error'];
     }
 }
 
@@ -100,7 +90,9 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php endif; ?>
 
         <?php foreach ($teams as $t):
-            $canEdit = in_array($t['role'], array('editor', 'owner'), true);
+            // Formun görünürlüğü ile POST'un kabulü AYNI fonksiyondan gelir —
+            // "gizlenen ama hâlâ kabul edilen" bir aksiyon oluşamaz.
+            $canEdit = bcc_can_manage_bases($t['role']);
         ?>
             <div class="settings-card">
                 <h2>
@@ -139,7 +131,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <button type="submit" class="settings-btn settings-btn-primary">Base Oluştur</button>
                     </form>
                 <?php else: ?>
-                    <p class="settings-hint">Bu ekipte base oluşturmak için editor veya owner rolü gerekir.</p>
+                    <p class="settings-hint">Bu çalışma alanında base oluşturmak için Owner rolü gerekir.</p>
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>

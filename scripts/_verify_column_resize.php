@@ -357,20 +357,29 @@ try {
     $resizeJs = file_get_contents($assetsDir . '/grid-column-resize.js');
     $freezeJs = file_get_contents($assetsDir . '/grid-freeze-columns.js');
 
-    check('D) genislik tutamaci cursor:col-resize',
+    check('D) genislik seridi cursor:col-resize',
         preg_match('/\.grid-col-resize-handle \{[^}]*cursor: col-resize;/s', $styleCss) === 1);
     check('D) dondurma tutamaci HALA cursor:grab (degistirilmedi)',
         preg_match('/\.grid-freeze-handle \{[^}]*cursor: grab;/s', $styleCss) === 1);
     check('D) iki tutamac farkli renkte cizgi kullaniyor',
         preg_match('/\.grid-freeze-handle::after \{[^}]*background: var\(--bcc-accent\);/s', $styleCss) === 1
         && preg_match('/\.grid-col-resize-handle::after \{[^}]*background: var\(--bcc-border-strong\);/s', $styleCss) === 1);
-    check('D) donmus kenarda genislik tutamaci kaydiriliyor (ust uste binmiyor)',
-        strpos($styleCss, '.grid-frozen-edge .grid-col-resize-handle { right: 9px; }') !== false);
-    check('D) genislik tutamaci z-index dondurmanin ALTINDA',
-        preg_match('/\.grid-col-resize-handle \{[^}]*z-index: 9;/s', $styleCss) === 1
+    // Serit artik <th>'nin cocugu DEGIL, .grid-wrap'teki katmanda ve katman
+    // (z-index 4) dondurma tutamacinin (th'nin z-index:2 yigin baglaminda
+    // hapsolmus z-index:10) USTUNDE kaliyor — bu yuzden 12px kaydirma ARTIK
+    // ZORUNLU ve CSS'te degil, JS'te (FREEZE_CLEARANCE) yapiliyor.
+    check('D) donmus kenarda genislik seridi 12px kaydiriliyor (ust uste binmiyor)',
+        preg_match('/var FREEZE_CLEARANCE = 12;/', $resizeJs) === 1
+        && strpos($resizeJs, "th.classList.contains('grid-frozen-edge')") !== false
+        && strpos($resizeJs, 'x -= FREEZE_CLEARANCE;') !== false);
+    check('D) eski, tutamaci th icinde kaydiran CSS kurali KALDIRILDI',
+        strpos($styleCss, '.grid-frozen-edge .grid-col-resize-handle') === false);
+    check('D) katman z-index 4 (sticky baslik 2 / satir no basligi 3 USTUNDE, paneller 5 ALTINDA)',
+        preg_match('/\.grid-col-resize-layer \{[^}]*z-index: 4;/s', $styleCss) === 1
         && preg_match('/\.grid-freeze-handle \{[^}]*z-index: 10;/s', $styleCss) === 1);
-    check('D) grid-freeze-columns.js e DOKUNULMADI (genislik kodu icermiyor)',
-        stripos($freezeJs, 'col-resize') === false && stripos($freezeJs, 'column_widths') === false);
+    check('D) freeze dosyasinda genislik MANTIGI yok (yalnizca relayout kancasi)',
+        stripos($freezeJs, 'col-resize') === false && stripos($freezeJs, 'column_widths') === false
+        && strpos($freezeJs, 'window.BCC_relayoutColumnResize') !== false);
     check('D) resize dosyasi ORTAK surukleme iskeletini kullaniyor (kopya yok)',
         strpos($resizeJs, 'bcc_bindColumnDrag') !== false
         && strpos($resizeJs, 'addEventListener(\'mousedown\'') === false);
@@ -383,8 +392,9 @@ try {
     // E) EXPORT / PRINT REGRESYONU
     // =====================================================================
     echo "\n--- E) Export / print ---\n";
-    check('E) export CSS her IKI tutamaci da gizliyor',
-        strpos($exportCss, '.grid-col-resize-handle,') !== false
+    check('E) export CSS her IKI tutamaci da (ve serit KATMANINI) gizliyor',
+        strpos($exportCss, '.grid-col-resize-layer,') !== false
+        && strpos($exportCss, '.grid-col-resize-handle,') !== false
         && strpos($exportCss, '.grid-freeze-handle {') !== false);
     check('E) print te sabit yerlesim cozuluyor (table-layout:auto)',
         preg_match('/table\.grid\.grid-has-col-widths \{\s*table-layout: auto !important;/', $shellCss) === 1);
@@ -486,6 +496,77 @@ try {
     // Golge SADECE o sinifla kapanmali - kosulsuz silinmis olmamali
     check('F) satir no golgesi KOSULSUZ silinmedi (frozen=1 de geri geliyor)',
         preg_match('/table\.grid \.grid-rownum \{[^}]*box-shadow: 2px 0 4px -2px/s', $styleNoComments) === 1);
+
+    // =====================================================================
+    // G) TAM BOY AYIRAC + LOCALSTORAGE KALICILIGI
+    // =====================================================================
+    // Bu bolum KAYNAK duzeyinde dogruluyor; davranisin kendisi tarayicida
+    // dogrulandi (scripts/_colresize_browse_fixture.php ile kurulan GECICI
+    // fikstur uzerinde, gercek base'e dokunmadan):
+    //   - 4 veri sutununun 4 seridi de tablo yuksekliginin TAMAMI kadar
+    //     (480px = table.offsetHeight) ve hepsinde cursor:col-resize,
+    //   - elementFromPoint hem BASLIK hem 6. GOVDE satiri hizasinda seridi
+    //     donuyor; ayiracin 40px uzagi hala hucre (.cell-view),
+    //   - surukleme: 457px -> 257px (dikey +250px hicbir seyi degistirmedi,
+    //     tablo yuksekligi 480px sabit), sola 900px -> 80px'te durdu, saga
+    //     2000px -> 800px'te durdu, birakinca 260px kaydedildi,
+    //   - F5 sonrasi sunucudan 260px geldi; views.config'te
+    //     {"column_widths":{"row":120,"f3539":260,...}},
+    //   - config NULL'landiktan sonra F5: sunucu <colgroup> BASMADI, genislikler
+    //     localStorage'dan geri yuklendi (ayni degerler),
+    //   - donmus kenarda serit sinirdan tam 12px solda ve .grid-freeze-handle
+    //     hala kendi noktasindan yakalanabiliyor (cursor:grab),
+    //   - yatay kaydirmada (scrollLeft=380, donmus grup=380) donmus grubun
+    //     ALTINA giren 2 serit display:none oldu, donmus kenarinki pinli kaldi,
+    //   - konsolda hata yok.
+    echo "\n--- G) Tam boy ayirac + localStorage ---\n";
+
+    check('G) serit artik <th> icine EKLENMIYOR (th.appendChild yok)',
+        strpos($resizeJs, 'th.appendChild') === false);
+    check('G) serit katmani .grid-wrap e ekleniyor',
+        strpos($resizeJs, "layer.className = 'grid-col-resize-layer'") !== false
+        && strpos($resizeJs, 'wrap.appendChild(layer)') !== false);
+    check('G) .grid-wrap konum atasi (position: relative)',
+        preg_match('/\.grid-wrap \{[^}]*position: relative;/s', $styleCss) === 1);
+    check('G) katman olay gecirmiyor, serit geciriyor (hucreler tiklanabilir kaliyor)',
+        preg_match('/\.grid-col-resize-layer \{[^}]*pointer-events: none;/s', $styleCss) === 1
+        && preg_match('/\.grid-col-resize-handle \{[^}]*pointer-events: auto;/s', $styleCss) === 1);
+    check('G) serit yuksekligi TABLONUN yuksekliginden hesaplaniyor',
+        strpos($resizeJs, 'var height = table.offsetHeight;') !== false
+        && strpos($resizeJs, "strip.style.height = height + 'px';") !== false);
+    check('G) yerlesim tablo boyutu degisince kendiliginden tazeleniyor (ResizeObserver)',
+        strpos($resizeJs, 'new window.ResizeObserver(layout).observe(table)') !== false);
+    check('G) yatay kaydirmada donmus grubun altina giren seritler gizleniyor',
+        strpos($resizeJs, 'frozenGroupWidth') !== false
+        && strpos($resizeJs, "strip.style.display = 'none';") !== false);
+    check('G) surukleme YALNIZCA yatay (onMove clientY kullanmiyor)',
+        preg_match('/onMove: function \(clientX\) \{(.*?)\n                \},/s', $resizeJs, $om) === 1
+        && strpos($om[1], 'clientY') === false);
+    check('G) istemci min/max, sunucudan gelen sinirlarla kirpiyor',
+        strpos($resizeJs, 'var MIN_WIDTH = parseInt(window.BCC_MIN_COLUMN_WIDTH, 10) || 80;') !== false
+        && strpos($resizeJs, 'clampWidth(startWidth + (clientX - startX))') !== false);
+    check('G) surukleme boyunca imlec col-resize kaliyor (body sinifi)',
+        strpos($resizeJs, "document.body.classList.add('is-col-resizing')") !== false
+        && strpos($resizeJs, "document.body.classList.remove('is-col-resizing')") !== false
+        && preg_match('/body\.is-col-resizing \*? ?\{|body\.is-col-resizing,/', $styleCss) === 1);
+    check('G) her surukleme sonunda localStorage a yaziliyor',
+        preg_match('/function persist\(\)\s*\{\s*var map = currentWidthMap\(\);\s*writeStored\(map\);/s', $resizeJs) === 1);
+    check('G) SUNUCU kaydi oncelikli (varsa localStorage ondan tazeleniyor)',
+        preg_match("/if \(table\.classList\.contains\('grid-has-col-widths'\)\) \{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*writeStored\(currentWidthMap\(\)\);\s*\} else \{/s", $resizeJs) === 1);
+    check('G) localStorage anahtari GORUNUM basina',
+        strpos($resizeJs, "'bcc.grid.column_widths.v' + viewId") !== false);
+    // Her iki localStorage cagrisi (getItem/setItem) da try/catch icinde:
+    // gizli sekme kotasi ya da "site verilerini engelle" ayari ozelligi
+    // patlatmamali, yalnizca sunucu kaydina dusmeli.
+    check('G) bozuk/kapali depolama sessizce yutuluyor (try/catch)',
+        substr_count($resizeJs, 'window.localStorage') === 2
+        && substr_count(substr($resizeJs, strpos($resizeJs, 'function readStored')), 'catch (e)') >= 2);
+    check('G) yalnizca-okuma kullanicisi sunucuya POST ETMIYOR',
+        strpos($resizeJs, 'if (!canEdit || !viewId) {') !== false);
+    check('G) tam boy seritte ipucu balonu URETILMIYOR (grid-wrap disina tasardi)',
+        strpos($resizeJs, "'gs-kbd-tooltip'") === false);
+    check('G) dondurma tutamacinin balonu KORUNDU',
+        strpos($freezeJs, 'gs-kbd-tooltip') !== false);
 
     $cleanup();
 } catch (Throwable $e) {

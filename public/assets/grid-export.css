@@ -47,11 +47,13 @@
 .grid-row-expand,
 .grid-rownum-selectall,
 .grid-row-select,
-/* Sütun genişliği tutamacı (grid-column-resize.js) — dondurma tutamacı gibi
-   yalnızca etkileşim öğesi. AYRICA kırpılmaması ZORUNLU: hücreden dışarı taşan
-   mutlak konumlu bir kutu ve PNG tarafında th'nin position'ı static'e
-   çekildiği için (aşağıdaki kural) en yakın konumlu ataya kaçıp çıktının
-   ortasında bir çizgi olarak belirirdi. */
+/* Sütun genişliği şeritleri ve onları taşıyan katman (grid-column-resize.js) —
+   dondurma tutamacı gibi yalnızca etkileşim öğesi. Katmanın TAMAMI gizleniyor:
+   şeritler artık tablonun tam boyunda ve .grid-wrap'e göre mutlak konumlu, yani
+   kâğıtta/PNG'de (tablo yeniden akıtıldığı, hatta @media print'te table-layout
+   auto'ya döndüğü için) sütun sınırlarıyla İLGİSİZ yerlerde dikey çizgiler
+   olarak belirirdi. */
+.grid-col-resize-layer,
 .grid-col-resize-handle,
 .grid-freeze-handle {
     display: none !important;

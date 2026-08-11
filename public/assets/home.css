@@ -33,7 +33,30 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
 }
 
-.home-logo img { height: 26px; display: block; }
+/* Üst barın sol köşesindeki SABİT "Ana sayfa" düğmesi (eski `.home-logo img`
+   logosunun yerine). Ölçüler yanındaki .home-icon-btn (menü aç/kapat) ile
+   hizalı; hover davranışı da onunla AYNI — simge asla değişmez. */
+.home-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 6px;
+    color: var(--bcc-text-muted);
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.home-logo:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+.home-logo:focus-visible {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
+}
 
 .home-topbar-center {
     flex: 1;
@@ -148,7 +171,71 @@ a { text-decoration: none; color: inherit; }
    (aynı özgüllük ama author > UA) — bu yüzden burada açıkça geri kazanılıyor. */
 .home-search-result[hidden] { display: none; }
 
-.home-search-result:hover { background: var(--bcc-surface-hover); }
+/* Sonuç satırları artık <a> VEYA <button> olabilir (sayfa içi atlama hedefleri
+   — katılımcı/üye/kayıt — gidilecek bir adres taşımaz). Buton varsayılanlarını
+   sıfırla ki iki tür birebir aynı görünsün. */
+button.home-search-result {
+    width: 100%;
+    border: none;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.home-search-result:hover,
+.home-search-result.is-active { background: var(--bcc-surface-hover); }
+
+/* Klavyeyle (↑/↓) seçili satır — hover'dan ayırt edilsin diye ayrıca sol
+   kenarda accent şerit. */
+.home-search-result.is-active { box-shadow: inset 2px 0 0 var(--bcc-accent); }
+
+/* Aramanın NEYİ süzdüğünü söyleyen bağlam etiketi ("12 kayıt içinde
+   aranıyor") — sayfadan sayfaya değişen tek metin, global-search.js doldurur. */
+.home-search-scope {
+    padding: 0.4rem 0.75rem 0.1rem;
+    font-size: 0.72rem;
+    color: var(--bcc-text-muted);
+}
+
+.home-search-scope[hidden] { display: none; }
+
+.home-search-hint kbd {
+    display: inline-block;
+    padding: 0 0.25rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 4px;
+    background: var(--bcc-surface);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+/* Sayfa içi atlama vurgusu: seçilen katılımcı/üye/kayıt kısa süre işaretlenir
+   (global-search.js flashTo, 1.6sn sonra sınıf kaldırılır). Satır (<tr>) de
+   olabildiği için `background` yerine `box-shadow` DEĞİL background kullanılıyor —
+   <tr> üzerinde box-shadow tarayıcılar arasında güvenilir çizilmiyor. */
+.bcc-search-flash {
+    background: var(--bcc-accent-soft) !important;
+    transition: background 0.25s ease;
+}
+
+/* grid.php üst barındaki tetikleyici. Home'daki sürüm ortadaki geniş alanı
+   doldurmak için width:100% + flex:1 etiket kullanıyor; grid'in üst barı ise
+   sağa yaslı küçük butonlardan oluşuyor — orada aynı kurallar etiketi
+   sıkıştırıp iki satıra sardırıyordu. Burada sabit bir genişlik verilip
+   satır sarması kapatılıyor. */
+.home-search-trigger.gs-topbar-search {
+    width: auto;
+    min-width: 168px;
+    padding: 0.32rem 0.6rem;
+    white-space: nowrap;
+}
+
+.home-search-trigger.gs-topbar-search .home-search-trigger-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 .home-search-result .home-base-icon {
     width: 30px;
@@ -681,11 +768,61 @@ a { text-decoration: none; color: inherit; }
     gap: 0.85rem;
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 1rem 1.1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.12s ease, transform 0.12s ease;
+    transition: box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s ease;
 }
+
+/* ---------- Rol rozeti (kart modu) ----------
+   Kullanıcının o base'in çalışma alanındaki yetkisi (Owner/Editor/Commenter/
+   Viewer). Renkler settings-page.css'teki .sp-role--* ile AYNI token'lardan
+   gelir; sınıf adı ayrıdır çünkü o kurallar ayarlar sayfası kabuğunun altına
+   kapsanmış ve Home o kabuğu kullanmıyor.
+   `margin-left:auto` + `align-self:flex-end`: rozet sağ ALTA oturur, sağ ÜSTteki
+   hover aksiyonlarının (yıldız / ⋯, position:absolute) altında kalır — ikisi
+   çakışmaz. Akışta durduğu için .home-base-info'yu daraltır, uzun base adı
+   rozetin ALTINDAN geçmek yerine düzgünce kırpılır. */
+.home-base-role {
+    margin-left: auto;
+    align-self: flex-end;
+    flex: none;
+    padding: 0.14rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.home-base-role--owner {
+    border-color: var(--bcc-role-owner-soft);
+    background: var(--bcc-role-owner-soft);
+    color: var(--bcc-role-owner);
+}
+
+.home-base-role--editor {
+    border-color: var(--bcc-accent-soft);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.home-base-role--commenter {
+    border-color: var(--bcc-success-soft);
+    background: var(--bcc-success-soft);
+    color: var(--bcc-success);
+}
+
+/* viewer taban stilde kalır (nötr) — ayrı kural gereksiz. */
+
+/* Liste modunda rozet GİZLENİR: o mod, başlık satırıyla (Ad / Son açılma /
+   Çalışma alanı) piksel piksel hizalanan sabit genişlikli kolonlardan oluşuyor
+   (bkz. .home-list-header) — araya beşinci bir hücre girseydi hizayı bozardı. */
+html.home-view-list .home-base-role,
+.view-mode-list .home-base-role { display: none; }
 
 /* Yıldız / ⋯ aksiyonları — hover'da belirir; yıldız BUTONU ayrıca
    "starred" durumdayken (aria-pressed="true") hover olmasa da görünür
@@ -860,19 +997,123 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 }
 
 .home-base-card:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    border-color: var(--bcc-border-strong);
+    transform: translateY(-2px);
 }
 
+/* ---------- "+ Yeni Base Oluştur" kutucuğu ----------
+   Grid'in son hücresi. .home-base-card ile AYNI kutu ölçüleri (yükseklik/
+   köşe/boşluk) — grid satırında diğer kartlarla hizalanması için — ama <a>
+   değil <button> olduğundan tarayıcının buton varsayılanları (font, hizalama,
+   genişlik) açıkça sıfırlanır. Kesikli kenarlık onu "veri" değil "aksiyon"
+   olarak ayırır. */
+.home-base-create {
+    border-style: dashed;
+    background: transparent;
+    box-shadow: none;
+    width: 100%;
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--bcc-text-muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.home-base-create:hover {
+    background: var(--bcc-surface);
+    border-style: solid;
+    border-color: var(--bcc-accent);
+    color: var(--bcc-accent-strong);
+}
+
+/* Kutucuğun içi <div> değil <span>'lerden oluşuyor (<button> içinde geçerli
+   içerik olsun diye) — kart modunda ad ve alt metin alt alta dursun diye
+   blokluk açıkça verilir. Liste modunda .home-base-info zaten flex satıra
+   dönüyor, orada bu bir şey değiştirmez. */
+.home-base-create .home-base-name,
+.home-base-create .home-base-meta { display: block; }
+
+.home-base-create .home-base-name { color: var(--bcc-text); }
+.home-base-create:hover .home-base-name { color: var(--bcc-accent-strong); }
+
+/* Kutucuğun ikonu base kimliği TAŞIMAZ (bir base'e ait değil) — pastel palet
+   yerine nötr/accent zemin; --bi-* değişkenleri hiç basılmadığı için
+   .home-base-icon'un yedek değerleri devreye girerdi, burada açıkça eziliyor. */
+.home-base-create-icon {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text-muted);
+}
+
+.home-base-create:hover .home-base-create-icon {
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+/* Hiç base'i olmayan ama base ekleyebilen kullanıcı için boş durum içindeki
+   aynı tetikleyici (grid hiç basılmadığında kutucuk da basılmaz). */
+.home-empty-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0.95rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+    font-family: inherit;
+    font-size: 0.87rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.home-empty-create-btn:hover { background: var(--bcc-accent-strong); }
+
+/* Base ikonu — pastel zemin + üstünde okunan koyu mürekkep. Renkler BURADA
+   sabit değil: PHP tarafı her base için --bi-bg/--bi-fg (+ koyu tema
+   karşılıkları --bi-bg-dark/--bi-fg-dark) çiftini inline CSS DEĞİŞKENİ olarak
+   basar (bkz. src/schema.php bcc_base_icon_style_attr) — inline bir
+   `background` yazılsaydı aşağıdaki koyu tema kuralları onu ASLA yenemezdi.
+   Glif `currentColor` ile çizildiği için `color` tek başına yeterli.
+   Yedek değerler (var(..., #eee)) grid.php/interface.php gibi değişkeni
+   basmayan, kendi düz rengini inline veren çağıranlar içindir. */
 .home-base-icon {
     width: 42px;
     height: 42px;
-    border-radius: 9px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: var(--bi-bg, var(--bcc-surface-sunken));
+    color: var(--bi-fg, var(--bcc-text-muted));
+    /* Pastel zemin açık arka planda kenarını kaybediyordu — 1px'lik içeriden
+       halka (box-shadow inset, layout'u ETKİLEMEZ; gerçek bir border 42px'i
+       44px yapıp liste modunun piksel hizasını bozardı). */
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.12s ease;
 }
+
+/* Koyu tema — theme.css'teki ÜÇ durumun aynısı: açıkça seçilmiş koyu,
+   sistem tercihi koyu (ve kullanıcı "Açık"ı açıkça seçmemiş). */
+:root[data-theme="dark"] .home-base-icon {
+    background: var(--bi-bg-dark, var(--bcc-surface-sunken));
+    color: var(--bi-fg-dark, var(--bcc-text-muted));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-theme="dark"]) .home-base-icon {
+        background: var(--bi-bg-dark, var(--bcc-surface-sunken));
+        color: var(--bi-fg-dark, var(--bcc-text-muted));
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+}
+
+/* Kart hover'ında ikon hafifçe büyür — kartın kendi yükselmesiyle (aşağıdaki
+   translateY) aynı 0.12s'de, "canlı ama sakin" his için. */
+.home-base-card:hover .home-base-icon { transform: scale(1.06); }
 
 .home-base-info { min-width: 0; }
 
@@ -994,55 +1235,13 @@ html.home-view-list .home-list-header,
 .view-btn-active svg path { stroke: var(--bcc-accent-strong); }
 .view-btn-active svg rect { stroke: var(--bcc-accent-strong); }
 
-/* ---------- Workspaces sayfası ---------- */
-
-.ws-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.ws-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
-    background: var(--bcc-surface);
-    border: 1px solid var(--bcc-border);
-    border-radius: 10px;
-    padding: 1.1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.12s ease, border-color 0.12s ease;
-}
-
-.ws-card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
-
-.ws-card.is-active {
-    border-color: var(--bcc-accent-strong);
-    box-shadow: 0 0 0 1px var(--bcc-accent-strong);
-}
-
-.ws-card-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: var(--bcc-accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.ws-card-name {
-    font-weight: 600;
-    font-size: 0.92rem;
-    color: var(--bcc-text);
-}
-
-.ws-card-meta {
-    font-size: 0.78rem;
-    color: var(--bcc-text-muted);
-}
+/* ---------- Workspaces sayfası ----------
+   ÖLÜ KOD TEMİZLİĞİ: eski kart-ızgara yerleşimi (.ws-grid, .ws-card ve
+   -icon/-name/-meta/:hover/.is-active varyantları) KALDIRILDI — workspaces.php
+   iki sütunlu panoya dönüştürüldüğünde yerini .wsx-* sınıfları aldı ve bu blok
+   geride kalmıştı. Aşağıdaki .ws-detail / .ws-collab-* sınıfları KALIYOR:
+   team_members.php onları hâlâ kullanıyor (.ws-detail.tm-detail, katılımcı
+   satırlarındaki avatar/ad/e-posta). */
 
 .ws-detail {
     background: var(--bcc-surface);
@@ -1052,37 +1251,8 @@ html.home-view-list .home-list-header,
     max-width: 640px;
 }
 
-.ws-detail-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--bcc-border);
-}
-
-.ws-detail-title {
-    font-size: 1.25rem;
-    margin: 0;
-}
-
-.ws-detail-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
-}
-
-.ws-detail-btn {
-    background: var(--bcc-surface-hover);
-    border: 1px solid var(--bcc-border);
-    border-radius: 6px;
-    padding: 0.4rem 0.85rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--bcc-border-strong);
-    cursor: default;
-}
+/* .ws-detail-header/-title/-actions/-btn KALDIRILDI — eski workspaces detay
+   panelinin başlık şeridiydi; .wsx-* yerleşimi kendi başlığını kullanıyor. */
 
 .ws-collab-heading {
     font-size: 0.82rem;
@@ -1093,21 +1263,9 @@ html.home-view-list .home-list-header,
     margin: 0 0 0.85rem;
 }
 
-.ws-collab-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.ws-collab-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.55rem 0.3rem;
-    border-bottom: 1px solid var(--bcc-surface-hover);
-}
-
-.ws-collab-row:last-child { border-bottom: none; }
+/* .ws-collab-list/-row KALDIRILDI — katılımcılar artık team_members.php'de
+   .tm-table satırlarıyla, "Paylaş" modalında ise .gs-share-row ile basılıyor.
+   Bu iki sınıfı basan bir şablon kalmadı. */
 
 .ws-collab-avatar {
     width: 30px;
@@ -1175,6 +1333,20 @@ a.ws-detail-btn:hover {
     border-bottom: 1px solid var(--bcc-border);
 }
 
+/* Owner olmayan rollerde .tm-assign-form'un YERİNE basılan açıklama (form
+   gizlenmiyor — sunucu onu hiç basmıyor, bkz. team_members.php). Aynı alt
+   kenarlık/boşluk değerleriyle: yerine geçtiği bloğun bıraktığı ritmi korur. */
+.tm-readonly-note {
+    margin: 0 0 1.5rem;
+    padding: 0.7rem 0.85rem 1.5rem;
+    border-bottom: 1px solid var(--bcc-border);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--bcc-text-muted);
+}
+
+.tm-readonly-note strong { color: var(--bcc-text); }
+
 .tm-assign-field {
     display: flex;
     flex-direction: column;
@@ -1219,8 +1391,8 @@ a.ws-detail-btn:hover {
 
 .tm-remove-btn:hover { background: var(--bcc-surface-hover); }
 
-.tm-msg-error { color: var(--bcc-danger); font-weight: 600; margin: 0 0 1rem; }
-.tm-msg-success { color: #1a7f37; font-weight: 600; margin: 0 0 1rem; }
+/* .tm-msg-error/-success KALDIRILDI (ölü kod denetimi): team_members.php
+   hata/başarı mesajlarını ortak flash partial'ı ile basıyor. */
 
 /* ---------- team_members.php — görsel 2 (Airtable "Collaborators" tam paneli):
    arama/filtre/Excel indir toolbar + toplu seçim + tablo. .ws-detail'in 640px max-width'i
@@ -1718,17 +1890,8 @@ a.ws-detail-btn:hover {
 
 .account-section-heading-danger { color: var(--bcc-danger); }
 
-.account-btn-danger-link {
-    background: none;
-    border: none;
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--bcc-danger);
-    cursor: pointer;
-    padding: 0.15rem 0;
-    flex-shrink: 0;
-}
+/* .account-btn-danger-link KALDIRILDI (ölü kod denetimi): account.php tehlikeli
+   eylemi .account-btn-danger ile basıyor, bu bağlantı-görünümlü varyantı değil. */
 
 .account-danger-warning {
     font-size: 0.85rem;
@@ -1868,13 +2031,8 @@ a.ws-detail-btn:hover {
 .settings-table tbody tr:last-child td { border-bottom: none; }
 .settings-table tbody tr:hover { background: var(--bcc-surface-sunken); }
 
-.settings-table-type-icon {
-    width: 1.1rem;
-    height: 1.1rem;
-    background-size: 14px 14px;
-    vertical-align: -3px;
-    margin-right: 0.3rem;
-}
+/* .settings-table-type-icon KALDIRILDI (ölü kod denetimi): alan tipi
+   rozetleri .field-badge (theme.css) ile basılıyor. */
 
 .settings-row-actions {
     display: flex;
@@ -1976,18 +2134,8 @@ a.ws-detail-btn:hover {
 
 .settings-btn-primary:hover { background: var(--bcc-accent-strong); border-color: var(--bcc-accent-strong); }
 
-.settings-btn-danger {
-    background: var(--bcc-danger-soft);
-    border-color: var(--bcc-danger-soft);
-    color: var(--bcc-danger);
-}
-
-.settings-btn-danger:hover { background: var(--bcc-danger-soft); filter: brightness(0.95); }
-
-.settings-btn-sm {
-    padding: 0.28rem 0.6rem;
-    font-size: 0.78rem;
-}
+/* .settings-btn-danger/-sm KALDIRILDI (ölü kod denetimi): hiçbir şablon
+   bu iki varyantı basmıyor. */
 
 .settings-form-actions {
     display: flex;
@@ -2078,8 +2226,8 @@ table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
    sabit zemin + tema-duyarlı metin (var(--bcc-text-muted)) karışımıydı —
    koyu temada metin açılıp sabit açık zeminle düşük kontrasta düşüyordu. */
 .admin-pill-gray   { background: #eceef1; color: #5f6368; }
-.admin-pill-amber  { background: #fef3e2; color: #b45309; }
-.admin-pill-purple { background: #f1e8fd; color: #7c3aed; }
+/* .admin-pill-amber/-purple KALDIRILDI (ölü kod denetimi): admin/index.php
+   yalnızca .admin-pill'in diğer varyantlarını basıyor. */
 
 .admin-team-block { margin-bottom: 1.5rem; }
 .admin-team-block:last-child { margin-bottom: 0; }
@@ -2280,43 +2428,13 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 }
 
 /* ---------------------------------------------------------------------------
-   Form görünümü tasarımcısı (form_edit.php) — Grup View-Form.
-   Bu sayfa home kabuğunu (home_shell_top) kullanıyor, yani style.css YÜKLÜ
-   DEĞİL; grid.php'nin .share-popover-* kuralları burada geçerli olmaz. Bu
-   yüzden kopyalama kutusunun stili kendi (form-share-*) sınıflarıyla burada
-   tanımlanıyor. .share-popover-form sınıfı yalnızca share-popover.js'in
-   closest() kancası olarak duruyor, GÖRSEL bir kural taşımıyor.
+   Form görünümü tasarımcısı (form_edit.php) kopyalama kutusunun ESKİ
+   .form-share-row/-input/-warning kuralları BURADAN KALDIRILDI (ölü kod
+   denetimi): o kutu artık .fe-share-row/.fe-share-input/.fe-copy-btn ile
+   basılıyor ve stilleri assets/form-edit.css içinde yaşıyor. Bu blok,
+   yeniden adlandırmadan sonra geride kalmıştı; hiçbir şablon bu üç
+   sınıfı basmıyordu.
    --------------------------------------------------------------------------- */
-.form-share-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.form-share-input {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid var(--bcc-border);
-    border-radius: 6px;
-    background: var(--bcc-surface);
-    color: var(--bcc-text);
-    font-size: 0.9rem;
-}
-
-/* Uyarı kutusu: projenin bugüne kadarki tek güvenlik sözünü ("yalnızca oturum
-   açmış takım üyeleri") tersine çeviren yer — görsel olarak da ayrışmalı ki
-   kullanıcı linki paylaşmadan önce fark etsin. */
-.form-share-warning {
-    margin-top: 0.75rem;
-    padding: 0.6rem 0.8rem;
-    border-left: 3px solid #d98324;
-    border-radius: 4px;
-    background: rgba(217, 131, 36, 0.1);
-    color: var(--bcc-text);
-    font-size: 0.88rem;
-    line-height: 1.45;
-}
 
 /* ---------------------------------------------------------------------------
    Kanban görünümü (kanban.php) — Grup View-Kanban.
@@ -2462,3 +2580,166 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 
 .kanban-empty { max-width: 520px; }
 .kanban-footer { margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------------
+   Base oluşturma modalı (dashboard.php "+ Yeni Base Oluştur")
+   ---------------------------------------------------------------------------
+   Modalın TAMAMI sunucuda koşullu basılır (bkz. dashboard.php $canCreateBase) —
+   burada yalnızca görünüm var, gizleme bir yetki mekanizması DEĞİL. Açılıp
+   kapanması `hidden` özniteliğiyle (home.js); ayrı bir "is-open" sınıfı
+   eklenmedi, çünkü hidden aynı zamanda içeriği erişilebilirlik ağacından da
+   çıkarır (klavye/ekran okuyucu kapalı modala girmez).
+   --------------------------------------------------------------------------- */
+
+.home-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.42);
+}
+
+/* [hidden] varsayılanı display:block'tur ve yukarıdaki display:flex onu yener
+   (aynı özgüllük, sonra gelen kural) — .home-search-result[hidden] ile AYNI
+   gerekçe, açıkça geri kazanılıyor. */
+.home-modal-backdrop[hidden] { display: none; }
+
+.home-modal {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+}
+
+.home-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem 0.85rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.home-modal-head h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.home-modal-close {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    padding: 0;
+}
+
+.home-modal-close:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+.home-modal-form { padding: 1.15rem; }
+
+.home-modal-field {
+    display: block;
+    margin-bottom: 0.9rem;
+}
+
+.home-modal-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.home-modal-optional { font-weight: 400; }
+
+.home-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-family: inherit;
+    font-size: 0.88rem;
+}
+
+.home-modal-input:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+/* Tek çalışma alanı olan kullanıcıda seçici yerine basılan sabit metin
+   (bkz. dashboard.php) — girdi alanıyla aynı yükseklikte dursun diye
+   aynı dolgu/köşe değerleri, ama sönük zemin: tıklanabilir DEĞİL. */
+.home-modal-static {
+    display: block;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+    font-size: 0.88rem;
+}
+
+.home-modal-error {
+    margin: 0 0 0.9rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+    font-size: 0.82rem;
+}
+
+.home-modal-error[hidden] { display: none; }
+
+.home-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.home-modal-btn {
+    padding: 0.5rem 0.95rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.home-modal-btn:hover { background: var(--bcc-surface-hover); }
+
+.home-modal-btn-primary {
+    border-color: transparent;
+    background: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+}
+
+.home-modal-btn-primary:hover { background: var(--bcc-accent-strong); }
+
+.home-modal-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

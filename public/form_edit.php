@@ -22,7 +22,7 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = ($role === 'owner' || $role === 'editor');
+$canEdit = bcc_can_edit_records($role);  // form/görünüm — src/auth.php
 
 $viewId = isset($_GET['view_id']) ? (int) $_GET['view_id'] : (isset($_POST['view_id']) ? (int) $_POST['view_id'] : 0);
 $view = $viewId ? bcc_find_view($viewId, $table['id']) : null;
@@ -159,8 +159,7 @@ function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
             <div class="fe-share-row">
                 <input type="text" class="fe-share-input" data-share-url-input readonly
                        value="<?php echo htmlspecialchars($publicFormUrl, ENT_QUOTES, 'UTF-8'); ?>"
-                       aria-label="Herkese açık form bağlantısı"
-                       onclick="this.select()">
+                       aria-label="Herkese açık form bağlantısı">
                 <?php // Buton İÇİNDE <svg> YOK — bilerek. share-popover.js kopyalamada
                       // btn.textContent'i "Kopyalandı" ile değiştiriyor; bir svg çocuk
                       // o anda silinirdi. İkon CSS ::before maskesiyle veriliyor

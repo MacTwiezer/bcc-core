@@ -256,7 +256,16 @@ try {
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&{$q}", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('VE: Renk=Kirmizi VE Miktar>=10 -> sadece Elma', $names === array('Elma'), 'bulunan: ' . implode(',', $names));
-    check('VE modunda "VE (tüm kurallar)" secili', strpos($resp['body'], 'value="and" checked') !== false);
+    // Bagac kontrolu artik radyo dugmesi DEGIL, 2. satirdaki <select>.
+    // Eski kontrol 'value="and" checked' ariyordu (radyonun isareti); panel
+    // Airtable paritesine gore yeniden tasarlaninca o markup kalkti. Sunucu
+    // sozlesmesi AYNI: hala tek bir name="filter_logic" gonderiliyor, yalnizca
+    // secili degeri gosteren isaret 'checked' yerine 'selected'.
+    check('VE modunda bagac select i "VE" secili',
+        preg_match('/<select name="filter_logic"[^>]*>.*?<option value="and" selected>/s', $resp['body']) === 1);
+    check('Formda filter_logic ADINDA TEK oge (yinelenen gonderim yok)',
+        preg_match('#<form[^>]*class="filter-form"[^>]*>(.*?)</form>#s', $resp['body'], $ffm) === 1
+        && substr_count($ffm[1], 'name="filter_logic"') === 1);
 
     // --- VEYA (OR): Renk=Mavi VEYA Miktar<10 -> Kiraz+Muz -------------------
     $q = "filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Mavi')

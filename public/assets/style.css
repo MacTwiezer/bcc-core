@@ -1851,56 +1851,9 @@ td.cell-flash-error {
     min-width: 420px;
 }
 
-.filter-row {
-    display: flex;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
-}
-
-.filter-row select,
-.filter-row input {
-    padding: 0.3rem 0.4rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 4px;
-    font: inherit;
-    box-sizing: border-box;
-}
-
-.filter-row .filter-field-select {
-    flex: 1;
-    min-width: 0;
-}
-
-.filter-row .filter-cond-select {
-    flex: 1;
-    min-width: 0;
-}
-
-.filter-row .filter-value-input {
-    flex: 1;
-    min-width: 0;
-}
-
-.filter-logic-row {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.85rem;
-    color: var(--bcc-text-muted);
-    margin: 0.5rem 0 0.25rem;
-}
-
-.filter-logic-row label {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.filter-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
+/* Filtre paneli kurallari dosyanin SONUNA tasindi (Airtable paritesi
+   yeniden tasarimi). .filter-logic-row KALDIRILDI: alt taraftaki radyo
+   dugmeleri yerini 2. satirdaki bagac <select>'ine birakti. */
 
 .hide-fields-panel,
 .group-panel,
@@ -2192,15 +2145,9 @@ td.cell-flash-error {
     margin-bottom: 0.5rem;
 }
 
-.hide-field-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.3rem 0;
-    font-size: 0.9rem;
-    cursor: pointer;
-}
+/* .hide-field-row'un YERLESIMI .hide-fields-form ile nitelenmis olarak
+   asagida (Airtable paritesi bolumu). Toggle gorseli (asagidaki
+   .hide-field-toggle kurallari) DEGISMEDI. */
 
 .hide-field-toggle-input {
     position: absolute;
@@ -2490,4 +2437,460 @@ table.grid.wrap-headers thead th {
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--bcc-text-muted);
+}
+
+/* ---------- "Alanları gizle" paneli (Airtable "Hide fields" paritesi) --------
+   ⚠️ KAPSAM UYARISI: .hide-fields-search ve .hide-fields-actions sınıflarını
+   GRUPLAMA paneli de kullanıyor (grid.php'deki .group-form). Bu yüzden aşağıdaki
+   yeni görünüm kuralları .hide-fields-form ile NİTELENDİ — çıplak yazılsalardı
+   gruplama panelinin arama kutusu ve buton satırı da sessizce değişirdi.
+
+   Panelin kendisi de burada yeniden tanımlanıyor: ortak popover kuralı
+   (.hide-fields-form, .group-form, ... ortak bloğu) tüm kutuya padding verip
+   TAMAMINI kaydırılabilir yapıyor. Burada padding sıfırlanıp bölümlere
+   dağıtılıyor ve kaydırma YALNIZCA listeye bırakılıyor: arama kutusu ve
+   eylem butonları uzun listede de sabit kalsın. */
+
+.hide-fields-form {
+    /* İstenen 280-320px aralığı: uzun alan adları kırpılmadan sığsın. */
+    min-width: 300px;
+    max-width: 360px;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+/* ---- Üst bölüm: arama + sayaç ---- */
+
+.hide-fields-form .hide-fields-top {
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.hide-fields-form .hide-fields-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.hide-fields-form .hide-fields-search-wrap svg {
+    position: absolute;
+    left: 0.5rem;
+    color: var(--bcc-text-muted);
+    pointer-events: none;
+}
+
+/* Ortak .hide-fields-search kuralının üzerine YALNIZCA bu panelde geçerli
+   olacak farklar: ikon için sol boşluk ve alt marjın kaldırılması (aradaki
+   boşluğu artık .hide-fields-top'un padding'i veriyor). */
+.hide-fields-form .hide-fields-search-wrap .hide-fields-search {
+    padding-left: 1.65rem;
+    margin-bottom: 0;
+    border-radius: 7px;
+    font-size: 0.85rem;
+}
+
+.hide-fields-form .hide-fields-search-wrap .hide-fields-search:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.hide-fields-form .hide-fields-counter {
+    margin: 0.45rem 0 0;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--bcc-text-muted);
+}
+
+/* ---- Liste ---- */
+
+.hide-fields-form .hide-fields-list {
+    padding: 0.35rem 0.4rem;
+    /* Kaydırma burada (tüm panelde değil) — üst ve alt bölümler sabit kalır. */
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.hide-fields-form .hide-field-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    /* Airtable'daki gibi daha nefesli satır + tam genişlikte hover alanı. */
+    padding: 0.4rem 0.45rem;
+    border-radius: 7px;
+    font-size: 0.87rem;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.hide-fields-form .hide-field-row:hover {
+    background: var(--bcc-surface-hover);
+}
+
+/* Klavyeyle gezinirken de aynı geri bildirim (toggle gizli bir input). */
+.hide-fields-form .hide-field-toggle-input:focus-visible ~ .hide-field-name {
+    text-decoration: underline;
+}
+
+/* Alan tipi ikonu: ortak .field-badge bileşeni (theme.css). Burada yalnızca
+   satır içindeki hizası ayarlanıyor — ikonun KENDİSİ orada tanımlı, kopya yok. */
+.hide-fields-form .hide-field-row .field-badge {
+    flex-shrink: 0;
+    margin-right: 0;
+    vertical-align: 0;
+}
+
+/* Gizli alanın adı soluk: hangi satırların kapalı olduğu tek bakışta okunsun
+   (toggle rengine ek ikinci bir ipucu). */
+.hide-fields-form .hide-field-toggle-input:not(:checked) ~ .hide-field-name {
+    color: var(--bcc-text-muted);
+}
+
+/* Aramada elenen satır. [hidden]/display:none DEĞİL ayrı sınıf — satır flex
+   ve flex öğesine uygulanan display, [hidden]'ı ezer. */
+.hide-fields-form .hide-field-row.is-filtered-out { display: none; }
+
+.hide-fields-form .hide-fields-empty {
+    margin: 0;
+    padding: 0.8rem 0.45rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.hide-fields-form .hide-fields-empty[hidden] { display: none; }
+
+/* ---- Alt bölüm: iki eylem YAN YANA ---- */
+
+.hide-fields-form .hide-fields-actions {
+    display: grid;
+    /* İki eşit sütun: hangisinin etkin olduğuna bakılmaksızın düzen sabit. */
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0;
+    padding: 0.6rem 0.75rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.hide-fields-form .hide-fields-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 7px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.hide-fields-form a.hide-fields-btn:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-text-muted);
+    text-decoration: none;
+}
+
+/* Uygulanamayan taraf: görünür ama etkisiz. Butonu HİÇ basmamak yerine devre
+   dışı göstermek, iki sütunlu düzenin seçime göre zıplamasını önlüyor. */
+.hide-fields-form .hide-fields-btn.is-disabled {
+    background: var(--bcc-surface-sunken);
+    border-color: var(--bcc-border);
+    color: var(--bcc-text-muted);
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* "Uygula" yalnızca JS YOKKEN görünür (grid-hide-fields.js onu hidden yapıyor).
+   Göründüğünde iki sütunun ALTINDA tam genişlik kaplar. */
+.hide-fields-form .hide-fields-apply {
+    grid-column: 1 / -1;
+    background: var(--bcc-accent);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+}
+
+.hide-fields-form .hide-fields-apply[hidden] { display: none; }
+
+/* Gönderim beklenirken (toggle sonrası kısa gecikme) panel "işleniyor"
+   görünür — kullanıcı ikinci kez tıklamaya çalışmasın. */
+.hide-fields-form.is-pending .hide-fields-list { opacity: 0.6; }
+.hide-fields-form.is-pending .hide-fields-actions { pointer-events: none; opacity: 0.6; }
+
+/* ---------- Filtre paneli (Airtable "Filter" paritesi) ----------------------
+   Sunucu sözleşmesi DEĞİŞMEDİ (filter_field_N/filter_cond_N/filter_value_N +
+   tek filter_logic); burada yalnızca panelin görünümü var.
+
+   Satırlar IZGARA: her satır aynı sütun şablonunu kullandığı için bağlaç,
+   alan, koşul ve değer kutuları satırlar arasında BİREBİR hizalı. Eskiden
+   flex + flex:1 vardı ve satırdaki kutular içeriklerine göre farklı
+   genişliklere kayıyordu.
+
+   .filter-row / .filter-actions bu panele ÖZEL (gizle/gruplama panelleriyle
+   paylaşılmıyor — kontrol edildi), bu yüzden niteleme gerekmedi. */
+
+.filter-panel .filter-form {
+    /* İstenen genişlik: seçiciler ve değer kutusu kırpılmadan sığsın. */
+    min-width: 480px;
+    max-width: 560px;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+.filter-panel .filter-rows {
+    padding: 0.7rem 0.75rem 0.35rem;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.filter-row {
+    display: grid;
+    /* bağlaç | tip rozeti | alan | koşul | değer | sil */
+    grid-template-columns: 66px 15px minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr) 26px;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+}
+
+.filter-row:last-child { margin-bottom: 0; }
+
+/* Hücreler AÇIKÇA konumlandırılıyor. Sebep: değer kutusu "boş"/"boş değil"
+   operatörlerinde display:none oluyor ve ızgaradan tamamen çıkıyor — otomatik
+   yerleşimde bu, ONDAN SONRAKİ hücreyi (çöp kutusu) bir sütun sola kaydırıyordu
+   ve satırlar arasında hizasızlık oluşuyordu (ölçüldü). Sabit sütun numarasıyla
+   gizli değer kutusu kendi hücresini boş bırakıyor, komşuları yerinde kalıyor. */
+.filter-row .filter-conj { grid-column: 1; }
+.filter-row .filter-field-badge { grid-column: 2; }
+.filter-row .filter-field-select { grid-column: 3; }
+.filter-row .filter-cond-select { grid-column: 4; }
+.filter-row .filter-value-input { grid-column: 5; }
+.filter-row .filter-row-remove { grid-column: 6; }
+
+.filter-row select,
+.filter-row input {
+    padding: 0.35rem 0.4rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+}
+
+.filter-row select:focus,
+.filter-row input:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.filter-row select:disabled {
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text-muted);
+}
+
+/* Değer kutusu gizlendiğinde ("boş"/"boş değil" operatörleri) ızgara hücresi
+   boş kalır — display:none JS'ten geliyor, sütun genişliği korunur. */
+
+/* ---- Bağlaç sütunu ---- */
+
+.filter-conj {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.filter-conj-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    padding-left: 0.15rem;
+}
+
+/* 2. satırdaki GERÇEK kontrol (name="filter_logic"). Yansıtma rozetinden
+   GÖRSEL OLARAK AYRILMALI: ikisi de "VEYA" yazan gri kutu olduğunda kullanıcı
+   hangisinin değiştirilebilir olduğunu anlayamıyordu. Bu yüzden gerçek kontrol
+   normal yüzey + belirgin kenarlık (yani "form öğesi" dili), yansıtma ise
+   kenarlıksız düz metin. */
+.filter-row .filter-conj-select {
+    padding: 0.3rem 0.2rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-align: center;
+    background: var(--bcc-surface);
+    color: var(--bcc-accent-strong);
+    border-color: var(--bcc-accent);
+    cursor: pointer;
+}
+
+/* 3+ satırlar: aynı değeri yansıtan pasif rozet. Bağlaç sunucuda TEK değer
+   olduğu için burada düzenlenebilir bir kontrol GÖSTERİLMİYOR — motorun
+   desteklemediği "satır başına mantık" izlenimi verirdi. */
+.filter-conj-mirror {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.3rem 0.25rem;
+    /* Kenarlık YOK: düzenlenebilir görünmesin (yukarıdaki nota bkz.). */
+    border: 1px solid transparent;
+    background: none;
+    color: var(--bcc-text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: default;
+}
+
+/* ---- Alan tipi rozeti ----
+   Ortak .field-badge bileşeni (theme.css) — burada yalnızca ızgara hücresine
+   oturması ayarlanıyor. Native <option> içine ikon konulamadığı için rozet
+   select'in SOLUNDA duruyor ve seçili alanın tipini gösteriyor. */
+.filter-row .filter-field-badge {
+    margin-right: 0;
+    vertical-align: 0;
+    justify-self: center;
+}
+
+/* Alan seçilmemişken rozet yer tutar ama boş görünür. */
+.filter-row .filter-field-badge.is-empty { opacity: 0; }
+
+/* ---- Satır sil ---- */
+
+.filter-row-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.filter-row-remove:hover {
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+}
+
+/* ---- "+ Filtre ekle" ---- */
+
+.filter-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.75rem 0.6rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.filter-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-accent-strong);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.filter-add-btn:hover:not(:disabled) { background: var(--bcc-accent-soft); }
+
+.filter-add-btn:disabled {
+    color: var(--bcc-text-muted);
+    cursor: default;
+}
+
+.filter-slot-note {
+    font-size: 0.74rem;
+    color: var(--bcc-text-muted);
+}
+
+.filter-slot-note[hidden] { display: none; }
+
+/* ---- Alt eylemler ---- */
+
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.8rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 7px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+a.filter-btn:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-text-muted);
+    text-decoration: none;
+}
+
+.filter-btn--primary {
+    background: var(--bcc-accent);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+}
+
+.filter-btn--primary:hover {
+    background: var(--bcc-accent-strong);
+    border-color: var(--bcc-accent-strong);
+}
+
+/* Filtre yokken "Filtreleri temizle" görünür ama etkisiz — butonu hiç
+   basmamak yerine devre dışı göstermek alt satırın zıplamasını önlüyor
+   ("Alanları gizle" panelindeki AYNI karar). */
+.filter-btn.is-disabled {
+    background: var(--bcc-surface-sunken);
+    border-color: var(--bcc-border);
+    color: var(--bcc-text-muted);
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* Dar ekranda ızgara tek sütuna düşerse kutular okunmaz olurdu; panel yatayda
+   kaydırılabilir kalıyor (popover zaten viewport'a göre konumlanıyor). */
+@media (max-width: 620px) {
+    .filter-panel .filter-form {
+        min-width: 0;
+        max-width: 92vw;
+    }
+    .filter-panel .filter-rows { overflow-x: auto; }
+    .filter-row { min-width: 460px; }
 }

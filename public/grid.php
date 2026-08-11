@@ -365,6 +365,40 @@ if ($openFilterFieldId !== 0) {
     }
 }
 
+// ---- Filtre panelinde BASILACAK satırlar ----------------------------------
+// Eskiden panel KOŞULSUZ 5 boş satır basıyordu: kullanıcı tek bir filtre için
+// dört ölü satıra bakıyordu. Artık yalnızca (a) mevcut kurallar, (b) sütun
+// başlığından "bu alana göre filtrele" ile gelindiyse ön-seçili alan, (c)
+// hiçbiri yoksa TEK boş satır basılıyor; gerisini "+ Filtre ekle" ekliyor.
+//
+// SUNUCU SÖZLEŞMESİ DEĞİŞMEDİ: satırlar yine filter_field_N/filter_cond_N/
+// filter_value_N olarak 1'den başlayarak numaralanıyor ve parse_grid_filter_rules()
+// boş slotları zaten atlıyor. Kurallar 1..N olarak YENİDEN numaralanıyor (kaynak
+// slot'ları korunmuyor) — parse tarafı slot'u yalnızca sıra için okuduğundan bu
+// güvenli ve panelin satır ekleme/silme mantığını basitleştiriyor.
+$filterPanelRows = array();
+foreach ($filterRules as $rule) {
+    $filterPanelRows[] = array(
+        'field_id' => (int) $rule['field_id'],
+        'field_type' => $rule['field_type'],
+        'operator' => $rule['operator'],
+        'value' => $rule['raw_value'],
+    );
+}
+if ($openFilterFieldId !== 0 && count($filterPanelRows) < $GLOBALS['BCC_FILTER_MAX_SLOTS']) {
+    // Başlıktan gelen ön-seçim: alan dolu, operatör/değer boş — gerçek bir kural
+    // DEĞİL, kullanıcı tamamlayacak (önceki davranışın aynısı).
+    $filterPanelRows[] = array(
+        'field_id' => $openFilterFieldId,
+        'field_type' => $fieldsById[$openFilterFieldId]['field_type'],
+        'operator' => '',
+        'value' => '',
+    );
+}
+if (empty($filterPanelRows)) {
+    $filterPanelRows[] = array('field_id' => 0, 'field_type' => null, 'operator' => '', 'value' => '');
+}
+
 // Group panelinin boş alan listesi (henüz gruplama yokken) her alan için hazır bir
 // bağlantı üretir — mevcut sort/filter/hidden_fields durumu korunur.
 $groupFieldLinkBase = $baseState + $sortState + $filterState + $hiddenFieldsState + $rowHeightState + $wrapHeadersState;
@@ -911,32 +945,76 @@ $gridUser = current_user();
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                     <input type="hidden" name="visible_fields_submitted" value="1">
                     <?php bcc_render_grid_state_hidden_inputs($sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState); ?>
-                    <input type="text" class="hide-fields-search" placeholder="Alan ara" data-hide-fields-search>
-                    <?php foreach ($fields as $f):
-                        if ((int) $f['id'] === $primaryFieldId) {
-                            continue; // birincil alan Airtable'daki gibi panelde listelenmez, hep görünür
-                        }
-                    ?>
-                        <label class="hide-field-row">
-                            <input
-                                type="checkbox"
-                                class="hide-field-toggle-input"
-                                name="visible_fields[]"
-                                value="<?php echo (int) $f['id']; ?>"
-                                <?php echo !in_array((int) $f['id'], $hiddenFieldIds, true) ? 'checked' : ''; ?>
-                            >
-                            <span class="hide-field-toggle" aria-hidden="true"></span>
-                            <span class="hide-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
-                        </label>
-                    <?php endforeach; ?>
+
+                    <?php // ---- Arama + sayaç (üst bölüm) ----------------------------
+                          // Sayaç sunucudan DOĞRU değerle basılıyor; JS her toggle'da
+                          // yeniden yazıyor (bkz. grid-hide-fields.js) — böylece
+                          // JS'siz de doğru, JS'liyken de anlık. ?>
+                    <div class="hide-fields-top">
+                        <div class="hide-fields-search-wrap">
+                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                            <input type="text" class="hide-fields-search" placeholder="Alan ara" aria-label="Alan ara" autocomplete="off" data-hide-fields-search>
+                        </div>
+                        <p class="hide-fields-counter" data-hide-fields-counter
+                           data-total="<?php echo count($nonPrimaryFieldIds); ?>">
+                            <?php echo count($hiddenFieldIds); ?> / <?php echo count($nonPrimaryFieldIds); ?> alan gizli
+                        </p>
+                    </div>
+
+                    <div class="hide-fields-list" data-hide-fields-list>
+                        <?php foreach ($fields as $f):
+                            if ((int) $f['id'] === $primaryFieldId) {
+                                continue; // birincil alan Airtable'daki gibi panelde listelenmez, hep görünür
+                            }
+                        ?>
+                            <label class="hide-field-row">
+                                <input
+                                    type="checkbox"
+                                    class="hide-field-toggle-input"
+                                    name="visible_fields[]"
+                                    value="<?php echo (int) $f['id']; ?>"
+                                    <?php echo !in_array((int) $f['id'], $hiddenFieldIds, true) ? 'checked' : ''; ?>
+                                >
+                                <span class="hide-field-toggle" aria-hidden="true"></span>
+                                <?php // Alan tipi ikonu: grid başlığı ve gruplama panelinin
+                                      // KULLANDIĞI AYNI bileşen (.field-badge--<tip>,
+                                      // assets/theme.css) — 21 tipin tamamı orada tanımlı,
+                                      // burada ikinci bir ikon seti YOK. ?>
+                                <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                <span class="hide-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                        <p class="hide-fields-empty" data-hide-fields-empty hidden>Eşleşen alan yok.</p>
+                    </div>
+
+                    <?php // ---- İki eylem, YAN YANA, HER ZAMAN basılır ----------------
+                          // Eskiden ikisi de KOŞULLUYDU ("Tümünü göster" yalnızca gizli
+                          // alan varken, "Tümünü gizle" yalnızca gösterilecek alan
+                          // varken) — yani panelde çoğu zaman TEK buton görünüyordu ve
+                          // yerleşim seçime göre zıplıyordu. Artık ikisi de her zaman
+                          // var; uygulanamayan taraf devre dışı (aria-disabled + tabindex)
+                          // görünür, böylece düzen sabit kalıyor.
+                          //
+                          // <a> olarak kalıyorlar: ikisi de GERÇEK bir GET adresine
+                          // gidiyor (sunucu durumu URL'de taşıyor), yani JS olmadan da
+                          // çalışıyorlar. ?>
                     <div class="hide-fields-actions">
-                        <button type="submit" class="btn-sm" data-hide-fields-apply>Uygula</button>
-                        <?php if (!empty($hiddenFieldIds)): ?>
-                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($showAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü göster</a>
+                        <?php $allHidden = count($hiddenFieldIds) >= count($nonPrimaryFieldIds); ?>
+                        <?php if ($allHidden): ?>
+                            <span class="hide-fields-btn is-disabled" aria-disabled="true">Tümünü gizle</span>
+                        <?php else: ?>
+                            <a class="hide-fields-btn" href="/grid.php?<?php echo htmlspecialchars($hideAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü gizle</a>
                         <?php endif; ?>
-                        <?php if (count($hiddenFieldIds) < count($nonPrimaryFieldIds)): ?>
-                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($hideAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü gizle</a>
+
+                        <?php if (empty($hiddenFieldIds)): ?>
+                            <span class="hide-fields-btn is-disabled" aria-disabled="true">Tümünü göster</span>
+                        <?php else: ?>
+                            <a class="hide-fields-btn" href="/grid.php?<?php echo htmlspecialchars($showAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü göster</a>
                         <?php endif; ?>
+
+                        <?php // JS varken gizleniyor (her değişiklikte otomatik submit
+                              // ediliyor); JS yokken tek uygulama yolu bu. ?>
+                        <button type="submit" class="hide-fields-btn hide-fields-apply" data-hide-fields-apply>Uygula</button>
                     </div>
                 </form>
             </details>
@@ -948,102 +1026,160 @@ $gridUser = current_user();
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4z" stroke="#5f6368" stroke-width="1.4" stroke-linejoin="round"/></svg>
                     Filtrele<?php echo !empty($filterRules) ? ' (' . count($filterRules) . ')' : ''; ?>
                 </summary>
-                <form method="get" action="/grid.php" class="filter-form">
+                <form method="get" action="/grid.php" class="filter-form" data-filter-form>
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                     <?php bcc_render_grid_state_hidden_inputs($hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState); ?>
-                    <?php for ($slot = 1; $slot <= 5; $slot++):
-                        $currentRule = null;
-                        foreach ($filterRules as $rule) {
-                            if ($rule['slot'] === $slot) {
-                                $currentRule = $rule;
-                                break;
-                            }
-                        }
-                        $currentFieldId = $currentRule ? $currentRule['field_id'] : 0;
-                        $currentFieldType = $currentRule ? $currentRule['field_type'] : null;
-                        $currentOp = $currentRule ? $currentRule['operator'] : '';
-                        $currentValue = $currentRule ? $currentRule['raw_value'] : '';
-                        // Sütun başlığı "Bu alana göre filtrele" ile gelindiyse (bkz.
-                        // $openFilterFieldId/$openFilterSlot yukarıda) — bu, ilk boş
-                        // slotu bu alanla ön-seçili gösterir (henüz operatör/değer yok,
-                        // kullanıcı seçecek), gerçek bir filtre kuralı OLUŞTURMAZ.
-                        if ($currentRule === null && $slot === $openFilterSlot) {
-                            $currentFieldId = $openFilterFieldId;
-                            $currentFieldType = $fieldsById[$openFilterFieldId]['field_type'];
-                        }
-                        $opsForField = $currentFieldType ? $GLOBALS['BCC_FILTER_OPERATORS'][$currentFieldType] : array();
-                        $valueHidden = in_array($currentOp, $GLOBALS['BCC_FILTER_NO_VALUE_OPS'], true);
-                        $valueInputType = 'text';
-                        if ($currentFieldType === 'number') {
-                            $valueInputType = 'number';
-                        } elseif ($currentFieldType === 'date') {
-                            $valueInputType = 'date';
-                        } elseif ($currentFieldType === 'time') {
-                            $valueInputType = 'time';
-                        }
-                        // 'user' değerleri (users.id) serbest metin yerine takım
-                        // üyelerinden bir <select> ile seçilir (grid-filter.js alan
-                        // değişince aynı düğümü inşa eder) — id yazmak insan için
-                        // anlamsız olurdu, diğer tüm tipler <input> olarak kalır.
-                        $isUserFilter = ($currentFieldType === 'user');
+
+                    <?php
+                    // BAĞLAÇ (VE/VEYA) SUNUCUDA TEK DEĞERDİR: filter_logic tüm
+                    // kurallara birden uygulanır (bkz. bcc_build_grid_records_query).
+                    // Bu yüzden "her satırda ayrı bağlaç" YAPILMADI — öyle bir arayüz,
+                    // motorun desteklemediği bir söz verirdi.
+                    //
+                    // Gerçek kontrol 2. SATIRDAKİ <select name="filter_logic">;
+                    // 3. ve sonraki satırlar aynı değeri YANSITAN, ada sahip olmayan
+                    // (yani forma girmeyen) devre dışı kopyalardır — Airtable de
+                    // tekdüze mantıkta sonraki bağlaçları pasif gösterir.
+                    // Tek satır varken 2. satır yoktur; değer kaybolmasın diye
+                    // gizli input basılır (JS ikinci satırı eklerken onu kaldırıp
+                    // yerine select koyar).
+                    $filterRowCount = count($filterPanelRows);
+                    $filterLogicValue = $filterLogic === 'OR' ? 'or' : 'and';
                     ?>
-                        <div class="filter-row">
-                            <select name="filter_field_<?php echo $slot; ?>" class="filter-field-select">
-                                <option value="">— yok —</option>
-                                <?php foreach ($fields as $f):
-                                    if ($f['field_type'] === 'attachment') {
-                                        continue; // dosya eki alanları filtrelenemez (cell_values karşılığı yok)
-                                    }
-                                ?>
-                                    <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <select name="filter_cond_<?php echo $slot; ?>" class="filter-cond-select" <?php echo $opsForField ? '' : 'disabled'; ?>>
-                                <?php if (empty($opsForField)): ?>
-                                    <option value="">— önce alan seçin —</option>
-                                <?php else: ?>
-                                    <?php foreach ($opsForField as $opKey => $opLabel): ?>
-                                        <option value="<?php echo htmlspecialchars($opKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $currentOp === $opKey ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($opLabel, ENT_QUOTES, 'UTF-8'); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                            <?php if ($isUserFilter): ?>
-                                <select
-                                    name="filter_value_<?php echo $slot; ?>"
-                                    class="filter-value-input filter-value-user-select"
-                                    <?php echo $valueHidden ? 'style="display:none"' : ''; ?>
-                                >
-                                    <option value="">— seç —</option>
-                                    <?php foreach ($usersById as $uid => $uname): ?>
-                                        <option value="<?php echo (int) $uid; ?>" <?php echo ((string) $currentValue === (string) $uid) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($uname, ENT_QUOTES, 'UTF-8'); ?>
+                    <?php if ($filterRowCount < 2): ?>
+                        <input type="hidden" name="filter_logic" value="<?php echo $filterLogicValue; ?>" data-filter-logic-hidden>
+                    <?php endif; ?>
+
+                    <div class="filter-rows" data-filter-rows>
+                        <?php foreach ($filterPanelRows as $i => $row):
+                            $slot = $i + 1;
+                            $currentFieldId = (int) $row['field_id'];
+                            $currentFieldType = $row['field_type'];
+                            $currentOp = $row['operator'];
+                            $currentValue = $row['value'];
+
+                            $opsForField = $currentFieldType ? $GLOBALS['BCC_FILTER_OPERATORS'][$currentFieldType] : array();
+                            // Değer kutusu gizlenir: (a) değer almayan operatörlerde
+                            // ("boş"/"boş değil"), (b) HENÜZ ALAN SEÇİLMEMİŞKEN —
+                            // grid-filter.js alan değişince zaten aynı kuralı
+                            // uyguluyordu, ilk render'da uygulanmıyordu ve boş satır
+                            // kullanılamaz bir "değer" kutusu gösteriyordu.
+                            $valueHidden = ($currentFieldType === null)
+                                || in_array($currentOp, $GLOBALS['BCC_FILTER_NO_VALUE_OPS'], true);
+                            $valueInputType = 'text';
+                            if ($currentFieldType === 'number') {
+                                $valueInputType = 'number';
+                            } elseif ($currentFieldType === 'date') {
+                                $valueInputType = 'date';
+                            } elseif ($currentFieldType === 'time') {
+                                $valueInputType = 'time';
+                            }
+                            // 'user' değerleri (users.id) serbest metin yerine takım
+                            // üyelerinden bir <select> ile seçilir (grid-filter.js alan
+                            // değişince aynı düğümü inşa eder) — id yazmak insan için
+                            // anlamsız olurdu, diğer tüm tipler <input> olarak kalır.
+                            $isUserFilter = ($currentFieldType === 'user');
+                        ?>
+                            <div class="filter-row" data-filter-row data-slot="<?php echo $slot; ?>">
+                                <?php // ---- Bağlaç sütunu: 1. satır etiket, 2. satır GERÇEK
+                                      // kontrol, 3+ yansıtma. Üçü de AYNI genişlikte, böylece
+                                      // alan/operatör/değer sütunları satırlar arasında hizalı. ?>
+                                <span class="filter-conj" data-filter-conj>
+                                    <?php if ($slot === 1): ?>
+                                        <span class="filter-conj-label">Koşul</span>
+                                    <?php elseif ($slot === 2): ?>
+                                        <select name="filter_logic" class="filter-conj-select" data-filter-logic aria-label="Kurallar arası bağlaç">
+                                            <option value="and" <?php echo $filterLogicValue === 'and' ? 'selected' : ''; ?>>VE</option>
+                                            <option value="or" <?php echo $filterLogicValue === 'or' ? 'selected' : ''; ?>>VEYA</option>
+                                        </select>
+                                    <?php else: ?>
+                                        <span class="filter-conj-mirror" data-filter-conj-mirror title="Bağlaç tüm kurallara birlikte uygulanır"><?php echo $filterLogicValue === 'or' ? 'VEYA' : 'VE'; ?></span>
+                                    <?php endif; ?>
+                                </span>
+
+                                <?php // Alan tipi ikonu: SEÇİLİ alanın tipini gösterir ve
+                                      // grid-filter.js alan değişince tazeler. Native <option>
+                                      // içine ikon konulamadığı için (HTML sınırı) rozet
+                                      // select'in YANINDA duruyor — ikon seti yine ortak
+                                      // .field-badge (theme.css), ikinci bir set YOK. ?>
+                                <span class="field-badge filter-field-badge <?php echo $currentFieldType ? 'field-badge--' . htmlspecialchars($currentFieldType, ENT_QUOTES, 'UTF-8') : 'is-empty'; ?>" data-filter-field-badge aria-hidden="true"></span>
+
+                                <select name="filter_field_<?php echo $slot; ?>" class="filter-field-select" aria-label="Filtre alanı">
+                                    <option value="">— alan seçin —</option>
+                                    <?php foreach ($fields as $f):
+                                        if ($f['field_type'] === 'attachment') {
+                                            continue; // dosya eki alanları filtrelenemez (cell_values karşılığı yok)
+                                        }
+                                    ?>
+                                        <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                            <?php else: ?>
-                                <input
-                                    type="<?php echo $valueInputType; ?>"
-                                    name="filter_value_<?php echo $slot; ?>"
-                                    class="filter-value-input"
-                                    value="<?php echo htmlspecialchars($currentValue, ENT_QUOTES, 'UTF-8'); ?>"
-                                    placeholder="değer"
-                                    <?php echo $valueHidden ? 'style="display:none"' : ''; ?>
-                                >
-                            <?php endif; ?>
-                        </div>
-                    <?php endfor; ?>
-                    <div class="filter-logic-row">
-                        <label><input type="radio" name="filter_logic" value="and" <?php echo $filterLogic === 'AND' ? 'checked' : ''; ?>> VE (tüm kurallar)</label>
-                        <label><input type="radio" name="filter_logic" value="or" <?php echo $filterLogic === 'OR' ? 'checked' : ''; ?>> VEYA (herhangi biri)</label>
+
+                                <select name="filter_cond_<?php echo $slot; ?>" class="filter-cond-select" aria-label="Koşul" <?php echo $opsForField ? '' : 'disabled'; ?>>
+                                    <?php if (empty($opsForField)): ?>
+                                        <option value="">— önce alan seçin —</option>
+                                    <?php else: ?>
+                                        <?php foreach ($opsForField as $opKey => $opLabel): ?>
+                                            <option value="<?php echo htmlspecialchars($opKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $currentOp === $opKey ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($opLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+
+                                <?php if ($isUserFilter): ?>
+                                    <select
+                                        name="filter_value_<?php echo $slot; ?>"
+                                        class="filter-value-input filter-value-user-select"
+                                        aria-label="Değer"
+                                        <?php echo $valueHidden ? 'style="display:none"' : ''; ?>
+                                    >
+                                        <option value="">— seç —</option>
+                                        <?php foreach ($usersById as $uid => $uname): ?>
+                                            <option value="<?php echo (int) $uid; ?>" <?php echo ((string) $currentValue === (string) $uid) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($uname, ENT_QUOTES, 'UTF-8'); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php else: ?>
+                                    <input
+                                        type="<?php echo $valueInputType; ?>"
+                                        name="filter_value_<?php echo $slot; ?>"
+                                        class="filter-value-input"
+                                        value="<?php echo htmlspecialchars($currentValue, ENT_QUOTES, 'UTF-8'); ?>"
+                                        placeholder="değer"
+                                        aria-label="Değer"
+                                        <?php echo $valueHidden ? 'style="display:none"' : ''; ?>
+                                    >
+                                <?php endif; ?>
+
+                                <?php // Satır silme. JS YOKKEN de anlamlı: butonun kendisi
+                                      // JS ile bağlanıyor ama JS yoksa kullanıcı alanı
+                                      // "— alan seçin —"e çekerek kuralı zaten iptal
+                                      // edebiliyor (sunucu boş slotu atlıyor). ?>
+                                <button type="button" class="filter-row-remove" data-filter-remove aria-label="Bu filtre kuralını sil" title="Kuralı sil">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6M8.5 9v5M11.5 9v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
+
+                    <div class="filter-add-row">
+                        <button type="button" class="filter-add-btn" data-filter-add>
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                            Filtre ekle
+                        </button>
+                        <span class="filter-slot-note" data-filter-slot-note hidden>En fazla <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?> kural eklenebilir.</span>
+                    </div>
+
                     <div class="filter-actions">
-                        <button type="submit" class="btn-sm">Uygula</button>
+                        <button type="submit" class="filter-btn filter-btn--primary">Uygula</button>
                         <?php if (!empty($filterRules)): ?>
-                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($clearFilterQueryString, ENT_QUOTES, 'UTF-8'); ?>">Temizle</a>
+                            <a class="filter-btn" href="/grid.php?<?php echo htmlspecialchars($clearFilterQueryString, ENT_QUOTES, 'UTF-8'); ?>">Filtreleri temizle</a>
+                        <?php else: ?>
+                            <span class="filter-btn is-disabled" aria-disabled="true">Filtreleri temizle</span>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -1527,6 +1663,10 @@ $gridUser = current_user();
     ?>;
     var BCC_FILTER_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_FILTER_NO_VALUE_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_NO_VALUE_OPS'], JSON_UNESCAPED_UNICODE); ?>;
+    <?php // Azami kural sayısı SUNUCUDAN — "+ Filtre ekle" bu sınırda kapanıyor.
+          // İstemcide ikinci bir sabit YOK (parse_grid_filter_rules aynı değeri
+          // okuyor, bkz. src/schema.php BCC_FILTER_MAX_SLOTS). ?>
+    var BCC_FILTER_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>;
     // 'user' alanı filtre değeri: takım üyeleri (KVKK — yalnızca bu takım), hücre
     // editöründeki data-options ile AYNI [{"id":..,"name":..}] şekli.
     var BCC_TEAM_MEMBERS = <?php echo json_encode(bcc_user_choices_from_map($usersById), JSON_UNESCAPED_UNICODE); ?>;

@@ -444,6 +444,13 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
 
 // Grid filtresi (Faz 4): alan tipine göre izin verilen koşullar (whitelist).
 // Anahtarlar SQL'e gömülmez — filter_condition_sql() içinde sabit switch/case ile eşlenir.
+// Filtre panelindeki AZAMI kural sayisi (slot). URL sozlesmesi
+// filter_field_1..N / filter_cond_1..N / filter_value_1..N seklinde ve bu
+// sayi UC yerde birden geciyordu: parse_grid_filter_rules(), grid.php'nin
+// panel dongusu ve bcc_grid_state_is_empty(). Tek kaynak buraya alindi —
+// '+ Filtre ekle' butonu da istemcide ayni sayiyi kullaniyor.
+$GLOBALS['BCC_FILTER_MAX_SLOTS'] = 5;
+
 $GLOBALS['BCC_FILTER_OPERATORS'] = array(
     'single_line_text' => array(
         'contains' => 'içerir', 'not_contains' => 'içermez',
@@ -2881,7 +2888,7 @@ function parse_grid_group_rules($params, $fieldsById)
 // filter_condition_sql() içinde, SQL'e bağlanma anında yapılır.
 function parse_grid_filter_rules($params, $fieldsById)
 {
-    $maxSlots = 5;
+    $maxSlots = $GLOBALS['BCC_FILTER_MAX_SLOTS'];
     $rules = array();
 
     for ($i = 1; $i <= $maxSlots; $i++) {
@@ -3005,7 +3012,7 @@ function bcc_grid_state_is_empty($params)
         $keys[] = 'sort_field_' . $i;
         $keys[] = 'group_field_' . $i;
     }
-    for ($i = 1; $i <= 5; $i++) {
+    for ($i = 1; $i <= $GLOBALS['BCC_FILTER_MAX_SLOTS']; $i++) {
         $keys[] = 'filter_field_' . $i;
     }
 
@@ -3812,4 +3819,430 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId,
     $sql .= ' ORDER BY last_update DESC, r.id DESC';
 
     return bcc_fetch_all($sql, $params);
+}
+
+// ---------------------------------------------------------------------------
+// Çalışma alanı panosu (workspaces.php) — veri katmanı
+// ---------------------------------------------------------------------------
+// Sayfanın SORGULARI burada, HTML'i orada: workspaces.php şablon olarak kalsın
+// ve bu sayaçlar ileride başka bir ekrandan (ör. dashboard) da okunabilsin.
+// Hepsi $teamId ile sınırlı — KVKK izolasyonu çağıranın require_team_access()
+// kontrolünün ARDINDAN, ikinci bir katman olarak burada da korunuyor.
+
+// "Kullanım & Limitler" kartındaki doluluk çubuklarının REFERANS değerleri.
+//
+// ⚠️ BUNLAR ZORLANAN BİR KOTA DEĞİLDİR. Bu projede çalışma alanı başına kayıt/
+// depolama/base sınırı uygulayan hiçbir kod YOK (gerçekten zorlanan tek
+// sınırlar dosya başına 20MB yükleme ve 10MB xlsx içe aktarmadır — bkz.
+// api/attachment_upload.php ve api/table_import_xlsx.php). Buradaki sayılar
+// yalnızca "ne kadar doluyum" sorusuna görsel bir ölçek verir; kartın altında
+// da kullanıcıya bunun zorlanmadığı AÇIKÇA yazılır. Bir gün gerçek kota
+// gelirse, uygulayan kod da bu diziyi okumalı — o zaman tek kaynak olur.
+$GLOBALS['BCC_WORKSPACE_SOFT_LIMITS'] = array(
+    'records' => 50000,
+    'storage_bytes' => 2 * 1024 * 1024 * 1024, // 2 GB
+    'bases' => 25,
+);
+
+// Yukarıdakiler ÇALIŞMA ALANI BAŞINA; bu ise KULLANICI BAŞINA (kaç çalışma
+// alanına üye) — workspaces.php sol panelindeki kullanım rozeti için. Ayrı
+// bir sabit, çünkü ölçtüğü eksen farklı; aynı diziye konsaydı "workspace
+// başına workspace sayısı" gibi okunurdu.
+//
+// ⚠️ BU DA ZORLANAN BİR KOTA DEĞİL (yukarıdaki notun aynısı): kullanıcıyı
+// N çalışma alanıyla sınırlayan hiçbir kod yok. Rozet bunu açıkça yazıyor ve
+// üyelik eşiği aşarsa kesir hiç gösterilmiyor.
+$GLOBALS['BCC_USER_WORKSPACE_SOFT_LIMIT'] = 5;
+
+// Baytları okunabilir birime çevirir. account.php'den BURAYA TAŞINDI
+// (bcc_account_format_bytes idi): artık iki sayfa da (hesap özeti + çalışma
+// alanı kullanım kartı) aynı biçimlendirmeyi kullanıyor, ikinci bir kopya YOK.
+function bcc_format_bytes($bytes)
+{
+    $bytes = (int) $bytes;
+    if ($bytes < 1024) {
+        return $bytes . ' B';
+    }
+    $units = array('KB', 'MB', 'GB', 'TB');
+    $value = $bytes / 1024;
+    $i = 0;
+    while ($value >= 1024 && $i < count($units) - 1) {
+        $value /= 1024;
+        $i++;
+    }
+
+    return number_format($value, $value >= 10 ? 0 : 1, ',', '.') . ' ' . $units[$i];
+}
+
+// Bu kurulumda PHP ile MySQL AYNI SAATİ GÖSTERMİYOR: php.ini'de date.timezone
+// boş (PHP UTC varsayıyor), MySQL ise yerel saati (UTC+3) döndürüyor. Bu
+// yüzden bir DB zaman damgasını PHP'nin time()'ı ile karşılaştırmak 3 saatlik
+// bir kayma üretiyordu — ölçüldü: en son yazılan audit satırı bile "-10228 sn"
+// yani GELECEKTE görünüyor ve göreli ifade mutlak tarihe düşüyordu.
+//
+// Çözüm: referans saat de VERİTABANINDAN alınır, böylece iki taraf aynı
+// saat diliminde. İstek başına TEK sorgu (static önbellek). php.ini'ye ya da
+// global date_default_timezone_set()'e DOKUNULMADI — mevcut sayfalar
+// (team_members.php, account.php...) DB damgalarını zaten date() ile
+// basıyor ve global bir kaydırma onların hepsini sessizce değiştirirdi.
+function bcc_db_now()
+{
+    static $now = null;
+
+    if ($now === null) {
+        $raw = bcc_fetch_column('SELECT NOW()');
+        $now = $raw !== null && $raw !== false ? strtotime((string) $raw) : time();
+    }
+
+    return $now;
+}
+
+// "2 saat önce" — Türkçe göreli zaman. Gelecek tarihler ve 30 günden eskiler
+// mutlak tarihe düşer (göreli ifade orada bilgi vermez, "412 gün önce" gibi).
+//
+// $now dışarıdan verilebilir (test edilebilirlik); verilmezse DB saati
+// kullanılır — bkz. bcc_db_now() üstündeki kayma notu.
+function bcc_time_ago($datetime, $now = null)
+{
+    if ($datetime === null || $datetime === '') {
+        return '—';
+    }
+
+    $ts = is_numeric($datetime) ? (int) $datetime : strtotime((string) $datetime);
+    if ($ts === false || $ts <= 0) {
+        return '—';
+    }
+
+    $diff = ($now === null ? bcc_db_now() : (int) $now) - $ts;
+
+    if ($diff < 0) {
+        return date('d.m.Y', $ts);
+    }
+    if ($diff < 60) {
+        return 'az önce';
+    }
+    if ($diff < 3600) {
+        return ((int) floor($diff / 60)) . ' dakika önce';
+    }
+    if ($diff < 86400) {
+        return ((int) floor($diff / 3600)) . ' saat önce';
+    }
+    if ($diff < 2592000) {
+        return ((int) floor($diff / 86400)) . ' gün önce';
+    }
+
+    return date('d.m.Y', $ts);
+}
+
+// Çalışma alanındaki base'ler + kart ızgarası için gereken her şey.
+//
+// "Son değişiklik" TÜRETİLİYOR: bases tablosunda updated_at YOK (DDL
+// eklenmiyor). Gerçek düzenleme sinyali cell_values.updated_at'tir
+// (ON UPDATE CURRENT_TIMESTAMP) — hücre düzenlemesi olmayan yeni bir base
+// için bases.created_at'e düşülür. Böylece "son değişiklik" uydurma değil,
+// gerçekten yazılmış bir zaman damgasıdır.
+//
+// $userId verilirse her satıra is_starred bayrağı eklenir (yıldızlılar
+// bölümü için) — ayrı bir sorgu açılmaz.
+function bcc_workspace_bases($teamId, $userId = null)
+{
+    $teamId = (int) $teamId;
+
+    return bcc_fetch_all(
+        'SELECT
+             b.id,
+             b.name,
+             b.description,
+             b.created_at,
+             (SELECT COUNT(*) FROM tables_meta tm WHERE tm.base_id = b.id) AS table_count,
+             (SELECT COUNT(*)
+                FROM records r
+                INNER JOIN tables_meta tm2 ON tm2.id = r.table_id
+               WHERE tm2.base_id = b.id AND r.deleted_at IS NULL) AS record_count,
+             (SELECT MAX(cv.updated_at)
+                FROM cell_values cv
+                INNER JOIN records r2 ON r2.id = cv.record_id AND r2.deleted_at IS NULL
+                INNER JOIN tables_meta tm3 ON tm3.id = r2.table_id
+               WHERE tm3.base_id = b.id) AS last_edit_at,
+             (SELECT COUNT(*) FROM user_starred_bases usb
+               WHERE usb.base_id = b.id AND usb.user_id = :uid) AS is_starred
+         FROM bases b
+         WHERE b.team_id = :team_id AND b.deleted_at IS NULL
+         ORDER BY b.name',
+        array('team_id' => $teamId, 'uid' => (int) $userId)
+    );
+}
+
+// Çalışma alanı kullanım sayaçları. account.php'nin hesap geneli sayaçlarıyla
+// AYNI sorgu deseni, yalnızca tek ekiple sınırlı.
+//
+// slack_webhook_count: "aktif entegrasyon" göstergesi — gerçek bir satır
+// sayısı, tahmin değil (slack_webhooks tablosu, bkz. slack_settings.php).
+//
+// DİKKAT: slack_webhooks'un KENDİ team_id'si var ve table_id NULL OLABİLİR
+// (çalışma alanı geneli webhook). Bu yüzden tables_meta üzerinden JOIN
+// YAPILMIYOR — yapılsaydı table_id'si NULL olan webhook'lar sessizce
+// sayılmazdı. Yalnızca is_active = 1 olanlar "aktif entegrasyon" sayılır.
+function bcc_workspace_usage($teamId)
+{
+    $teamId = (int) $teamId;
+    $params = array('team_id' => $teamId);
+
+    return array(
+        'base_count' => (int) bcc_fetch_column(
+            'SELECT COUNT(*) FROM bases WHERE team_id = :team_id AND deleted_at IS NULL',
+            $params
+        ),
+        'table_count' => (int) bcc_fetch_column(
+            'SELECT COUNT(*) FROM tables_meta tm
+             INNER JOIN bases b ON b.id = tm.base_id AND b.deleted_at IS NULL
+             WHERE b.team_id = :team_id',
+            $params
+        ),
+        'record_count' => (int) bcc_fetch_column(
+            'SELECT COUNT(*) FROM records r
+             INNER JOIN tables_meta tm ON tm.id = r.table_id
+             INNER JOIN bases b ON b.id = tm.base_id AND b.deleted_at IS NULL
+             WHERE b.team_id = :team_id AND r.deleted_at IS NULL',
+            $params
+        ),
+        'storage_bytes' => (int) bcc_fetch_column(
+            'SELECT COALESCE(SUM(a.file_size), 0) FROM attachments a
+             INNER JOIN records r ON r.id = a.record_id AND r.deleted_at IS NULL
+             INNER JOIN tables_meta tm ON tm.id = r.table_id
+             INNER JOIN bases b ON b.id = tm.base_id AND b.deleted_at IS NULL
+             WHERE b.team_id = :team_id',
+            $params
+        ),
+        'slack_webhook_count' => (int) bcc_fetch_column(
+            'SELECT COUNT(*) FROM slack_webhooks WHERE team_id = :team_id AND is_active = 1',
+            $params
+        ),
+    );
+}
+
+// Çalışma alanı hareket akışı (workspaces.php "Son Hareketler" paneli).
+//
+// KAYNAK GERÇEK: audit_log — bu proje zaten her anlamlı eylemde log_audit()
+// çağırıyor (record.create, cell.update, team_member.assign, view.create...).
+// Uydurma/örnek satır YOK; tablo boşsa panel boş durumunu gösterir.
+//
+// GÜRÜLTÜ FİLTRESİ: 'base.open' (her sayfa açılışında yazılıyor, yüzlerce
+// satır), 'user.login'/'user.logout' (çalışma alanına ait bir hareket değil)
+// ve export izleri DIŞARIDA BIRAKILIR — akış "kim neyi DEĞİŞTİRDİ" sorusuna
+// cevap versin, "kim ne zaman baktı"ya değil.
+//
+// N+1 YOK: sonuç sayfası (varsayılan 12 satır) toplandıktan SONRA içindeki
+// base/tablo/kullanıcı id'leri TEK seferde toplu çözülür — satır başına sorgu
+// açılmaz.
+function bcc_workspace_activity($teamId, $limit = 12)
+{
+    $teamId = (int) $teamId;
+    // LIMIT'e değişken bağlanamadığı için değer önce int'e çevrilip
+    // 1..50 aralığına sıkıştırılıyor — dizgeye giren şey her zaman bir sayı.
+    $limit = max(1, min(50, (int) $limit));
+
+    $rows = bcc_fetch_all(
+        "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at,
+                u.full_name AS actor_name
+         FROM audit_log al
+         LEFT JOIN users u ON u.id = al.user_id
+         WHERE al.team_id = :team_id
+           AND al.action NOT IN ('base.open', 'user.login', 'user.logout', 'view.export_xlsx', 'team_member.export_xlsx')
+         ORDER BY al.id DESC
+         LIMIT " . $limit,
+        array('team_id' => $teamId)
+    );
+
+    if (empty($rows)) {
+        return array();
+    }
+
+    // ---- Adları TOPLU çöz (N+1 yok) --------------------------------------
+    $baseIds = array();
+    $tableIds = array();
+    $userIds = array();
+
+    foreach ($rows as $r) {
+        $d = bcc_audit_details($r['details']);
+        if ($r['entity_type'] === 'base' && $r['entity_id']) {
+            $baseIds[(int) $r['entity_id']] = true;
+        }
+        if (isset($d['base_id'])) {
+            $baseIds[(int) $d['base_id']] = true;
+        }
+        if (isset($d['table_id'])) {
+            $tableIds[(int) $d['table_id']] = true;
+        }
+        if ($r['entity_type'] === 'table' && $r['entity_id']) {
+            $tableIds[(int) $r['entity_id']] = true;
+        }
+        if (isset($d['user_id'])) {
+            $userIds[(int) $d['user_id']] = true;
+        }
+    }
+
+    $baseNames = bcc_ids_to_names('bases', array_keys($baseIds));
+    $tableNames = bcc_ids_to_names('tables_meta', array_keys($tableIds));
+    $userNames = bcc_ids_to_names('users', array_keys($userIds), 'full_name');
+
+    // ---- Satırları insan diline çevir ------------------------------------
+    $out = array();
+    foreach ($rows as $r) {
+        $d = bcc_audit_details($r['details']);
+
+        // Hedef adı: en belirgin olandan en genele doğru ilk dolu olan.
+        $target = null;
+        if (isset($d['name']) && is_string($d['name']) && $d['name'] !== '') {
+            $target = $d['name'];
+        } elseif (isset($d['field_name']) && is_string($d['field_name']) && $d['field_name'] !== '') {
+            $target = $d['field_name'];
+        } elseif (isset($d['table_id']) && isset($tableNames[(int) $d['table_id']])) {
+            $target = $tableNames[(int) $d['table_id']];
+        } elseif ($r['entity_type'] === 'table' && isset($tableNames[(int) $r['entity_id']])) {
+            $target = $tableNames[(int) $r['entity_id']];
+        } elseif ($r['entity_type'] === 'base' && isset($baseNames[(int) $r['entity_id']])) {
+            $target = $baseNames[(int) $r['entity_id']];
+        } elseif (isset($d['base_id']) && isset($baseNames[(int) $d['base_id']])) {
+            $target = $baseNames[(int) $d['base_id']];
+        } elseif (isset($d['user_id']) && isset($userNames[(int) $d['user_id']])) {
+            $target = $userNames[(int) $d['user_id']];
+        }
+
+        $out[] = array(
+            'id' => (int) $r['id'],
+            'action' => $r['action'],
+            'actor' => ($r['actor_name'] !== null && $r['actor_name'] !== '') ? $r['actor_name'] : 'Sistem',
+            'label' => bcc_audit_action_label($r['action']),
+            'kind' => bcc_audit_action_kind($r['action']),
+            'target' => $target,
+            'created_at' => $r['created_at'],
+            'ago' => bcc_time_ago($r['created_at']),
+        );
+    }
+
+    return $out;
+}
+
+// audit_log.details her zaman geçerli JSON olmayabilir (NULL, boş dizge veya
+// eski bir satırdan bozuk içerik) — savunmacı çözüm, her zaman dizi döner.
+function bcc_audit_details($raw)
+{
+    if ($raw === null || $raw === '') {
+        return array();
+    }
+    $decoded = json_decode((string) $raw, true);
+
+    return is_array($decoded) ? $decoded : array();
+}
+
+// id -> ad haritası, TEK sorguda. Boş id listesinde sorgu HİÇ açılmaz.
+function bcc_ids_to_names($table, array $ids, $nameColumn = 'name')
+{
+    // $table/$nameColumn çağıran tarafından SABİT veriliyor (kullanıcı girdisi
+    // değil) ama yine de whitelist'ten geçiyor — bcc_reorder_sibling() ile AYNI
+    // disiplin: dinamik tanımlayıcı asla doğrudan SQL'e yazılmaz.
+    $allowed = array(
+        'bases' => 'name',
+        'tables_meta' => 'name',
+        'users' => 'full_name',
+    );
+    if (!isset($allowed[$table]) || $allowed[$table] !== $nameColumn) {
+        throw new InvalidArgumentException('bcc_ids_to_names: izin verilmeyen tablo/kolon.');
+    }
+
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if (empty($ids)) {
+        return array();
+    }
+
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    $rows = bcc_fetch_all("SELECT id, {$nameColumn} AS nm FROM {$table} WHERE id IN ($ph)", $ids);
+
+    $map = array();
+    foreach ($rows as $row) {
+        $map[(int) $row['id']] = $row['nm'];
+    }
+
+    return $map;
+}
+
+// audit_log action -> Türkçe etiket. Bilinmeyen action için action'ın KENDİSİ
+// döner (sessizce boş bırakmak yerine) — yeni bir eylem eklendiğinde akış
+// bozulmaz, yalnızca ham adı görünür ve buraya eklenmesi gerektiği anlaşılır.
+function bcc_audit_action_label($action)
+{
+    $labels = array(
+        'base.create' => 'yeni base oluşturdu',
+        'base.delete' => 'base\'i çöpe taşıdı',
+        'base.restore' => 'base\'i geri yükledi',
+        'base.update' => 'base\'i güncelledi',
+        'table.create' => 'yeni tablo oluşturdu',
+        'table.update' => 'tabloyu güncelledi',
+        'table.delete' => 'tabloyu sildi',
+        'table.reorder' => 'tabloları yeniden sıraladı',
+        'table.import_xlsx' => 'Excel\'den veri aktardı',
+        'table.clear_data' => 'tablo verilerini temizledi',
+        'field.create' => 'yeni alan ekledi',
+        'field.update' => 'alanı güncelledi',
+        'field.delete' => 'alanı sildi',
+        'field.reorder' => 'alanları yeniden sıraladı',
+        'record.create' => 'kayıt ekledi',
+        'record.duplicate' => 'kaydı çoğalttı',
+        'record.delete_soft' => 'kaydı çöpe taşıdı',
+        'record.restore' => 'kaydı geri yükledi',
+        'record.delete' => 'kaydı kalıcı sildi',
+        'record.form_submit' => 'form üzerinden kayıt geldi',
+        'record.send' => 'kaydı e-posta ile gönderdi',
+        'cell.update' => 'hücre güncelledi',
+        'comment.add' => 'yorum ekledi',
+        'comment.update' => 'yorumu düzenledi',
+        'comment.delete' => 'yorumu sildi',
+        'view.create' => 'yeni görünüm oluşturdu',
+        'view.delete' => 'görünümü sildi',
+        'view.rename' => 'görünümü yeniden adlandırdı',
+        'view.duplicate' => 'görünümü çoğalttı',
+        'view.reorder' => 'görünümleri yeniden sıraladı',
+        'view.config_update' => 'görünüm düzenini değiştirdi',
+        'view.kanban_config' => 'kanban ayarını değiştirdi',
+        'view.form_config' => 'form ayarını değiştirdi',
+        'view.description_update' => 'görünüm açıklamasını değiştirdi',
+        'view.favorite_toggle' => 'görünümü favoriledi',
+        'view.save_state' => 'görünüm durumunu kaydetti',
+        'team_member.assign' => 'çalışma alanına katılımcı ekledi',
+        'team_member.role_change' => 'katılımcı rolünü değiştirdi',
+        'team_member.remove' => 'katılımcıyı çıkardı',
+        'attachment.upload' => 'dosya ekledi',
+        'attachment.delete' => 'dosya ekini sildi',
+        'slack.notify_sent' => 'Slack bildirimi gönderdi',
+        'slack.notify_failed' => 'Slack bildirimi başarısız oldu',
+        'slack.webhook_create' => 'Slack entegrasyonu ekledi',
+        'slack.webhook_delete' => 'Slack entegrasyonunu kaldırdı',
+        'slack.routing_rule_reorder' => 'Slack kurallarını sıraladı',
+        'user.account_updated' => 'hesap bilgilerini güncelledi',
+    );
+
+    return isset($labels[$action]) ? $labels[$action] : $action;
+}
+
+// Akış satırının kategori sınıfı — eylem AİLESİNE göre (ayrı ayrı ikon seti
+// taşımak yerine tek kategori). CSS .wsx-act-dot--<kategori> ile renklendirir.
+function bcc_audit_action_kind($action)
+{
+    $byPrefix = array(
+        'base' => 'base',
+        'table' => 'table',
+        'field' => 'field',
+        'record' => 'record',
+        'cell' => 'record',
+        'comment' => 'comment',
+        'view' => 'view',
+        'team_member' => 'member',
+        'attachment' => 'file',
+        'slack' => 'slack',
+    );
+
+    $prefix = strtok((string) $action, '.');
+
+    return isset($byPrefix[$prefix]) ? $byPrefix[$prefix] : 'other';
 }

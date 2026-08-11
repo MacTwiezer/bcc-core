@@ -142,22 +142,10 @@ foreach ($teams as $t) {
     }
 }
 
-function bcc_account_format_bytes($bytes)
-{
-    $bytes = (int) $bytes;
-    if ($bytes < 1024) {
-        return $bytes . ' B';
-    }
-    $units = array('KB', 'MB', 'GB', 'TB');
-    $value = $bytes / 1024;
-    $i = 0;
-    while ($value >= 1024 && $i < count($units) - 1) {
-        $value /= 1024;
-        $i++;
-    }
-
-    return number_format($value, $value >= 10 ? 0 : 1, ',', '.') . ' ' . $units[$i];
-}
+// Buradaki yerel bcc_account_format_bytes() KALDIRILDI: bayt biçimlendirme
+// artık src/schema.php'teki ortak bcc_format_bytes() fonksiyonunda —
+// workspaces.php'nin "Kullanım & Limitler" kartı da AYNI biçimi kullanıyor,
+// ikinci bir kopya YOK.
 
 function bcc_account_format_dt($value)
 {
@@ -438,7 +426,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </div>
                 <div class="ac-stat ac-stat-standalone">
                     <dt>Dosya eki depolaması</dt>
-                    <dd><?php echo htmlspecialchars(bcc_account_format_bytes($accountStats['storage_bytes']), ENT_QUOTES, 'UTF-8'); ?></dd>
+                    <dd><?php echo htmlspecialchars(bcc_format_bytes($accountStats['storage_bytes']), ENT_QUOTES, 'UTF-8'); ?></dd>
                 </div>
                 <p class="ac-widget-note">Üyesi olduğunuz ekiplerin toplamı.</p>
             </div>

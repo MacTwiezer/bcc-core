@@ -10,101 +10,13 @@
             window.bcc_bindDismissable(filterDetails);
         }
 
-        // Global arama (Ctrl+K / Cmd+K popover) — canlı filtre mantığı ÖNCEKİYLE
-        // AYNI (substring eşleşme, hidden toggle, boş durum sayacı); yalnızca
-        // sonuçlar artık sayfaya gömülü değil, position:fixed bir popover'da
-        // (Airtable tarzı, arkası kararmış). #home-base-grid'deki kartlar artık
-        // hiç gizlenmiyor — arama yalnızca popover'ın kendi sonuç listesini
-        // süzüyor. Sonuç satırları .home-base-card'lardan (ad/tarih/ikon,
-        // sunucunun zaten team_id ile KVKK-izole edip bastığı veri) klonlanır —
-        // PHP tarafında ikinci bir döngü/sorgu YOK. Açma/kapama, #home-filter
-        // ile aynı <details> + dışarı-tık deseni.
-        var searchDetails = document.getElementById('home-search');
-        var searchInput = document.getElementById('home-search-input');
-        var searchResults = document.getElementById('home-search-results');
-        var searchEmpty = document.getElementById('home-search-empty');
-        var searchGrid = document.getElementById('home-base-grid');
-
-        // Aşağıdaki [data-base-delete] silme işleyicisinin de erişebilmesi için
-        // if bloğunun DIŞINDA (arama UI'sı olmayan bir sayfada da boş dizi olarak var).
-        var resultItems = [];
-
-        if (searchDetails && searchInput && searchResults && searchGrid) {
-            Array.prototype.forEach.call(searchGrid.querySelectorAll('.home-base-card'), function (card) {
-                var nameEl = card.querySelector('.home-base-name');
-                var metaEl = card.querySelector('.home-base-meta');
-                var iconEl = card.querySelector('.home-base-icon');
-                var name = nameEl ? nameEl.textContent : '';
-
-                var row = document.createElement('a');
-                row.className = 'home-search-result';
-                row.href = card.getAttribute('href');
-                row.setAttribute('data-base-id', card.getAttribute('data-base-id') || '');
-
-                if (iconEl) {
-                    row.appendChild(iconEl.cloneNode(true));
-                }
-
-                var nameNode = document.createElement('div');
-                nameNode.className = 'home-search-result-name';
-                nameNode.textContent = name;
-                row.appendChild(nameNode);
-
-                var typeNode = document.createElement('div');
-                typeNode.className = 'home-search-result-type';
-                typeNode.textContent = 'Base';
-                row.appendChild(typeNode);
-
-                var metaNode = document.createElement('div');
-                metaNode.className = 'home-search-result-meta';
-                metaNode.textContent = metaEl ? metaEl.textContent : '';
-                row.appendChild(metaNode);
-
-                searchResults.appendChild(row);
-                resultItems.push({ el: row, name: name.toLowerCase() });
-            });
-
-            var openSearch = function () {
-                searchDetails.setAttribute('open', '');
-                searchInput.focus();
-                searchInput.select();
-            };
-
-            // Ctrl+K/Cmd+K açma kısayolu burada kalır (dismiss deseniyle ilgisiz);
-            // dışarı-tık/Escape ile kapanma assets/dismissable-panel.js'den.
-            document.addEventListener('keydown', function (e) {
-                if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-                    e.preventDefault();
-                    openSearch();
-                }
-            });
-
-            window.bcc_bindDismissable(searchDetails);
-
-            searchDetails.addEventListener('toggle', function () {
-                if (searchDetails.open) {
-                    searchInput.focus();
-                    searchInput.select();
-                }
-            });
-
-            searchInput.addEventListener('input', function () {
-                var q = searchInput.value.trim().toLowerCase();
-                var visibleCount = 0;
-
-                resultItems.forEach(function (item) {
-                    var matches = q === '' || item.name.indexOf(q) !== -1;
-                    item.el.hidden = !matches;
-                    if (matches) {
-                        visibleCount++;
-                    }
-                });
-
-                if (searchEmpty) {
-                    searchEmpty.hidden = !(q !== '' && visibleCount === 0);
-                }
-            });
-        }
+        // Global arama (Ctrl+K / Cmd+K popover) ARTIK BURADA DEĞİL —
+        // assets/global-search.js'e taşındı ve TÜM sayfalarda (grid.php dahil)
+        // çalışıyor. Buradaki eski sürüm, kısayolu da dahil olmak üzere
+        // tamamen `#home-base-grid` var mı kontrolünün içindeydi; o yüzden
+        // workspaces.php / team_members.php / boş dashboard'da Ctrl+K ÖLÜYDÜ.
+        // Kart silindiğinde arama listesini güncelleme kancası:
+        // window.bcc_searchRemoveItem(baseId).
 
         // Yıldız (favori) toggle — .home-base-card'ın sağ üst köşesindeki
         // yıldız butonu. Sunucu: /api/star_base.php (CSRF + require_team_access,
@@ -365,15 +277,13 @@
                         }
 
                         // Bulunan gerçek bug: Ctrl+K arama popover'ı kartlardan
-                        // KLONLANMIŞ ayrı bir kopya listesi (resultItems) — kart
+                        // KLONLANMIŞ ayrı bir kopya listesi tutuyor — kart
                         // silinince bu klon silinmiyordu, artık var olmayan bir
                         // base'e giden tıklanabilir bir sonuç sayfa yenilenene
-                        // kadar aramada kalıyordu. DOM'dan ve diziden kaldırılır.
-                        for (var i = resultItems.length - 1; i >= 0; i--) {
-                            if (resultItems[i].el.getAttribute('data-base-id') === baseId) {
-                                resultItems[i].el.remove();
-                                resultItems.splice(i, 1);
-                            }
+                        // kadar aramada kalıyordu. Liste artık global-search.js'te
+                        // yaşadığı için temizlik onun açtığı kancadan yapılır.
+                        if (typeof window.bcc_searchRemoveItem === 'function') {
+                            window.bcc_searchRemoveItem(baseId);
                         }
                     } else {
                         btn.disabled = false;
@@ -385,6 +295,94 @@
                 });
             });
         });
+
+        // "+ Yeni Base Oluştur" modalı. Tetikleyici (#home-create-base-btn) ve
+        // modalın KENDİSİ sunucuda koşullu basılır (bkz. dashboard.php
+        // $canCreateBase / src/auth.php bcc_can_manage_bases) — yetkisi olmayan
+        // kullanıcıda ikisi de DOM'da yoktur, bu blok sessizce atlanır. Buradaki
+        // hiçbir kontrol yetki kontrolü DEĞİLDİR; asıl kapı api/base_create.php.
+        var createModal = document.getElementById('home-create-base-modal');
+        var createBtn = document.getElementById('home-create-base-btn');
+
+        if (createModal && createBtn) {
+            var createForm = document.getElementById('home-create-base-form');
+            var createError = document.getElementById('home-create-base-error');
+            var createNameInput = createForm.querySelector('input[name="name"]');
+            var createSubmitBtn = createForm.querySelector('button[type="submit"]');
+
+            var showCreateError = function (message) {
+                createError.textContent = message;
+                createError.hidden = false;
+            };
+
+            var closeCreateModal = function () {
+                createModal.hidden = true;
+                createError.hidden = true;
+                createBtn.focus();
+            };
+
+            var openCreateModal = function () {
+                createModal.hidden = false;
+                createError.hidden = true;
+                createNameInput.focus();
+            };
+
+            createBtn.addEventListener('click', openCreateModal);
+            document.getElementById('home-create-base-close').addEventListener('click', closeCreateModal);
+            document.getElementById('home-create-base-cancel').addEventListener('click', closeCreateModal);
+
+            // Dışarı tıklayınca kapanma — .home-modal'ın İÇİNE tıklandığında
+            // olay yukarı kabarıp backdrop'a ulaştığı için hedef kontrolü şart
+            // (e.target === backdrop), yoksa form alanlarına her tıklama modalı
+            // kapatırdı.
+            createModal.addEventListener('click', function (e) {
+                if (e.target === createModal) {
+                    closeCreateModal();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !createModal.hidden) {
+                    closeCreateModal();
+                }
+            });
+
+            createForm.addEventListener('submit', function (e) {
+                // JS buraya kadar geldiyse AJAX yolunu kullanırız; formun kendi
+                // action="/bases.php" POST'u yalnızca bu dinleyici hiç
+                // bağlanamadıysa (JS kapalı/hatalı) devreye giren yedektir.
+                e.preventDefault();
+
+                if (createSubmitBtn.disabled) {
+                    return;
+                }
+                createSubmitBtn.disabled = true;
+                createError.hidden = true;
+
+                var payload = new URLSearchParams(new FormData(createForm)).toString();
+
+                fetch('/api/base_create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: payload,
+                }).then(function (res) {
+                    return res.json().catch(function () { return { ok: false }; });
+                }).then(function (data) {
+                    if (data && data.ok && data.id) {
+                        // Yeni base doğrudan açılır (Airtable de oluşturur
+                        // oluşturmaz base'e girer). Kartı DOM'a elle eklemeye
+                        // gerek yok — sayfa zaten terk ediliyor.
+                        window.location.href = '/base.php?base_id=' + encodeURIComponent(data.id);
+                        return;
+                    }
+                    createSubmitBtn.disabled = false;
+                    showCreateError((data && data.error) || 'Base oluşturulamadı.');
+                }).catch(function () {
+                    createSubmitBtn.disabled = false;
+                    showCreateError('Base oluşturulamadı (bağlantı hatası).');
+                });
+            });
+        }
 
         // Bildirim paneli (zil ikonu) — #home-filter ile AYNI <details>+dışarı-tık
         // deseni. Tab (Unread/Read) + arama TAMAMEN client-side (veri zaten DOM'da,

@@ -28,38 +28,39 @@ body.gs-body a { text-decoration: none; color: inherit; }
     padding: 0.85rem 0;
 }
 
-.gs-rail-logo {
-    position: relative;
+/* Şeridin en üstündeki SABİT "Ana sayfa" düğmesi (eski .gs-rail-logo + hover'da
+   beliren .gs-rail-back-icon ikilisinin yerine). Simge DEĞİŞMEZ — hover yalnızca
+   zemini aydınlatır, tıpkı hemen altındaki .gs-rail-icon-btn'lerde olduğu gibi;
+   böylece şeridin tamamı tek bir etkileşim diline uyar.
+   Koyu şerit üstünde olduğu için renk açık; currentColor ile çizilen SVG bunu
+   otomatik izler. */
+/* ⚠️ Seçici BİLEREK iki sınıflı (.gs-rail .gs-rail-home): bu dosyanın en
+   üstündeki `body.gs-body a { color: inherit }` kuralı (özgüllük 0,0,1,2) tek
+   sınıflı bir `.gs-rail-home` (0,0,1,0) kuralını YENER ve simgeyi gövde metin
+   rengine (koyu) zorlar — koyu şerit üstünde ikon görünmez olur. Canlı olarak
+   yaşandı: computed color rgb(29,29,31), ekran görüntüsünde bomboş kare.
+   İki sınıf (0,0,2,0) o kuralı geçer. */
+.gs-rail .gs-rail-home {
     width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    overflow: hidden;
+    color: #e8e8ea;
+    transition: background 0.12s ease, color 0.12s ease;
 }
 
-.gs-rail-logo-img {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    display: block;
+.gs-rail .gs-rail-home:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
 }
 
-.gs-rail-back-icon {
-    display: none;
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    background: var(--bcc-accent);
-    border-radius: 8px;
-    padding: 7px;
-    width: 32px;
-    height: 32px;
+/* Klavyeyle gezinenler için görünür odak halkası — koyu zeminde beyaz. */
+.gs-rail .gs-rail-home:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
 }
-
-.gs-rail-logo:hover .gs-rail-logo-img { visibility: hidden; }
-.gs-rail-logo:hover .gs-rail-back-icon { display: block; }
 
 .gs-rail-bottom {
     display: flex;
@@ -217,14 +218,18 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 .gs-topbar-left:hover { background: var(--bcc-surface-hover); }
 
+/* Zemin DOLU marka rengi (grid.php inline `background` basar) — glif
+   bcc_base_icon_svg() ile `currentColor` çizildiği için `color` beyaza
+   çekilmeli, yoksa gövdenin metin rengini miras alıp koyu zeminde kaybolurdu. */
 .gs-base-icon {
     width: 26px;
     height: 26px;
-    border-radius: 6px;
+    border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    color: #fff;
 }
 
 .gs-base-name {
@@ -1176,6 +1181,291 @@ html.is-mac .gs-kbd-other { display: none; }
 .gs-import-result-error {
     color: #c62828;
 }
+
+/* ---------- "Paylaş" modalı (Airtable Collaborators diyaloğu) ----------
+   Backdrop YENİDEN KULLANILIYOR: .gs-view-desc-overlay (yukarıda) — aynı
+   position:fixed/inset:0/z-index:60/blur'suz koyu zemin + [hidden] kuralı,
+   ikinci bir kopya YOK. grid-export.css o sınıfı zaten gizlediği için
+   yazdırma/PNG'de de bedavaya kayboluyor. Burada yalnızca İÇ KUTU farklı:
+   .gs-view-desc-modal 380px ve tek amaçlı, bu ise sekmeli ve daha geniş. */
+
+.gs-share-modal {
+    width: 560px;
+    max-width: 94vw;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bcc-surface);
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    padding: 1.1rem 1.15rem 0.9rem;
+}
+
+.gs-share-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.gs-share-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--bcc-text);
+}
+
+.gs-share-subtitle {
+    margin-top: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.gs-share-close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+
+.gs-share-close:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+.gs-share-invite {
+    margin-top: 0.9rem;
+}
+
+.gs-share-invite-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.gs-share-invite-email,
+.gs-share-invite-role {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+}
+
+.gs-share-invite-email { flex: 1; min-width: 0; }
+.gs-share-invite-role { flex: 0 0 auto; }
+.gs-share-invite-btn { flex: 0 0 auto; }
+
+.gs-share-invite-note,
+.gs-share-readonly-note {
+    margin: 0.5rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--bcc-text-muted);
+}
+
+.gs-share-readonly-note {
+    margin-top: 0.9rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+}
+
+.gs-share-status {
+    margin-top: 0.7rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.gs-share-status.is-error {
+    background: #fdecea;
+    color: #c62828;
+}
+
+/* Sunucu isteği sürerken tıklamaları yut — çift gönderim (ör. rol
+   <select>'inde hızlı iki değişiklik) yarış oluşturmasın. JS ayrıca kendi
+   `busy` bayrağıyla ikinci isteği hiç başlatmıyor; bu onun görsel karşılığı. */
+.gs-share-overlay.is-busy .gs-share-modal {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.gs-share-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.gs-share-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+
+.gs-share-tab:hover { color: var(--bcc-text); }
+
+.gs-share-tab.is-active {
+    color: var(--bcc-accent-strong);
+    border-bottom-color: var(--bcc-accent);
+}
+
+.gs-share-tab-count {
+    padding: 0.05rem 0.35rem;
+    border-radius: 999px;
+    background: var(--bcc-surface-sunken);
+    font-size: 0.72rem;
+}
+
+.gs-share-tab.is-active .gs-share-tab-count {
+    background: var(--bcc-accent-soft);
+}
+
+.gs-share-list {
+    flex: 1;
+    min-height: 120px;
+    overflow-y: auto;
+    padding: 0.35rem 0;
+}
+
+.gs-share-list[hidden] { display: none; }
+
+.gs-share-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.15rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.gs-share-row:last-child { border-bottom: none; }
+
+/* .ws-collab-avatar (home.css) TABAN stilini kullanır — .collab-popover-avatar
+   ile AYNI teknik, burada yalnızca boyut. */
+.gs-share-avatar {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.gs-share-row-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gs-share-row-name,
+.gs-share-row-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gs-share-row-name {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--bcc-text);
+}
+
+.gs-share-row-email {
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+}
+
+.gs-share-row-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Sabit genişlik: seçili rol adı ("Owner" / "Commenter") kutuyu büyütmesin —
+   yoksa her satırın rol kutusu farklı ende olur ve sağ kenar tırtıklı görünür. */
+.gs-share-role-select {
+    width: 108px;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+}
+
+.gs-share-role-readonly {
+    width: 108px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+/* "Çıkar" butonu basılmayan satırlarda (kendi satırınız, yetki dışı rütbe) rol
+   kutusu tek başına sağa yapışır ve diğer satırlarla hizası kayardı. Bu boşluk
+   yalnızca o 26px'i ayırır — tıklanabilir/odaklanabilir bir öğe DEĞİL. */
+.gs-share-remove-spacer {
+    display: block;
+    width: 26px;
+    flex-shrink: 0;
+}
+
+.gs-share-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+
+.gs-share-remove-btn:hover {
+    background: #fdecea;
+    color: #c62828;
+}
+
+.gs-share-empty {
+    margin: 0;
+    padding: 1.4rem 0.6rem;
+    text-align: center;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--bcc-text-muted);
+}
+
+.gs-share-foot {
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.gs-share-foot-link {
+    font-size: 0.8rem;
+    color: var(--bcc-accent-strong);
+    text-decoration: none;
+}
+
+.gs-share-foot-link:hover { text-decoration: underline; }
 
 /* ---------- Grid dışa aktarma: PDF (yazdır) + PNG ---------- */
 

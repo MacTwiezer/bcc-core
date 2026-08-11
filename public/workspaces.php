@@ -13,8 +13,12 @@ require_login();
 $user = current_user();
 
 // dashboard.php ile AYNI desen.
+// m.role EKLENDİ: sağdaki aksiyon butonlarının (Katılımcıları yönet / Base
+// oluştur / Ayarlar) görünürlüğü seçili alandaki role bağlı ve bu bilgi zaten
+// bu JOIN'de mevcut — current_user_role_in_team() ile AYRI bir sorgu açmak
+// gereksiz olurdu (dashboard.php'de de aynı desen).
 $teams = bcc_fetch_all(
-    'SELECT t.id, t.name
+    'SELECT t.id, t.name, m.role
      FROM team_members m
      INNER JOIN teams t ON t.id = m.team_id
      WHERE m.user_id = :uid
@@ -53,12 +57,31 @@ if ($selectedTeamId === 0 && !empty($teams)) {
     $selectedTeamName = $teams[0]['name'];
 }
 
+// Seçili çalışma alanındaki YETENEKLER — tek kaynak src/auth.php. Sol panelden
+// başka bir çalışma alanına geçildiğinde sayfa yeniden yüklendiği için bu
+// bayraklar her zaman GÖRÜNTÜLENEN alana aittir (kullanıcı bir alanda owner,
+// diğerinde viewer olabilir; tek bir "ben owner'ım" bayrağı yanlış olurdu).
+$selectedRole = null;
+$canManageMembers = false;
+$canCreateBase = false;
+
 $collaborators = array();
 if ($selectedTeamId) {
     // KVKK: $teams zaten kullanıcının üyeliğiyle filtrelenmişti ama savunma
     // amaçlı ikinci bir doğrulama — projedeki her veri erişiminin ÖNÜNDE olan
     // aynı fonksiyon.
     require_team_access($selectedTeamId);
+
+    // $teams zaten m.role'ü içeriyor (yukarıdaki sorgu) — rolü ORADAN okuruz,
+    // current_user_role_in_team() ile ikinci bir sorgu AÇILMAZ.
+    foreach ($teams as $t) {
+        if ((int) $t['id'] === $selectedTeamId) {
+            $selectedRole = $t['role'];
+            break;
+        }
+    }
+    $canManageMembers = bcc_can_manage_members($selectedRole);
+    $canCreateBase = bcc_can_manage_bases($selectedRole);
 
     // u.is_active AYRICA çekilir (bulunan gerçek bug: bu sorgu hiç seçmiyordu) —
     // admin bir kullanıcıyı pasif yaptığında team_members satırı SİLİNMEZ (bkz.
@@ -161,25 +184,45 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </div>
                             </div>
                             <div class="wsx-actions">
-                                <?php // "Paylaş" birincil eylem — GERÇEKTEN çalışan tek aksiyon
-                                      // buydu; etiketi ne yaptığını söyleyecek şekilde netleşti.
-                                      // "Oluştur" artık ÖLÜ DEĞİL: base oluşturmanın gerçek
-                                      // sayfası olan bases.php'ye gidiyor. "Ayarlar" ise HÂLÂ
-                                      // devre dışı — çalışma alanı ayarları diye bir özellik
-                                      // yok (bu dosyanın kendi başlık yorumundaki onaylanmış
-                                      // karar). Çalışıyormuş gibi göstermek yanıltıcı olurdu. ?>
+                                <?php
+                                // Aksiyonlar SEÇİLİ çalışma alanındaki role göre basılır
+                                // (bkz. $canManageMembers / $canCreateBase yukarıda) —
+                                // CSS ile gizlenmiyor, yetkisi olmayanın kaynağında hiç yok.
+                                //
+                                // "Katılımcıları yönet": hedef sayfa (team_members.php)
+                                //   artık Owner olmayana zaten salt-okunur açılıyor; butonu
+                                //   da göstermemek "yönet" vaadini boşa çıkarmamak için.
+                                // "Base oluştur": Airtable'da Owner+Creator satırı
+                                //   (bcc_can_manage_bases), bases.php'nin formu ve
+                                //   api/base_create.php ile AYNI eşik.
+                                // "Ayarlar": çalışma alanı ayarları diye bir ÖZELLİK YOK
+                                //   (bu dosyanın onaylanmış kararı) — buton hâlâ devre
+                                //   dışı, ama artık yalnızca onu bir gün kullanacak olan
+                                //   role gösteriliyor.
+                                ?>
+                                <?php if ($canManageMembers): ?>
                                 <a href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" class="wsx-btn wsx-btn--primary">
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                                     Katılımcıları yönet
                                 </a>
+                                <?php endif; ?>
+                                <?php if ($canCreateBase): ?>
                                 <a href="/bases.php" class="wsx-btn">
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                                     Base oluştur
                                 </a>
+                                <?php endif; ?>
+                                <?php if ($canManageMembers): ?>
                                 <button type="button" class="wsx-btn" disabled title="Çalışma alanı ayarları henüz kullanılamıyor">
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m11.9-4.9l-1.4 1.4M6.5 13.5l-1.4 1.4m9.8 0l-1.4-1.4M6.5 6.5L5.1 5.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                                     Ayarlar
                                 </button>
+                                <?php endif; ?>
+                                <?php if (!$canManageMembers && !$canCreateBase): ?>
+                                    <span class="wsx-role-note">
+                                        Rolünüz: <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$selectedRole], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                    </span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -210,10 +253,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                         </div>
                                         <?php // Rol değiştirme / çıkarma bu sayfada YOK — team_members.php'nin
                                               // işi (assign / remove aksiyonları orada). Bu yüzden hover
-                                              // kısayolu sahte bir dropdown değil, GERÇEK sayfaya giden link. ?>
+                                              // kısayolu sahte bir dropdown değil, GERÇEK sayfaya giden link.
+                                              // Yalnızca Owner'a: "rolü değiştir veya çıkar" diyen bir
+                                              // kısayolu, o sayfada hiçbirini yapamayacak bir role
+                                              // göstermek yanıltıcı olurdu. ?>
+                                        <?php if ($canManageMembers): ?>
                                         <a class="wsx-member-manage" href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" title="Rolü değiştir veya çıkar" aria-label="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?> — rolü değiştir veya çıkar">
                                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>
                                         </a>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
                             </div>

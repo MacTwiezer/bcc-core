@@ -32,8 +32,9 @@ require_team_access($table['team_id']);
 $role = current_user_role_in_team($table['team_id']);
 // grid.php:14 ile BİREBİR AYNI kural — Kanban'da sürüklemek "o hücreyi
 // düzenlemek" demek, yeni bir izin kavramı İCAT EDİLMEDİ.
-$canEdit = in_array($role, array('editor', 'owner'), true);
-$canComment = in_array($role, array('commenter', 'editor', 'owner'), true);
+// Yetenekler tek kaynaktan (src/auth.php) — grid.php ile AYNI çift.
+$canEdit = bcc_can_edit_records($role);
+$canComment = bcc_can_comment($role);
 
 $viewId = isset($_GET['view_id']) ? (int) $_GET['view_id'] : 0;
 $view = $viewId ? bcc_find_view($viewId, $table['id']) : null;

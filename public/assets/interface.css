@@ -80,12 +80,18 @@ body.if-page a { text-decoration: none; color: inherit; }
    .home-base-icon (30px) ile AYNI "scoped override" deseni, ikinci bir
    bileşen YOK. flex-shrink:0 — .if-nav-back span'ın nowrap/ellipsis'i
    metne (isim) özel, ikonu etkilemesin diye ayrıca belirtildi. */
+   Zemin burada DOLU marka rengidir (interface.php inline `background` basar,
+   kartlardaki pastel çift DEĞİL) — glif `currentColor` ile çizildiği için
+   `color` açıkça beyaza çekilir, yoksa home.css'in kart bağlamı için
+   tanımladığı koyu mürekkebi miras alırdı. */
 .if-nav-back .home-base-icon {
     width: 22px;
     height: 22px;
-    border-radius: 5px;
+    border-radius: 6px;
     flex-shrink: 0;
     white-space: normal;
+    color: #fff;
+    box-shadow: none;
 }
 
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }

@@ -7,6 +7,10 @@
 
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
+<?php // global-search.js, dismissable-panel.js'ten SONRA (bcc_bindDismissable'ı
+      // çağırıyor) ve home.js'ten ÖNCE (home.js'in silme işleyicisi onun açtığı
+      // window.bcc_searchRemoveItem kancasını kullanıyor — defer sırası korunur). ?>
+<script src="<?php echo bcc_asset_url('global-search.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
 <script>
 (function () {

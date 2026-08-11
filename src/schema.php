@@ -1220,6 +1220,23 @@ function bcc_create_field($tableId, $teamId, $postData)
         throw $e;
     }
 
+    // Slack bildirimi — COMMIT'TEN SONRA, transaction'ın DIŞINDA. Gerekçe:
+    // (1) geri alınmış bir alan için bildirim gitmemeli, (2) Slack yavaşsa
+    // transaction o süre boyunca açık kalmamalı (satır kilitleri), (3) gönderim
+    // hata verse bile alan oluşturma başarılı sayılmalı — bcc_notify_slack_*
+    // zaten hiçbir koşulda istisna sızdırmaz.
+    // Bu TEK hook iki giriş noktasını da kapsar (table_fields.php tam sayfa
+    // formu + api/field_create.php grid "+" popup'ı), çünkü ikisi de bu
+    // fonksiyondan geçer.
+    $creator = current_user();
+    bcc_notify_slack_new_field(
+        $tableId,
+        (int) $newId,
+        $name,
+        $fieldType,
+        $creator ? $creator['full_name'] : null
+    );
+
     return array('ok' => true, 'field_id' => $newId, 'name' => $name, 'field_type' => $fieldType, 'is_required' => $isRequired);
 }
 
@@ -1311,6 +1328,163 @@ function bcc_team_members_invited_by($teamId)
     }
 
     return $byTargetUserId;
+}
+
+// ---------------------------------------------------------------------------
+// Üye listesi + üye MUTASYONLARI — team_members.php ile "Paylaş" modalının
+// (src/partials/share_modal.php + api/team_member_assign.php|remove.php)
+// PAYLAŞTIĞI tek kaynak.
+// ---------------------------------------------------------------------------
+// Bu blok team_members.php'nin POST gövdesinden ÇIKARILDI (davranış birebir
+// korunarak): hiyerarşi kapısı (rank(hedef) <= rank(ben)), kendini çıkaramama,
+// son owner'ı çıkaramama ve audit action adları artık TEK yerde. Modal ayrı bir
+// kopya yazsaydı, iki yolun kuralları ilk değişiklikte sessizce ayrışırdı — bu
+// dosyadaki RBAC disiplininin (bkz. src/auth.php yetenek haritası) aynısı.
+//
+// YETKİ KAPISI BURADA DEĞİL, ÇAĞIRANDA: her iki çağıran da önce
+// bcc_can_manage_members() ile 403 veriyor (team_members.php die, uçnoktalar
+// json_fail). Buradaki kontroller onun ÜSTÜNE gelen hiyerarşi/bütünlük
+// kurallarıdır.
+
+// Bir ekibin TÜM üyeleri (pasif hesaplar DAHİL) — rol ve is_active ile.
+// grid.php'nin "Paylaş" özeti ve modal aynı satırları kullanır: aktif olanlar
+// "Katılımcılar", is_active = 0 olanlar "Bekleyen davetler" (hesap
+// oluşturulmuş ama register.php/verify_email.php akışı tamamlanmamış).
+function bcc_team_members_with_roles($teamId)
+{
+    return bcc_fetch_all(
+        'SELECT u.id, u.full_name, u.email, u.is_active, tm.role, tm.created_at
+         FROM team_members tm
+         INNER JOIN users u ON u.id = tm.user_id
+         WHERE tm.team_id = :team_id
+         ORDER BY u.full_name',
+        array('team_id' => $teamId)
+    );
+}
+
+// Üye ekleme VE mevcut üyenin rolünü değiştirme (tek sorgu, INSERT ... ON
+// DUPLICATE KEY UPDATE — admin/assign_team.php ile AYNI desen). Doğru audit
+// action'ı seçebilmek için önce mevcut satıra bakılır.
+// Dönüş: array('ok' => bool, 'error' => ?string, 'created' => bool)
+function bcc_team_member_assign($teamId, $targetUserId, $role, $myRank, $assignableRoles)
+{
+    $teamId = (int) $teamId;
+    $targetUserId = (int) $targetUserId;
+
+    if ($targetUserId <= 0 || !in_array($role, $assignableRoles, true)) {
+        return array('ok' => false, 'error' => 'Geçersiz seçim.', 'created' => false);
+    }
+
+    if (!bcc_fetch_one('SELECT id FROM users WHERE id = :id AND is_active = 1', array('id' => $targetUserId))) {
+        return array('ok' => false, 'error' => 'Kullanıcı bulunamadı.', 'created' => false);
+    }
+
+    $existingMember = bcc_fetch_one(
+        'SELECT id, role FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
+        array('team_id' => $teamId, 'user_id' => $targetUserId)
+    );
+
+    // Hiyerarşi kapısı: $assignableRoles yalnızca ATANACAK rolü sınırlar,
+    // hedefin ŞU ANKİ rütbesini değil — benden yüksek rütbedeki bir üyeye
+    // dokunulamaz (arayüzde salt-okunur gösterilen satırın POST/AJAX ile de
+    // değiştirilememesi).
+    if ($existingMember && $GLOBALS['BCC_ROLE_RANK'][$existingMember['role']] > $myRank) {
+        return array('ok' => false, 'error' => 'Bu kullanıcıyı yönetme yetkiniz yok.', 'created' => false);
+    }
+
+    bcc_execute(
+        'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
+         ON DUPLICATE KEY UPDATE role = VALUES(role)',
+        array('team_id' => $teamId, 'user_id' => $targetUserId, 'role' => $role)
+    );
+
+    $auditAction = $existingMember ? 'team_member.role_change' : 'team_member.assign';
+    log_audit($auditAction, 'team_member', null, array('team_id' => $teamId, 'user_id' => $targetUserId, 'role' => $role), $teamId);
+
+    return array('ok' => true, 'error' => null, 'created' => !$existingMember);
+}
+
+// Tek satır "Çıkar" ve toplu seçim AYNI koddan geçer (tek eleman = tek elemanlı
+// liste). Atlanma nedenleri: kendisi, yetki dışı rütbe, son owner, üye değil.
+// Dönüş: array('removed' => int[], 'skipped' => int)
+function bcc_team_member_remove_many($teamId, $targetUserIds, $actorUserId, $myRank)
+{
+    $teamId = (int) $teamId;
+    $actorUserId = (int) $actorUserId;
+    $removedIds = array();
+    $skipped = 0;
+
+    foreach ($targetUserIds as $rawId) {
+        $id = (int) $rawId;
+        if ($id <= 0) {
+            $skipped++;
+            continue;
+        }
+
+        if ($id === $actorUserId) {
+            // Kasıtlı olarak KOŞULSUZ engellenir (son owner olup olmadığına
+            // bakılmaksızın) — admin/index.php'deki "kendi hesabını pasif
+            // yapamama" korumasıyla AYNI ilke.
+            $skipped++;
+            continue;
+        }
+
+        $targetMember = bcc_fetch_one(
+            'SELECT role FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
+            array('team_id' => $teamId, 'user_id' => $id)
+        );
+
+        if (!$targetMember) {
+            $skipped++;
+            continue;
+        }
+
+        if ($GLOBALS['BCC_ROLE_RANK'][$targetMember['role']] > $myRank) {
+            $skipped++;
+            continue;
+        }
+
+        if ($targetMember['role'] === 'owner') {
+            $ownerCount = (int) bcc_fetch_column(
+                "SELECT COUNT(*) FROM team_members WHERE team_id = :team_id AND role = 'owner'",
+                array('team_id' => $teamId)
+            );
+            if ($ownerCount <= 1) {
+                $skipped++;
+                continue;
+            }
+        }
+
+        bcc_execute('DELETE FROM team_members WHERE team_id = :team_id AND user_id = :user_id', array('team_id' => $teamId, 'user_id' => $id));
+        $removedIds[] = $id;
+    }
+
+    if (!empty($removedIds)) {
+        // admin/index.php'nin remove_from_team action'ıyla AYNI audit action adı.
+        log_audit('team_member.remove', 'team', $teamId, array('user_ids' => $removedIds), $teamId);
+    }
+
+    return array('removed' => $removedIds, 'skipped' => $skipped);
+}
+
+// Çıkarma sonucunun kullanıcıya gösterilecek metni — team_members.php'nin flash
+// mesajı ile modalın durum satırı AYNI cümleleri kullansın diye burada.
+// Dönüş: array('error' => ?string, 'success' => ?string)
+function bcc_team_member_remove_message($result)
+{
+    $removedCount = count($result['removed']);
+
+    if ($removedCount === 0) {
+        return array('error' => 'Kimse çıkarılamadı (kendiniz, son owner veya yetkiniz dışındaki bir rütbe).', 'success' => null);
+    }
+    if ($result['skipped'] > 0) {
+        return array('error' => null, 'success' => $removedCount . ' kişi çıkarıldı, ' . $result['skipped'] . ' kişi atlandı (kendiniz, son owner veya yetkiniz dışında).');
+    }
+
+    return array(
+        'error' => null,
+        'success' => $removedCount === 1 ? 'Ekipten çıkarıldı.' : $removedCount . ' kişi ekipten çıkarıldı.',
+    );
 }
 
 // team_id, fields -> tables_meta -> bases üzerinden gelir; bir alanın hücre verisine
@@ -3163,6 +3337,52 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
     return array($recordsSql, $recordsParams);
 }
 
+// Base oluşturmanın TEK yolu: public/bases.php'nin klasik form POST'u VE
+// Home'daki "+ Yeni Base Oluştur" kartının AJAX uçnoktası (api/base_create.php)
+// ikisi de burayı çağırır — doğrulama, INSERT ve audit kaydı tek yerdedir.
+//
+// YETKİ KONTROLÜ BURADA YAPILMAZ: çağıran taraf, kendi hata biçimine uygun
+// şekilde (HTML sayfası -> require_role()'un 403 die'ı; JSON uçnoktası ->
+// json_fail()) bcc_can_manage_bases() ile ÖNCEDEN reddetmiş olmalıdır. Bu
+// fonksiyon yalnızca yetkisi doğrulanmış istekle çağrılır.
+//
+// Dönüş: array('ok' => bool, 'error' => string|null, 'id' => int|null)
+function bcc_create_base($teamId, $name, $description, $userId)
+{
+    $name = trim((string) $name);
+    $description = trim((string) $description);
+
+    if ($name === '') {
+        return array('ok' => false, 'error' => 'Base adı boş olamaz.', 'id' => null);
+    }
+
+    // bases.name VARCHAR(150) / description VARCHAR(500) — bu kontroller olmadan
+    // uzun bir ad, sql_mode'da STRICT_TRANS_TABLES kapalı olduğu için hatasız
+    // SESSİZCE kırpılıyordu (aynı gerekçe base_tables.php'de de yazılı).
+    if (mb_strlen($name, 'UTF-8') > 150) {
+        return array('ok' => false, 'error' => 'Base adı en fazla 150 karakter olabilir.', 'id' => null);
+    }
+
+    if (mb_strlen($description, 'UTF-8') > 500) {
+        return array('ok' => false, 'error' => 'Açıklama en fazla 500 karakter olabilir.', 'id' => null);
+    }
+
+    bcc_execute(
+        'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)',
+        array(
+            'team_id' => $teamId,
+            'name' => $name,
+            'description' => $description !== '' ? $description : null,
+            'created_by' => $userId,
+        )
+    );
+
+    $newId = (int) bcc_last_insert_id();
+    log_audit('base.create', 'base', $newId, array('name' => $name), $teamId);
+
+    return array('ok' => true, 'error' => null, 'id' => $newId);
+}
+
 // dashboard.php (Home) ve starred.php (Starred) ortak kullanır — "kod tekrarı
 // yok" kuralı gereği iki ayrı sayfada aynı satır/kart döngüsü YAZILMAZ.
 function bcc_home_relative_date($datetimeStr)
@@ -3192,24 +3412,123 @@ function bcc_home_relative_date($datetimeStr)
     return intdiv($months, 12) . ' yıl önce';
 }
 
-$GLOBALS['BCC_BASE_ICON_COLORS'] = array('#2D7FF9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4');
+// Base kimlik paleti — TEK kaynak. Her satır AYNI rengin üç sunumu:
+//   solid   : küçük kroma yerlerinde (grid.php üst barı, interface.php nav'ı)
+//             kullanılan dolu çip rengi — beyaz glif üstünde.
+//   bg/fg   : kart ikonu için açık temadaki pastel zemin + üstüne okunan koyu
+//             mürekkep. bgDark/fgDark koyu temanın karşılıkları (aynı pastelin
+//             #e8f0fe gibi bir değeri koyu temada göz alıyordu; bu yüzden renk
+//             sabit basılmaz, aşağıdaki bcc_base_icon_style_attr() DÖRDÜNÜ DE
+//             CSS değişkeni olarak basar, tema seçimini home.css yapar).
+// solid ve bg AYNI satırda durduğu için ikisi ASLA ayrışamaz: bir base
+// dashboard kartında "mavi" ise grid üst barında da "mavi"dir.
+$GLOBALS['BCC_BASE_ICON_THEMES'] = array(
+    array('solid' => '#2D7FF9', 'bg' => '#e8f0fe', 'fg' => '#1a56db', 'bgDark' => '#1b2a4a', 'fgDark' => '#8ab4f8'),
+    array('solid' => '#8b5cf6', 'bg' => '#f3ebfd', 'fg' => '#6b3fa0', 'bgDark' => '#2b2140', 'fgDark' => '#c4a7ec'),
+    array('solid' => '#f59e0b', 'bg' => '#fff4e0', 'fg' => '#a35c00', 'bgDark' => '#3a2c14', 'fgDark' => '#e8b96a'),
+    array('solid' => '#10b981', 'bg' => '#e4f6ec', 'fg' => '#1b7e3c', 'bgDark' => '#18321f', 'fgDark' => '#7ac98d'),
+    array('solid' => '#ef4444', 'bg' => '#fdeaea', 'fg' => '#c62828', 'bgDark' => '#3a1e1e', 'fgDark' => '#ef9a9a'),
+    array('solid' => '#06b6d4', 'bg' => '#e2f4f8', 'fg' => '#0e6c80', 'bgDark' => '#14313a', 'fgDark' => '#7fd0e0'),
+);
 
 // Base ikonunun rengi — base'in KENDİ id'sinden deterministik türetilir, bu
 // yüzden AYNI base dashboard/starred/interface.php dahil HER YERDE HER ZAMAN
 // aynı renkte görünür. Önceki hâl (listedeki sıraya göre $i % count(...))
 // kaldırıldı — o yöntemde aynı base, listede farklı bir sırada göründüğünde
 // (ör. farklı kullanıcı, farklı sıralama) FARKLI renk gösterebiliyordu.
-function bcc_base_icon_color($baseId)
+function bcc_base_icon_theme($baseId)
 {
-    $palette = $GLOBALS['BCC_BASE_ICON_COLORS'];
-    return $palette[(int) $baseId % count($palette)];
+    $themes = $GLOBALS['BCC_BASE_ICON_THEMES'];
+    return $themes[(int) $baseId % count($themes)];
 }
 
-// Dashboard/Starred kartındaki KÜP ikonunun SVG'si — interface.php'nin
-// "Bcc-Core ▾" menüsünde de AYNEN kullanılır, ikinci bir kopya YOK.
-function bcc_base_icon_svg($size = 20)
+// Geriye dönük uyumlu sarmalayıcı (grid.php / interface.php dolu çip rengini
+// bununla basar) — artık kendi paletini TAŞIMAZ, üstteki tek tablodan okur.
+function bcc_base_icon_color($baseId)
 {
-    return '<svg width="' . (int) $size . '" height="' . (int) $size . '" viewBox="0 0 20 20" fill="none"><path d="M2.5 6.2L10 2.5l7.5 3.7L10 9.9 2.5 6.2z" fill="#fff" fill-opacity="0.95"/><path d="M2.5 6.2V13l7.5 3.7V9.9L2.5 6.2z" fill="#fff" fill-opacity="0.7"/><path d="M17.5 6.2V13L10 16.7V9.9l7.5-3.7z" fill="#fff" fill-opacity="0.85"/></svg>';
+    $theme = bcc_base_icon_theme($baseId);
+    return $theme['solid'];
+}
+
+// Kart ikonunun zemin/mürekkep çiftini CSS değişkeni olarak basar. Renk
+// doğrudan `background:` olarak basılmaz — koyu temada pastel zeminin
+// değişmesi gerekiyor ve bir inline `background` her CSS kuralını yenerdi.
+// Karşılığı home.css'teki .home-base-icon kuralı (üç tema durumu: açık,
+// data-theme="dark", prefers-color-scheme).
+function bcc_base_icon_style_attr($baseId)
+{
+    $t = bcc_base_icon_theme($baseId);
+
+    return '--bi-bg: ' . $t['bg'] . '; --bi-fg: ' . $t['fg']
+        . '; --bi-bg-dark: ' . $t['bgDark'] . '; --bi-fg-dark: ' . $t['fgDark'] . ';';
+}
+
+// Base adından ikon kategorisi. Not: bases tablosunda "tip"/"kategori" diye bir
+// KOLON YOK (bkz. schema.sql) ve bu iş için DDL eklenmedi — kategori, base'in
+// ADINDAN türetilir. Kural: aşağıdaki liste SIRAYLA taranır, İLK eşleşen kazanır;
+// bu yüzden alana özgü sözcükler (rol, export, finans...) genel olan 'test'ten
+// ÖNCE gelir — "Export Test" dışa aktarma ikonunu alır, "RoleTest Base" yetki
+// ikonunu, hiçbiri eşleşmeyen "Bcc-Core" ise varsayılan veritabanı ikonunu.
+// Eşleşme küçük harfe indirgenmiş ad üzerinde substring'dir; Türkçe sözcüklerin
+// hem şapkalı hem şapkasız yazımı listede vardır (kullanıcı "butce" de yazar).
+function bcc_base_icon_category($baseName)
+{
+    $name = mb_strtolower((string) $baseName, 'UTF-8');
+
+    $rules = array(
+        'shield' => array('rol', 'role', 'yetki', 'izin', 'permission', 'admin', 'personel', 'calisan', 'çalışan'),
+        'export' => array('export', 'import', 'aktar', 'csv', 'xlsx', 'yedek'),
+        'users' => array('crm', 'musteri', 'müşteri', 'satis', 'satış', 'sales', 'customer', 'lead', 'uye', 'üye'),
+        'receipt' => array('finans', 'fatura', 'muhasebe', 'butce', 'bütçe', 'budget', 'invoice', 'gider', 'masraf', 'odeme', 'ödeme'),
+        'package' => array('stok', 'envanter', 'inventory', 'urun', 'ürün', 'product', 'depo', 'katalog'),
+        'calendar' => array('takvim', 'calendar', 'etkinlik', 'event', 'toplanti', 'toplantı', 'randevu', 'ajanda'),
+        'layout' => array('proje', 'project', 'gorev', 'görev', 'task', 'sprint', 'roadmap', 'plan'),
+        'flask' => array('test', 'deneme', 'demo', 'sandbox', 'qa'),
+    );
+
+    foreach ($rules as $category => $needles) {
+        foreach ($needles as $needle) {
+            if (mb_strpos($name, $needle, 0, 'UTF-8') !== false) {
+                return $category;
+            }
+        }
+    }
+
+    return 'database';
+}
+
+// Kategori -> Lucide (lucide.dev, ISC) çizim yolları. TAMAMI 24x24 viewBox'ta,
+// dolgu değil ÇİZGİ (stroke) — bu yüzden renk `currentColor`dan gelir ve tek bir
+// glif hem pastel zeminli kartta (koyu mürekkep) hem grid.php'nin dolu çipinde
+// (beyaz, bkz. grid-shell.css .gs-base-icon { color: #fff }) doğru görünür,
+// ikinci bir kopya gerekmez.
+$GLOBALS['BCC_BASE_ICON_PATHS'] = array(
+    'database' => '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>',
+    'shield' => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    'export' => '<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>',
+    'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'receipt' => '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+    'package' => '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    'calendar' => '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+    'layout' => '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    'flask' => '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+);
+
+// Dashboard/Starred kartındaki ikonun SVG'si — grid.php üst barı ve
+// interface.php'nin "Bcc-Core ▾" menüsünde de AYNEN kullanılır, ikinci bir
+// kopya YOK. $baseName verilmezse (veya kategori bilinmiyorsa) varsayılan
+// veritabanı gliftir — eski tek-argümanlı çağrılar bu yüzden bozulmaz.
+function bcc_base_icon_svg($size = 20, $baseName = null)
+{
+    $category = $baseName === null ? 'database' : bcc_base_icon_category($baseName);
+    $paths = $GLOBALS['BCC_BASE_ICON_PATHS'];
+    $d = isset($paths[$category]) ? $paths[$category] : $paths['database'];
+
+    // stroke-width ikon küçüldükçe orantılı incelmesin diye 24'lük ızgarada
+    // sabit 1.8'dir; 14px'te de 20px'te de aynı optik ağırlıkta görünür.
+    return '<svg width="' . (int) $size . '" height="' . (int) $size . '" viewBox="0 0 24 24" fill="none"'
+        . ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
+        . ' aria-hidden="true">' . $d . '</svg>';
 }
 
 // Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
@@ -3218,17 +3537,24 @@ function bcc_base_icon_svg($size = 20)
 // $canDelete: bu base'in takımında 'owner' rolündeyse true — Trash özelliği
 // (Airtable referansı: yalnızca Owner silebilir/geri yükleyebilir), "⋯"
 // menüsündeki "Sil" öğesi buna göre gösterilir/gizlenir.
-function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false)
+// $role: kullanıcının bu base'in çalışma alanındaki rolü ('owner'|'editor'|
+// 'commenter'|'viewer'|null) — kartın sağ üstündeki rol rozeti için. null ise
+// rozet hiç basılmaz.
+function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false, $role = null)
 {
     // $workspaceName artık BASILMIYOR (kasıtlı) — Airtable referansı Workspace
     // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
     // parametre imzası geriye dönük uyumluluk için duruyor (çağıranlar hâlâ
     // $teamNamesById hesaplayıp geçiriyor), yalnızca çıktı kaldırıldı.
-    unset($workspaceName);
+    // $iconColor de artık DOĞRUDAN basılmıyor: zemin/mürekkep çifti (koyu tema
+    // dahil) bcc_base_icon_style_attr()'dan CSS değişkeni olarak gelir, çünkü
+    // inline bir `background` koyu tema kuralını yenerdi. Parametre yine imzada
+    // duruyor — çağıranlar değişmesin diye.
+    unset($workspaceName, $iconColor);
     ?>
     <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>">
-        <div class="home-base-icon" style="background: <?php echo htmlspecialchars($iconColor, ENT_QUOTES, 'UTF-8'); ?>;">
-            <?php echo bcc_base_icon_svg(20); ?>
+        <div class="home-base-icon" style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
+            <?php echo bcc_base_icon_svg(20, $base['name']); ?>
         </div>
         <div class="home-base-info">
             <div class="home-base-name"><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -3251,6 +3577,23 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
             </div>
         </div>
         <div class="home-base-workspace"></div>
+        <?php if ($role !== null && isset($GLOBALS['BCC_ROLE_LABELS'][$role])): ?>
+            <?php
+            // Rol rozeti — kullanıcının BU base'in çalışma alanındaki yetkisi.
+            // Airtable'ın "assigned permission level"ının kart üstünde görünür
+            // karşılığı: aynı listede farklı çalışma alanlarından base'ler yan
+            // yana durabildiği için, hangisinde neyi yapabildiği (ör. yalnızca
+            // Owner'da "Sil" çıkması) kartın kendisinden okunabilsin diye.
+            // Renkler settings-page.css'teki rol hapıyla AYNI token'lardan
+            // gelir ama sınıf ADI ayrıdır: o kurallar ayarlar sayfası
+            // kabuğunun altına kapsanmış, Home o kabuğu kullanmıyor.
+            // Liste modunda BASILIR ama gizlenir (home.css) — kolon başlıklarıyla
+            // piksel hizası bozulmasın diye.
+            ?>
+            <span class="home-base-role home-base-role--<?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$role], ENT_QUOTES, 'UTF-8'); ?>
+            </span>
+        <?php endif; ?>
         <div class="home-base-card-actions">
             <button type="button" class="home-base-star-btn" aria-label="Favorilere ekle/çıkar" aria-pressed="<?php echo $isStarred ? 'true' : 'false'; ?>">
                 <svg width="16" height="16" viewBox="0 0 20 20" class="home-base-star-icon"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -3281,16 +3624,52 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
     <?php
 }
 
+// "+ Yeni Base Oluştur" kutucuğu — grid'in SON hücresi olarak, yalnızca
+// kullanıcının base ekleyebildiği (bcc_can_manage_bases) EN AZ BİR çalışma alanı
+// varsa basılır. Bu bir <button>'dır, <a> değil: hedefi bir sayfa değil,
+// dashboard.php'nin altındaki modal (home.js #home-create-base-modal'ı açar).
+// JS kapalıysa bile bir çıkış yolu kalsın diye modal formunun kendisi normal bir
+// POST hedefi (/bases.php) taşır — bkz. dashboard.php.
+function bcc_render_home_create_base_tile()
+{
+    ?>
+    <button type="button" class="home-base-card home-base-create" id="home-create-base-btn">
+        <span class="home-base-icon home-base-create-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </span>
+        <span class="home-base-info">
+            <span class="home-base-name">Yeni Base Oluştur</span>
+            <span class="home-base-meta">Boş bir base ile başlayın</span>
+        </span>
+    </button>
+    <?php
+}
+
 // Base grid'in TAMAMI (boş durum VEYA liste-başlığı + kartlar) — Home ve
 // Starred sayfaları AYNI fonksiyonu çağırır, yalnızca $bases/$emptyMessage
 // farklıdır. $teamNamesById: team_id => takım adı (liste modu "Workspace"
 // kolonu için).
-function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array())
+// $canCreateBase: çağıran sayfa, kullanıcının base ekleyebildiği bir çalışma
+// alanı olup olmadığını hesaplayıp geçer (bkz. dashboard.php). Varsayılan false
+// — starred.php gibi "oluştur" akışı olmayan sayfalar imzalarını değiştirmeden
+// eskisi gibi çalışır.
+function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array(), $canCreateBase = false)
 {
     if (empty($bases)) {
         ?>
         <div class="home-empty">
             <p><?php echo htmlspecialchars($emptyMessage, ENT_QUOTES, 'UTF-8'); ?></p>
+            <?php if ($canCreateBase): ?>
+                <?php
+                // Hiç base'i olmayan ama yetkisi olan kullanıcı için çıkmaz sokak
+                // olmasın: boş durumun İÇİNDE de aynı tetikleyici (aynı id, aynı
+                // modal) — grid hiç basılmadığı için oradaki kutucuk görünmezdi.
+                ?>
+                <button type="button" class="home-empty-create-btn" id="home-create-base-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Yeni Base Oluştur
+                </button>
+            <?php endif; ?>
         </div>
         <?php
         return;
@@ -3309,9 +3688,13 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $isStarred = isset($starredBaseIds[(int) $b['id']]);
             $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
             $iconColor = bcc_base_icon_color($b['id']);
-            $canDelete = isset($roleByTeamId[(int) $b['team_id']]) && $roleByTeamId[(int) $b['team_id']] === 'owner';
-            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete);
+            $role = isset($roleByTeamId[(int) $b['team_id']]) ? $roleByTeamId[(int) $b['team_id']] : null;
+            // Airtable paritesi: base silme de ekleme ile AYNI yetki satırında
+            // ("Add and delete bases…") — eşik tek yerde, bkz. src/auth.php.
+            $canDelete = $role !== null && bcc_can_manage_bases($role);
+            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete, $role);
         endforeach; ?>
+        <?php if ($canCreateBase) { bcc_render_home_create_base_tile(); } ?>
     </div>
     <?php
 }

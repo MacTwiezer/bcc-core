@@ -407,3 +407,20 @@
     color: var(--bcc-text-muted);
     font-size: 0.86rem;
 }
+
+/* Owner olmayan rollerde .wsx-actions'ta hiçbir buton kalmaz (Katılımcıları
+   yönet / Base oluştur / Ayarlar üçü de Owner'a bağlı, bkz. workspaces.php) —
+   başlık satırının sağı bomboş kalmasın, kullanıcı de neden buton görmediğini
+   anlasın diye rolünü söyleyen sönük bir etiket basılır. */
+/* .sp-page ile kapsanir — bu dosyanin TUM kurallari gibi (bkz. dosya basligi):
+   .wsx-* sinifları workspaces.php'ye ozel ama kurallar baska sayfalara
+   sizmasin diye kapsam zorunlu (scripts/_verify_settings_pages_ui.php bunu
+   denetliyor ve bu iki satiri yakaladi). */
+.sp-page .wsx-role-note {
+    align-self: center;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+    white-space: nowrap;
+}
+
+.sp-page .wsx-role-note strong { color: var(--bcc-text); font-weight: 600; }

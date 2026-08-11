@@ -27,7 +27,7 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = ($role === 'owner');
+$canEdit = bcc_can_manage_schema($role);  // entegrasyon ayarı — src/auth.php
 
 $error = null;
 $success = null;
@@ -109,6 +109,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 log_audit('slack.webhook_create', 'table', $table['id'], array('scope' => $scope, 'channel_name' => $channelName), $table['team_id']);
                 $success = 'Webhook kaydedildi.';
             }
+        }
+    } elseif ($action === 'test_webhook') {
+        // "Bağlantıyı test et" — kayıtlı bir webhook satırına deneme mesajı
+        // gönderir ve SONUCU kullanıcıya bildirir. Kaydetme akışının bir parçası
+        // DEĞİL, ayrı bir aksiyon: kaydetmenin kendisi otomatik mesaj atsaydı
+        // her küçük düzenleme (ör. yalnızca kanal adını değiştirmek) kanala
+        // gürültü basardı. Yetki: yukarıdaki require_role('owner') bu POST'un
+        // TAMAMINI zaten kapsıyor.
+        $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
+
+        $testResult = bcc_slack_send_test($webhookIdRaw, $table['team_id'], $user['full_name']);
+
+        if ($testResult['ok']) {
+            $success = 'Test mesajı gönderildi — Slack kanalınızı kontrol edin ("Slack Integration Connected Successfully").';
+        } else {
+            $error = $testResult['error'];
         }
     } elseif ($action === 'delete_webhook') {
         $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
@@ -389,6 +405,20 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                       // .sp-icon-btn hayalet ikon butonları. POST/CSRF formları
                                       // AYNEN korundu — yalnızca görünüm + aria-label değişti. ?>
                                 <td class="settings-row-actions">
+                                    <?php // "Test et" — kaydedilmiş URL'e gerçek bir deneme
+                                          // mesajı atar ("Slack Integration Connected
+                                          // Successfully"). Kaydetme akışından AYRI: kaydetmek
+                                          // otomatik mesaj atsaydı her küçük düzenleme kanala
+                                          // gürültü basardı. ?>
+                                    <form method="post" action="/slack_settings.php">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="test_webhook">
+                                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                                        <input type="hidden" name="webhook_id" value="<?php echo (int) $w['id']; ?>">
+                                        <button type="submit" class="sp-icon-btn" title="Test mesajı gönder" aria-label="Bu webhook'a test mesajı gönder">
+                                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M17 3L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3l-5.5 14-3-6-6-3L17 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                                        </button>
+                                    </form>
                                     <a class="sp-icon-btn" title="Düzenle" aria-label="Webhook'u düzenle" href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>&edit_webhook=<?php echo (int) $w['id']; ?>">
                                         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                                     </a>
@@ -451,7 +481,19 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         <span class="sl-channel <?php echo ((string) $teamWebhook['channel_name'] === '') ? 'sl-channel-empty' : ''; ?>"><?php echo htmlspecialchars((string) $teamWebhook['channel_name'] ?: 'kanal adı belirtilmemiş', ENT_QUOTES, 'UTF-8'); ?></span>
                         <span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($teamWebhook), ENT_QUOTES, 'UTF-8'); ?></span>
                         <?php bcc_slack_status_pill($teamWebhook['is_active']); ?>
-                        <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');" style="margin-left:auto;">
+                        <?php // Tablo-özel listedeki AYNI test aksiyonu (bkz. yukarısı) —
+                              // takım-geneli satır için de. margin-left:auto burada, iki
+                              // butonu birlikte sağa itsin diye. ?>
+                        <form method="post" action="/slack_settings.php" style="margin-left:auto;">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="action" value="test_webhook">
+                            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                            <input type="hidden" name="webhook_id" value="<?php echo (int) $teamWebhook['id']; ?>">
+                            <button type="submit" class="sp-icon-btn" title="Test mesajı gönder" aria-label="Takım webhook'una test mesajı gönder">
+                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M17 3L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3l-5.5 14-3-6-6-3L17 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                            </button>
+                        </form>
+                        <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');">
                             <?php echo csrf_field(); ?>
                             <input type="hidden" name="action" value="delete_webhook">
                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">

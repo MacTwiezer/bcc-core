@@ -27,13 +27,28 @@ if (!$team) {
     die('Ekip bulunamadı.');
 }
 
-// Atanabilecek roller: çağıranın GERÇEK rütbesi kadar ve altı (eşit dahil) —
-// require_role('viewer') dört rolün de sayfaya girmesine izin verdiği için
-// artık 'owner' hardcode edilemez, current_user_role_in_team() ile okunuyor.
-// bcc_assignable_roles() (src/auth.php) — grid.php'nin Paylaş popup'ıyla PAYLAŞILAN
-// mantık, kopya YOK.
-$myRank = $GLOBALS['BCC_ROLE_RANK'][current_user_role_in_team($teamId)];
-$assignableRoles = bcc_assignable_roles($myRank);
+$myRole = current_user_role_in_team($teamId);
+$myRank = $GLOBALS['BCC_ROLE_RANK'][$myRole];
+
+// ÜYE YÖNETİMİ YETKİSİ — tek kaynak: src/auth.php bcc_can_manage_members()
+// (yalnızca owner). Sayfanın KENDİSİ dört role de açık kalır (herkes ekipte
+// kimin olduğunu ve rolünü GÖRÜR — Airtable'da da katılımcı listesi görünür),
+// ama listeyi DEĞİŞTİREN her şey bu bayrağa bağlıdır.
+//
+// Bulunan gerçek açık (canlı doğrulandı, bu satır eklenmeden önce): yetki
+// kontrolü yalnızca "rank(hedef) <= rank(ben)" hiyerarşisiydi; bu, viewer'ın
+// $assignableRoles = ['viewer'] ile ekibe İSTEDİĞİ aktif kullanıcıyı viewer
+// olarak eklemesine ve diğer viewer'ları çıkarmasına izin veriyordu
+// (POST -> 200 + "Atama kaydedildi" + team_members satırı oluştu). Editor
+// aynısını commenter/editor rolleriyle de yapabiliyordu.
+$canManageMembers = bcc_can_manage_members($myRole);
+
+// Atanabilecek roller: çağıranın GERÇEK rütbesi kadar ve altı (eşit dahil).
+// bcc_assignable_roles() (src/auth.php) — grid.php'nin Paylaş popup'ıyla
+// PAYLAŞILAN mantık, kopya YOK. Yetkisi olmayan için BOŞ dizi: aşağıdaki
+// in_array($role, $assignableRoles) kontrolü böylece ikinci bir savunma
+// katmanı olarak da her zaman başarısız olur.
+$assignableRoles = $canManageMembers ? bcc_assignable_roles($myRank) : array();
 
 $error = null;
 $success = null;
@@ -41,45 +56,31 @@ $success = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
 
+    // ASIL KAPI. Arayüzde formu hiç görmeyen bir kullanıcı elle POST atsa da
+    // burada durur — "gizleme != yetkilendirme". 403 döndürülür ve sayfanın
+    // geri kalanı HİÇ çalıştırılmaz (die), yani hiçbir yazma yoluna girilmez.
+    if (!$canManageMembers) {
+        http_response_code(403);
+        die('Üye yönetimi için Owner yetkisi gerekir.');
+    }
+
     $action = isset($_POST['action']) ? $_POST['action'] : '';
     $targetUserId = isset($_POST['user_id']) ? (int) $_POST['user_id'] : 0;
 
+    // ATAMA/ÇIKARMA MANTIĞI ARTIK BURADA DEĞİL: src/schema.php'deki
+    // bcc_team_member_assign() / bcc_team_member_remove_many() — grid.php'nin
+    // "Paylaş" modalı (api/team_member_assign.php, api/team_member_remove.php)
+    // AYNI fonksiyonları çağırıyor. Hiyerarşi kapısı, "kendini çıkaramama",
+    // "son owner" kuralı ve audit action adları tek yerde; bu sayfanın
+    // davranışı (mesajlar dahil) birebir korundu.
     if ($action === 'assign') {
         $role = isset($_POST['role']) ? $_POST['role'] : '';
+        $result = bcc_team_member_assign($teamId, $targetUserId, $role, $myRank, $assignableRoles);
 
-        if ($targetUserId <= 0 || !in_array($role, $assignableRoles, true)) {
-            $error = 'Geçersiz seçim.';
-        } elseif (!bcc_fetch_one('SELECT id FROM users WHERE id = :id AND is_active = 1', array('id' => $targetUserId))) {
-            $error = 'Kullanıcı bulunamadı.';
+        if (!$result['ok']) {
+            $error = $result['error'];
         } else {
-            // admin/assign_team.php ile AYNI desen: INSERT ... ON DUPLICATE KEY
-            // UPDATE hem yeni üyeliği hem mevcut bir üyenin rol değişikliğini AYNI
-            // sorguyla yapar; hangisi olduğunu doğru audit action için önceden bakarak
-            // biliriz (bkz. assign_team.php'deki "bulunan gerçek bug" notu — burada
-            // baştan doğru).
-            $existingMember = bcc_fetch_one(
-                'SELECT id, role FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
-                array('team_id' => $teamId, 'user_id' => $targetUserId)
-            );
-
-            // Hiyerarşi kapısı SUNUCU tarafında da: sayfa artık owner-only değil,
-            // UI'da salt-okunur gösterilen bir satırın Permission'ı doğrudan POST
-            // ile de değiştirilemesin — hedefin ŞU ANKİ rütbesi benimkinden
-            // yüksekse (rank(hedef) > rank(ben)) reddedilir, $assignableRoles
-            // kontrolü yalnızca ATANACAK rolü sınırlıyordu, hedefin mevcut
-            // durumunu değil.
-            if ($existingMember && $GLOBALS['BCC_ROLE_RANK'][$existingMember['role']] > $myRank) {
-                $error = 'Bu kullanıcıyı yönetme yetkiniz yok.';
-            } else {
-                bcc_execute(
-                    'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
-                     ON DUPLICATE KEY UPDATE role = VALUES(role)',
-                    array('team_id' => $teamId, 'user_id' => $targetUserId, 'role' => $role)
-                );
-                $auditAction = $existingMember ? 'team_member.role_change' : 'team_member.assign';
-                log_audit($auditAction, 'team_member', null, array('team_id' => $teamId, 'user_id' => $targetUserId, 'role' => $role), $teamId);
-                $success = 'Atama kaydedildi.';
-            }
+            $success = 'Atama kaydedildi.';
         }
     } elseif ($action === 'remove' || $action === 'remove_bulk') {
         // Tek satır "Çıkar" (remove) ve toplu seçim "Çıkar" (remove_bulk) AYNI
@@ -101,62 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($targetUserIds)) {
             $error = 'Geçersiz seçim.';
         } else {
-            $removedIds = array();
-            $skipped = 0;
-
-            foreach ($targetUserIds as $id) {
-                if ($id === (int) $user['id']) {
-                    // Kasıtlı olarak KOŞULSUZ engellenir (son owner olup olmadığına
-                    // bakılmaksızın) — admin/index.php'deki "kendi hesabını pasif
-                    // yapamama" korumasıyla AYNI ilke, burada da tek satırla sağlanır.
-                    $skipped++;
-                    continue;
-                }
-
-                $targetMember = bcc_fetch_one(
-                    'SELECT role FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
-                    array('team_id' => $teamId, 'user_id' => $id)
-                );
-
-                if (!$targetMember) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Aynı hiyerarşi kapısı: rank(hedef) > rank(ben) ise dokunulamaz.
-                if ($GLOBALS['BCC_ROLE_RANK'][$targetMember['role']] > $myRank) {
-                    $skipped++;
-                    continue;
-                }
-
-                if ($targetMember['role'] === 'owner') {
-                    $ownerCount = (int) bcc_fetch_column(
-                        "SELECT COUNT(*) FROM team_members WHERE team_id = :team_id AND role = 'owner'",
-                        array('team_id' => $teamId)
-                    );
-                    if ($ownerCount <= 1) {
-                        $skipped++;
-                        continue;
-                    }
-                }
-
-                bcc_execute('DELETE FROM team_members WHERE team_id = :team_id AND user_id = :user_id', array('team_id' => $teamId, 'user_id' => $id));
-                $removedIds[] = $id;
-            }
-
-            if (!empty($removedIds)) {
-                // admin/index.php'nin remove_from_team action'ıyla AYNI audit action
-                // adı ('team_member.remove') — tutarlılık için, iki ayrı isim yok.
-                log_audit('team_member.remove', 'team', $teamId, array('user_ids' => $removedIds), $teamId);
-            }
-
-            if (empty($removedIds)) {
-                $error = 'Kimse çıkarılamadı (kendiniz, son owner veya yetkiniz dışındaki bir rütbe).';
-            } elseif ($skipped > 0) {
-                $success = count($removedIds) . ' kişi çıkarıldı, ' . $skipped . ' kişi atlandı (kendiniz, son owner veya yetkiniz dışında).';
-            } else {
-                $success = count($removedIds) === 1 ? 'Ekipten çıkarıldı.' : count($removedIds) . ' kişi ekipten çıkarıldı.';
-            }
+            $removeResult = bcc_team_member_remove_many($teamId, $targetUserIds, (int) $user['id'], $myRank);
+            $messages = bcc_team_member_remove_message($removeResult);
+            $error = $messages['error'];
+            $success = $messages['success'];
         }
     } else {
         $error = 'Geçersiz işlem.';
@@ -167,14 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // kullanıcıyı pasif yaptığında team_members satırı SİLİNMEZ, pasif bir üye
 // aktif bir katılımcıdan ayırt edilebilsin) + tm.created_at ("Eklenme tarihi"
 // kolonu, client-side sıralanabilir).
-$members = bcc_fetch_all(
-    'SELECT u.id, u.full_name, u.email, u.is_active, tm.role, tm.created_at
-     FROM team_members tm
-     INNER JOIN users u ON u.id = tm.user_id
-     WHERE tm.team_id = :team_id
-     ORDER BY u.full_name',
-    array('team_id' => $teamId)
-);
+$members = bcc_team_members_with_roles($teamId);
 
 // "Ekleyen" kolonu — bkz. src/schema.php'deki fonksiyon yorumu.
 $invitedByMap = bcc_team_members_invited_by($teamId);
@@ -207,30 +149,45 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <div class="ws-detail tm-detail">
             <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
-            <form class="tm-assign-form" method="post" action="/team_members.php?team_id=<?php echo (int) $teamId; ?>">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="action" value="assign">
-                <label class="tm-assign-field">Kullanıcı
-                    <select name="user_id" required>
-                        <option value="">— seçin —</option>
-                        <?php foreach ($allUsers as $u): ?>
-                            <option value="<?php echo (int) $u['id']; ?>">
-                                <?php echo htmlspecialchars($u['full_name'] . ' (' . $u['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label class="tm-assign-field">Rol
-                    <select name="role" required>
-                        <?php foreach ($assignableRoles as $r): ?>
-                            <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
-                                <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <button type="submit" class="tm-assign-submit">Ata</button>
-            </form>
+            <?php if ($canManageMembers): ?>
+                <form class="tm-assign-form" method="post" action="/team_members.php?team_id=<?php echo (int) $teamId; ?>">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="assign">
+                    <label class="tm-assign-field">Kullanıcı
+                        <select name="user_id" required>
+                            <option value="">— seçin —</option>
+                            <?php foreach ($allUsers as $u): ?>
+                                <option value="<?php echo (int) $u['id']; ?>">
+                                    <?php echo htmlspecialchars($u['full_name'] . ' (' . $u['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="tm-assign-field">Rol
+                        <select name="role" required>
+                            <?php foreach ($assignableRoles as $r): ?>
+                                <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button type="submit" class="tm-assign-submit">Ata</button>
+                </form>
+            <?php else: ?>
+                <?php
+                // Yetkisi olmayan rol formu HİÇ GÖRMEZ (CSS ile gizlenmiş bir
+                // form değil — sunucu onu hiç basmaz, kaynakta da yoktur).
+                // Yerine neden göremediğini söyleyen tek satır: sessizce eksik
+                // bir arayüz "bozuk" gibi okunurdu.
+                ?>
+                <p class="tm-readonly-note">
+                    Bu çalışma alanındaki rolünüz
+                    <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$myRole], ENT_QUOTES, 'UTF-8'); ?></strong>.
+                    Katılımcı listesini görüntüleyebilirsiniz; üye ekleme, rol değiştirme ve
+                    çıkarma işlemleri yalnızca <strong>Owner</strong> rolüne açıktır.
+                </p>
+            <?php endif; ?>
 
             <div class="tm-toolbar">
                 <h3 class="ws-collab-heading">Üyeler (<?php echo count($members); ?>)</h3>
@@ -250,16 +207,23 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </div>
             </div>
 
+            <?php if ($canManageMembers): ?>
             <div class="tm-bulk-bar" data-tm-bulk-bar>
                 <span><span data-tm-selected-count>0</span> seçili</span>
                 <button type="submit" form="tm-bulk-remove-form" class="tm-remove-btn" data-tm-bulk-remove-btn disabled>Çıkar</button>
             </div>
+            <?php endif; ?>
 
             <div class="tm-table-wrap">
                 <table class="tm-table">
                     <thead>
                         <tr>
+                            <?php // Seçim kolonu TOPLU ÇIKARMA içindir — yetki yoksa kolonun
+                                  // kendisi de basılmaz (boş bir onay kutusu sütunu bırakmak,
+                                  // "bir şey seçebilirim" izlenimi veren ölü bir arayüz olurdu). ?>
+                            <?php if ($canManageMembers): ?>
                             <th class="tm-col-check"><input type="checkbox" data-tm-select-all aria-label="Tümünü seç"></th>
+                            <?php endif; ?>
                             <th>Üye</th>
                             <th>Permission</th>
                             <th>Ekleyen</th>
@@ -269,7 +233,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <tbody data-tm-rows>
                         <?php foreach ($members as $m):
                             $memberRank = $GLOBALS['BCC_ROLE_RANK'][$m['role']];
-                            $manageable = $memberRank <= $myRank;
+                            // İki koşul BİRLİKTE: önce yetenek (owner mıyım),
+                            // sonra hiyerarşi (hedef benden yüksek rütbede mi).
+                            // $canManageMembers false ise hiyerarşi hiç sorulmaz.
+                            $manageable = $canManageMembers && $memberRank <= $myRank;
                             $isSelf = (int) $m['id'] === (int) $user['id'];
                             $invitedByName = isset($invitedByMap[(int) $m['id']]) && $invitedByMap[(int) $m['id']] !== null
                                 ? $invitedByMap[(int) $m['id']]
@@ -280,6 +247,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 data-tm-role="<?php echo htmlspecialchars($m['role'], ENT_QUOTES, 'UTF-8'); ?>"
                                 data-tm-created="<?php echo (int) strtotime($m['created_at']); ?>"
                             >
+                                <?php if ($canManageMembers): ?>
                                 <td class="tm-col-check">
                                     <input
                                         type="checkbox"
@@ -291,6 +259,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                         <?php echo $isSelf ? 'title="Kendinizi çıkaramazsınız"' : ''; ?>
                                     >
                                 </td>
+                                <?php endif; ?>
                                 <td class="tm-cell-member">
                                     <div class="ws-collab-avatar"><?php echo htmlspecialchars(bcc_user_initial($m), ENT_QUOTES, 'UTF-8'); ?></div>
                                     <div class="ws-collab-info">
@@ -328,10 +297,12 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <p class="tm-empty-state" data-tm-empty hidden>Aramayla eşleşen üye yok.</p>
             </div>
 
+            <?php if ($canManageMembers): ?>
             <form id="tm-bulk-remove-form" method="post" action="/team_members.php?team_id=<?php echo (int) $teamId; ?>">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="remove_bulk">
             </form>
+            <?php endif; ?>
         </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>
 <script src="<?php echo bcc_asset_url('team-members.js'); ?>"></script>

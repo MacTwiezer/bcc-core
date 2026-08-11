@@ -123,10 +123,11 @@ if (!empty($shareExistingIds)) {
                  gs-table-tab-menu panelleriyle AYNI <details> deseni. -->
             <details class="if-nav-menu gs-table-tab-menu" name="if-nav-menu">
                 <summary class="if-nav-back" title="Menü">
-                    <!-- Dashboard/Starred kartındaki AYNI ikon (bcc_base_icon_svg) +
-                         AYNI base_id-tabanlı renk (bcc_base_icon_color) — ikinci bir
-                         kopya YAZILMADI, src/schema.php'deki paylaşılan fonksiyonlar. -->
-                    <span class="home-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($baseId), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14); ?></span>
+                    <!-- Dashboard/Starred kartındaki AYNI ikon (bcc_base_icon_svg,
+                         base ADINDAN türetilen kategori glifi) + AYNI base_id-tabanlı
+                         renk (bcc_base_icon_color) — ikinci bir kopya YAZILMADI,
+                         src/schema.php'deki paylaşılan fonksiyonlar. -->
+                    <span class="home-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($baseId), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14, $base['name']); ?></span>
                     <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </summary>
@@ -238,14 +239,12 @@ if (!empty($shareExistingIds)) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     <span class="if-nav-bottom-label">Bağlantı</span>
                 </summary>
-                <div class="share-popover-form">
-                    <div class="share-popover-label">Bağlantıyı paylaş</div>
-                    <div class="share-popover-row">
-                        <input type="text" class="share-popover-input" data-share-url-input readonly value="<?php echo htmlspecialchars($interfaceSelfShareUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select()">
-                        <button type="button" class="btn-sm" data-share-copy-btn>Kopyala</button>
-                    </div>
-                    <p class="share-popover-note">Bu bağlantı yalnızca oturum açmış takım üyeleri için çalışır.</p>
-                </div>
+                <?php
+                // grid.php'nin iki paylaşım kutusuyla PAYLAŞILAN partial.
+                $shareLinkUrl = $interfaceSelfShareUrl;
+                $shareLinkLabel = 'Bağlantıyı paylaş';
+                require __DIR__ . '/../src/partials/share_link_popover.php';
+                ?>
             </details>
             <?php
             $notifUser = $user;

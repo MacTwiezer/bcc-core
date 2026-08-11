@@ -8,70 +8,12 @@ body {
 a { color: var(--bcc-accent-strong); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.topnav {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    background: var(--bcc-surface);
-    color: var(--bcc-text);
-    padding: 0.6rem 1.25rem;
-    border-bottom: 1px solid var(--bcc-border);
-}
-
-.topnav a {
-    color: var(--bcc-text);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.88rem;
-    padding: 0.4rem 0.65rem;
-    border-radius: 8px;
-}
-
-.topnav a:hover { background: var(--bcc-surface-hover); }
-
-.topnav a:first-child { margin-right: 0.5rem; }
-
-.topnav .navuser {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--bcc-text-muted);
-}
-
-.topnav .navuser-avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--bcc-accent);
-    color: var(--bcc-on-accent);
-    font-weight: 700;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.navlogout {
-    display: inline;
-}
-
-.navlogout button {
-    background: none;
-    border: 1px solid var(--bcc-border-strong);
-    color: var(--bcc-text-muted);
-    padding: 0.35rem 0.75rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-
-.navlogout button:hover { background: var(--bcc-surface-hover); border-color: var(--bcc-border-strong); }
-
-/* Admin paneli (.admin-*) artık home.css'te — admin/index.php home-shell'e
-   taşındı, başka kullanan kalmadı, ikinci bir kopya YOK. */
+/* ÖLÜ KOD TEMİZLİĞİ: eski üst gezinme çubuğu (.topnav / .topnav a /
+   .topnav .navuser / .navuser-avatar / .navlogout) buradan KALDIRILDI —
+   sayfalar home-shell (src/partials/home_shell_top.php) ve grid-shell
+   kabuklarına taşındığında bu blok geride kalmıştı; hiçbir .php/.js dosyası
+   bu sınıflardan hiçbirine artık referans vermiyor (denetimde doğrulandı).
+   Admin paneli (.admin-*) da AYNI nedenle daha önce home.css'e taşınmıştı. */
 
 .page {
     max-width: 900px;
@@ -186,13 +128,8 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 
 form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn):hover { background: var(--bcc-accent-strong); }
 
-.form-cancel-link {
-    color: var(--bcc-text-muted);
-    font-weight: 600;
-    font-size: 0.88rem;
-}
-
-.form-cancel-link:hover { color: var(--bcc-text); }
+/* .form-cancel-link KALDIRILDI (ölü kod denetimi): hiçbir sayfa "İptal"
+   bağlantısını bu sınıfla basmıyor. */
 
 .hint {
     color: var(--bcc-text-muted);
@@ -263,6 +200,12 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     overflow: auto;
     max-width: 100%;
     margin-bottom: 1rem;
+    /* Sütun genişliği şeritlerinin (.grid-col-resize-layer, grid-column-resize.js)
+       konum atası. GÜVENLİ: bu kutunun içindeki TEK mutlak konumlu öğeler
+       başlığın kendi çocukları (dondurma/boyutlandırma tutamaçları — atası
+       zaten sticky <th>), gerisi (richtext ve dosya-eki popover'ları)
+       position:fixed. Yani hiçbir mevcut öğenin koordinat kaynağı değişmiyor. */
+    position: relative;
     /* Kalın/gri, işletim sistemi varsayılanı sürükleme çubuğu yerine ince,
        Airtable tarzı bir kaydırma çubuğu (bkz. ::-webkit-scrollbar altta) —
        Firefox için standart karşılığı. */
@@ -1275,22 +1218,47 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
    Dondurma tutamacıyla (yukarıda) AYNI görsel bölgede duruyor ama BAŞKA bir iş
    yapıyor; ayırt edilebilir olması bilinçli bir gereklilik:
 
-     dondurma  : 12px şerit, cursor:grab,        MAVİ  (--bcc-accent) çizgi, tabloda TEK
-     genişlik  :  7px şerit, cursor:col-resize,  GRİ   (--bcc-border-strong) çizgi, HER başlıkta
+     dondurma  : 12px şerit, cursor:grab,        MAVİ  (--bcc-accent) çizgi, tabloda TEK,
+                 yalnızca BAŞLIK yüksekliğinde
+     genişlik  :  9px şerit, cursor:col-resize,  GRİ   (--bcc-border-strong) çizgi,
+                 HER veri sütununda, TABLONUN TAM BOYUNDA
 
-   İkisi aynı hücrede buluştuğunda (donmuş kenar sütunu) üst üste binmesinler
-   diye genişlik tutamacı orada 12px sola kaydırılıyor ve z-index'i altta
-   kalıyor — böylece imleç/çizgi rengi hangisinin sürükleneceğini belirsiz
-   bırakmıyor. grid-freeze-columns.js'e ve .grid-freeze-handle kurallarına
-   DOKUNULMADI. */
-.grid-col-resize-handle {
+   Şerit artık <th>'nin çocuğu DEĞİL: .grid-wrap'in mutlak konumlu çocuğu olan
+   tek bir katmanda (.grid-col-resize-layer) duruyor ve tablonun tamamı boyunca
+   uzuyor — böylece başlık kadar gövde hücrelerinin arasındaki ayıraç da
+   yakalanabiliyor. Konum/yükseklik JS'te hesaplanıyor (sütun genişlikleri
+   sürüklenirken değişiyor, statik CSS ile ifade edilemez).
+
+   İkisi aynı çizgide buluştuğunda (donmuş kenar sütunu) üst üste binmesinler
+   diye genişlik şeridi orada 12px sola kaydırılıyor (JS: FREEZE_CLEARANCE) —
+   böylece imleç/çizgi rengi hangisinin sürükleneceğini belirsiz bırakmıyor.
+   grid-freeze-columns.js'e ve .grid-freeze-handle kurallarına DOKUNULMADI. */
+.grid-col-resize-layer {
     position: absolute;
     top: 0;
-    bottom: 0;
-    right: -3px;
-    width: 7px;
+    left: 0;
+    /* 0×0: kutunun kendisi yer kaplamıyor, yalnızca çocukları için (0,0)
+       kaynağı — .grid-wrap'in kaydırılabilir alanını BÜYÜTMEMESİ şart. */
+    width: 0;
+    height: 0;
+    /* 4: sticky başlık (z-index 2), donmuş hücreler (2) ve satır no başlığının
+       (3) ÜSTÜNDE — yoksa şerit başlık satırında hiç yakalanmazdı. Araç çubuğu
+       panellerinin (z-index 5) ise ALTINDA: açık bir filtre/sıralama paneli
+       tablonun üzerine taştığında 9px'lik şeritler tıklamayı çalamaz. */
+    z-index: 4;
+    pointer-events: none;
+}
+
+.grid-col-resize-handle {
+    position: absolute;
+    width: 9px;
     cursor: col-resize;
-    z-index: 9;
+    /* Katman pointer-events:none — yalnızca şeritlerin kendisi olayları alır,
+       aradaki boşluklarda hücreler normal davranır (tıkla-düzenle, satır hover). */
+    pointer-events: auto;
+    /* Dokunmatik/kalemde tarayıcının kaydırma jestini devralmasını engeller;
+       etkileşim tek eksenli kalır. */
+    touch-action: none;
 }
 
 .grid-col-resize-handle::after {
@@ -1309,7 +1277,13 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
     opacity: 1;
 }
 
-.grid-frozen-edge .grid-col-resize-handle { right: 9px; }
+/* Sürükleme sırasında imleç fare şeridin dışına çıksa da col-resize kalsın —
+   sınıfı grid-column-resize.js onStart/onEnd'de ekleyip kaldırıyor. Metin
+   seçimini bcc_bindColumnDrag zaten kapatıyor (userSelect). */
+body.is-col-resizing,
+body.is-col-resizing * {
+    cursor: col-resize !important;
+}
 
 /* Kaydedilmiş genişlik VARKEN: sütunlar <colgroup>'tan gelir ve içerik onları
    genişletemez. `min-width: 100%` BURADA KAPATILMAK ZORUNDA — açık kalsaydı
@@ -1994,6 +1968,42 @@ td.cell-flash-error {
     overflow: visible;
 }
 
+/* Bağlantı paylaşım popover'ları — katılımcı popover'ından DAHA GENİŞ.
+   320px'te ÖLÇÜLEN gerçek durum: URL metni 323px yer istiyor, input yalnızca
+   215px veriyordu (108px taşma). Kutu, "Kopyala" butonu + boşluk + dolgular
+   için sabit 124px harcıyor, gerisi input'a kalıyor. İki tetikleyicinin de
+   sığması gereken genişlik ölçüldü:
+
+     grid.php "Bağlantı"        http://localhost/interface.php?base_id=741
+                                metin 304px -> kutu 429px
+     grid.php "Paylaş ve Senk." http://localhost/grid.php?table_id=857&view_id=809
+                                metin 375px -> kutu 500px
+     interface.php "Bağlantı"   http://localhost/interface.php?base_id=741&table_id=857
+                                metin 409px -> kutu 534px  (en uzunu)
+
+   Üçü de AYNI sınıfı kullanıyor, yani tek sayı üçünü birden bağlıyor: 560px
+   en uzun olanına ~26px pay bırakıyor. Katılımcı popover'ı 320px'te KALIYOR
+   (yukarıdaki ortak kural) — orada sığmayan bir metin yok, boşuna büyümesin.
+
+   Daha uzun bir URL (gerçek alan adı, dört haneli id'ler) hâlâ taşabilir: o
+   durumda input kaydırılır, ama tıklayınca TAMAMI seçildiği ve "Kopyala" her
+   zaman input.value'nun tamamını aldığı için İŞLEV kaybı olmaz — kırpılma
+   yalnızca görseldir. max-width dar ekranlarda popover'ın görüntü alanından
+   taşmasını engelliyor.
+
+   `width` + `min-width: 0`, `min-width: 560px` DEĞİL — CSS'te min-width,
+   max-width'i EZER: min-width:560px yazıldığında 600px'lik bir ekranda
+   `max-width: 90vw` (540px) hiç devreye girmiyor ve kutu (sağa hizalı olduğu
+   için) SOL kenardan taşıyordu (ölçüldü: left = -50px, yani URL'nin başı
+   ekran dışında kalıyordu). width olarak yazılınca max-width gerçekten
+   kısıtlıyor; ortak kuraldan gelen min-width: 320px de burada sıfırlanıyor
+   ki çok dar ekranlarda aynı tuzağa düşülmesin. */
+.share-popover-trigger .share-popover-form {
+    width: 560px;
+    min-width: 0;
+    max-width: 90vw;
+}
+
 /* ---------- D1 "Paylaş" popup (Airtable Share paritesi) ----------
    Konumlandırma/kutu stili yukarıdaki .share-popover-form ile PAYLAŞILIYOR
    (kopya yok); burada yalnızca içeriğe özgü kurallar var. */
@@ -2033,6 +2043,9 @@ td.cell-flash-error {
     margin: 0 0 0.7rem;
 }
 
+/* Artık <a> DEĞİL <button> (team_members.php'ye yönlendirmiyor, "Paylaş"
+   modalını açıyor) — tarayıcı buton varsayılanları sıfırlanıp önceki
+   bağlantı görünümü birebir korunuyor. */
 .collab-popover-people {
     display: flex;
     align-items: center;
@@ -2041,9 +2054,34 @@ td.cell-flash-error {
     padding: 0.4rem;
     margin: 0 -0.4rem;
     border-radius: 6px;
+    width: calc(100% + 0.8rem);
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 
 .collab-popover-people:hover { background: var(--bcc-surface-hover); }
+
+/* Popup'taki hızlı atama formunun yerini alan tek buton (modalı açar). */
+.collab-popover-add-btn {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    margin-bottom: 0.7rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.collab-popover-add-btn:hover { background: var(--bcc-surface-hover); }
 
 .collab-popover-avatars { display: flex; }
 

@@ -22,6 +22,29 @@
 
 $APP_BASE_URL = '';
 
+// $BCC_DEMO_LOGIN: login.php'deki "Hızlı Demo Girişi" butonları (sabit
+// e-posta/şifre çiftlerini forma dolduran yardımcılar, bkz. src/demo_accounts.php).
+//
+// VARSAYILAN false — KAPALI olmalı: açıkken sayfa kaynağında demo hesapların
+// şifreleri düz metin görünür. Bu, yerel rol testini kolaylaştırmak içindir,
+// canlı bir kuruluma ASLA bu şekilde çıkmamalıdır. Yerel makinede açmak için
+// config/app.local.php'ye (git'e girmez) `$BCC_DEMO_LOGIN = true;` yazın —
+// aşağıdaki require o dosyayı bu satırdan SONRA yüklediği için yerel değer
+// buradaki varsayılanı ezer.
+$BCC_DEMO_LOGIN = false;
+
+// $BCC_DEMO_PASSWORD: demo hesaplarının ortak şifresi.
+//
+// BURADA BİLEREK TANIMSIZ. Şifre bu depoda (açık/public bir GitHub deposu)
+// LİTERAL OLARAK BULUNMAZ — güvenlik denetiminde src/demo_accounts.php'den
+// çıkarıldı, çünkü o hesaplar veritabanında gerçekten var ve aktif; şifreyi
+// yayınlamak, $BCC_DEMO_LOGIN kapalı olsa bile (hesaplar normal giriş
+// formundan da denenebilir) çalışan bir kimlik bilgisini herkese açmak
+// olurdu. Yerel makinede config/app.local.php'ye yazın.
+//
+// Tanımsız bırakılırsa: bcc_demo_accounts() BOŞ liste döner, login.php demo
+// butonlarını hiç basmaz, scripts/seed_demo_users.php çalışmayı reddeder.
+
 $bcc_localAppConfigPath = __DIR__ . '/app.local.php';
 if (is_file($bcc_localAppConfigPath)) {
     require $bcc_localAppConfigPath;

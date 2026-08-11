@@ -8,3 +8,14 @@
 // alıcısı ona erişemez. Sonunda / OLMASIN.
 
 $APP_BASE_URL = 'https://uygulama.ornek.com';
+
+// $BCC_DEMO_LOGIN: login.php'deki "Hızlı Demo Girişi" butonlarını açar
+// (demo kimlik bilgileri — bkz. src/demo_accounts.php). YALNIZCA yerel
+// geliştirme/test makinelerinde true yapın; canlıda KAPALI kalmalıdır.
+// $BCC_DEMO_LOGIN = true;
+
+// $BCC_DEMO_PASSWORD: demo hesaplarının ortak şifresi. Depoda LİTERAL olarak
+// TUTULMAZ (bkz. config/app.php'deki güvenlik notu) — yalnızca bu yerel
+// dosyada yaşar. İkisi de tanımlı DEĞİLSE demo butonları hiç basılmaz ve
+// scripts/seed_demo_users.php hesap oluşturmayı reddeder.
+// $BCC_DEMO_PASSWORD = 'buraya-yerel-bir-sifre';

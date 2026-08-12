@@ -451,6 +451,11 @@ $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
 // '+ Filtre ekle' butonu da istemcide ayni sayiyi kullaniyor.
 $GLOBALS['BCC_FILTER_MAX_SLOTS'] = 5;
 
+// Siralama panelindeki AZAMI kural sayisi. Filtredeki sabitle AYNI
+// gerekce: bu sayi parse_grid_sort_rules(), grid.php'nin panel dongusu
+// ve bcc_grid_state_is_empty() olmak uzere UC yerde birden geciyordu.
+$GLOBALS['BCC_SORT_MAX_SLOTS'] = 3;
+
 $GLOBALS['BCC_FILTER_OPERATORS'] = array(
     'single_line_text' => array(
         'contains' => 'içerir', 'not_contains' => 'içermez',
@@ -616,6 +621,22 @@ $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
     'email' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
     'phone' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
 );
+
+// Alan tipine gore yon etiketleri ('A -> Z', '1 -> 9', 'Erken -> Gec'...).
+// TEK GIRIS NOKTASI: hem gruplama hem siralama paneli bunu cagiriyor.
+// Dizinin adi tarihsel olarak GROUP_ ile basliyor ama icerigi alan tipine
+// gore ARTAN/AZALAN etiketidir; gruplamaya ozel bir sey degil.
+//
+// isset() korumasi BURADA topland: ayni kontrol daha once grid.php'de
+// satir ici yaziliyordu ve siralama paneli eklenince IKINCI bir kopyasi
+// gerekecekti. Diziye eklenmeyi unutan yeni bir alan tipi 'Undefined
+// index' yerine makul bir varsayilana duser.
+function bcc_dir_labels($fieldType)
+{
+    $map = $GLOBALS['BCC_GROUP_DIR_LABELS'];
+
+    return isset($map[$fieldType]) ? $map[$fieldType] : array('asc' => 'artan', 'desc' => 'azalan');
+}
 
 // Tekli/çoklu seçim seçeneklerinin renk paleti (Color): serbest hex DEĞİL, sabit
 // whitelist — kullanıcıdan gelen bir rengi doğrudan style attribute'una basmak
@@ -2147,7 +2168,11 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                     <?php /* GÜVENLİ: $displayText burada YAZMA anında bcc_sanitize_rich_text()
                        ile temizlenmiş HTML — htmlspecialchars UYGULANMAZ (uygulansaydı <b>
                        literal &lt;b&gt; olarak görünürdü). Tek istisna, bkz. bcc_sanitize_rich_text(). */ ?>
-                    <div class="cell-view rich-text-view"><?php echo $displayText; ?></div>
+                    <?php /* bcc_rich_text_grid_html: <br> -> boşluk. Hücre TEK SATIR
+                       gösteriyor (bkz. style.css row-h-short kuralı); ham HTML
+                       yukarıdaki data-value'da <br>'leriyle DURUYOR, düzenleyici
+                       oradan okuyor. */ ?>
+                    <div class="cell-view rich-text-view"><?php echo bcc_rich_text_grid_html($displayText); ?></div>
                 <?php elseif ($f['field_type'] === 'rating'): ?>
                     <?php
                         // checkbox İLE AYNI desen: her zaman görünür/tıklanabilir gerçek
@@ -2525,6 +2550,35 @@ function bcc_sanitize_rich_text_node($node, $allowedTags)
     return '<' . $tag . '>' . $childrenHtml . '</' . $tag . '>';
 }
 
+// KAPALI grid hücresinde gösterilecek zengin metin HTML'i (Airtable paritesi:
+// hücre HER ZAMAN TEK SATIR, taşan kısım "..." ile kesilir).
+//
+// TEK İŞİ: <br> etiketlerini BOŞLUĞA indirmek. Neden CSS değil de burası —
+// tarayıcıda ölçüldü: white-space:nowrap bir <br>'yi DURDURMUYOR, satır atlatmayı
+// engelleyen tek yol `br { display: none }` (display:inline, display:inline-block
+// + width, content:"" hepsi denendi, üçü de atlatmaya devam etti). Ama
+// display:none olan bir öğe ::before/::after ÜRETEMEZ, yani ayırıcı boşluğu CSS
+// koyamaz: "Merhaba<br>Dünya" ekranda "MerhabaDünya" olurdu. Bu yüzden iş
+// bölüşümü şöyle: SATIR ATLAMAYI CSS engelliyor (style.css'teki br{display:none},
+// eski/atlanmış bir render yolu için de güvenlik ağı), AYIRICI BOŞLUĞU burası
+// koyuyor.
+//
+// ⚠️ YALNIZCA HÜCRE GÖRÜNÜMÜ (.cell-view) için. Düzenleyicinin okuduğu ham HTML
+// (td'nin data-value'su / cell_update.php'nin 'raw' alanı) bu fonksiyondan
+// GEÇMEZ — orada <br>'ler AYNEN durur, yoksa hücreyi açıp kaydeden kullanıcı
+// kendi satır sonlarını kaybederdi.
+//
+// /u modifikatörü BİLEREK YOK: geçersiz UTF-8 girdide preg_replace() null döner
+// ve içerik SESSİZCE SİLİNİRDİ (aynı tuzağa normalize_cell_value()'nun phone
+// dalında düşülmüştü) — burada zaten bayt düzeyinde bir etiket eşleşmesi yapılıyor,
+// yine de null dönüşü ham değere düşerek karşılanıyor.
+function bcc_rich_text_grid_html($html)
+{
+    $out = preg_replace('#<br\s*/?>#i', ' ', (string) $html);
+
+    return $out === null ? (string) $html : $out;
+}
+
 // Kullanıcıdan gelen ham değeri (POST'tan) fields.field_type'a göre doğrular ve
 // cell_values'a yazılacak kolon + normalize edilmiş değeri döndürür.
 // Dönüş: array('ok' => bool, 'error' => string|null, 'column' => string|null, 'value' => mixed)
@@ -2747,7 +2801,7 @@ function parse_grid_sort_rules($params, $fieldsById)
 {
     $rules = array();
 
-    for ($i = 1; $i <= 3; $i++) {
+    for ($i = 1; $i <= $GLOBALS['BCC_SORT_MAX_SLOTS']; $i++) {
         $fieldKey = 'sort_field_' . $i;
 
         if (empty($params[$fieldKey])) {
@@ -3008,7 +3062,7 @@ function bcc_grid_state_is_empty($params)
 {
     $keys = array('hidden_fields', 'visible_fields_submitted', 'row_height', 'wrap_headers', 'filter_logic');
 
-    for ($i = 1; $i <= 3; $i++) {
+    for ($i = 1; $i <= $GLOBALS['BCC_SORT_MAX_SLOTS']; $i++) {
         $keys[] = 'sort_field_' . $i;
         $keys[] = 'group_field_' . $i;
     }

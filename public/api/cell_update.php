@@ -86,6 +86,15 @@ $response = array(
     'raw' => cell_raw_value($field['field_type'], $cellRow),
 );
 
+// long_text (zengin metin): 'display' doğrudan .cell-view'ın innerHTML'i olarak
+// yazılıyor (grid.js applyCellResultToTd) — yani KAPALI hücre görünümü. İlk
+// render'la (bcc_render_grid_data_row) AYNI dönüşümden geçmeli, yoksa kaydettikten
+// hemen sonra hücre çok satırlı kalır, ancak F5'ten sonra tek satıra düşerdi.
+// 'raw' DOKUNULMADAN kalıyor: düzenleyici data-value'yu ondan alıyor.
+if ($field['field_type'] === 'long_text') {
+    $response['display'] = bcc_rich_text_grid_html($response['display']);
+}
+
 // Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
 // render edilir (bkz. bcc_render_grid_data_row) — bu anahtar VARSA (boş dizi
 // dahil), grid.js kaydettikten sonra .cell-view'ı chip olarak yeniden çizer;

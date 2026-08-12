@@ -9,6 +9,12 @@ if (is_logged_in()) {
 
 $error = null;
 
+// Doğrulanmamış bir hesap için etkinleştirme mailinin yeniden gönderilebilmesi
+// arasındaki en kısa süre (saniye). Çift tıklama / "geri"ye basıp tekrar
+// gönderme / iki sekme gibi durumlarda AYNI adrese ikinci bir mail çıkmasını
+// engeller; gerçekten maili kaçıran kullanıcı 2 dakika sonra tekrar deneyebilir.
+define('BCC_REGISTER_RESEND_COOLDOWN', 120);
+
 // Kayıt akışı artık şifreyi burada ALMAZ: kullanıcı Ad Soyad + E-posta girer,
 // e-postasına gelen tek kullanımlık bağlantıdan (/verify_email.php) kendi
 // şifresini oluşturur. Hesap o ana kadar is_active=0 kalır (giriş yapılamaz)
@@ -39,7 +45,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $token = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 saat
 
-        $existing = bcc_fetch_one('SELECT id, is_active FROM users WHERE email = :email LIMIT 1', array('email' => $email));
+        // Aynı adrese arka arkaya etkinleştirme maili atılmasını engelleyen
+        // bekleme süresi (saniye). Bir "yeniden gönder" isteğini tamamen
+        // yasaklamayacak kadar kısa, çift gönderimi/çift tıklamayı yakalayacak
+        // kadar uzun.
+        $skipVerificationMail = false;
+
+        // email_verify_expires_at: aşağıdaki mükerrer gönderim kapısı bunu
+        // okuyor (veriliş anını buradan türetiyor) — SELECT'e eklendi.
+        $existing = bcc_fetch_one(
+            'SELECT id, is_active, email_verify_expires_at FROM users WHERE email = :email LIMIT 1',
+            array('email' => $email)
+        );
 
         if ($existing && (int) $existing['is_active'] === 1) {
             // Zaten doğrulanmış/aktif bir hesap — normal "zaten kayıtlı" reddi.
@@ -50,10 +67,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // e-postayı tekrar gönderiyoruz. Sessizce aynı "kaydınız alındı"
             // akışına düşer, bir saldırgana "bu e-posta zaten var" bilgisini
             // aktif/pasif ayrımı dışında sızdırmaz.
-            bcc_execute(
-                'UPDATE users SET full_name = :full_name, email_verify_token = :token, email_verify_expires_at = :expires WHERE id = :id',
-                array('full_name' => $fullName, 'token' => $token, 'expires' => $expiresAt, 'id' => $existing['id'])
-            );
+            //
+            // MÜKERRER GÖNDERİM KAPISI (asıl koruma BURASI, istemci tarafı
+            // yalnızca UX): bu dal her POST'ta token'ı yenileyip YENİ bir mail
+            // atıyordu. Formu iki kez göndermek (çift tıklama, "geri" tuşuyla
+            // dönüp tekrar gönderme, iki sekme) alıcıya İKİ ayrı etkinleştirme
+            // maili demekti. Artık son token'ın üzerinden BCC_REGISTER_RESEND_COOLDOWN
+            // saniye geçmediyse yeni mail GÖNDERİLMEZ.
+            //
+            // Neden ayrı bir "gönderildi" kolonu YOK: token'ın veriliş anı
+            // email_verify_expires_at'ten türetilebiliyor (veriliş = son
+            // kullanma - 86400). Bu iş için DDL/migration eklemek gerekmedi —
+            // projedeki "kolon icat etmeden türet" kararıyla aynı çizgi.
+            // Karar saf bir fonksiyonda (src/mailer.php) — burada yalnızca
+            // sonucuna göre dallanıyoruz.
+            if (!bcc_should_send_verification_mail($existing['email_verify_expires_at'], BCC_REGISTER_RESEND_COOLDOWN)) {
+                // Yakın zamanda zaten gönderilmiş: token'a ve son kullanma
+                // tarihine DOKUNULMAZ (aksi hâlde kullanıcının elindeki
+                // linki geçersiz kılardık) ve mail tekrar atılmaz.
+                // Kullanıcı yine aynı başarı ekranını görür — "gönderildi mi,
+                // gönderilmedi mi" belirsizliği yaratmamak için.
+                $skipVerificationMail = true;
+                bcc_execute(
+                    'UPDATE users SET full_name = :full_name WHERE id = :id',
+                    array('full_name' => $fullName, 'id' => $existing['id'])
+                );
+            } else {
+                bcc_execute(
+                    'UPDATE users SET full_name = :full_name, email_verify_token = :token, email_verify_expires_at = :expires WHERE id = :id',
+                    array('full_name' => $fullName, 'token' => $token, 'expires' => $expiresAt, 'id' => $existing['id'])
+                );
+            }
         } else {
             $unusableHash = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
             bcc_execute(
@@ -85,31 +129,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
                 . bcc_mail_text_footer();
 
+            // $verifyLink'in kaçırılmış hâli ARTIK burada gerekmiyor: şablon
+            // hem butonda hem kopyalama kutusunda kendisi kaçırıyor.
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
-            $safeLink = htmlspecialchars($verifyLink, ENT_QUOTES, 'UTF-8');
 
             $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
                 . '<p style="margin: 0 0 14px;">BCC-Core hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
                 . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
 
-            // Buton çalışmazsa (bazı istemciler <a>'yı düz metne çevirir) diye
-            // altında ham bağlantı da duruyor — word-break, uzun token'ın
-            // kutuyu yatay taşırmaması için.
-            $noteHtml = '<p style="margin: 12px 0 0;">Buton çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>'
-                . '<a href="' . $safeLink . '" style="color: #2d7ff9; word-break: break-all;">' . $safeLink . '</a></p>'
-                . '<p style="margin: 12px 0 0;">Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>';
+            // Ham bağlantı ARTIK burada biçimlenmiyor: şablona $fallbackUrl
+            // olarak veriliyor ve kopyalanabilir kutu içinde basılıyor (bkz.
+            // bcc_mail_html_shell). Not satırında yalnızca uyarı kaldı.
+            $noteHtml = 'Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.';
 
             $bodyHtml = bcc_mail_html_shell(
                 'Hesabınızı etkinleştirin',
                 $introHtml,
                 'Hesabımı Etkinleştir',
                 $verifyLink,
-                $noteHtml
+                $noteHtml,
+                'Hesap Doğrulama',
+                $verifyLink
             );
 
             // Konu sade ve net: eski "BCC-Core — e-postanızı doğrulayın"daki
             // uzun tire ve ürün öneki spam filtrelerinde gereksiz gürültüydü.
-            bcc_send_mail($email, 'BCC-Core hesabınızı etkinleştirin', $bodyText, $bodyHtml);
+            //
+            // TEK ÇAĞRI, TEK GÖNDERİM: $skipVerificationMail yalnızca yukarıdaki
+            // "az önce zaten gönderildi" dalında true olur. Ardından gelen
+            // header()+exit (Post/Redirect/Get) tarayıcı yenilemesinin formu
+            // yeniden göndermesini de engelliyor — iki koruma birbirini
+            // tamamlıyor, birbirinin yerine geçmiyor.
+            if (!$skipVerificationMail) {
+                bcc_send_mail($email, 'BCC-Core hesabınızı etkinleştirin', $bodyText, $bodyHtml);
+            }
 
             header('Location: /login.php?registered=1');
             exit;
@@ -139,7 +192,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="login-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
 
-        <form method="post" action="/register.php">
+        <?php // data-once-submit: gönder düğmesini ilk tıklamada kilitler,
+              // yani ikinci bir POST hiç yola çıkmaz. Bu YALNIZCA UX katmanı —
+              // JS kapalıysa ya da istek elle tekrarlanırsa asıl korumayı
+              // sunucudaki BCC_REGISTER_RESEND_COOLDOWN kapısı sağlıyor. ?>
+        <form method="post" action="/register.php" data-once-submit>
             <?php echo csrf_field(); ?>
             <div class="login-field">
                 <label for="register-fullname">Ad Soyad</label>
@@ -162,5 +219,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+<?php // Çift gönderim kilidi: form bir kez gönderildikten sonra düğme devre
+      // dışı kalır ve ikinci submit iptal edilir. Sunucudaki bekleme kapısının
+      // YERİNE değil, ÖNÜNE konan bir katman — ikisi de gerekli (bkz.
+      // BCC_REGISTER_RESEND_COOLDOWN yorumu). ?>
+<script>
+(function () {
+    var form = document.querySelector('form[data-once-submit]');
+    if (!form) {
+        return;
+    }
+    var submitted = false;
+    form.addEventListener('submit', function (e) {
+        if (submitted) {
+            e.preventDefault();
+            return;
+        }
+        submitted = true;
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+            // disabled ATTRIBUTE'u submit'ten SONRA konmalı; hemen konursa
+            // tarayıcı düğmeyi göndermez (burada gövdeye dahil bir alan değil,
+            // yine de davranışı bir sonraki tura bırakmak en güvenlisi).
+            window.setTimeout(function () {
+                btn.disabled = true;
+                btn.textContent = 'Gönderiliyor...';
+            }, 0);
+        }
+    });
+})();
+</script>
 </body>
 </html>

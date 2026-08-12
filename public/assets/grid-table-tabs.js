@@ -22,33 +22,19 @@
         //      View-Form ile eklendi, aynı sebeple kapsam dışı kaldı.
         // name="gs-table-tab-menu" taşıyan HER <details> artık otomatik dahil;
         // ileride eklenecek bir menü bu listeye yazılmayı UNUTAMAZ.
-        var menus = document.querySelectorAll('details[name="gs-table-tab-menu"]');
-
-        if (!menus.length) {
-            return;
-        }
-
-        menus.forEach(function (menu) {
-            menu.addEventListener('toggle', function () {
-                if (!menu.open) {
-                    return;
-                }
-
-                menus.forEach(function (other) {
-                    if (other !== menu && other.open) {
-                        other.removeAttribute('open');
-                    }
-                });
-            });
-        });
-
-        document.addEventListener('click', function (e) {
-            menus.forEach(function (menu) {
-                if (menu.open && !menu.contains(e.target)) {
-                    menu.removeAttribute('open');
-                }
-            });
-        });
+        // KARŞILIKLI DIŞLAMA + DIŞARI-TIK + ESCAPE BURADAN KALDIRILDI.
+        //
+        // Aynı davranış artık assets/dismissable-panel.js'te GENEL olarak
+        // uygulanıyor ve sayfadaki HER <details>'i kayıt gerektirmeden
+        // kapsıyor. Buradaki sürüm yalnızca name="gs-table-tab-menu" grubunu
+        // tanıyordu ve bu dosya grid.php/kanban.php dışında yüklenmiyordu —
+        // ölçülen sonuç: interface.php'deki üç popover'ın (nav menüsü,
+        // "Paylaş", "Bağlantı") dışarı-tık ve Escape davranışı HİÇ YOKTU.
+        //
+        // Erken `if (!menus.length) return;` çıkışı da kalktı: bu dosyanın geri
+        // kalanı (tüm-tablolar araması, görünüm yeniden adlandırma, Ctrl+J)
+        // menü SAYISINA bağlı değildi, ama o guard menü yokken hepsini birden
+        // devre dışı bırakıyordu.
 
         // "All tables" paneli: açılınca odak arama kutusuna gider, yazdıkça
         // istemci tarafında anlık filtreler (sunucuya gitmeden — liste zaten
@@ -72,14 +58,9 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                menus.forEach(function (menu) {
-                    if (menu.open) {
-                        menu.removeAttribute('open');
-                    }
-                });
-                return;
-            }
+            // Escape dalı KALDIRILDI — menüleri artık ortak otomatik dismiss
+            // kapatıyor (assets/dismissable-panel.js). Bu dinleyici yalnızca
+            // Ctrl+J kısayolu için duruyor.
 
             // Ctrl+J (Windows/Linux) veya ⌘+J (Mac): "All tables" panelini aç/kapat.
             // Hücre düzenlerken (input/textarea/contenteditable odaktayken) tetiklenmemeli.

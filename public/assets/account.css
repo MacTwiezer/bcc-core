@@ -39,8 +39,15 @@
    .home-main'in tüm genişliğini dolduramıyordu. Ana ayarlar solda, özet
    widget'ları sağda. minmax(0,1fr) ŞART — auto yerleşimde uzun bir e-posta
    veya ekip adı sütunu şişirip sağ paneli ezerdi. */
+/* Genişlik UYGULAMA STANDARDINA çekildi: iki sütunlu diğer ayar sayfaları
+   (workspaces.css .wsx-page, form-edit.css .fe-page) 1240px kullanıyor.
+   Buradaki 1180px tek başına duran bir değerdi. .sp-page tabanı 1080px
+   (settings-page.css) — geniş yerleşim gerektiren sayfalar onu böyle ezer.
+   Kapsayıcı ORTALI: .home-main içinde `margin: 0 auto` ile. */
 .sp-page.ac-page {
-    max-width: 1180px;
+    max-width: 1240px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .sp-page .ac-grid {

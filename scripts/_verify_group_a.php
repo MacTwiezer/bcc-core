@@ -349,13 +349,23 @@ try {
             stripos($g, 'Undefined index') === false && stripos($g, 'Undefined variable') === false,
             'notice bulundu');
         check("I) '{$ft}' yon etiketi dogru ('{$expectedLabel}')",
-            strpos($g, '>' . $expectedLabel . '</option>') !== false, 'etiket bulunamadi');
+            // Panel yeniden tasarlandi: yon etiketi <select><option> icinde DEGIL,
+            // tek tiklik .group-dir-toggle baglantisindaki .group-dir-text
+            // <span>'inde. Kontrol edilen sey AYNI: alan TIPINE gore dogru etiket.
+            strpos($g, '<span class="group-dir-text">' . $expectedLabel . '</span>') !== false,
+            'etiket bulunamadi');
     }
 
     // Koruma katmani: dizide OLMAYAN bir tip artik notice uretmemeli.
-    check('I) grid.php okumasi isset() ile korundu (gelecekteki tipler icin)',
+    // Koruma grid.php'den src/schema.php'ye TASINDI: bcc_dir_labels()
+    // artik hem gruplama hem siralama panelinin tek giris noktasi ve
+    // isset() kontrolu ORADA. grid.php'de satir ici bir kopya KALMAMALI.
+    check('I) yon etiketi okumasi ortak bcc_dir_labels() ile korunuyor',
+        function_exists('bcc_dir_labels')
+        && bcc_dir_labels('boyle_bir_tip_yok') === array('asc' => 'artan', 'desc' => 'azalan'));
+    check('I) grid.php artik satir ici isset() kopyasi TASIMIYOR',
         strpos(file_get_contents(__DIR__ . '/../public/grid.php'),
-            "isset(\$GLOBALS['BCC_GROUP_DIR_LABELS'][\$activeRule['field_type']])") !== false);
+            "isset(\$GLOBALS['BCC_GROUP_DIR_LABELS']") === false);
     check('I) BCC_GROUP_DIR_LABELS artik attachment DISINDA tum tipleri kapsiyor',
         count(array_diff(array_keys($GLOBALS['BCC_FIELD_TYPES']), array_keys($GLOBALS['BCC_GROUP_DIR_LABELS']))) === 1,
         'eksik: ' . implode(',', array_diff(array_keys($GLOBALS['BCC_FIELD_TYPES']), array_keys($GLOBALS['BCC_GROUP_DIR_LABELS']))));

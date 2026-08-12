@@ -33,24 +33,37 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
 }
 
-/* Üst barın sol köşesindeki SABİT "Ana sayfa" düğmesi (eski `.home-logo img`
-   logosunun yerine). Ölçüler yanındaki .home-icon-btn (menü aç/kapat) ile
-   hizalı; hover davranışı da onunla AYNI — simge asla değişmez. */
+/* Üst barın sol köşesindeki "Ana sayfa" düğmesi — içinde marka logosu.
+   YÜKSEKLİK sabit (32px, yanındaki .home-icon-btn ile aynı dokunma hedefi),
+   GENİŞLİK auto: logo 94x44 yani ~2.14:1, kare bir kutuya sıkıştırılsaydı
+   ezilirdi. flex-shrink:0 — .home-topbar-left daralsa bile logo sıkışmaz. */
 .home-logo {
-    width: 32px;
     height: 32px;
+    width: auto;
+    padding: 0 0.3rem;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     border-radius: 6px;
-    color: var(--bcc-text-muted);
-    transition: background 0.12s ease, color 0.12s ease;
+    transition: background 0.12s ease;
+}
+
+/* Ölçü YALNIZCA yükseklikten sürülür; width:auto en-boy oranını korur, yani
+   logo hiçbir zaman gerilmez/ezilmez. 24px, 56px'lik çubukta üstte/altta
+   rahat pay bırakır ve komşu kontrolleri itmez: 32px düğme + 0.75rem boşluk
+   + ~51px logo = ~95px, .home-topbar-left'in 240px'inin çok altında.
+   display:block: satır içi görselin taban çizgisi altında bıraktığı boşluğu
+   kaldırır (kutu tam ortalanmış görünsün). */
+.home-logo img {
+    display: block;
+    height: 24px;
+    width: auto;
+    max-width: 100%;
 }
 
 .home-logo:hover {
     background: var(--bcc-surface-hover);
-    color: var(--bcc-text);
 }
 
 .home-logo:focus-visible {
@@ -1699,14 +1712,18 @@ a.ws-detail-btn:hover {
 
 /* ---------- Hesap Özeti sayfası ---------- */
 
-.account-card {
-    background: var(--bcc-surface);
-    border: 1px solid var(--bcc-border);
-    border-radius: 8px;
-    padding: 1.25rem;
-    max-width: 560px;
-    margin-bottom: 1.25rem;
-}
+/* .account-card KURALI BURADAN KALDIRILDI.
+ *
+ * Bulunan gerçek bug (ölçüldü): kural `max-width: 560px` taşıyordu — sayfa TEK
+ * DAR SÜTUNKEN doğruydu. account.php iki sütuna geçirilince ızgara sol parçaya
+ * 842px veriyor ama kartlar 560px'te takılı kalıyordu; aradaki 282px, sol
+ * içerikle sağ panel arasında "kocaman boşluk" olarak görünüyordu. Yani boşluğun
+ * kaynağı ızgara gap'i (18.4px) DEĞİL, bu eski genişlik sınırıydı.
+ *
+ * Kuralın geri kalanı (background/border/radius/padding/margin-bottom) zaten
+ * assets/account.css'te YENİDEN tanımlı ve o dosya daha sonra yükleniyor — yani
+ * bu blok max-width dışında hiçbir şey katmıyordu. .account-card'ı YALNIZCA
+ * account.php kullanıyor (denetlendi), bu yüzden silmek başka sayfayı etkilemez. */
 
 .account-card-profile {
     display: flex;
@@ -1941,8 +1958,14 @@ a.ws-detail-btn:hover {
    Settings/CRUD sayfaları (bases.php, base_tables.php, table_fields.php,
    slack_settings.php, admin/*) — ws-card/tm-table/account-btn ile AYNI
    tasarım dilini paylaşan, tek noktadan yönetilen ORTAK bileşen seti.
-   Bu sayfa ailesi kendi ws-*/tm-*/account-* önekini icat etmek yerine
+   Bu sayfa ailesi kendi "ws-" / "tm-" / "account-" önekini icat etmek yerine
    burayı kullanır — sekiz sayfa arasında ikinci bir kopya YOK.
+
+   ⚠️ Önekler bilerek TIRNAK İÇİNDE ve joker YILDIZSIZ yazıldı: burada bir
+   zamanlar "ws-*[/]tm-*" dizilimi vardı ve yıldız+eğik çizgi ikilisi yorumu
+   TAM ORADA kapatıyordu. Kalan iki satır ham metne dönüyor, ayrıştırıcı da
+   ardından gelen .settings-breadcrumb kuralını ATIYORDU (bu blok sekiz
+   sayfada kullanılıyor). Aynı tuzak interface.css'te iki kez daha vardı.
    ------------------------------------------------------------------- */
 
 .settings-breadcrumb {

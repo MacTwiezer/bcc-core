@@ -290,6 +290,15 @@
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
+/* Şifre alanlarında sağ dolgu, göz düğmesinin altına yazı girmesin diye
+   40px olmalı (12px sağ boşluk + 24px düğme + pay). home.css'teki
+   `.input-with-toggle input` kuralı bunu zaten veriyordu ama yukarıdaki
+   `.sp-page .account-input` (0,2,0) onu (0,1,1) özgüllükte geçiyor ve
+   account.css home.css'ten SONRA yükleniyor — dolgu 10.4px'e düşüp yazı
+   ikonun altına giriyordu. Bu kural yalnızca toggle'lı alanları hedefler,
+   diğer .account-input'ların dolgusuna dokunmaz. */
+.sp-page .input-with-toggle .account-input { padding-right: 40px; }
+
 .sp-page .account-input:focus {
     outline: none;
     border-color: var(--bcc-accent);

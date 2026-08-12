@@ -365,6 +365,24 @@ if ($openFilterFieldId !== 0) {
     }
 }
 
+// ---- Sıralama panelinde BASILACAK satırlar --------------------------------
+// Eskiden panel KOŞULSUZ 3 boş satır basıyordu. Artık yalnızca mevcut kurallar,
+// hiç yoksa TEK boş satır; gerisini "+ Sıralama ekle" ekliyor.
+//
+// SUNUCU SÖZLEŞMESİ DEĞİŞMEDİ: satırlar yine sort_field_N/sort_dir_N olarak
+// 1'den numaralanıyor ve parse_grid_sort_rules() boş slotları atlıyor.
+$sortPanelRows = array();
+foreach ($sortRules as $rule) {
+    $sortPanelRows[] = array(
+        'field_id' => (int) $rule['field_id'],
+        'field_type' => $fieldsById[$rule['field_id']]['field_type'],
+        'dir' => strtolower($rule['dir']),
+    );
+}
+if (empty($sortPanelRows)) {
+    $sortPanelRows[] = array('field_id' => 0, 'field_type' => null, 'dir' => 'asc');
+}
+
 // ---- Filtre panelinde BASILACAK satırlar ----------------------------------
 // Eskiden panel KOŞULSUZ 5 boş satır basıyordu: kullanıcı tek bir filtre için
 // dört ölü satıra bakıyordu. Artık yalnızca (a) mevcut kurallar, (b) sütun
@@ -420,6 +438,56 @@ foreach ($groupRules as $removeIdx => $ruleToRemove) {
         $newSlot++;
     }
     $groupRemoveLinks[$removeIdx] = http_build_query($groupFieldLinkBase + $remaining);
+}
+
+// Her seviye için "yönü çevir" linki (A→Z ↔ Z→A). "Bu seviyeyi kaldır" ile AYNI
+// desen: seviyeler olduğu gibi yeniden kurulur, yalnızca hedef seviyenin dir'i
+// tersine döner. Böylece yön değiştirmek bir <select> + "Uygula" değil, tek
+// tıklık bir bağlantı — JS gerekmiyor ve sunucu sözleşmesi (group_dir_N)
+// değişmiyor.
+$groupDirToggleLinks = array();
+foreach ($groupRules as $flipIdx => $ruleToFlip) {
+    $rebuilt = array();
+    $newSlot = 1;
+    foreach ($groupRules as $idx => $rule) {
+        $dir = strtolower($rule['dir']);
+        if ($idx === $flipIdx) {
+            $dir = ($dir === 'asc') ? 'desc' : 'asc';
+        }
+        $rebuilt['group_field_' . $newSlot] = $rule['field_id'];
+        $rebuilt['group_dir_' . $newSlot] = $dir;
+        $newSlot++;
+    }
+    $groupDirToggleLinks[$flipIdx] = http_build_query($groupFieldLinkBase + $rebuilt);
+}
+
+// Alan listesindeki her alan için "bunu (alt) grup olarak ekle" linki: mevcut
+// seviyeler korunur, alan SONA eklenir. Zaten gruplanmış alanlar ve 3 seviye
+// dolduğunda tüm alanlar link ALMAZ (listede aktif/pasif olarak gösterilirler) —
+// aksi hâlde aynı alan iki seviyede birden görünebilir ya da 4. seviye sessizce
+// yok sayılırdı.
+$groupedFieldIds = array();
+foreach ($groupRules as $rule) {
+    $groupedFieldIds[(int) $rule['field_id']] = (int) $rule['slot'];
+}
+$groupAddLinks = array();
+if (count($groupRules) < 3) {
+    foreach ($fields as $f) {
+        $fid = (int) $f['id'];
+        if ($f['field_type'] === 'attachment' || isset($groupedFieldIds[$fid])) {
+            continue;
+        }
+        $appended = array();
+        $newSlot = 1;
+        foreach ($groupRules as $rule) {
+            $appended['group_field_' . $newSlot] = $rule['field_id'];
+            $appended['group_dir_' . $newSlot] = strtolower($rule['dir']);
+            $newSlot++;
+        }
+        $appended['group_field_' . $newSlot] = $fid;
+        $appended['group_dir_' . $newSlot] = 'asc';
+        $groupAddLinks[$fid] = http_build_query($groupFieldLinkBase + $appended);
+    }
 }
 
 // Row height panelinin kendi linkleri (yükseklik seçenekleri + Wrap headers) için
@@ -1192,96 +1260,136 @@ $gridUser = current_user();
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="2" stroke="#5f6368" stroke-width="1.3"/><circle cx="14" cy="14" r="2" stroke="#5f6368" stroke-width="1.3"/><path d="M8 6h9M3 14h3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                     Grupla<?php echo !empty($groupRules) ? ' (' . count($groupRules) . ')' : ''; ?>
                 </summary>
-                <?php if (empty($groupRules)): ?>
-                    <div class="group-form" id="group-form-empty">
-                        <input type="text" class="hide-fields-search" placeholder="Alan ara" data-group-search>
-                        <div class="group-field-list">
-                            <?php foreach ($fields as $f):
+                <?php // TEK PANEL (eskiden İKİ ayrı görünüm vardı: gruplama yokken
+                      // bir alan listesi, varken <select>'li bir form). İkisi
+                      // birleştirildi: üstte aktif seviyeler, altta her zaman
+                      // görünen aranabilir alan listesi.
+                      //
+                      // SUNUCU SÖZLEŞMESİ DEĞİŞMEDİ: hâlâ group_field_N/group_dir_N
+                      // (N = 1..3). Fark, bunları bir <form> yerine ÖNCEDEN kurulmuş
+                      // BAĞLANTILARIN taşıması — seviye ekleme, yön çevirme ve
+                      // kaldırma tek tık, "Uygula" gerekmiyor. Bu aynı zamanda
+                      // JS'siz de tam çalışan bir panel demek. ?>
+                <div class="group-form group-panel-box">
+
+                    <?php if (empty($groupRules)): ?>
+                        <?php // İSTEK 4 — boş durum rehberi. Yalnızca gruplama YOKKEN. ?>
+                        <p class="group-hint">Kayıtları gruplamak için bir alan seçin.</p>
+                    <?php else: ?>
+                        <div class="group-active">
+                            <div class="group-active-head">
+                                <span class="group-active-title">Gruplama</span>
+                                <span class="sp-count group-active-count"><?php echo count($groupRules); ?></span>
+                            </div>
+
+                            <?php foreach ($groupRules as $idx => $rule):
+                                $rf = $fieldsById[$rule['field_id']];
+                                $dir = strtolower($rule['dir']);
+                                // Yön etiketi alan TİPİNE göre ("A → Z" / "1 → 9" /
+                                // "Erken → Geç"...). isset() koruması artık BURADA
+                                // DEĞİL, ortak bcc_dir_labels()'ta (src/schema.php) —
+                                // sıralama paneli de aynı etiketleri kullandığı için
+                                // kontrolün ikinci bir kopyası gerekmesin.
+                                $dirLabels = bcc_dir_labels($rule['field_type']);
+                            ?>
+                                <div class="group-active-row">
+                                    <span class="group-level-badge"><?php echo (int) $rule['slot']; ?></span>
+
+                                    <?php // İSTEK 1 — aktif alan accent zeminli rozet olarak. ?>
+                                    <span class="group-active-field">
+                                        <span class="field-badge field-badge--<?php echo htmlspecialchars($rf['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$rf['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                        <span class="group-active-name"><?php echo htmlspecialchars($rf['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </span>
+
+                                    <?php // İSTEK 2 — satır içi yön düğmesi. <select> DEĞİL:
+                                          // iki durumu olan bir ayarda açılır liste fazladan
+                                          // bir tık istiyordu. Bağlantı, yönü çevrilmiş tam
+                                          // durumu taşıyor. ?>
+                                    <a
+                                        class="group-dir-toggle"
+                                        href="/grid.php?<?php echo htmlspecialchars($groupDirToggleLinks[$idx], ENT_QUOTES, 'UTF-8'); ?>"
+                                        title="Yönü çevir"
+                                        aria-label="<?php echo htmlspecialchars($rf['name'] . ' — yönü çevir', ENT_QUOTES, 'UTF-8'); ?>"
+                                    >
+                                        <span class="group-dir-text"><?php echo htmlspecialchars($dirLabels[$dir], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <svg width="11" height="11" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 4v12m0 0l-2.5-2.5M6 16l2.5-2.5M14 16V4m0 0l-2.5 2.5M14 4l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </a>
+
+                                    <a class="group-remove-btn" href="/grid.php?<?php echo htmlspecialchars($groupRemoveLinks[$idx], ENT_QUOTES, 'UTF-8'); ?>" title="Bu seviyeyi kaldır" aria-label="<?php echo htmlspecialchars($rf['name'] . ' — bu seviyeyi kaldır', ENT_QUOTES, 'UTF-8'); ?>">
+                                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6M8.5 9v5M11.5 9v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+
+                            <?php // Grid'deki grup başlıklarını topluca aç/kapa — panelin
+                                  // kendi durumuna değil, tabloya etki eder (grid-group.js). ?>
+                            <div class="group-collapse-row">
+                                <button type="button" class="group-mini-btn" data-group-collapse-all>Tümünü daralt</button>
+                                <button type="button" class="group-mini-btn" data-group-expand-all>Tümünü genişlet</button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php // İSTEK 3 — arama + alan listesi. Artık HER İKİ durumda da
+                          // görünür (eskiden yalnızca gruplama yokken vardı; gruplama
+                          // varken alan eklemek için <select> açmak gerekiyordu). ?>
+                    <div class="group-pick">
+                        <div class="group-search-wrap">
+                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                            <input type="text" class="group-search" placeholder="Alan ara" aria-label="Alan ara" autocomplete="off" data-group-search>
+                        </div>
+
+                        <div class="group-field-list" data-group-field-list>
+                            <?php
+                            $groupAtMax = count($groupRules) >= 3;
+                            foreach ($fields as $f):
                                 if ($f['field_type'] === 'attachment') {
                                     continue; // dosya eki alanlarına göre gruplanamaz (cell_values karşılığı yok)
                                 }
+                                $fid = (int) $f['id'];
+                                $activeSlot = isset($groupedFieldIds[$fid]) ? $groupedFieldIds[$fid] : null;
+                                $addLink = isset($groupAddLinks[$fid]) ? $groupAddLinks[$fid] : null;
                             ?>
-                                <a
-                                    class="group-field-option"
-                                    href="/grid.php?<?php echo htmlspecialchars(http_build_query($groupFieldLinkBase + array('group_field_1' => $f['id'], 'group_dir_1' => 'asc')), ENT_QUOTES, 'UTF-8'); ?>"
-                                >
-                                    <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
-                                    <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
-                                </a>
+                                <?php if ($activeSlot !== null): ?>
+                                    <?php // Zaten gruplanmış: listede AKTİF görünür ama tekrar
+                                          // eklenemez (aynı alan iki seviyede olamaz). ?>
+                                    <span class="group-field-option is-active" data-group-field-name="<?php echo htmlspecialchars(mb_strtolower($f['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>" title="Bu alan zaten <?php echo (int) $activeSlot; ?>. seviyede gruplu">
+                                        <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                        <span class="group-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="group-field-flag"><?php echo (int) $activeSlot; ?>. seviye</span>
+                                    </span>
+                                <?php elseif ($addLink !== null): ?>
+                                    <a class="group-field-option" href="/grid.php?<?php echo htmlspecialchars($addLink, ENT_QUOTES, 'UTF-8'); ?>" data-group-field-name="<?php echo htmlspecialchars(mb_strtolower($f['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>">
+                                        <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                        <span class="group-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </a>
+                                <?php else: ?>
+                                    <?php // 3 seviye dolu: eklenemez, ama liste eksik görünmesin. ?>
+                                    <span class="group-field-option is-disabled" data-group-field-name="<?php echo htmlspecialchars(mb_strtolower($f['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>" title="En fazla 3 seviye gruplanabilir">
+                                        <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                        <span class="group-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </span>
+                                <?php endif; ?>
                             <?php endforeach; ?>
+                            <p class="group-empty" data-group-empty hidden>Eşleşen alan yok.</p>
                         </div>
-                    </div>
-                <?php else: ?>
-                    <form method="get" action="/grid.php" class="group-form" id="group-form">
-                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                        <?php bcc_render_grid_state_hidden_inputs($sortState + $filterState + $hiddenFieldsState + $rowHeightState + $wrapHeadersState); ?>
-                        <div class="group-panel-header">
-                            <button type="button" class="btn-sm" data-group-collapse-all>Tümünü daralt</button>
-                            <button type="button" class="btn-sm" data-group-expand-all>Tümünü genişlet</button>
-                        </div>
-                        <div class="group-level-rows" id="group-level-rows">
-                            <?php for ($slot = 1; $slot <= 3; $slot++):
-                                $activeIdx = null;
-                                $activeRule = null;
-                                foreach ($groupRules as $idx => $rule) {
-                                    if ($rule['slot'] === $slot) {
-                                        $activeIdx = $idx;
-                                        $activeRule = $rule;
-                                        break;
-                                    }
-                                }
-                                $isActive = ($activeRule !== null);
-                                $currentFieldId = $isActive ? $activeRule['field_id'] : 0;
-                                $currentDir = $isActive ? strtolower($activeRule['dir']) : 'asc';
-                                // Bulunan gerçek bug (Grup A turunda yakalandı): bu erişim
-                                // KORUMASIZDI ve BCC_GROUP_DIR_LABELS Grup B1/B2/C1/C2 ile
-                                // eklenen sekiz tipin HİÇBİRİNİ içermiyordu — gruplama paneli
-                                // yalnızca 'attachment'ı elediği için (aşağıdaki döngü) o
-                                // tiplerden birine göre gruplamak "Undefined index" notice'ı
-                                // ve BOŞ yön etiketleri üretiyordu. Eksik girişler
-                                // src/schema.php'de tamamlandı; buradaki isset() ise gelecekte
-                                // eklenecek bir tip diziye yazılmayı unutursa aynı hatanın
-                                // TEKRARLAMAMASI için — zaten var olan genel varsayılana düşer.
-                                if ($isActive && isset($GLOBALS['BCC_GROUP_DIR_LABELS'][$activeRule['field_type']])) {
-                                    $slotDirLabels = $GLOBALS['BCC_GROUP_DIR_LABELS'][$activeRule['field_type']];
-                                } else {
-                                    $slotDirLabels = array('asc' => 'artan', 'desc' => 'azalan');
-                                }
-                            ?>
-                                <div class="group-level-row" data-level="<?php echo $slot; ?>" <?php echo (!$isActive && $slot > 1) ? 'hidden' : ''; ?>>
-                                    <select name="group_field_<?php echo $slot; ?>">
-                                        <option value="">— seç —</option>
-                                        <?php foreach ($fields as $f):
-                                            if ($f['field_type'] === 'attachment') {
-                                                continue;
-                                            }
-                                        ?>
-                                            <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <select name="group_dir_<?php echo $slot; ?>">
-                                        <option value="asc" <?php echo $currentDir === 'asc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($slotDirLabels['asc'], ENT_QUOTES, 'UTF-8'); ?></option>
-                                        <option value="desc" <?php echo $currentDir === 'desc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($slotDirLabels['desc'], ENT_QUOTES, 'UTF-8'); ?></option>
-                                    </select>
-                                    <?php if ($isActive): ?>
-                                        <a class="group-remove-btn" href="/grid.php?<?php echo htmlspecialchars($groupRemoveLinks[$activeIdx], ENT_QUOTES, 'UTF-8'); ?>" title="Bu seviyeyi kaldır" aria-label="Bu seviyeyi kaldır">
-                                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endfor; ?>
-                        </div>
-                        <?php if (count($groupRules) < 3): ?>
-                            <button type="button" class="link-btn" id="group-add-subgroup">+ Alt grup ekle</button>
+
+                        <?php if ($groupAtMax): ?>
+                            <p class="group-max-note">En fazla 3 seviye gruplanabilir.</p>
                         <?php endif; ?>
-                        <div class="hide-fields-actions">
-                            <button type="submit" class="btn-sm" data-group-apply>Uygula</button>
-                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($clearGroupQueryString, ENT_QUOTES, 'UTF-8'); ?>">Temizle</a>
-                        </div>
-                    </form>
-                <?php endif; ?>
+                    </div>
+
+                    <?php // İSTEK 1 — tek tıkla tüm gruplamayı kaldır. Gruplama yokken
+                          // de basılır ama devre dışı: alt satır seçime göre zıplamasın
+                          // ("Alanları gizle"/"Filtrele" panellerindeki AYNI karar). ?>
+                    <div class="group-actions">
+                        <?php if (!empty($groupRules)): ?>
+                            <a class="group-clear-btn" href="/grid.php?<?php echo htmlspecialchars($clearGroupQueryString, ENT_QUOTES, 'UTF-8'); ?>">Gruplamayı kaldır</a>
+                        <?php else: ?>
+                            <span class="group-clear-btn is-disabled" aria-disabled="true">Gruplamayı kaldır</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </details>
             <?php endif; ?>
 
@@ -1291,43 +1399,81 @@ $gridUser = current_user();
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4 5h9M4 10h6M4 15h3" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round"/><path d="M15 4v11m0 0l-2.5-2.5M15 15l2.5-2.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Sırala<?php echo !empty($sortRules) ? ' (' . count($sortRules) . ')' : ''; ?>
                 </summary>
-                <form method="get" action="/grid.php" class="sort-form">
+                <form method="get" action="/grid.php" class="sort-form" data-sort-form>
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                     <?php bcc_render_grid_state_hidden_inputs($hiddenFieldsState + $groupState + $rowHeightState + $wrapHeadersState); ?>
-                    <?php for ($slot = 1; $slot <= 3; $slot++):
-                        $currentFieldId = 0;
-                        $currentDir = 'asc';
-                        foreach ($sortRules as $rule) {
-                            if ($rule['slot'] === $slot) {
-                                $currentFieldId = $rule['field_id'];
-                                $currentDir = strtolower($rule['dir']);
-                                break;
-                            }
-                        }
-                    ?>
-                        <div class="sort-row">
-                            <select name="sort_field_<?php echo $slot; ?>">
-                                <option value="">— yok —</option>
-                                <?php foreach ($fields as $f):
-                                    if ($f['field_type'] === 'attachment') {
-                                        continue; // dosya eki alanlarına göre sıralanamaz (cell_values karşılığı yok)
-                                    }
-                                ?>
-                                    <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <select name="sort_dir_<?php echo $slot; ?>">
-                                <option value="asc" <?php echo $currentDir === 'asc' ? 'selected' : ''; ?>>artan</option>
-                                <option value="desc" <?php echo $currentDir === 'desc' ? 'selected' : ''; ?>>azalan</option>
-                            </select>
-                        </div>
-                    <?php endfor; ?>
+
+                    <div class="sort-rows" data-sort-rows>
+                        <?php foreach ($sortPanelRows as $i => $row):
+                            $slot = $i + 1;
+                            $currentFieldId = (int) $row['field_id'];
+                            $currentType = $row['field_type'];
+                            $currentDir = $row['dir'];
+                            // Yön etiketleri alan TİPİNE göre; ortak yardımcıdan
+                            // (gruplama paneliyle AYNI kaynak, isset() koruması orada).
+                            // Alan henüz seçilmemişse jenerik varsayılan gelir ve
+                            // grid-sort.js alan seçilince etiketleri tazeler.
+                            $dirLabels = bcc_dir_labels($currentType);
+                        ?>
+                            <div class="sort-row" data-sort-row data-slot="<?php echo $slot; ?>">
+                                <?php // Sıra numarası: çok seviyeli sıralamada önceliği
+                                      // gösterir (1. kurala göre sırala, eşitlerde 2. ...). ?>
+                                <span class="sort-level-badge"><?php echo $slot; ?></span>
+
+                                <?php // Alan tipi ikonu: native <option> içine markup
+                                      // konulamadığı için (HTML sınırı) rozet select'in
+                                      // YANINDA ve SEÇİLİ alanın tipini gösteriyor.
+                                      // Ortak .field-badge bileşeni (theme.css). ?>
+                                <span class="field-badge sort-field-badge <?php echo $currentType ? 'field-badge--' . htmlspecialchars($currentType, ENT_QUOTES, 'UTF-8') : 'is-empty'; ?>" data-sort-field-badge aria-hidden="true"></span>
+
+                                <select name="sort_field_<?php echo $slot; ?>" class="sort-field-select" aria-label="Sıralama alanı">
+                                    <option value="">— alan seçin —</option>
+                                    <?php foreach ($fields as $f):
+                                        if ($f['field_type'] === 'attachment') {
+                                            continue; // dosya eki alanlarına göre sıralanamaz (cell_values karşılığı yok)
+                                        }
+                                    ?>
+                                        <option value="<?php echo (int) $f['id']; ?>" <?php echo $currentFieldId === (int) $f['id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+
+                                <?php // YÖN: iki seçenekli <select> olarak KALIYOR (buton
+                                      // değil). Gerekçe: bu satırlar henüz UYGULANMAMIŞ bir
+                                      // formun parçası, yani yön değerinin form gönderimine
+                                      // katılması gerekiyor; JS'siz çalışan tek yol bu.
+                                      // Bildirilen asıl kusur metnin KIRPILMASIYDI — kutu
+                                      // artık min-width ile ölçülendi ve etiketler alan
+                                      // tipine göre ("A → Z" / "1 → 9" / "Erken → Geç").
+                                      // (Gruplama panelindeki yön DÜĞMESİ farklı: orada kural
+                                      // zaten uygulanmış durumda, o yüzden tek tıklık link.) ?>
+                                <select name="sort_dir_<?php echo $slot; ?>" class="sort-dir-select" data-sort-dir aria-label="Sıralama yönü">
+                                    <option value="asc" <?php echo $currentDir === 'asc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($dirLabels['asc'], ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <option value="desc" <?php echo $currentDir === 'desc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($dirLabels['desc'], ENT_QUOTES, 'UTF-8'); ?></option>
+                                </select>
+
+                                <button type="button" class="sort-row-remove" data-sort-remove aria-label="Bu sıralama kuralını sil" title="Kuralı sil">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6M8.5 9v5M11.5 9v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="sort-add-row">
+                        <button type="button" class="sort-add-btn" data-sort-add>
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                            Sıralama ekle
+                        </button>
+                        <span class="sort-slot-note" data-sort-slot-note hidden>En fazla <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?> kural eklenebilir.</span>
+                    </div>
+
                     <div class="sort-actions">
-                        <button type="submit" class="btn-sm">Uygula</button>
+                        <button type="submit" class="sort-btn sort-btn--primary">Uygula</button>
                         <?php if (!empty($sortRules)): ?>
-                            <a class="btn-sm" href="/grid.php?<?php echo htmlspecialchars($clearSortQueryString, ENT_QUOTES, 'UTF-8'); ?>">Temizle</a>
+                            <a class="sort-btn" href="/grid.php?<?php echo htmlspecialchars($clearSortQueryString, ENT_QUOTES, 'UTF-8'); ?>">Sıralamayı temizle</a>
+                        <?php else: ?>
+                            <span class="sort-btn is-disabled" aria-disabled="true">Sıralamayı temizle</span>
                         <?php endif; ?>
                     </div>
                 </form>
@@ -1667,6 +1813,11 @@ $gridUser = current_user();
           // İstemcide ikinci bir sabit YOK (parse_grid_filter_rules aynı değeri
           // okuyor, bkz. src/schema.php BCC_FILTER_MAX_SLOTS). ?>
     var BCC_FILTER_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>;
+    <?php // Sıralama paneli: azami kural sayısı + alan tipine göre yön etiketleri.
+          // İkisi de SUNUCUDAN — istemcide ikinci bir sabit/etiket tablosu YOK
+          // (bcc_dir_labels() ile aynı diziyi okuyor, bkz. src/schema.php). ?>
+    var BCC_SORT_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>;
+    var BCC_DIR_LABELS = <?php echo json_encode($GLOBALS['BCC_GROUP_DIR_LABELS'], JSON_UNESCAPED_UNICODE); ?>;
     // 'user' alanı filtre değeri: takım üyeleri (KVKK — yalnızca bu takım), hücre
     // editöründeki data-options ile AYNI [{"id":..,"name":..}] şekli.
     var BCC_TEAM_MEMBERS = <?php echo json_encode(bcc_user_choices_from_map($usersById), JSON_UNESCAPED_UNICODE); ?>;
@@ -1698,6 +1849,7 @@ $gridUser = current_user();
 </script>
 <script src="<?php echo bcc_asset_url('grid-toolbar.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-filter.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-sort.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-hide-fields.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-group.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>

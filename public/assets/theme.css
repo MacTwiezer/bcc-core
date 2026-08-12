@@ -16,6 +16,14 @@
     --bcc-accent: #2d7ff9;
     --bcc-accent-strong: #1a56db;
     --bcc-accent-soft: #e8f0fe;
+    /* Zengin metnin İÇİNDEKİ <a> — accent'ten AYRI bir token, çünkü accent
+       "etkileşimli UI kroması" (seçili sekme, odak kenarlığı, birincil buton),
+       bu ise "tıklanabilir köprü metni". Aynı değişkeni paylaşsalardı, birinin
+       tonunu değiştirmek diğerini de bozardı. success/warning ikilileriyle AYNI
+       desende EKLENDİ: mevcut hiçbir token değiştirilmedi. Koyu temada #1d4ed8
+       koyu zeminde okunmaz olurdu, bu yüzden orada açık tona çevrilir. */
+    --bcc-link: #1d4ed8;
+    --bcc-link-hover: #1e40af;
     --bcc-danger: #c62828;
     --bcc-danger-soft: #fdecea;
     /* Durum yesili — "aktif/etkin" gostergeleri icin (ilk tuketici:
@@ -60,6 +68,8 @@
     --bcc-accent: #4c94fb;
     --bcc-accent-strong: #6ea3ff;
     --bcc-accent-soft: #1c2b4d;
+    --bcc-link: #7ea9ff;
+    --bcc-link-hover: #a3c2ff;
     --bcc-danger: #e57373;
     --bcc-danger-soft: #3a1f1f;
     --bcc-success: #6cc17e;
@@ -84,6 +94,8 @@
         --bcc-accent: #4c94fb;
         --bcc-accent-strong: #6ea3ff;
         --bcc-accent-soft: #1c2b4d;
+        --bcc-link: #7ea9ff;
+        --bcc-link-hover: #a3c2ff;
         --bcc-danger: #e57373;
         --bcc-danger-soft: #3a1f1f;
     --bcc-success: #6cc17e;

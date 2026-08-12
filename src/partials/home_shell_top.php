@@ -23,6 +23,16 @@ if (!isset($homeActiveNav)) {
 if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {
     $homeExtraCss = array();
 }
+// Bulunan gerçek bug: $starredBases, yukarıdaki ikisinin AKSİNE varsayılana
+// düşmüyordu — ayarlamayı unutan bir sayfada aşağıdaki foreach tanımsız
+// değişkenle çalışıyor, sol paneldeki "Yıldızlılar" listesi SESSİZCE boş
+// kalıyordu (display_errors kapalı olduğu için ekranda hiçbir uyarı yok).
+// form_edit.php'de tam olarak bu oldu. Varsayılan, listeyi doldurmaz —
+// yalnızca kabuğu bir sonraki unutkan sayfada da tutarlı kılar; sayfanın
+// KENDİSİ listeyi doldurmakla yükümlü (bkz. table_fields.php).
+if (!isset($starredBases) || !is_array($starredBases)) {
+    $starredBases = array();
+}
 ?>
 <!doctype html>
 <html lang="tr">
@@ -60,17 +70,23 @@ if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 5h16M2 10h16M2 15h16" stroke="#5f6368" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
         <?php
-        // Üst barın sol köşesi: SABİT "Ana sayfa" düğmesi (eski bcc logosunun
-        // yerine). grid.php'nin sol şeridindeki .gs-rail-home ile AYNI simge ve
-        // AYNI davranış — uygulamanın her yerinde sol üst köşe aynı şeyi yapar.
-        // Marka logosu KALDIRILMADI, yalnızca gezinme rolünden çıkarıldı:
-        // login/register/verify_email sayfalarında kimlik olarak duruyor.
+        // Üst barın sol köşesi: marka logosu, "Ana sayfa" düğmesi olarak.
+        // Bir dönem burada Lucide "house" simgesi vardı; logo geri alındı —
+        // login/register/verify_email'de kimlik olarak zaten duran AYNI dosya
+        // (assets/logo.png), ikinci bir varlık eklenmedi.
+        //
+        // bcc_asset_url(): dosya değişince ?v=filemtime ile önbellek kırılır —
+        // diğer varlıklarla AYNI yol. (login.php/register.php/verify_email.php
+        // bu logoyu hâlâ düz "/assets/logo.png" ile basıyor; oraya
+        // dokunulmadı, bu işin kapsamı üst gezinme çubuğu.)
+        //
+        // alt="": <a> zaten aria-label="Ana sayfa" taşıyor. Görsele ayrıca
+        // alt metni verilseydi ekran okuyucu bağlantıyı İKİ KEZ okurdu.
+        // width/height öznitelikleri (logonun doğal 94x44'ü) yükleme sırasında
+        // yer kaymasını (CLS) önler; görünen ölçü CSS'ten gelir.
         ?>
         <a href="/dashboard.php" class="home-logo" title="Ana sayfa" aria-label="Ana sayfa">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
-                <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            </svg>
+            <img src="<?php echo bcc_asset_url('logo.png'); ?>" width="94" height="44" alt="">
         </a>
     </div>
 

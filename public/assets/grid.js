@@ -632,21 +632,209 @@
             + '</svg>';
 
         var linkBtn = makeToolbarButton(linkIconSvg, 'Link ekle', function () {
-            var url = window.prompt('Link URL:', 'https://');
-            if (!url) {
-                return;
+            // Açıksa ikinci tıklama kapatır (araç çubuğu düğmelerinin geri kalanı
+            // gibi "aç/kapa" davranışı).
+            if (linkBar.hidden) {
+                openLinkBar();
+            } else {
+                cancelLinkBar();
             }
-            if (!/^https?:\/\//i.test(url)) {
-                window.alert('Link https:// veya http:// ile başlamalı.');
-                return;
-            }
-            editable.focus();
-            document.execCommand('createLink', false, url);
         }, true);
 
         toolbar.appendChild(boldBtn);
         toolbar.appendChild(italicBtn);
         toolbar.appendChild(linkBtn);
+
+        // ---- Satır içi link çubuğu (araç çubuğunun HEMEN ALTINDA) ----
+        // window.prompt() KULLANILMAZ: native prompt sayfayı bloklar, uygulamanın
+        // temasına/diline uymaz ve —asıl sorun— contenteditable'ın seçimini
+        // tarayıcıya göre değişen biçimde bozar. Hata mesajı da window.alert
+        // değil, çubuğun İÇİNDE (aşağıdaki linkError).
+        var linkBar = document.createElement('div');
+        linkBar.className = 'richtext-link-bar';
+        linkBar.hidden = true;
+
+        var linkRow = document.createElement('div');
+        linkRow.className = 'richtext-link-row';
+
+        var linkInput = document.createElement('input');
+        linkInput.type = 'url';
+        linkInput.className = 'richtext-link-input';
+        linkInput.placeholder = 'https://';
+        linkInput.setAttribute('aria-label', 'Link URL');
+
+        var linkAddBtn = document.createElement('button');
+        linkAddBtn.type = 'button';
+        // Kaydet/İptal ikilisiyle AYNI birincil buton sınıfı (grid-shell.css).
+        linkAddBtn.className = 'gs-btn-primary richtext-link-add';
+        linkAddBtn.textContent = 'Ekle';
+
+        var linkCancelBtn = document.createElement('button');
+        linkCancelBtn.type = 'button';
+        linkCancelBtn.className = 'richtext-link-cancel';
+        linkCancelBtn.textContent = '×';
+        linkCancelBtn.title = 'İptal';
+        linkCancelBtn.setAttribute('aria-label', 'İptal');
+
+        var linkError = document.createElement('p');
+        linkError.className = 'richtext-link-error';
+        linkError.hidden = true;
+
+        linkRow.appendChild(linkInput);
+        linkRow.appendChild(linkAddBtn);
+        linkRow.appendChild(linkCancelBtn);
+        linkBar.appendChild(linkRow);
+        linkBar.appendChild(linkError);
+
+        // Seçim URL girişine odaklanınca KAYBOLUR (contenteditable'ın seçimi
+        // yalnızca kendisi odaktayken korunur) — bu yüzden çubuk AÇILIRKEN Range
+        // saklanır ve ekleme anında geri yüklenir. prompt() döneminde bu gerekli
+        // değildi çünkü prompt odağı DOM'dan hiç almıyordu.
+        var savedRange = null;
+        var editingAnchor = null; // imleç mevcut bir <a>'nın içindeyse: href güncellenir
+
+        function editableSelectionRange() {
+            var sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) {
+                return null;
+            }
+            var range = sel.getRangeAt(0);
+
+            // Node.contains kendisini de kapsar (seçim doğrudan editable'daysa).
+            return editable.contains(range.commonAncestorContainer) ? range : null;
+        }
+
+        function selectRange(range) {
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function anchorAtRange(range) {
+            var node = range ? range.commonAncestorContainer : null;
+            if (node && node.nodeType === 3) {
+                node = node.parentNode;
+            }
+            var anchor = (node && node.closest) ? node.closest('a') : null;
+
+            return (anchor && editable.contains(anchor)) ? anchor : null;
+        }
+
+        function openLinkBar() {
+            savedRange = editableSelectionRange();
+            editingAnchor = anchorAtRange(savedRange);
+            linkError.hidden = true;
+            // Mevcut bir linkin üzerindeyken URL'si doldurulur ve buton "Kaydet"
+            // olur (düzenleme), aksi hâlde boş giriş + "Ekle".
+            linkInput.value = editingAnchor ? editingAnchor.getAttribute('href') : '';
+            linkAddBtn.textContent = editingAnchor ? 'Kaydet' : 'Ekle';
+            linkBar.hidden = false;
+            // Popover büyüdü: aşağı sığmıyorsa yeniden konumlanmalı.
+            positionPopover();
+            linkInput.focus();
+            linkInput.select();
+        }
+
+        // Çubuğu kapatır ve odağı editöre geri verir. Seçimi GERİ YÜKLEMEZ —
+        // ekleme sonrası imleç zaten yeni linkin arkasındadır; iptalde geri
+        // yükleme cancelLinkBar()'ın işi.
+        function closeLinkBar() {
+            linkBar.hidden = true;
+            linkError.hidden = true;
+            linkInput.value = '';
+            editingAnchor = null;
+            savedRange = null;
+            positionPopover();
+            editable.focus();
+        }
+
+        function cancelLinkBar() {
+            var range = savedRange;
+            closeLinkBar();
+            if (range) {
+                selectRange(range); // kullanıcının vurgusu kaybolmasın
+            }
+        }
+
+        function applyLink() {
+            var url = linkInput.value.trim();
+
+            if (!/^https?:\/\//i.test(url)) {
+                // Sunucudaki whitelist (bcc_build_safe_link) ile AYNI kural —
+                // burada yalnızca kullanıcıya erken/anlaşılır geri bildirim için.
+                linkError.textContent = 'Link https:// veya http:// ile başlamalı.';
+                linkError.hidden = false;
+                linkInput.focus();
+                return;
+            }
+
+            if (editingAnchor) {
+                editingAnchor.setAttribute('href', url);
+                closeLinkBar();
+                return;
+            }
+
+            editable.focus();
+            if (savedRange) {
+                selectRange(savedRange);
+            }
+
+            var sel = window.getSelection();
+            if (!editableSelectionRange()) {
+                // Seçim bir şekilde editable dışında kaldı: imleci sona al —
+                // link ASLA editörün dışına yazılmaz.
+                var endRange = document.createRange();
+                endRange.selectNodeContents(editable);
+                endRange.collapse(false);
+                selectRange(endRange);
+            }
+
+            if (sel.isCollapsed) {
+                // Seçili metin YOK: URL'nin kendisi link metni olur (Notion/
+                // Google Docs davranışı). execCommand('createLink') boş seçimde
+                // hiçbir şey yapmazdı, bu yüzden <a> elle kurulur.
+                var anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.textContent = url;
+                sel.getRangeAt(0).insertNode(anchor);
+
+                // İmleç linkin ARKASINA alınır — yazmaya devam eden kullanıcı
+                // metni linkin İÇİNE eklemesin.
+                var afterRange = document.createRange();
+                afterRange.setStartAfter(anchor);
+                afterRange.collapse(true);
+                selectRange(afterRange);
+            } else {
+                // Seçili metni <a> ile SARAR. DOM'u elle kurmak yerine
+                // execCommand: tarayıcının geri-al (undo) yığını korunur.
+                document.execCommand('createLink', false, url);
+            }
+
+            closeLinkBar();
+        }
+
+        // mousedown'da preventDefault: araç çubuğu düğmeleriyle AYNI gerekçe —
+        // buton tıklaması URL girişinin/editörün odağını çalmasın.
+        [linkAddBtn, linkCancelBtn].forEach(function (btn) {
+            btn.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+            });
+        });
+        linkAddBtn.addEventListener('click', applyLink);
+        linkCancelBtn.addEventListener('click', cancelLinkBar);
+
+        linkInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyLink();
+            } else if (e.key === 'Escape') {
+                // Yalnızca link çubuğunu kapatır — TÜM hücre düzenlemesini
+                // iptal ETMEZ (o, editable üzerindeki Escape'in işi).
+                e.preventDefault();
+                e.stopPropagation();
+                cancelLinkBar();
+            }
+        });
 
         var actions = document.createElement('div');
         actions.className = 'richtext-actions';
@@ -665,6 +853,7 @@
         actions.appendChild(saveBtn);
 
         popover.appendChild(toolbar);
+        popover.appendChild(linkBar); // araç çubuğunun HEMEN ALTINDA açılır
         popover.appendChild(editable);
         popover.appendChild(actions);
 
@@ -1030,6 +1219,21 @@
             // tıklamak her zamanki gibi düzenlemeyi açar; bu yüzden metnin kendisi
             // bilerek <a> DEĞİL (bkz. bcc_render_linkified_cell yorumu).
             if (e.target.closest('.cell-link-icon')) {
+                e.stopPropagation();
+                return;
+            }
+            // Zengin metnin İÇİNE gömülü link (long_text): AYNI desen — tıklama
+            // düzenlemeyi AÇMAZ, tarayıcı linki kendi açar. Grup A'dan farkı,
+            // burada linkleşen şeyin metnin KENDİSİ olması (kullanıcı <a>'yı
+            // seçtiği metnin üzerine kuruyor); hücrenin link DIŞINDAKİ kısmına
+            // tıklamak her zamanki gibi düzenlemeyi açar.
+            var richLink = e.target.closest('.rich-text-view a');
+            if (richLink) {
+                // Sunucu (bcc_build_safe_link) zaten target/rel yazıyor; bu iki
+                // satır, o attribute'lar eklenmeden ÖNCE kaydedilmiş eski
+                // satırların da yeni sekmede açılmasını garantiler.
+                richLink.target = '_blank';
+                richLink.rel = 'noopener noreferrer';
                 e.stopPropagation();
                 return;
             }

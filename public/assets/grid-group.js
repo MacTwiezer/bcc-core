@@ -2,64 +2,65 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Aktif panel: alan/yön <select>'i normal bir GET form elemanı; JS olmadan
-        // da "Uygula" butonuyla submit edilip doğru çalışır. JS varken değişiklikte
-        // anında submit ediyoruz ve artık gereksiz olan "Uygula" butonunu gizliyoruz
-        // (Hide fields panelindeki aynı desen).
-        var form = document.getElementById('group-form');
-        if (form) {
-            var selects = form.querySelectorAll('select');
-            selects.forEach(function (select) {
-                select.addEventListener('change', function () {
-                    form.submit();
-                });
-            });
+        // ---- "Grupla" paneli -------------------------------------------------
+        // Panel artık TAMAMEN BAĞLANTI TABANLI: seviye ekleme, yön çevirme,
+        // seviye kaldırma ve "Gruplamayı kaldır" birer <a> (sunucuda önceden
+        // kurulmuş group_field_N/group_dir_N URL'leri). Bu yüzden buradan
+        // KALDIRILANLAR:
+        //   - #group-form select'lerini dinleyip form.submit() eden blok
+        //   - "Uygula" butonunu gizleyen blok
+        //   - #group-add-subgroup ("+ Alt grup ekle") gizli satır açma bloğu
+        // Hepsi artık gereksiz: <select> ve <form> kalmadı, alan eklemek için
+        // listedeki alana tıklamak yeterli. JS'siz de tam çalışıyor.
+        //
+        // Panelde JS'in yaptığı TEK iş alan listesini filtrelemek; grid'deki
+        // grup başlıklarını aç/kapa işi (aşağısı) panelden bağımsız.
 
-            var applyBtn = form.querySelector('[data-group-apply]');
-            if (applyBtn) {
-                applyBtn.style.display = 'none';
-            }
-        }
-
-        // "+ Add subgroup": en fazla 3 seviyeye kadar, DOM'da zaten sunucu
-        // tarafından basılmış (ama `hidden`) bir sonraki seviye satırını açar —
-        // yeni bir form elemanı YOK, yalnızca görünürlük değişir. O satırdaki
-        // alan seçilince yukarıdaki genel "select değişince submit et" davranışı
-        // (aynı dinleyiciler, sayfa yüklenirken zaten bağlandı) devreye girer.
-        var addSubgroupBtn = document.getElementById('group-add-subgroup');
-        if (addSubgroupBtn) {
-            addSubgroupBtn.addEventListener('click', function () {
-                var hiddenRow = document.querySelector('.group-level-row[hidden]');
-                if (!hiddenRow) {
-                    return;
-                }
-
-                hiddenRow.hidden = false;
-
-                if (!document.querySelector('.group-level-row[hidden]')) {
-                    addSubgroupBtn.style.display = 'none';
-                }
-
-                var select = hiddenRow.querySelector('select');
-                if (select) {
-                    select.focus();
-                }
-            });
-        }
-
-        // "Find a field": henüz gruplama yokken gösterilen alan listesini istemci
-        // tarafında filtreler (Hide fields panelindeki arama ile aynı desen).
+        // "Alan ara": panel içi listeyi istemci tarafında filtreler.
+        // Eşleşme anahtarı SUNUCUDAN (data-group-field-name, küçük harfe
+        // çevrilmiş) — option.textContent kullanılmıyor, çünkü satır artık
+        // "N. seviye" rozetini de içeriyor ve arama sessizce onu da
+        // eşleştirirdi ("seviye" yazınca tüm gruplu alanlar çıkardı).
         var searchInput = document.querySelector('[data-group-search]');
-        var fieldOptions = document.querySelectorAll('.group-field-option');
+        var fieldList = document.querySelector('[data-group-field-list]');
 
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
+        if (searchInput && fieldList) {
+            var options = Array.prototype.slice.call(fieldList.querySelectorAll('.group-field-option'));
+            var emptyNote = fieldList.querySelector('[data-group-empty]');
+            var keys = options.map(function (o) {
+                return (o.getAttribute('data-group-field-name') || '').trim();
+            });
+
+            var applyGroupFilter = function () {
                 var q = searchInput.value.trim().toLowerCase();
+                var visible = 0;
 
-                fieldOptions.forEach(function (option) {
-                    var match = q === '' || option.textContent.toLowerCase().indexOf(q) !== -1;
-                    option.style.display = match ? '' : 'none';
+                options.forEach(function (option, i) {
+                    var match = q === '' || keys[i].indexOf(q) !== -1;
+                    // [hidden]/style.display DEĞİL ayrı sınıf: satırlar flex ve
+                    // flex öğesine uygulanan display, [hidden]'ı ezer.
+                    option.classList.toggle('is-filtered-out', !match);
+                    if (match) {
+                        visible++;
+                    }
                 });
+
+                if (emptyNote) {
+                    emptyNote.hidden = visible !== 0;
+                }
+            };
+
+            searchInput.addEventListener('input', applyGroupFilter);
+
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && searchInput.value !== '') {
+                    // stopPropagation: paneli kapatan ortak Escape dinleyicisi
+                    // bu tuşu ayrıca yorumlamasın — ilk Escape aramayı temizler,
+                    // ikincisi paneli kapatır.
+                    e.stopPropagation();
+                    searchInput.value = '';
+                    applyGroupFilter();
+                }
             });
         }
 

@@ -14,13 +14,20 @@
 
 /* ---------- İki sütunlu oluşturucu ---------- */
 
-.sp-page.fe-page { max-width: 1240px; }
+/* Kap genişliği: 1240px İDİ ve bu sayfayı ORTAK `.sp-page` ölçüsünün (1080px,
+   settings-page.css) tek istisnası yapıyordu. Ölçüldü (1440px pencere): sol
+   sütun 750px'e, içindeki tek satırlık metin girdileri 704px'e uzuyordu —
+   "Form başlığı" gibi kısa bir alan için okunaksız kadar geniş, sağdaki alan
+   listesiyle arasındaki boşluk da orantısız görünüyordu. Ortak ölçüye
+   çekildi: sayfa artık kardeş ayar sayfalarıyla AYNI genişlikte ve AYNI
+   şekilde ortalanıyor (.sp-page { margin: 0 auto }). */
+.sp-page.fe-page { max-width: 1080px; }
 
 /* Sol: ayarlar. Sağ: forma girecek alanlar. Tek bir <form> içinde iki sütun —
    "Kaydet" hepsini birlikte gönderiyor, ikinci bir form YOK. */
 .sp-page .fe-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
     gap: 1.15rem;
     align-items: start;
     max-width: none;
@@ -62,6 +69,41 @@
 }
 
 .sp-page .fe-section-title svg { color: var(--bcc-text-muted); flex: none; }
+
+/* ---------- Sol sütun: girdi aralıkları ---------- */
+
+/* `.settings-field` ORTAK tanımı (home.css) `display:flex; flex-direction:
+   column` — yani etiketin HER çocuğu kendi satırına düşüyor. Sonuç, yanında
+   açıklama taşıyan etiketlerin ikiye bölünmesiydi: "Açıklama" bir satırda,
+   "— formun üstünde görünür" altındaki satırda. Blok düzende etiket metni ile
+   `.sp-muted` açıklaması satır içi kalıp TEK satırda birleşiyor; flex'in
+   sağladığı 0.3rem'lik boşluk da girdinin kendi margin'ine devrediliyor.
+   Kapsam BİLEREK `.fe-page`: aynı `.settings-field` sınıfı dokuz sayfada daha
+   kullanılıyor, hepsinin etiket düzenini değiştirmek bu işin kapsamı değil. */
+.sp-page.fe-page .settings-field {
+    display: block;
+}
+
+.sp-page.fe-page .settings-field > input,
+.sp-page.fe-page .settings-field > textarea,
+.sp-page.fe-page .settings-field > select {
+    margin-top: 0.3rem;
+}
+
+/* Ardışık alanlar arasındaki boşluk: markup'ta satır içi
+   `style="margin-top:0.9rem"` ile tekrar tekrar yazılıyordu — tek yerden
+   sürülüyor (HTML'deki satır içi stiller kaldırıldı). */
+.sp-page.fe-page .fe-section .settings-field + .settings-field {
+    margin-top: 0.85rem;
+}
+
+/* Tek satırlık metin girdileri kartın tamamına yayılmasın. Ölçüldü: kap
+   daraltıldıktan SONRA bile 626px'e uzuyorlardı; 150/500 karakterlik kısa
+   alanlar için gereksiz. Çok satırlı açıklama alanı bu sınırın DIŞINDA —
+   ona genişlik gerçekten yarıyor. */
+.sp-page.fe-page .fe-section .settings-field > input[type="text"] {
+    max-width: 480px;
+}
 
 /* ---------- Paylaşım kutusu ---------- */
 
@@ -158,10 +200,52 @@
 
 /* ---------- Alan seçim kartları ---------- */
 
+/* Uzun alan listesi sayfayı aşağı uzatmasın: KART viewport'a sığacak kadar
+   yükselir, İÇİNDE yalnızca liste kayar — başlık, bilgi notu ve sayaç sabit
+   kalır.
+   Sınır kartın KENDİSİNE veriliyor, listeye DEĞİL: ilk deneme listeye sabit
+   bir `calc(100vh - 19rem)` koyuyordu ve ölçümde kartın altı 1051px'e, yani
+   900px'lik pencerenin 151px DIŞINA taşıyordu — çünkü o sabit pay kartın
+   başlığını ve (satır sayısı içeriğe göre değişen) bilgi notunu hesaba
+   katamıyor. Flex düzeninde artık hiçbir sihirli sayı yok: ne kalırsa liste
+   onu alıyor. `min-height: 0` ŞART — flex öğesinin varsayılan `min-height:
+   auto`su içeriğinden kısalmasını engeller, overflow hiç devreye girmezdi. */
+.sp-page .fe-col-right > .settings-card {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 2rem);
+}
+
+/* Başlık / bilgi notu / sayaç: sabit yükseklik, sıkışmaz. */
+.sp-page .fe-col-right > .settings-card > * {
+    flex: none;
+}
+
 .sp-page .fe-field-list {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.35rem;
+    /* Kaydırma çubuğu belirdiğinde kartlar çubuğun altına girmesin. */
+    padding-right: 0.15rem;
+}
+
+/* ⚠️ Seçici, yukarıdaki `... > *` kuralıyla AYNI derinlikte olmak ZORUNDA.
+   İlk hâli yalnızca `.sp-page .fe-field-list` (0,0,2,0) idi ve `... >  *`
+   (0,0,3,0) onu YENİYORDU: liste `flex: none` kalıyor, içeriği kadar uzayıp
+   kartı viewport'un 174px dışına taşırıyordu (ölçüldü: kart altı 1074px,
+   pencere 900px, iç kaydırma hiç açılmıyor). Dördüncü sınıf kuralı öne
+   geçiriyor. */
+.sp-page .fe-col-right > .settings-card > .fe-field-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+@media (max-width: 1000px) {
+    /* Tek sütuna düşünce sayfa zaten dikey akıyor; iç kaydırma burada
+       kullanıcıyı iki ayrı kaydırma alanına hapsederdi. */
+    .sp-page .fe-col-right > .settings-card { display: block; max-height: none; }
+    .sp-page .fe-col-right > .settings-card > .fe-field-list { overflow-y: visible; }
 }
 
 /* Düz checkbox listesi yerine seçilebilir kart.
@@ -255,8 +339,13 @@
     flex: none;
 }
 
+/* `flex: 1` İDİ: ad kutusu kalan TÜM genişliği yutuyor, arkasındaki zorunluluk
+   yıldızı kartın en sağ kenarına itiliyordu — ait olduğu adla arasında 150px
+   boşlukla, ilgisiz bir işaret gibi duruyordu. Şimdi ad içeriği kadar yer
+   kaplıyor, yıldız hemen yanında; boşluğu yıldızın `margin-right: auto`su
+   yutuyor (yıldız yoksa da öğeler zaten sola hizalı). */
 .sp-page .fe-field-name {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     font-size: 0.86rem;
     font-weight: 500;
@@ -264,6 +353,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ⚠️ `.req-mark` style.css'te tanımlı ve BU SAYFA style.css'i YÜKLEMİYOR
+   (kabuk yalnızca theme.css + home.css + sayfaya özel dosyaları basıyor) —
+   yani yıldız burada TAMAMEN STİLSİZ, gövde renginde düz bir "*" olarak
+   çıkıyordu. Aynı tuzağa bu dosyada .field-badge/.field-type-badge ile bir
+   kez daha düşülmüştü (bkz. aşağıdaki not). Tanım kopyalanmıyor, bu sayfanın
+   ihtiyacı olan iki özellik yerel olarak veriliyor. */
+.sp-page .fe-field-inner .req-mark {
+    flex: none;
+    margin-right: auto;
+    color: var(--bcc-danger);
+    font-weight: 700;
+    line-height: 1;
 }
 
 .sp-page .fe-field-card input:checked + .fe-field-inner .fe-field-name {

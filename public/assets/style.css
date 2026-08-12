@@ -1467,6 +1467,83 @@ td.editable.richtext-editing {
     border-color: var(--bcc-border);
 }
 
+/* Satır içi link çubuğu — window.prompt()'un yerini alır (bkz. grid.js
+   startRichTextEdit). Araç çubuğunun HEMEN ALTINDA, editörün ÜSTÜNDE açılır.
+   [hidden] çalışsın diye kapsayıcıya display VERİLMEZ (flex yalnızca iç
+   satırda); aksi halde .richtext-link-bar kuralı UA'nın [hidden]{display:none}
+   kuralını ezer ve çubuk hiç gizlenmezdi. */
+
+.richtext-link-bar {
+    margin-bottom: 0.4rem;
+}
+
+.richtext-link-bar[hidden] {
+    display: none;
+}
+
+.richtext-link-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.richtext-link-input {
+    flex: 1;
+    min-width: 0; /* flex öğesi: uzun URL çubuğu taşırmasın */
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.richtext-link-input:focus {
+    outline: none;
+    border-color: var(--bcc-accent-strong);
+}
+
+.richtext-link-add {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.richtext-link-cancel {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.richtext-link-cancel:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-border);
+    color: var(--bcc-text);
+}
+
+/* window.alert() yerine satır içi hata — çubuk açık kalır, kullanıcı yazdığı
+   URL'yi düzeltebilir. */
+.richtext-link-error {
+    margin: 0.25rem 0 0;
+    color: var(--bcc-danger);
+    font-size: 0.78rem;
+}
+
+.richtext-link-error[hidden] {
+    display: none;
+}
+
 .richtext-editable {
     min-height: 4.5rem;
     max-height: 12rem;
@@ -1489,8 +1566,43 @@ td.editable.richtext-editing {
     margin-top: 0.5rem;
 }
 
-.rich-text-view a {
-    color: var(--bcc-accent-strong);
+/* Zengin metin linkleri — long_text içeriğinin göründüğü ÜÇ yüzeyde de AYNI
+   görünüm: grid hücresi (.rich-text-view), düzenleyici (.richtext-editable) ve
+   Duyuru ekranının salt-okunur detay paneli (.if-detail-field-value, bkz.
+   interface.js is_rich dalı — interface.php bu dosyayı da yüklüyor). Böylece
+   kullanıcı yazarken gördüğü şeyi kaydedince de görür.
+   BİLEREK dar kapsam: çıplak "td a" yazılsaydı hücredeki diğer <a>'lar
+   (.attachment-chip dosya kutucukları, .cell-link-icon "yeni sekmede aç"
+   ikonu) da mavi+altı çizili olurdu — onlar köprü metni değil, kendi
+   tasarımları var. :not(.attachment-cell-view) da AYNI gerekçe: o sınıf detay
+   panelindeki dosya-eki listesine veriliyor. */
+
+/* ⚠️ Seçiciler BİLEREK İKİ SINIFLI (.cell-view.rich-text-view /
+   .richtext-popover .richtext-editable): grid-shell.css'in en üstündeki
+   `body.gs-body a { text-decoration: none; color: inherit }` kuralı (özgüllük
+   0,0,1,2) tek sınıflı bir `.rich-text-view a`yı (0,0,1,1) YENER — link gövde
+   metni rengine döner ve altı çizgisi kalkar. Canlı olarak yaşandı: computed
+   color rgb(29,29,31), text-decoration none. İki sınıf (0,0,2,1) o kuralı
+   geçer. AYNI ders, aynı kural yüzünden .gs-rail .gs-rail-home'da da alındı
+   (bkz. grid-shell.css'teki not) — üçüncü kez düşülmesin.
+   .if-detail-field-value zaten :not(...) ile iki sınıf değerinde. */
+
+.cell-view.rich-text-view a,
+.richtext-popover .richtext-editable a,
+.if-detail-field-value:not(.attachment-cell-view) a {
+    color: var(--bcc-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.cell-view.rich-text-view a:hover,
+.richtext-popover .richtext-editable a:hover,
+.if-detail-field-value:not(.attachment-cell-view) a:hover {
+    color: var(--bcc-link-hover);
+    /* Hover'da altı çizgi KALINLAŞIR (kaybolmaz) — linkin tıklanabilirliği
+       hover'a bağlı bir ipucu olmamalı, hover yalnızca onu pekiştirir. */
+    text-decoration-thickness: 2px;
 }
 
 /* Dosya eki (attachment) hücresi: küçük resim (image/*) ya da rozet+ad "chip"i,
@@ -1806,30 +1918,8 @@ td.cell-flash-error {
     min-width: 320px;
 }
 
-.sort-row {
-    display: flex;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
-}
-
-.sort-row select {
-    padding: 0.3rem 0.4rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 4px;
-    font: inherit;
-}
-
-.sort-row select:first-child {
-    flex: 1;
-    min-width: 0;
-}
-
-.sort-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.4rem;
-}
+/* Siralama paneli kurallari dosyanin SONUNA tasindi (Airtable paritesi
+   yeniden tasarimi) — eski .sort-row/.sort-actions kurallari kaldirildi. */
 
 .grid-row-count {
     align-self: center;
@@ -2211,77 +2301,343 @@ td.cell-flash-error {
     border-top: 1px solid var(--bcc-border);
 }
 
-.group-field-list {
-    display: flex;
-    flex-direction: column;
+/* ---------- "Grupla" paneli (Airtable "Group" paritesi) ---------------------
+   Eskiden İKİ AYRI görünüm vardı: gruplama yokken bir alan listesi, varken
+   <select>'li bir form. Artık TEK panel: üstte aktif seviyeler (rozet + yön
+   düğmesi + kaldır), altta her zaman görünen aranabilir alan listesi.
+
+   Sunucu sözleşmesi (group_field_N / group_dir_N) DEĞİŞMEDİ; sadece bunları
+   bir <form> yerine önceden kurulmuş bağlantılar taşıyor, yani "Uygula" yok
+   ve panel JS'siz de çalışıyor. */
+
+.group-panel .group-panel-box {
+    min-width: 320px;
+    max-width: 380px;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
 }
 
-.group-field-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.3rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: inherit;
-    text-decoration: none;
-}
+/* ---- Boş durum rehberi ---- */
 
-.group-field-option:hover {
-    background: var(--bcc-surface-hover);
-}
-
-.group-panel-header {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
+.group-hint {
+    margin: 0;
+    padding: 0.7rem 0.8rem;
     border-bottom: 1px solid var(--bcc-border);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--bcc-text-muted);
 }
 
-.group-level-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+/* ---- Aktif seviyeler ---- */
+
+.group-active {
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
 }
 
-.group-level-row {
+.group-active-head {
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    margin-bottom: 0.5rem;
 }
 
-.group-level-row select {
-    padding: 0.3rem 0.4rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 4px;
-    font: inherit;
+.group-active-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
 }
 
-.group-level-row select:first-child {
+.group-active-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+}
+
+.group-active-row:last-child { margin-bottom: 0; }
+
+/* Seviye numarası — çok seviyeli gruplamada sıra tek bakışta okunsun. */
+.group-level-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+/* AKTİF alan rozeti: accent zemin — "bu alana göre gruplanıyor" durumunu
+   listedeki sıradan satırlardan ayıran ana ipucu. */
+.group-active-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     flex: 1;
     min-width: 0;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--bcc-accent);
+    border-radius: 999px;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.group-active-field .field-badge {
+    margin-right: 0;
+    vertical-align: 0;
+    flex-shrink: 0;
+}
+
+.group-active-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Yön düğmesi: iki durumlu bir ayar için <select> fazladan bir tık istiyordu.
+   Etiket alan TİPİNE göre geliyor (BCC_GROUP_DIR_LABELS): "A → Z", "1 → 9",
+   "Erken → Geç"... */
+.group-dir-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    padding: 0.28rem 0.45rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-size: 0.73rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.group-dir-toggle:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-accent-strong);
+    text-decoration: none;
 }
 
 .group-remove-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 26px;
+    height: 26px;
     flex-shrink: 0;
+    border-radius: 6px;
+    color: var(--bcc-text-muted);
+    transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .group-remove-btn:hover {
     background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
 }
 
-.group-form .link-btn {
-    display: block;
-    margin: 0.5rem 0;
+.group-collapse-row {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.group-mini-btn {
+    flex: 1;
+    padding: 0.32rem 0.4rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.group-mini-btn:hover { background: var(--bcc-surface-hover); }
+
+/* ---- Alan seçici ---- */
+
+.group-pick { padding: 0.6rem 0.75rem 0.35rem; }
+
+.group-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.group-search-wrap svg {
+    position: absolute;
+    left: 0.5rem;
+    color: var(--bcc-text-muted);
+    pointer-events: none;
+}
+
+/* .group-panel ile NITELENDI (tek sinif YETMIYOR): theme.css'te
+   input[type="text"] hedefleyen genel bir kural var ve ozgullugu (0,1,1)
+   tek sinifli .group-search'i (0,1,0) EZIYORDU — sol dolgu 1.65rem yerine
+   0.6rem kaliyor ve arama IKONU yer tutucu metnin UZERINE biniyordu
+   (olculdu: ikon sagi 837px, metin baslangici 826px). */
+.group-panel .group-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem 0.45rem 1.65rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 7px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.83rem;
+}
+
+.group-panel .group-search::placeholder { color: var(--bcc-text-muted); }
+
+.group-panel .group-search:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.group-field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-height: 250px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.group-field-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.42rem 0.45rem;
+    border-radius: 7px;
     font-size: 0.85rem;
+    color: var(--bcc-text);
+    text-decoration: none;
+    transition: background-color 0.12s ease;
+}
+
+a.group-field-option:hover {
+    background: var(--bcc-surface-hover);
+    text-decoration: none;
+}
+
+.group-field-option .field-badge {
+    margin-right: 0;
+    vertical-align: 0;
+    flex-shrink: 0;
+}
+
+.group-field-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Zaten gruplanmış alan: listede accent'li görünür ama tıklanamaz (aynı alan
+   iki seviyede olamaz). Kaç. seviyede olduğunu de söyler. */
+.group-field-option.is-active {
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-weight: 600;
+    cursor: default;
+}
+
+.group-field-flag {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--bcc-accent-strong);
+    opacity: 0.85;
+}
+
+/* 3 seviye dolduğunda: liste eksik görünmesin ama eklenemesin. */
+.group-field-option.is-disabled {
+    color: var(--bcc-text-muted);
+    opacity: 0.55;
+    cursor: default;
+}
+
+/* Aramada elenen satır — [hidden] DEĞİL ayrı sınıf (flex öğesine uygulanan
+   display, [hidden]'ın display:none'ını ezer). */
+.group-field-option.is-filtered-out { display: none; }
+
+.group-empty {
+    margin: 0;
+    padding: 0.8rem 0.45rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.group-empty[hidden] { display: none; }
+
+.group-max-note {
+    margin: 0.45rem 0 0;
+    font-size: 0.73rem;
+    color: var(--bcc-text-muted);
+}
+
+/* ---- Alt eylem ---- */
+
+.group-actions {
+    padding: 0.6rem 0.75rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.group-clear-btn {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.5rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 7px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+a.group-clear-btn:hover {
+    background: var(--bcc-danger-soft);
+    border-color: var(--bcc-danger);
+    color: var(--bcc-danger);
+    text-decoration: none;
+}
+
+/* Gruplama yokken görünür ama etkisiz — alt satır seçime göre zıplamasın
+   ("Alanları gizle"/"Filtrele" panellerindeki AYNI karar). */
+.group-clear-btn.is-disabled {
+    background: var(--bcc-surface-sunken);
+    border-color: var(--bcc-border);
+    color: var(--bcc-text-muted);
+    cursor: default;
+    opacity: 0.7;
 }
 
 /* Row height paneli (Grid araçları Adım 3). */
@@ -2366,12 +2722,57 @@ table.grid.row-h-extra .cell-view {
    .cell-view'a EKLENMEDİ, diğer alan tipleri (sayı/tarih/düz metin/tekli
    seçim) etkilenmiyor. */
 table.grid.row-h-short .cell-view.rich-text-view {
-    display: -webkit-box;
-    white-space: normal;
+    /* Taban .cell-view'ın nowrap/overflow/ellipsis'i AYNEN geçerli — burada
+       yalnızca tekrar YAZILIYOR ki bu bloğun ne garanti ettiği tek yerden
+       okunabilsin (eski hâli bu üçünü -webkit-box + white-space:normal ile
+       EZİYORDU, aşağıdaki nota bkz.). */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
+}
+
+/* <br>: TARAYICIDA ölçüldü — white-space:nowrap bir <br>'yi DURDURMUYOR
+   (kutu 3 satıra çıkıyordu), satır atlamayı engelleyen TEK yol display:none.
+   display:inline, display:inline-block + width ve content:"" üçü de denendi,
+   üçü de atlatmaya devam etti. Ayırıcı BOŞLUK burada konamaz (display:none bir
+   öğe ::before/::after üretmez) — onu sunucu koyuyor (bcc_rich_text_grid_html).
+   Bu kural o dönüşümü atlayan/eski bir render yolu için güvenlik ağı: boşluk
+   kaybolur ama hücre TEK SATIR kalır. */
+table.grid.row-h-short .cell-view.rich-text-view br {
+    display: none;
+}
+
+/* Blok elemanlar SATIR İÇİ akar: sütun genişledikçe sonraki paragraf/madde
+   YAN YANA ortaya çıkar, alt satıra kaçıp gizlenmez.
+   SAVUNMA AMAÇLI: bugünkü temizleyici whitelist'i (bcc_sanitize_rich_text)
+   p/div/ul/ol/li'yi zaten düşürüyor — whitelist bir gün genişletilirse hücre
+   kendiliğinden çok satıra dönmesin diye şimdiden yazıldı. */
+table.grid.row-h-short .cell-view.rich-text-view p,
+table.grid.row-h-short .cell-view.rich-text-view div,
+table.grid.row-h-short .cell-view.rich-text-view ul,
+table.grid.row-h-short .cell-view.rich-text-view ol,
+table.grid.row-h-short .cell-view.rich-text-view li {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Madde imi satır içi öğede ÇİZİLMEZ (list-style yalnızca blok kutuda görünür) —
+   ardışık maddeler birbirine yapışmasın diye görünür bir ayırıcı konuyor. */
+table.grid.row-h-short .cell-view.rich-text-view li + li::before {
+    content: ' • ';
+    color: var(--bcc-text-muted);
+}
+
+/* Sütun genişletildiğinde (grid-has-col-widths = kullanıcı tutamağı sürükledi)
+   taban .cell-view'ın 320px tavanı zengin metinde KALDIRILIR. Tavan otomatik
+   yerleşim için var (tek uzun hücre sütunu şişirmesin); sabit yerleşimde sütun
+   genişliği zaten <colgroup>'tan geliyor ve <td> kırpıyor. Kalsaydı sütun
+   320px'in ötesine çekildiğinde metin genişlemeyi İZLEMEZ, "..." olduğu yerde
+   kalırdı — yani "genişletince daha fazlası görünsün" hiç çalışmazdı. */
+table.grid.grid-has-col-widths .cell-view.rich-text-view {
+    max-width: none;
 }
 
 table.grid.wrap-headers thead th {
@@ -2893,4 +3294,215 @@ a.filter-btn:hover {
     }
     .filter-panel .filter-rows { overflow-x: auto; }
     .filter-row { min-width: 460px; }
+}
+
+/* ---------- Sıralama paneli (Airtable "Sort" paritesi) ---------------------
+   Sunucu sözleşmesi (sort_field_N / sort_dir_N) DEĞİŞMEDİ; burada yalnızca
+   panelin görünümü var. Satırlar IZGARA: sıra rozeti, tip ikonu, alan, yön ve
+   sil hücreleri satırlar arasında BİREBİR hizalı. Eskiden flex + flex:1 vardı
+   ve kutular içeriklerine göre farklı genişliklere kayıyordu.
+
+   .sort-row / .sort-actions bu panele ÖZEL (başka panel kullanmıyor —
+   kontrol edildi), bu yüzden ek niteleme gerekmedi. */
+
+.sort-panel .sort-form {
+    /* İstenen genişlik: alan seçicisi ve yön kutusu rahat sığsın. */
+    min-width: 420px;
+    max-width: 480px;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+.sort-panel .sort-rows {
+    padding: 0.7rem 0.75rem 0.35rem;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.sort-row {
+    display: grid;
+    /* sıra | tip ikonu | alan | yön | sil */
+    grid-template-columns: 20px 15px minmax(0, 1fr) 116px 26px;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.sort-row:last-child { margin-bottom: 0; }
+
+/* Hücreler AÇIKÇA konumlanıyor — ileride bir hücre gizlenirse komşuları
+   yerinden kaymasın (filtre panelinde ölçülen tuzağın aynısı). */
+.sort-row .sort-level-badge { grid-column: 1; }
+.sort-row .sort-field-badge { grid-column: 2; }
+.sort-row .sort-field-select { grid-column: 3; }
+.sort-row .sort-dir-select { grid-column: 4; }
+.sort-row .sort-row-remove { grid-column: 5; }
+
+.sort-row select {
+    padding: 0.35rem 0.4rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+}
+
+.sort-row select:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+/* YÖN kutusu: bildirilen kusur "artan"/"azalan" metninin KIRPILMASIYDI.
+   Etiketler artık alan tipine göre ve daha uzun ("İşaretsiz → İşaretli" gibi),
+   bu yüzden sütun 116px sabit ve kutunun kendi alt sınırı da var. Ok işareti
+   için sağda pay bırakılıyor. */
+.sort-row .sort-dir-select {
+    min-width: 96px;
+    padding-right: 1.1rem;
+    font-weight: 600;
+    background: var(--bcc-surface-sunken);
+}
+
+/* Sıra rozeti: çok seviyeli sıralamada önceliği gösterir (1. kurala göre
+   sırala, eşit olanlarda 2. kurala bak...). */
+.sort-level-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+/* Alan tipi rozeti — ortak .field-badge (theme.css); native <option> içine
+   ikon konulamadığı için select'in SOLUNDA duruyor. */
+.sort-row .sort-field-badge {
+    margin-right: 0;
+    vertical-align: 0;
+    justify-self: center;
+}
+
+.sort-row .sort-field-badge.is-empty { opacity: 0; }
+
+.sort-row-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sort-row-remove:hover {
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+}
+
+/* ---- "+ Sıralama ekle" ---- */
+
+.sort-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.75rem 0.6rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sort-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-accent-strong);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sort-add-btn:hover:not(:disabled) { background: var(--bcc-accent-soft); }
+
+.sort-add-btn:disabled {
+    color: var(--bcc-text-muted);
+    cursor: default;
+}
+
+.sort-slot-note {
+    font-size: 0.74rem;
+    color: var(--bcc-text-muted);
+}
+
+.sort-slot-note[hidden] { display: none; }
+
+/* ---- Alt eylemler ---- */
+
+.sort-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+}
+
+.sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.8rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 7px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+a.sort-btn:hover {
+    background: var(--bcc-surface-hover);
+    border-color: var(--bcc-text-muted);
+    text-decoration: none;
+}
+
+.sort-btn--primary {
+    background: var(--bcc-accent);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+}
+
+.sort-btn--primary:hover {
+    background: var(--bcc-accent-strong);
+    border-color: var(--bcc-accent-strong);
+}
+
+/* Sıralama yokken görünür ama etkisiz — alt satır seçime göre zıplamasın
+   (diğer üç panelde alınan AYNI karar). */
+.sort-btn.is-disabled {
+    background: var(--bcc-surface-sunken);
+    border-color: var(--bcc-border);
+    color: var(--bcc-text-muted);
+    cursor: default;
+    opacity: 0.7;
 }

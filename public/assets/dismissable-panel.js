@@ -168,3 +168,100 @@
         });
     };
 })();
+
+(function () {
+    'use strict';
+
+    // ---------------------------------------------------------------------
+    // GENEL (OTOMATİK) DIŞARI-TIK / ESCAPE KAPATMA
+    // ---------------------------------------------------------------------
+    // Yukarıdaki bcc_bindDismissable() TEK bir elemanı bağlar ve çağıran onu
+    // açıkça çağırmak zorundadır. Sorun tam olarak buydu: bir <details> popover
+    // eklenip bu çağrı UNUTULDUĞUNDA panel dışarı tıklayınca kapanmıyor,
+    // Escape'e cevap vermiyordu — sessiz bir kusur, çünkü panel diğer her
+    // açıdan çalışıyor görünüyor.
+    //
+    // Ölçülen gerçek durum (denetim): interface.php'deki ÜÇ popover'ın da
+    // (nav menüsü, "Paylaş" katılımcı popover'ı, "Bağlantı" popover'ı)
+    // dışarı-tık ve Escape davranışı YOKTU. Sebep: o davranış grid'e özel
+    // assets/grid-table-tabs.js içinde, YALNIZCA name="gs-table-tab-menu"
+    // grubu için yazılmıştı ve o dosya interface.php'de hiç yüklenmiyor.
+    //
+    // Çözüm, o mantığı ORTAK dosyaya taşımak ve KAYIT GEREKTİRMEZ hâle
+    // getirmek: sayfadaki HER <details> otomatik kapsanır. Böylece ileride
+    // eklenecek bir popover "listeye yazılmayı" unutamaz.
+    //
+    // KAPSAM: bu projedeki her <details> bir menü/popover'dır (denetlendi:
+    // araç çubuğu panelleri, sütun başlığı menüsü, paylaşım popover'ları,
+    // nav menüleri, bildirimler, arama). İleride içerik açar-kapar bir
+    // <details> gerekirse ona data-no-auto-dismiss eklemek yeterli.
+    //
+    // NEDEN pointerdown DEĞİL click: pointerdown, kullanıcı popover içindeki
+    // bir metni seçmek için dışarıda basıp içeride bırakırken (ya da tersi)
+    // erken kapatırdı. click yalnızca basma+bırakma AYNI hedefte olduğunda
+    // oluşur, yani seçim/sürükleme jestlerini bozmaz.
+
+    function isAutoDismissable(details) {
+        return !details.hasAttribute('data-no-auto-dismiss');
+    }
+
+    function openDetails() {
+        // Her olayda YENİDEN sorgulanıyor (önbelleğe alınmıyor): sonradan
+        // DOM'a eklenen popover'lar da kendiliğinden kapsansın.
+        return Array.prototype.slice.call(document.querySelectorAll('details[open]'));
+    }
+
+    // ---- Dışarı tıklama ----
+    document.addEventListener('click', function (e) {
+        openDetails().forEach(function (details) {
+            if (!isAutoDismissable(details)) {
+                return;
+            }
+            // İÇERİDEKİ tıklama kapatmaz (bağlantı kopyalama, input'a yazma,
+            // rol seçme...) — gereksinim 3. contains() summary'yi de kapsar,
+            // yani tetikleyiciye tıklamak da normal aç/kapa olarak çalışır.
+            if (details.contains(e.target)) {
+                return;
+            }
+            details.removeAttribute('open');
+        });
+    });
+
+    // ---- Escape ----
+    // capture:false ve stopPropagation'a SAYGILI: panel içindeki arama
+    // kutuları (grid "Alan ara", çalışma alanı araması...) ilk Escape'te
+    // yalnızca metni temizleyip olayı durduruyor; panel ikinci Escape'te
+    // kapanıyor. Bu, o kutuların bilinçli davranışı.
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') {
+            return;
+        }
+        openDetails().forEach(function (details) {
+            if (isAutoDismissable(details)) {
+                details.removeAttribute('open');
+            }
+        });
+    });
+
+    // ---- Aynı gruptan yalnızca biri açık kalsın ----
+    // <details name="X"> modern tarayıcılarda bunu KENDİSİ yapıyor; eski
+    // Firefox/Safari desteklemiyor. Aşağısı o tarayıcılar için yedek.
+    // 'toggle' olayı KABARMADIĞI için eleman başına bağlanmak zorunda.
+    document.addEventListener('DOMContentLoaded', function () {
+        var named = document.querySelectorAll('details[name]');
+
+        named.forEach(function (details) {
+            details.addEventListener('toggle', function () {
+                if (!details.open) {
+                    return;
+                }
+                var group = details.getAttribute('name');
+                document.querySelectorAll('details[name="' + group + '"]').forEach(function (other) {
+                    if (other !== details && other.open) {
+                        other.removeAttribute('open');
+                    }
+                });
+            });
+        });
+    });
+})();

@@ -79,6 +79,80 @@ function bcc_mail_storage_dir()
 }
 
 /**
+ * MÜKERRER GÖNDERİM KAPISI — "bu adrese etkinleştirme maili ŞİMDİ atılmalı mı?"
+ *
+ * Saf fonksiyon (DB/mail/zaman yan etkisi YOK): kararı tek yerde toplar ve
+ * gönderim yapmadan test edilebilir kılar. register.php bunu çağırır.
+ *
+ * Token'ın VERİLİŞ anı ayrı bir kolonda tutulmuyor; son kullanma tarihinden
+ * türetiliyor (veriliş = son kullanma - $ttlSeconds). Bu iş için tabloya yeni
+ * kolon/migration EKLENMEDİ.
+ *
+ * @param string|null $expiresAt users.email_verify_expires_at (NULL olabilir)
+ * @param int         $cooldown  iki gönderim arasındaki en kısa süre (saniye)
+ * @param int         $now       şimdi (unix); testlerde sabitlenebilsin diye parametre
+ * @param int         $ttl       token ömrü (saniye) — veriliş anını çıkarmak için
+ * @return bool true ise gönder, false ise ATLA (yakın zamanda zaten gönderilmiş)
+ */
+function bcc_should_send_verification_mail($expiresAt, $cooldown, $now = null, $ttl = 86400)
+{
+    if ($now === null) {
+        $now = time();
+    }
+
+    // Hiç token verilmemiş (ya da kolon boş): gönderilecek ilk mail.
+    if ($expiresAt === null || $expiresAt === '') {
+        return true;
+    }
+
+    $expiresTs = strtotime($expiresAt);
+    if ($expiresTs === false) {
+        // Okunamayan damga: gönderimi ENGELLEMEK yerine izin ver — kullanıcıyı
+        // hiç mail alamaz durumda bırakmak, fazladan bir mailden daha kötü.
+        return true;
+    }
+
+    return ($now - ($expiresTs - $ttl)) >= $cooldown;
+}
+
+/**
+ * Şablonun footer'ındaki ikonları (cid: ile gömülü) PHPMailer mesajına ekler.
+ *
+ * YALNIZCA GÖVDEDE GEÇEN cid'ler eklenir: gövdesinde ikon bulunmayan bir mail
+ * (ör. record_send.php'nin kendi şablonu) gereksiz 4 ek taşımasın — kullanılmayan
+ * bir ek, bazı istemcilerde maili "ataşmanlı" göstererek gereksiz kuşku uyandırır.
+ *
+ * Dosya yoksa SESSİZCE atlanır: ikon eksikliği yüzünden etkinleştirme maili
+ * hiç gitmemesi çok daha kötü bir sonuç olurdu.
+ *
+ * @param PHPMailer\PHPMailer\PHPMailer $mail
+ * @param string                        $bodyHtml
+ */
+function bcc_mail_attach_footer_icons($mail, $bodyHtml)
+{
+    if (empty($GLOBALS['BCC_MAIL_ICONS'])) {
+        return;
+    }
+
+    $dir = bcc_mail_icons_dir();
+
+    foreach ($GLOBALS['BCC_MAIL_ICONS'] as $icon) {
+        if (strpos($bodyHtml, 'cid:' . $icon['cid']) === false) {
+            continue;
+        }
+
+        $path = $dir . '/' . $icon['file'];
+        if (!is_file($path)) {
+            continue;
+        }
+
+        // 5. parametre 'image/png': PHPMailer normalde uzantıdan tahmin eder,
+        // açıkça vermek Outlook'un tip tahminine kalmamasını sağlar.
+        $mail->addEmbeddedImage($path, $icon['cid'], $icon['file'], 'base64', 'image/png');
+    }
+}
+
+/**
  * @param string      $toEmail
  * @param string      $subject
  * @param string      $bodyText Düz metin gövde — HER ZAMAN gönderilir
@@ -141,6 +215,10 @@ function bcc_send_mail($toEmail, $subject, $bodyText, $bodyHtml = null)
                 $mail->isHTML(true);
                 $mail->Body = $bodyHtml;
                 $mail->AltBody = $bodyText;
+                // Footer ikonlarını cid: ile gövdeye göm — şablon
+                // <img src="cid:bcc-icon-*"> basıyor, karşılığı BURADA
+                // eklenmezse o ikonlar kırık görünürdü.
+                bcc_mail_attach_footer_icons($mail, $bodyHtml);
             } else {
                 $mail->isHTML(false);
                 $mail->Body = $bodyText;

@@ -1,7 +1,15 @@
 /* F3 — Duyuru (Interface / yayınlanmış görünüm), salt-okunur. Yalnızca
-   public/interface.php tarafından kullanılır; app'in normal .home-*/.gs-*
+   public/interface.php tarafından kullanılır; app'in normal ".home-" / ".gs-"
    kabuğunu paylaşmaz (GEREKSINIMLER.md F3 kendi başına bağımsız bir ekran
-   tarifliyor: sol nav + orta liste + sağ detay + arama, başka hiçbir şey). */
+   tarifliyor: sol nav + orta liste + sağ detay + arama, başka hiçbir şey).
+
+   ⚠️ YORUM İÇİNDE "*" + "/" YAN YANA YAZMAYIN. Bu blok bir zamanlar
+   ".home-*[/].gs-*" yazıyordu; o dizilim yorumu TAM ORADA kapatıyor, kalan
+   satırlar ham metne dönüyor ve ayrıştırıcı ARDINDAN GELEN KURALI atıyordu —
+   yani aşağıdaki `* { box-sizing: border-box; }` bu sayfada hiç
+   uygulanmıyordu. Aynı tuzak bu dosyada iki, home.css'te bir yerde daha
+   vardı; hepsi düzeltildi. Joker anlatmak gerekirse tırnak içinde ve
+   aralarında boşlukla yazın. */
 
 * { box-sizing: border-box; }
 
@@ -21,10 +29,21 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 /* ---------- Sol: sarı nav paneli ---------- */
 
+/* Kenar çubuğu renk paleti — TEK KAYNAK. Dosyanın geri kalanı bu üç
+   değişkeni kullanır, hex'leri tekrar YAZMAZ; ton değiştirmek isteyen tek
+   yeri düzenler. (--bcc-* token'ları BU panelde kullanılmıyor: onlar açık/koyu
+   yüzeyler için ayarlı ve amber zeminde okunmuyor — bkz. .if-nav-group-label
+   yorumu.) */
 .if-nav {
+    --if-nav-bg: #ffba05;         /* panel geneli */
+    --if-nav-active-bg: #f3ac04;  /* seçili tablo öğesi */
+    --if-nav-footer-bg: #ffc11e;  /* alt araç çubuğu kabı */
+    /* İkon kutularının keskin dış hattı (bkz. .home-base-icon / .if-account). */
+    --if-nav-ink: #1e293b;
+
     width: 220px;
     flex-shrink: 0;
-    background: #f6c343;
+    background: var(--if-nav-bg);
     display: flex;
     flex-direction: column;
     padding: 1rem 0.75rem;
@@ -75,22 +94,36 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-overflow: ellipsis;
 }
 
-/* Base ikonu (bcc_base_icon_svg/bcc_base_icon_color) — dashboard'daki
-   .home-base-icon'un (42px) burada küçültülmüş hâli, .home-search-result
-   .home-base-icon (30px) ile AYNI "scoped override" deseni, ikinci bir
-   bileşen YOK. flex-shrink:0 — .if-nav-back span'ın nowrap/ellipsis'i
-   metne (isim) özel, ikonu etkilemesin diye ayrıca belirtildi. */
-   Zemin burada DOLU marka rengidir (interface.php inline `background` basar,
-   kartlardaki pastel çift DEĞİL) — glif `currentColor` ile çizildiği için
-   `color` açıkça beyaza çekilir, yoksa home.css'in kart bağlamı için
-   tanımladığı koyu mürekkebi miras alırdı. */
+/* Base ikonu (bcc_base_icon_svg) — dashboard'daki .home-base-icon'un (42px)
+   burada küçültülmüş hâli, .home-search-result .home-base-icon (30px) ile
+   AYNI "scoped override" deseni, ikinci bir bileşen YOK. flex-shrink:0 —
+   .if-nav-back span'ın nowrap/ellipsis'i metne (isim) özel, ikonu
+   etkilemesin diye ayrıca belirtildi.
+
+   ⚠️ BULUNAN GERÇEK BUG (bu düzenlemede yakalandı): bu yorum bloğu erken
+   kapanan bir yorum sonlandırıcısı içeriyordu, kalan satırlar yorum DIŞINDA
+   ham metne dönüyordu. CSS ayrıştırıcısı o çöpü görüp ARDINDAN GELEN KURALI
+   TAMAMEN ATIYORDU — yani aşağıdaki .if-nav-back .home-base-icon bloğu (22px
+   boyut dahil) hiç uygulanmıyordu; ikon home.css'in genel .home-base-icon
+   kuralına (42px) düşüyordu. Dosyanın en üstündeki nota bkz.
+
+   ZEMİN: eskiden interface.php satır içi `background: bcc_base_icon_color()`
+   basıyordu — base id'sinden türeyen CANLI dolu renk (bu base'de #06b6d4
+   turkuaz), amber panelde yabancı bir leke gibi duruyordu. Satır içi stil
+   olduğu için CSS'ten yumuşatılamıyordu da; o yüzden PHP'den kaldırıldı ve
+   zemin buraya alındı: panelin kendi diline ait, hafif açılmış amber.
+   Ayırt ediciliği artık RENK değil, kategori GLİFİ sağlıyor (glif korundu).
+   Glif `currentColor` ile çizilir — açık zeminde beyaz kaybolacağı için
+   `color` koyu mürekkebe çekildi (eski değer #fff idi). */
 .if-nav-back .home-base-icon {
     width: 22px;
     height: 22px;
     border-radius: 6px;
     flex-shrink: 0;
     white-space: normal;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1.5px solid var(--if-nav-ink);
+    color: var(--if-nav-ink);
     box-shadow: none;
 }
 
@@ -124,35 +157,35 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-nav-item:hover { background: rgba(255, 255, 255, 0.35); }
 
-/* Airtable referansı: seçili öğe kutucuk DEĞİL, aynı sarı zemin üzerinde
-   hafif koyu (yarı saydam amber) bir vurgu — önceki hâli (background: beyaz)
-   düz bir kutucuk gibi göründüğü için değiştirildi. */
+/* Seçili öğe: panel zemininden bir tık koyu, DOLU amber (yarı saydam
+   rgba(74,59,0,0.14) değil) — böylece hangi tabloda olduğunuz panelin her
+   yerinde aynı tonda okunuyor, altındaki zemine göre değişmiyor. */
 .if-nav-item.is-active {
-    background: rgba(74, 59, 0, 0.14);
+    background: var(--if-nav-active-bg);
     color: #4a3b00;
 }
 
-/* ---------- Sol nav alt satırı: profil/boşluk/paylaş/bildirim/daralt ----------
-   E2: sıralama DOM'a değil `order`e dayanır — açıkken Share, Bildirim'den
-   ÖNCE; kapalıyken (aşağıda .is-collapsed override'ı) Bildirim, Share'den
-   ÖNCE — DOM sırası tek başına bunu karşılayamaz (satır sırası ikisi
-   arasında YER DEĞİŞTİRİYOR). */
-.if-nav-bottom {
-    margin-top: auto;
-    padding-top: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
+/* ---------- Sol nav: kategori başlığı ----------
+   Listeye derinlik veren büyük harf başlık. Renk sözlüğü bu kenar çubuğuna
+   ÖZEL (amber zemin + #5a4a00 metin) — burada --bcc-* token'ları KULLANILMAZ,
+   çünkü onlar açık/koyu yüzeyler için ayarlı ve sarı zeminde okunmuyor.
+   Dosyanın geri kalanı da aynı yerel sözlüğü kullanıyor. */
+.if-nav-group-label {
+    margin: 0 0 0.35rem;
+    padding: 0 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(90, 74, 0, 0.62);
 }
 
-.if-account { order: 1; }
-.if-nav-spacer { order: 2; flex: 1; }
-.if-nav-collab-share { order: 3; }
-.if-nav-share { order: 4; }
-.if-nav-bottom .home-notif { order: 5; }
-.if-nav-collapse-btn { order: 6; }
-.if-nav-expand-btn { order: 7; }
+.if-nav.is-collapsed .if-nav-group-label { display: none; }
 
+/* Alt bölgedeki tüm ikon/summary butonlarının TABANI. <summary> için
+   list-style:none + ::-webkit-details-marker gizleme ŞART — yoksa tarayıcı
+   kendi ▶ üçgenini basar (bu blok bir düzenlemede yanlışlıkla silindiğinde
+   tam olarak bu oldu, ekranda görüldü). */
 .if-nav-icon-btn {
     background: none;
     border: none;
@@ -161,6 +194,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
     color: #5a4a00;
     flex-shrink: 0;
@@ -168,35 +202,82 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-nav-icon-btn::-webkit-details-marker { display: none; }
+.if-nav-icon-btn::marker { content: ''; }
 
-.if-nav-icon-btn:hover { background: rgba(255, 255, 255, 0.3); }
-
-.if-nav-share-btn,
-.if-nav-collab-share-btn { width: 100%; }
+.if-nav-icon-btn:hover { background: rgba(255, 255, 255, 0.35); }
 
 .if-nav-bottom-label {
     font-size: 0.82rem;
     font-weight: 600;
+    letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Bulunan gerçek bug: iki paylaşım butonu (Paylaş + Bağlantı) artık AYNI
-   satırda — ikisi de yazılı etiketle (bkz. yukarıdaki .if-nav-bottom-label)
-   220px'lik dar sütuna sığmıyor, taşan kısım .if-list-panel'in ALTINDA kalıp
-   görünmez oluyordu. .home-notif zaten simge-yalnız (etiketsiz) bu satırda —
-   AYNI yoğunluğa uyarlanıyor: title/aria-label (zaten var) hover tooltip'i
-   sağlıyor, metin etiketi genişken de gizli. */
-.if-nav-collab-share .if-nav-bottom-label,
-.if-nav-share .if-nav-bottom-label {
-    display: none;
+/* ---------- Sol nav alt bölge: TEK SATIRLIK "footer" kabı ----------
+   Avatar · boşluk · Paylaş · Bağlantı · bildirim · daralt(≪) — hepsi kendi
+   zemin rengine sahip bir şeritte.
+
+   Şerit panelin TAM genişliğini kaplasın diye .if-nav'ın yatay padding'i
+   (0.75rem) ve alt padding'i negatif margin ile geri alınıp kabın KENDİ
+   padding'i olarak veriliyor; yoksa zemin, panelin ortasında kenarlara
+   değmeyen bir kutu gibi dururdu. */
+.if-nav-bottom {
+    margin: auto -0.75rem -1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--if-nav-footer-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
+/* Satır: profil · boşluk · Paylaş · Bağlantı · bildirim · daralt.
+   `order` KORUNDU — daraltılmış hâlde sütuna dönüp sıra değiştiği için
+   DOM sırası tek başına yetmiyor (bkz. aşağıdaki .is-collapsed blokları). */
+.if-nav-util-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.if-account { order: 1; }
+.if-nav-spacer { order: 2; flex: 1; }
+.if-nav-collab-share { order: 3; }
+.if-nav-share { order: 4; }
+.if-nav-util-row .home-notif { order: 5; }
+.if-nav-collapse-btn { order: 6; }
+.if-nav-expand-btn { order: 7; }
+
+/* ⚠️ "Paylaş" bu satırda İKON-YALNIZ (etiketi aşağıda gizleniyor).
+   Bu, bilinçli bir geri adım: bir dönem tam genişlikte METİNLİ buton olarak
+   kendi satırındaydı, çünkü daha da öncesinde etiketli hâliyle tek satıra
+   sığmayıp taşıyordu. Artık tekrar tek satırda ama etiketsiz — ölçülen
+   genişlik 156px, kullanılabilir alan 190px. Etiketi geri açan biri o taşmayı
+   da geri getirir; testte satır taşma kontrolü var. */
+.if-nav-collab-share-btn {
+    padding: 0.4rem;
+    border-radius: 6px;
+}
+
+/* Genişlet (≫) YALNIZCA daraltılmış hâlde görünür.
+   AÇIK KURAL ŞART: butonda `hidden` özniteliği var ama .if-nav-icon-btn'in
+   `display: flex`i tarayıcının `[hidden] { display: none }` varsayılanını
+   EZİYOR — bu satır silindiğinde ≪ ve ≫ yan yana göründü (ekranda yakalandı). */
 .if-nav-expand-btn { display: none; }
+
+/* Alt satırdaki İKİ paylaşım düğmesi de ikon-yalnız: metin etiketleri altı
+   öğeyi 220px'e sığdırmayı imkânsız kılıyor. İkisinde de title + aria-label
+   var, yani ipucu ve erişilebilirlik korunuyor. */
+.if-nav-share .if-nav-bottom-label,
+.if-nav-collab-share .if-nav-bottom-label { display: none; }
 
 /* ---------- Daraltılmış durum (.if-nav.is-collapsed) ---------- */
 
+/* Bu blok bir düzenlemede yanlışlıkla silinmişti (ekranda yakalandı: daraltma
+   düğmesine basınca kenar çubuğu 220px kalıyor, tablo listesi ve "Paylaş"
+   etiketi gizlenmiyordu). Genişlik/gizleme kuralları geri getirildi; iki
+   satırlı yeni alt bölge için sıralama aşağıda güncellendi. */
 .if-nav.is-collapsed {
     width: 64px;
     padding: 1rem 0.5rem;
@@ -204,7 +285,13 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-nav.is-collapsed .if-nav-top { justify-content: center; }
-.if-nav.is-collapsed .if-nav-back span,
+
+/* Yalnızca base ADI gizlenir, İKON KALIR.
+   Önceki kural `.if-nav-back span` idi ve base ikonu da bir <span> olduğu için
+   onu da gizliyordu: daraltılmış başlıkta yapayalnız bir ▾ oku kalıyordu
+   (ekranda görüldü). :not(.home-base-icon) ikonu korur. */
+.if-nav.is-collapsed .if-nav-back span:not(.home-base-icon),
+.if-nav.is-collapsed .if-nav-back > svg,
 .if-nav.is-collapsed .if-nav-list,
 .if-nav.is-collapsed .if-nav-bottom-label {
     display: none;
@@ -213,26 +300,35 @@ body.if-page a { text-decoration: none; color: inherit; }
 .if-nav.is-collapsed .if-nav-back { flex: none; padding: 0.5rem; }
 .if-nav.is-collapsed .if-nav-list-icon { display: flex; }
 
-/* Kapalıyken Bildirim, Share'den ÖNCE gelir (açıkken tam tersi) + boşluk
-   (spacer) sütun modunda anlamsız fazladan yer açmasın diye gizlenir +
-   daralt (≪) gizlenip genişlet (≫) görünür — TEK toggle yuvası, artık
-   ikisi de aynı satırda/sütunda yaşıyor (önceki karışıklığın kök nedeni
-   buydu: ≪ .if-nav-top'ta, ≫ .if-nav-bottom'daydı). */
-.if-nav.is-collapsed .if-nav-spacer { display: none; }
-.if-nav.is-collapsed .if-nav-collab-share { order: 5; flex: none; }
-.if-nav.is-collapsed .if-nav-share { order: 6; flex: none; }
-.if-nav.is-collapsed .if-nav-bottom .home-notif { order: 4; }
-.if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
-.if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }
-
+/* Daraltılmışken alt bölge dikey ikon yığınına döner. Sıra:
+   Avatar — ≫ — Bildirim — Bağlantı — Paylaş; aç/kapa düğmesi avatarın hemen
+   altında kalsın diye ≫ ikinci sırada.
+   Footer zemini burada da TAM genişlikte olsun diye negatif margin dar
+   padding'e (0.5rem) göre yeniden hesaplanıyor. */
+/* `align-self: stretch` ŞART: .if-nav.is-collapsed `align-items: center`
+   taşıyor, yani çocuklar içerik genişliğine büzülür — `width: auto` ile
+   footer şeridi 45px'lik bir ada olarak kalıyordu (ölçüldü), zemin rengi dar
+   rayı kaplamıyordu. stretch ile içerik kutusunu doldurur, negatif margin de
+   kalan yatay padding'in üstüne taşırır. */
 .if-nav.is-collapsed .if-nav-bottom {
+    align-self: stretch;
+    align-items: center;
+    margin: auto -0.5rem -1rem;
+    padding: 0.6rem 0.5rem;
+}
+
+.if-nav.is-collapsed .if-nav-util-row {
     flex-direction: column;
     width: 100%;
 }
 
-.if-nav.is-collapsed .if-nav-share-btn,
-.if-nav.is-collapsed .if-nav-collab-share-btn { flex: none; }
-.if-nav.is-collapsed .if-nav-expand-btn { display: flex; }
+/* Kapalıyken bildirim, Bağlantı'dan ÖNCE gelir (açıkken tam tersi). */
+.if-nav.is-collapsed .if-nav-util-row .home-notif { order: 3; }
+.if-nav.is-collapsed .if-nav-share { order: 4; }
+.if-nav.is-collapsed .if-nav-collab-share { order: 5; }
+.if-nav.is-collapsed .if-nav-spacer { display: none; }
+.if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
+.if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }
 
 /* Bildirim/hesap panelleri varsayılan olarak tetikleyicinin ALTINDA-SAĞINDA
    açılır (bkz. home.css .home-notif-panel top:calc(100%+8px)) — burada
@@ -264,13 +360,16 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-account { position: relative; }
 
+/* Kenarlık: kenar çubuğundaki DİĞER ikon kutusuyla (.home-base-icon) aynı
+   keskin dış hat — amber footer şeridi üzerinde ikisi de aynı dili konuşsun
+   diye. Rengi/zemini DEĞİŞMEDİ; yalnızca sınırı tanımlandı. */
 .if-avatar {
     width: 28px;
     height: 28px;
     border-radius: 50%;
     background: var(--bcc-accent);
     color: var(--bcc-on-accent);
-    border: none;
+    border: 1.5px solid var(--if-nav-ink);
     font-weight: 700;
     font-size: 0.78rem;
     cursor: pointer;

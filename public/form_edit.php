@@ -185,6 +185,25 @@ function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
     <?php
 }
 
+// Sol panel "Yıldızlılar" listesi — table_fields.php/slack_settings.php/
+// workspaces.php ile AYNI desen.
+//
+// ⚠️ Bu blok EKSİKTİ: kabuk $starredBases'i bekliyor ama bu sayfa hiç
+// ayarlamıyordu, dolayısıyla sol paneldeki yıldızlı base listesi bu sayfada
+// (ve YALNIZCA bu sayfada) HER ZAMAN boş görünüyordu — kardeş sayfalarda
+// doluyken. display_errors kapalı olduğu için ortada bir hata mesajı da yoktu.
+$starredBases = array();
+$teamIdsForStar = current_user_team_ids();
+if (!empty($teamIdsForStar)) {
+    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
+    $starredBases = bcc_fetch_all(
+        "SELECT b.id, b.name FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ? ORDER BY b.name",
+        array_merge($teamIdsForStar, array((int) $user['id']))
+    );
+}
+
 // Sayfa iskeleti: table_fields.php/slack_settings.php ile AYNI kabuk
 // (home_shell_top/bottom) — yeni bir sayfa şablonu YAZILMADI.
 $homeActiveNav = 'fields';
@@ -250,11 +269,13 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                placeholder="<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>">
                     </label>
 
-                    <label class="settings-field" style="margin-top:0.9rem;">Açıklama <span class="sp-muted">— formun üstünde görünür</span>
+                    <?php // Satır içi margin YOK: alanlar arası boşluk tek yerden
+                          // (.fe-section .settings-field + .settings-field, form-edit.css). ?>
+                    <label class="settings-field">Açıklama <span class="sp-muted">— formun üstünde görünür</span>
                         <textarea name="form_description" rows="3" maxlength="1000"><?php echo htmlspecialchars($formConfig['form_description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                     </label>
 
-                    <label class="settings-field" style="margin-top:0.9rem;">Gönderim sonrası teşekkür metni
+                    <label class="settings-field">Gönderim sonrası teşekkür metni
                         <input type="text" name="form_success_message" maxlength="500"
                                value="<?php echo htmlspecialchars($formConfig['form_success_message'], ENT_QUOTES, 'UTF-8'); ?>"
                                placeholder="Teşekkürler, kaydınız alındı.">

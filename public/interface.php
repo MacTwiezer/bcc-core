@@ -60,26 +60,40 @@ $bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? '
 $bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
 $interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.php?base_id=' . (int) $baseId . '&table_id=' . (int) $tableId;
 
-// D1 "Paylaş" popup — grid.php'deki AYNI Airtable Share paritesi (People with
-// access özeti + mevcut kullanıcılar arasından hızlı atama), burada da $base
-// üzerinden AYNI mantık. Kod tekrarı yok: bcc_assignable_roles() (src/auth.php).
-$myRank = $GLOBALS['BCC_ROLE_RANK'][current_user_role_in_team($base['team_id'])];
-$shareAssignableRoles = bcc_assignable_roles($myRank);
-$shareCollaborators = bcc_fetch_all(
-    'SELECT u.id, u.full_name, u.email
-     FROM team_members tm
-     INNER JOIN users u ON u.id = tm.user_id
-     WHERE tm.team_id = :team_id AND u.is_active = 1
-     ORDER BY u.full_name',
-    array('team_id' => $base['team_id'])
-);
+// D1 "Paylaş" — grid.php ile BİREBİR AYNI bileşen.
+//
+// ⚠️ ÖNCEKİ HÂLİ SAYFADAN ÇIKIYORDU: bu blok kendi katılımcı/aday
+// sorgularını yazıyor, popover da bir <form action="/team_members.php">
+// (tam sayfa POST) ve bir <a href="/team_members.php"> taşıyordu — yani
+// "Paylaş"a tıklayan kullanıcı Duyuru ekranını TERK EDİYORDU. grid.php aynı
+// yolu daha önce bırakmıştı; burası geride kalmıştı.
+//
+// Artık TEK kaynak: bcc_share_modal_payload() + src/partials/share_modal.php
+// + assets/share-modal.js. Kendi sorguları SİLİNDİ (ikinci bir hesap yok);
+// davet/rol değiştirme/çıkarma işleri modalın AJAX uçnoktalarından geçiyor
+// (api/team_member_assign.php, api/team_member_remove.php).
+require_once __DIR__ . '/../src/share_modal_payload.php';
+
+$shareRole = current_user_role_in_team($base['team_id']);
+$canManageMembers = bcc_can_manage_members($shareRole);
+
+$shareModalPayload = bcc_share_modal_payload($base['team_id'], $shareRole);
+$shareModalTeamId = (int) $base['team_id'];
+$shareModalTeamName = $base['name'];
+
+$shareCollaborators = $shareModalPayload['collaborators'];
 $shareCollaboratorPreview = array_slice($shareCollaborators, 0, 4);
 $shareCollaboratorExtraCount = count($shareCollaborators) - count($shareCollaboratorPreview);
 
-$shareExistingIds = array_map('intval', array_column($shareCollaborators, 'id'));
-$shareCandidateUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY full_name');
+// Davet kutusunun <datalist> önerileri — grid.php'deki AYNI süzgeç: takımın
+// (bekleyenler dahil) henüz üyesi OLMAYAN aktif kullanıcılar.
+$shareExistingIds = array_map('intval', array_column(
+    array_merge($shareModalPayload['collaborators'], $shareModalPayload['pending']),
+    'id'
+));
+$shareModalCandidates = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY full_name');
 if (!empty($shareExistingIds)) {
-    $shareCandidateUsers = array_values(array_filter($shareCandidateUsers, function ($candidate) use ($shareExistingIds) {
+    $shareModalCandidates = array_values(array_filter($shareModalCandidates, function ($candidate) use ($shareExistingIds) {
         return !in_array((int) $candidate['id'], $shareExistingIds, true);
     }));
 }
@@ -124,10 +138,17 @@ if (!empty($shareExistingIds)) {
             <details class="if-nav-menu gs-table-tab-menu" name="if-nav-menu">
                 <summary class="if-nav-back" title="Menü">
                     <!-- Dashboard/Starred kartındaki AYNI ikon (bcc_base_icon_svg,
-                         base ADINDAN türetilen kategori glifi) + AYNI base_id-tabanlı
-                         renk (bcc_base_icon_color) — ikinci bir kopya YAZILMADI,
-                         src/schema.php'deki paylaşılan fonksiyonlar. -->
-                    <span class="home-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($baseId), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14, $base['name']); ?></span>
+                         base ADINDAN türetilen kategori glifi) — src/schema.php'deki
+                         paylaşılan fonksiyon, ikinci bir kopya YAZILMADI.
+                         ⚠️ Satır içi `background: bcc_base_icon_color($baseId)`
+                         KALDIRILDI: base id'sinden türeyen dolu/canlı renk (bu
+                         base'de #06b6d4 turkuaz) amber kenar çubuğunda yabancı
+                         bir leke gibi duruyordu ve satır içi olduğu için hiçbir
+                         CSS kuralıyla yumuşatılamıyordu. Zemin+kenarlık artık
+                         interface.css'te (.if-nav-back .home-base-icon).
+                         Kategori GLİFİ değişmedi — base'ler hâlâ birbirinden
+                         ayırt edilebiliyor. -->
+                    <span class="home-base-icon"><?php echo bcc_base_icon_svg(14, $base['name']); ?></span>
                     <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </summary>
@@ -149,6 +170,12 @@ if (!empty($shareExistingIds)) {
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M2.5 5.5A1.5 1.5 0 014 4h3.4l1.4 1.7H16A1.5 1.5 0 0117.5 7v7.5A1.5 1.5 0 0116 16H4a1.5 1.5 0 01-1.5-1.5v-9z" stroke="#5a4a00" stroke-width="1.4" stroke-linejoin="round"/></svg>
             </div>
 
+            <?php // Kategori başlığı: listeye derinlik verir ve daraltılmış
+                  // hâlde (metin gizlenirken) klasör ikonuyla değişir.
+                  // "TABLOLAR" — bu liste GERÇEKTEN tabloları gösteriyor
+                  // (arayüz/görünüm değil), uydurma bir başlık kullanılmadı. ?>
+            <p class="if-nav-group-label">Tablolar</p>
+
             <div class="if-nav-list">
                 <?php foreach ($tables as $t): ?>
                     <a
@@ -169,14 +196,22 @@ if (!empty($shareExistingIds)) {
              (≫) ile aynı yuvada olmadığı için "karışık" hissi veriyordu.
              Profil/bildirim: mevcut ortak partial'lar require edilir, ikinci
              bir kopya YAZILMAZ. -->
+        <?php // ALT BÖLGE: TEK SATIR — avatar · boşluk · Paylaş · Bağlantı ·
+              // bildirim · daralt(≪), tamamı kendi zemin rengine (#ffc11e)
+              // sahip bir "footer" kabında.
+              //
+              // ⚠️ TARİHÇE: bu bölge bir dönem tek satırdı, "Paylaş"/"Bağlantı"
+              // METİN etiketleri yüzünden 220px'e sığmıyordu ve taşan kısım
+              // komşu panelin altında kayboluyordu; o yüzden "Paylaş" kendi tam
+              // genişlikteki satırına alınmıştı. Şimdi tekrar tek satıra
+              // dönüldü ama ESKİ HATAYA DÜŞMEDEN: satır içindeki "Paylaş" da
+              // "Bağlantı" gibi İKON-YALNIZ (etiketi CSS gizliyor,
+              // title/aria-label duruyor). Ölçüldü: 5 ikon + avatar = 156px,
+              // kullanılabilir genişlik 190px — taşma yok (bkz.
+              // scripts/_verify_interface_nav_ui.php, satır taşma kontrolü). ?>
         <div class="if-nav-bottom">
-            <?php
-            $accountMenuPrefix = 'if';
-            $accountMenuUser = $user;
-            require __DIR__ . '/../src/partials/account_menu.php';
-            ?>
-            <div class="if-nav-spacer" aria-hidden="true"></div>
 
+            <div class="if-nav-util-row">
             <!-- D1 — grid.php'deki AYNI Airtable Share paritesi (collab-popover-*),
                  ikinci bir kopya YOK. .if-nav-bottom içindeki konumlandırma
                  düzeltmesi (sağa açılma) interface.css'te. -->
@@ -188,47 +223,52 @@ if (!empty($shareExistingIds)) {
                 <div class="collab-popover-form">
                     <div class="collab-popover-title">"<?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?>" paylaş</div>
 
-                    <form class="collab-popover-assign" method="post" action="/team_members.php?team_id=<?php echo (int) $base['team_id']; ?>">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="assign">
-                        <?php if (empty($shareCandidateUsers)): ?>
-                            <p class="collab-popover-note">Eklenebilecek başka aktif kullanıcı yok.</p>
-                        <?php else: ?>
-                            <label class="collab-popover-field">
-                                <select name="user_id" required>
-                                    <option value="">Kullanıcı ara ve seç...</option>
-                                    <?php foreach ($shareCandidateUsers as $cu): ?>
-                                        <option value="<?php echo (int) $cu['id']; ?>">
-                                            <?php echo htmlspecialchars($cu['full_name'] . ' (' . $cu['email'] . ')', ENT_QUOTES, 'UTF-8'); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label class="collab-popover-field collab-popover-field-role">
-                                <select name="role" required>
-                                    <?php foreach ($shareAssignableRoles as $r): ?>
-                                        <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>">
-                                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <button type="submit" class="btn-sm">Ekle</button>
-                        <?php endif; ?>
-                    </form>
+                    <?php if ($canManageMembers): ?>
+                        <?php // grid.php ile AYNI: tam sayfa POST eden kullanıcı
+                              // seçici + rol <select>'i KALDIRILDI. Aynı iş
+                              // (e-posta + rol + Davet Et) modalın davet
+                              // kutusunda, sayfadan çıkmadan yapılıyor. ?>
+                        <button type="button" class="collab-popover-add-btn" data-share-modal-open>Katılımcı ekle</button>
+                    <?php else: ?>
+                        <?php // Owner değil: ekleme yolu HİÇ basılmaz (sunucu
+                              // tarafı gate, CSS ile gizlenmiş bir form değil).
+                              // Katılımcı listesi görünür kalır — kimin erişimi
+                              // olduğunu görmek yetki gerektirmez. ?>
+                        <p class="collab-popover-note">Katılımcı eklemek için Owner yetkisi gerekir.</p>
+                    <?php endif; ?>
 
-                    <a class="collab-popover-people" href="/team_members.php?team_id=<?php echo (int) $base['team_id']; ?>">
+                    <?php // ARTIK YÖNLENDİRME YOK: eskiden bu satır
+                          // team_members.php'ye giden bir <a> idi ve Duyuru
+                          // ekranından çıkarıyordu. Şimdi grid.php ile AYNI
+                          // <button data-share-modal-open> — aynı sayfada modalı
+                          // açıyor. Tam yönetim ekranı kaybolmadı: modalın
+                          // altındaki "Tüm üye ayarları →" hâlâ oraya gidiyor. ?>
+                    <button type="button" class="collab-popover-people" data-share-modal-open>
                         <div class="collab-popover-avatars">
+                            <?php // 'name' / 'initial' anahtarları payload'da
+                                  // hazırlanmış (modaldakiyle AYNI kaynak). ?>
                             <?php foreach ($shareCollaboratorPreview as $c): ?>
-                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($c['initial'], ENT_QUOTES, 'UTF-8'); ?></div>
                             <?php endforeach; ?>
                         </div>
-                        <span class="collab-popover-people-label">
+                        <?php // data-share-people-label: modalda biri eklenip
+                              // çıkarıldığında share-modal.js bu özeti tazeliyor. ?>
+                        <span class="collab-popover-people-label" data-share-people-label>
                             <?php echo count($shareCollaborators); ?> kişinin erişimi var<?php echo $shareCollaboratorExtraCount > 0 ? ' (+' . (int) $shareCollaboratorExtraCount . ')' : ''; ?>
                         </span>
-                    </a>
+                    </button>
                 </div>
             </details>
+
+            <?php // Sıralama `order` ile sürülüyor (daraltılmış hâlde satır
+                  // sütuna dönüşüp sıra değiştiği için DOM sırası tek başına
+                  // yetmiyor — bkz. interface.css .if-nav-util-row order'ları). ?>
+            <?php
+            $accountMenuPrefix = 'if';
+            $accountMenuUser = $user;
+            require __DIR__ . '/../src/partials/account_menu.php';
+            ?>
+            <div class="if-nav-spacer" aria-hidden="true"></div>
 
             <!-- E1 — eski "Paylaş" (view-link kopyalama), grid.php'nin "Bağlantı"sıyla
                  AYNI ad değişikliği — yukarıdaki YENİ collaborators "Paylaş"'ıyla
@@ -259,6 +299,7 @@ if (!empty($shareExistingIds)) {
             <button type="button" class="if-nav-icon-btn if-nav-expand-btn" id="if-nav-expand" aria-label="Genişlet" title="Genişlet" hidden>
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M7.5 4.5L14 10l-6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+            </div><!-- /.if-nav-util-row -->
         </div>
     </nav>
 
@@ -380,10 +421,15 @@ if (!empty($shareExistingIds)) {
      yaşıyor, ikinci bir kopya YAZILMAZ — home.js'deki TÜM diğer bloklar
      (arama popover'ı, starred listesi, kart/liste görünüm) bu sayfada
      bulunmayan elemanlara bakar ve null-check'li olduğu için no-op kalır. -->
+<?php // "Paylaş" modalı — grid.php ile BİREBİR AYNI partial ve AYNI JS.
+      // Overlay .gs-* sınıflarını kullanıyor; bu sayfa grid-shell.css'i zaten
+      // yüklüyor (bkz. <head>'deki not), ek bir stil dosyası GEREKMEDİ. ?>
+<?php require __DIR__ . '/../src/partials/share_modal.php'; ?>
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('interface.js'); ?>" defer></script>
 </body>
 </html>

@@ -97,16 +97,38 @@
     font-family: inherit;
 }
 
+/* Şifre göster/gizle düğmesinin dikey hizası.
+   BULUNAN GERÇEK BUG: düğme `bottom: 0.32rem` ile ALTA sabitlenmişti. İki ayrı
+   sebeple ortadan kayıyordu:
+     1. bottom, input'un yüksekliğinden bağımsız — dolgu/font değiştiği anda
+        (login 0.7rem, hesap 0.4rem) elle ayarlanmış bu değer bozuluyordu.
+     2. input satır-içi bir eleman olduğu için sarmalayıcının altında bir
+        "descender" boşluğu kalıyor; sarmalayıcı input'tan birkaç piksel daha
+        uzun oluyordu, yani bottom input'un altına değil o boşluğun altına
+        yaslanıyordu.
+   Çözüm: input'u display:block yapıp sarmalayıcının yüksekliğini input'a
+   EŞİTLEMEK (1 ve 2'nin kaynağını kurutur), sonra top:50% + translateY(-50%)
+   ile gerçek merkeze koymak. Bu haliyle input yüksekliği değişse de hiza
+   kendiliğinden korunur. */
 .input-with-toggle {
     position: relative;
+    display: block;
 }
 
-.input-with-toggle input { padding-right: 2.4rem; }
+.input-with-toggle input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    /* Düğme sağdan 12px'te ve 28px genişliğinde: metin tam düğmenin
+       başladığı yerde bitsin diye 12 + 28 = 40px. */
+    padding-right: 40px;
+}
 
 .input-toggle-btn {
     position: absolute;
-    right: 0.4rem;
-    bottom: 0.32rem;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
     width: 28px;
     height: 28px;
     border: none;

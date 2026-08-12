@@ -83,17 +83,33 @@ form.stacked textarea:focus {
     box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14);
 }
 
+/* Dikey hiza: bkz. login.css'teki ayrıntılı gerekçe.
+   BURADA EK BİR TUZAK VARDI: `margin-top: 0.35rem` input'un ÜZERİNDEYDİ, yani
+   sarmalayıcının İÇİNDE. Sarmalayıcı bu yüzden input'tan 5.6px daha uzun
+   oluyordu ve top:50% input'un değil "boşluk + input"un ortasını gösterirdi
+   (düğme ~3px aşağı kayardı). Margin sarmalayıcıya taşındı: etiketle arasındaki
+   boşluk aynı kaldı, sarmalayıcı artık tam olarak input kadar. */
 form.stacked .input-with-toggle {
     position: relative;
+    display: block;
     max-width: 360px;
+    margin-top: 0.35rem;
 }
 
-form.stacked .input-with-toggle input { max-width: none; margin-top: 0.35rem; padding-right: 2.4rem; }
+form.stacked .input-with-toggle input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: none;
+    margin-top: 0;
+    padding-right: 40px;
+}
 
 .input-toggle-btn {
     position: absolute;
-    right: 0.4rem;
-    bottom: 0.32rem;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
     width: 28px;
     height: 28px;
     border: none;

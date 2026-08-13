@@ -10,6 +10,11 @@
 //   $starredBases   - array, [['id'=>.., 'name'=>..], ...] (team-scoped, alfabetik)
 //   $homeActiveNav  - 'home' | 'starred' | 'workspaces'
 //   $homePageTitle  - <title> metni
+//   $homeIdentityMeta - (opsiyonel) bcc_page_identity_meta() çıktısı. YALNIZCA
+//                     tek bir base bağlamı olan sayfalar ayarlar (base_tables.php);
+//                     ayarlanırsa sekme ikonu o base'in rozetine döner
+//                     (assets/page-identity.js). Çok base listeleyen sayfalar
+//                     (dashboard/starred/workspaces) ayarlamaz.
 //   $homeExtraCss   - (opsiyonel) sayfaya ÖZEL stylesheet adları, ör.
 //                     array('table-fields.css'). Tanımsızsa hiçbir şey basılmaz;
 //                     bu kabuğu paylaşan diğer sayfalar etkilenmez. Sayfaya özel
@@ -40,6 +45,14 @@ if (!isset($starredBases) || !is_array($starredBases)) {
 <meta charset="utf-8">
 <title><?php echo htmlspecialchars($homePageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<?php if (!empty($homeIdentityMeta)): ?>
+<?php // Yalnızca TEK bir base bağlamı olan sayfalarda (ör. base_tables.php).
+      // Dashboard/Starred/Workspaces birçok base listeler — orada sekme
+      // ikonu tek bir base'e ait olamaz, bu yüzden bu blok hiç basılmaz ve
+      // yukarıdaki genel BCC-Core favicon'u kalır. ?>
+<?php echo $homeIdentityMeta, "\n"; ?>
+<script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
+<?php endif; ?>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">

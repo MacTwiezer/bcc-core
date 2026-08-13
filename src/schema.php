@@ -3598,6 +3598,61 @@ function bcc_base_icon_svg($size = 20, $baseName = null)
         . ' aria-hidden="true">' . $d . '</svg>';
 }
 
+// Bir base'in glif ÇİZİM YOLLARI (dış <svg> kabuğu olmadan). bcc_base_icon_svg()
+// ile AYNI kategori tablosunu okur — favicon'u istemcide kurabilmek için
+// (assets/page-identity.js) yalnızca iç yollar gerekiyor, kabuğu o kendi
+// boyutunda/renginde yeniden çiziyor.
+function bcc_base_icon_paths($baseName = null)
+{
+    $category = $baseName === null ? 'database' : bcc_base_icon_category($baseName);
+    $paths = $GLOBALS['BCC_BASE_ICON_PATHS'];
+
+    return isset($paths[$category]) ? $paths[$category] : $paths['database'];
+}
+
+// ---- Sekme kimliği: <title> + favicon ------------------------------------
+//
+// Airtable'ın sekme biçimi: "[Base]: [Tablo/Görünüm] — BCC-Core".
+//
+// Başlık SUNUCUDA basılır (JS'siz de doğrudur ve sayfa açılırken yanlış bir
+// başlığın bir an görünüp düzelmesi — "title flash" — hiç yaşanmaz). Favicon
+// ise istemcide üretilir: rengi (base id'sinden) ve glifi (base adından)
+// birleştirip bir data: URI kurmak gerekiyor, ayrıca aynı yardımcı ileride
+// sayfa yenilenmeden base/tablo değiştirmede tekrar çağrılabilsin.
+//
+// DİKKAT: aşağıdaki biçim page-identity.js'teki updatePageTitle() ile
+// birebir AYNI olmalı — biri değişirse diğeri de değişmeli.
+function bcc_page_title($baseName, $contextName = null)
+{
+    $base = trim((string) $baseName);
+    $ctx = trim((string) $contextName);
+
+    if ($base === '') {
+        return $ctx !== '' ? $ctx . ' — BCC-Core' : 'BCC-Core';
+    }
+
+    return $ctx !== ''
+        ? $base . ': ' . $ctx . ' — BCC-Core'
+        : $base . ' — BCC-Core';
+}
+
+// page-identity.js'in okuduğu <meta> etiketleri. Base ikonu VERİTABANINDA
+// TUTULMUYOR: glif base ADINDAN (bcc_base_icon_category), renk base ID'sinden
+// (bcc_base_icon_theme) deterministik olarak türetilir — bu yüzden favicon,
+// Home kartındaki ve grid üst barındaki çiple HER ZAMAN aynı çıkar, ayrıca
+// senkronlanacak ikinci bir veri yoktur.
+function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
+{
+    $esc = function ($v) {
+        return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    };
+
+    return '<meta name="bcc-base-name" content="' . $esc($baseName) . '">' . "\n"
+        . '<meta name="bcc-context-name" content="' . $esc($contextName) . '">' . "\n"
+        . '<meta name="bcc-base-color" content="' . $esc(bcc_base_icon_color($baseId)) . '">' . "\n"
+        . '<meta name="bcc-base-icon" content="' . $esc(bcc_base_icon_paths($baseName)) . '">';
+}
+
 // Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
 // şekilde kullanılır). $isStarred true ise yıldız butonu hover'dan bağımsız
 // hep görünür kalır (CSS: .home-base-star-btn[aria-pressed="true"]).

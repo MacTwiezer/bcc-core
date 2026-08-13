@@ -188,7 +188,12 @@ if (!empty($teamIdsForStar)) {
 }
 
 $homeActiveNav = 'bases';
-$homePageTitle = 'BCC-Core — ' . $base['name'];
+// Bu ekranın bir tablo/görünüm bağlamı yok (base'in tablo LİSTESİ), bu yüzden
+// ikinci parça boş: başlık "Base — BCC-Core" olur. Sekme ikonu ise base'in
+// kendi rozetine döner — base.php tablosuz bir base'e girilince buraya
+// yönlendirdiği için, kullanıcının base'e ilk açılan ekranı burasıdır.
+$homePageTitle = bcc_page_title($base['name']);
+$homeIdentityMeta = bcc_page_identity_meta($base['id'], $base['name']);
 // Sayfaya özel stylesheet. Bu ekranın .settings-* sınıfları sekiz başka sayfayla
 // PAYLAŞILIYOR (admin/*, bases, form_edit, kanban, slack_settings) — home.css'i
 // değiştirmek hepsini yeniden tasarlardı. Tüm yeni kurallar

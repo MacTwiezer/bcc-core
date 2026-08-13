@@ -661,8 +661,11 @@ $gridUser = current_user();
 <head>
 <meta charset="utf-8">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
-<title>BCC-Core — <?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?></title>
+<title><?php echo htmlspecialchars(bcc_page_title($table['base_name'], $table['name']), ENT_QUOTES, 'UTF-8'); ?></title>
+<?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name']), "\n"; ?>
+<script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">

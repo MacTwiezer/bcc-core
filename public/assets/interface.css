@@ -476,6 +476,174 @@ body.if-page a { text-decoration: none; color: inherit; }
     color: var(--bcc-text);
 }
 
+/* ---------- Grupla / Filtrele / Sırala araç çubuğu ----------
+   Arama kutusunun hemen ALTINDA, kayıt listesinin ÜSTÜNDE. Renkler token'la
+   (bu dosyadaki .grid-search-mark dersi): sabit hex koyu temayı bozardı. */
+
+.if-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0 0.85rem 0.6rem;
+    flex-shrink: 0;
+}
+
+.if-tool { position: relative; }
+
+.if-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.if-tool-btn::-webkit-details-marker { display: none; }
+.if-tool-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text); }
+.if-tool[open] .if-tool-btn { background: var(--bcc-surface-hover); color: var(--bcc-text); }
+
+.if-tool-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: var(--bcc-accent);
+    color: var(--bcc-on-accent);
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.if-tool-badge[hidden] { display: none; }
+
+/* Bulunan gerçek bug: panel önce `position: absolute` idi ve .if-list-panel'in
+   `overflow: hidden`i onu 340px'lik kenar çubuğunun sınırında KESİYORDU —
+   ekran görüntüsünde filtre satırının "Değer" kutusu yarıda kalıyordu.
+   Çözüm, bu depoda AYNI sorun için zaten kullanılan desen: position:fixed +
+   açılışta konumu JS'in hesaplaması (bkz. style.css'teki .grid-th-menu-panel /
+   .grid-add-field-panel / .gs-view-row-menu-panel notları). fixed olduğu için
+   hiçbir atanın overflow'u onu kırpamaz. Konum: assets/interface.js
+   positionToolPanel(). */
+.if-tool-panel {
+    position: fixed;
+    z-index: 40;
+    min-width: 300px;
+    padding: 0.6rem;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.if-tool-hint {
+    margin: 0 0 0.45rem;
+    font-size: 0.74rem;
+    color: var(--bcc-text-muted);
+}
+
+.if-tool-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.if-tool-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.if-tool-row select,
+.if-tool-row input,
+.if-tool-logic {
+    font: inherit;
+    font-size: 0.76rem;
+    padding: 0.25rem 0.3rem;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    min-width: 0;
+}
+
+.if-tool-row .if-tool-field { flex: 1.2; }
+.if-tool-row .if-tool-cond { flex: 1; }
+.if-tool-row .if-tool-value { flex: 1; }
+.if-tool-row .if-tool-dir { flex: 1; }
+.if-tool-row .if-tool-value[hidden] { display: none; }
+
+.if-tool-logic {
+    width: 100%;
+    margin-bottom: 0.4rem;
+}
+
+.if-tool-del {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: var(--bcc-text-muted);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.if-tool-del:hover { background: var(--bcc-surface-hover); color: var(--bcc-text); }
+
+.if-tool-add {
+    margin-top: 0.45rem;
+    border: none;
+    background: transparent;
+    color: var(--bcc-accent);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 0.2rem 0;
+    cursor: pointer;
+}
+
+/* Grup başlıkları — istemcide üretiliyor (interface.js renderItems). */
+.if-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    margin: 0.5rem 0 0.15rem;
+    border-radius: 6px;
+    background: var(--bcc-surface-hover);
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--bcc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* İç seviyeler girintili — çok seviyeli gruplamada hiyerarşi görünsün. */
+.if-group-level-1 { margin-left: 0.75rem; }
+.if-group-level-2 { margin-left: 1.5rem; }
+
+.if-group-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.if-group-count {
+    flex-shrink: 0;
+    color: var(--bcc-text-muted);
+    font-weight: 600;
+}
+
 .if-record-list {
     flex: 1;
     overflow-y: auto;

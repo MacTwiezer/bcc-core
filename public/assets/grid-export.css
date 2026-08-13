@@ -63,6 +63,12 @@
    var, `.gs-main`/`.gs-body-row` açılsa bile tabloyu KENDİSİ kırpıyordu —
    "Kaydı yazdır" turunda bulunan sarmalayıcı bug'ının (kendi border/radius'u
    dahil) grid kardeşi. */
+/* body.gs-body DA listede olmak ZORUNDA: ekranda tam-kanama düzeni için
+   `height: 100vh; overflow: hidden` alıyor (grid-shell.css) — bu, kâğıtta ve
+   PNG'de tüm çıktıyı TEK EKRAN yüksekliğine kırpar, alttaki satırlar sessizce
+   kaybolurdu. Aşağıdaki .gs-main/.grid-wrap ile AYNI gerekçe, yalnızca bir
+   üst katman. */
+body.gs-body,
 .gs-body-row,
 .gs-main,
 .grid-wrap {
@@ -71,10 +77,17 @@
     max-height: none !important;
 }
 
+/* Tam-kanama düzeninde .grid-wrap zaten flex bir çocuk; çıktıda flex esnemesi
+   kapatılıp normal akışa dönülüyor, aksi hâlde flex-basis:0 yüzünden içeriğe
+   göre değil kapsayıcıya göre boylanırdı. (border/radius/margin artık ekranda
+   da sıfır — burada yine de bırakıldı: bu dosya ekran kurallarından bağımsız
+   olarak kendi başına doğru olmalı.) */
 .grid-wrap {
     border: 0;
     border-radius: 0;
     margin-bottom: 0;
+    flex: none !important;
+    min-height: 0 !important;
 }
 
 /* position:sticky (style.css: thead th, .grid-rownum, .grid-frozen-cell)

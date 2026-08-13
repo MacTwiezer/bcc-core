@@ -512,103 +512,10 @@ $attachmentsByRecord = !empty($records) ? bcc_fetch_attachments_by_record(array_
 
 $typeLabels = $GLOBALS['BCC_FIELD_TYPES'];
 
-// Çok seviyeli gruplama: $records üzerinde TEK geçişte, sıralı gelen kayıtları
-// iç içe bir ağaca böler. Segmentleme HAM DEĞER (group_raw_value_N, SQL'in
-// GROUP BY değil ORDER BY ile getirdiği ham kolon) üzerinden karşılaştırılır;
-// cell_display_text() yalnızca başlıkta GÖSTERİM için çağrılır, karşılaştırmaya
-// hiç girmez. Bir seviyenin ham değeri bir önceki kayıttan farklıysa, o seviye
-// VE ondan sonraki (daha iç) tüm seviyeler için yeni segment açılır — iç
-// sayaçlar bu noktada sıfırlanır (bkz. $counters), böylece dıştaki bir grup
-// değişince içteki "0-1" gibi bir path yanlışlıkla eski sayaçtan devam etmez.
-// Tüm tipler (checkbox dahil — cell_display_text() artık 'İşaretli'/'İşaretsiz'
-// döndürüyor) cell_display_text() ile (tarih formatı, seçim etiketleri vb.
-// doğru çıksın diye) biçimlendirilir. (Empty) davranışı: tek seviyeli
-// gruplamadaki gibi.
-//
-// Dönüş: düğüm dizisi. Her düğüm:
-//   'level'    => 0 tabanlı seviye
-//   'path'     => hiyerarşik segment yolu, ör. "0-2-1" (data-group-path'e gider)
-//   'display'  => başlıkta gösterilecek metin
-//   'count'    => bu düğümün altındaki TOPLAM kayıt sayısı (iç içe seviyelerde
-//                 tüm alt dallardaki kayıtların toplamı)
-//   'is_leaf'  => bu, gruplamanın en iç (son) seviyesi mi
-//   'children' => is_leaf değilse, alt düğüm dizisi (aksi halde null)
-//   'records'  => is_leaf ise, bu segmentteki kayıt dizisi (aksi halde null)
-function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
-{
-    $levelCount = count($groupRules);
-    $tree = array();
-
-    if ($levelCount === 0) {
-        return $tree;
-    }
-
-    $openNodes = array();
-    $counters = array_fill(0, $levelCount, -1);
-    $prevKeys = null;
-
-    foreach ($records as $record) {
-        $keys = array();
-        for ($lvl = 0; $lvl < $levelCount; $lvl++) {
-            $keys[$lvl] = $record['group_raw_value_' . $lvl];
-        }
-
-        $divergeLevel = 0;
-        if ($prevKeys !== null) {
-            $divergeLevel = $levelCount; // sentinel: hiçbir seviye değişmedi
-            for ($lvl = 0; $lvl < $levelCount; $lvl++) {
-                if ($keys[$lvl] !== $prevKeys[$lvl]) {
-                    $divergeLevel = $lvl;
-                    break;
-                }
-            }
-        }
-
-        for ($lvl = $divergeLevel; $lvl < $levelCount; $lvl++) {
-            $counters[$lvl] = ($lvl === $divergeLevel) ? $counters[$lvl] + 1 : 0;
-
-            $rule = $groupRules[$lvl];
-            $rawValue = $keys[$lvl];
-
-            if ($rawValue === null) {
-                $display = '(Boş)';
-            } else {
-                $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById, $rule['options']);
-            }
-
-            $isLeaf = ($lvl === $levelCount - 1);
-            $node = array(
-                'level' => $lvl,
-                'path' => implode('-', array_slice($counters, 0, $lvl + 1)),
-                'display' => $display,
-                'count' => 0,
-                'is_leaf' => $isLeaf,
-                'children' => $isLeaf ? null : array(),
-                'records' => $isLeaf ? array() : null,
-            );
-
-            if ($lvl === 0) {
-                $tree[] = $node;
-                $openNodes[0] = &$tree[count($tree) - 1];
-            } else {
-                $openNodes[$lvl - 1]['children'][] = $node;
-                $openNodes[$lvl] = &$openNodes[$lvl - 1]['children'][count($openNodes[$lvl - 1]['children']) - 1];
-            }
-        }
-
-        $openNodes[$levelCount - 1]['records'][] = $record;
-
-        for ($lvl = 0; $lvl < $levelCount; $lvl++) {
-            $openNodes[$lvl]['count']++;
-        }
-
-        $prevKeys = $keys;
-    }
-
-    unset($openNodes);
-
-    return $tree;
-}
+// bcc_build_grouped_tree() src/schema.php'e TAŞINDI: artık yalnızca grid.php
+// değil, Duyuru arayüzünün kayıt listesi uç noktası da (public/api/
+// interface_records.php) AYNI ağacı kuruyor — ikinci bir gruplama
+// mantığı yazılmadı. Çağrı yeri değişmedi.
 
 // Bir grup düğümünü (başlık satırı) ve altındakileri basar — iç içe her seviye
 // için ayrı bir fonksiyon KOPYALANMAZ, bu tek fonksiyon kendi kendini çağırır
@@ -1713,10 +1620,16 @@ $gridUser = current_user();
                 $colWidthFor = function ($key) use ($columnWidths) {
                     return isset($columnWidths[$key]) ? (int) $columnWidths[$key] : (int) $GLOBALS['BCC_DEFAULT_COLUMN_WIDTH'];
                 };
+                // Satır no sütunu haritadan OKUNMUYOR (bkz. BCC_ROW_COLUMN_WIDTH):
+                // sürüklenemeyen bir sütun olduğu için haritadaki 'row' değeri
+                // kullanıcı tercihi değil, eski yoğunluğun ölçülmüş kalıntısı —
+                // satır içi <col style> olarak basılınca CSS'i yenip sütunu
+                // 80px'te tutuyordu.
+                $rowColWidth = (int) $GLOBALS['BCC_ROW_COLUMN_WIDTH'];
                 $addFieldColWidth = 40; // "+" sütunu: ikon genişliği, kullanıcı ayarlayamaz
                 $totalColWidth = 0;
                 if ($hasColumnWidths) {
-                    $totalColWidth = $colWidthFor('row');
+                    $totalColWidth = $rowColWidth;
                     foreach ($visibleFields as $f) {
                         $totalColWidth += $colWidthFor('f' . (int) $f['id']);
                     }
@@ -1728,7 +1641,7 @@ $gridUser = current_user();
                 <table class="grid row-h-<?php echo htmlspecialchars($rowHeight, ENT_QUOTES, 'UTF-8'); ?> <?php echo $wrapHeaders ? 'wrap-headers' : ''; ?> <?php echo $hasColumnWidths ? 'grid-has-col-widths' : ''; ?>"<?php echo $hasColumnWidths ? ' style="width: ' . $totalColWidth . 'px;"' : ''; ?>>
                     <?php if ($hasColumnWidths): ?>
                     <colgroup>
-                        <col style="width: <?php echo $colWidthFor('row'); ?>px;">
+                        <col style="width: <?php echo $rowColWidth; ?>px;">
                         <?php foreach ($visibleFields as $f): ?>
                         <col data-col-key="f<?php echo (int) $f['id']; ?>" style="width: <?php echo $colWidthFor('f' . (int) $f['id']); ?>px;">
                         <?php endforeach; ?>

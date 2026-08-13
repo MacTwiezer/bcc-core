@@ -6,6 +6,12 @@
    alınmadı — yalnızca UI kroması (yüzey/kenarlık/metin/vurgu) temalanır. */
 
 :root {
+    /* Sayfa ZEMİNİ — yüzeyden (kart) bir ton daha çökük. Bento ızgarasında
+       kartların "kalkık" okunması buna bağlı: eskiden zemin de --bcc-surface
+       (#fff) olduğu için kartı yalnızca ince kenarlık ayırıyordu. surface ile
+       surface-sunken ikilisi DEĞİŞTİRİLMEDİ, yalnızca bu üçüncüsü eklendi
+       (success/danger ikililerindeki AYNI additive desen). */
+    --bcc-canvas: #f7f7f9;
     --bcc-surface: #fff;
     --bcc-surface-sunken: #fafafb;
     --bcc-surface-hover: #f2f2f4;
@@ -58,6 +64,7 @@
 
 /* Kullanıcı "Koyu" seçtiğinde (theme-init.js <html data-theme="dark"> yazar). */
 :root[data-theme="dark"] {
+    --bcc-canvas: #141416;
     --bcc-surface: #1e1e21;
     --bcc-surface-sunken: #17171a;
     --bcc-surface-hover: #2a2a2e;
@@ -84,6 +91,7 @@
    istiyorsa — data-theme="light" açıkça seçiliyse bu bloğu ATLAR. */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]):not([data-theme="dark"]) {
+        --bcc-canvas: #141416;
         --bcc-surface: #1e1e21;
         --bcc-surface-sunken: #17171a;
         --bcc-surface-hover: #2a2a2e;

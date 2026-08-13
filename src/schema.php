@@ -3679,7 +3679,44 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
 // $role: kullanıcının bu base'in çalışma alanındaki rolü ('owner'|'editor'|
 // 'commenter'|'viewer'|null) — kartın sağ üstündeki rol rozeti için. null ise
 // rozet hiç basılmaz.
-function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false, $role = null)
+// Base kartındaki "N tablo" rozeti için tablo sayıları. TEK sorgu, GROUP BY —
+// kart başına ayrı sorgu (N+1) AÇILMAZ; çağıran bütün base id'lerini bir kerede
+// verir ve haritayı kartlara dağıtır. tables_meta'da soft-delete kolonu yok
+// (bkz. SHOW COLUMNS), bu yüzden düz COUNT(*) doğru sayıdır.
+function bcc_base_table_counts($baseIds)
+{
+    if (empty($baseIds)) {
+        return array();
+    }
+
+    $placeholders = implode(',', array_fill(0, count($baseIds), '?'));
+    $rows = bcc_fetch_all(
+        "SELECT base_id, COUNT(*) AS c FROM tables_meta WHERE base_id IN ($placeholders) GROUP BY base_id",
+        array_map('intval', $baseIds)
+    );
+
+    // Hiç tablosu OLMAYAN base GROUP BY sonucunda HİÇ SATIR ÜRETMEZ. Sıfırlar
+    // burada doldurulmazsa o kart rozetsiz kalır ve kartlar arasında tutarsız
+    // görünür ("1 tablo" olan var, hiç olmayan var). İstenen id kümesini
+    // bildiğimiz için boşluklar 0 ile kapatılıyor — bu bir varsayım değil,
+    // sorgunun kesin sonucu.
+    $out = array();
+    foreach ($baseIds as $id) {
+        $out[(int) $id] = 0;
+    }
+    foreach ($rows as $r) {
+        $out[(int) $r['base_id']] = (int) $r['c'];
+    }
+
+    return $out;
+}
+
+// $variant: 'feature' (bento'daki 2x2 büyük kart) | 'standard' (1x1).
+// Varsayılan 'standard' — starred.php/workspaces.php gibi çağıranlar imzayı
+// değiştirmeden aynı kartı almaya devam eder.
+// $tableCount: bcc_base_table_counts() haritasından gelen sayı; null ise rozet
+// hiç basılmaz (uydurma sayı YOK).
+function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false, $role = null, $variant = 'standard', $tableCount = null)
 {
     // $workspaceName artık BASILMIYOR (kasıtlı) — Airtable referansı Workspace
     // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
@@ -3690,13 +3727,32 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
     // inline bir `background` koyu tema kuralını yenerdi. Parametre yine imzada
     // duruyor — çağıranlar değişmesin diye.
     unset($workspaceName, $iconColor);
+    $isFeature = ($variant === 'feature');
+    $description = isset($base['description']) ? trim((string) $base['description']) : '';
     ?>
-    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>">
-        <div class="home-base-icon" style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
+    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?><?php echo $isFeature ? ' home-base-card--feature' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>" style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
+        <?php
+        // "Kapak": base'lerde görsel YOK (DB'de böyle bir kolon hiç olmadı), bu
+        // yüzden Framer'ın önizleme görselinin karşılığı kartın KENDİ deterministik
+        // renginden (--bi-solid) color-mix ile türetiliyor + kategori glifi filigran.
+        // Uydurma bir görsel/stok resim kullanılmadı; renk zaten o base'i her yerde
+        // temsil eden değerin ta kendisi.
+        ?>
+        <span class="home-base-cover" aria-hidden="true">
+            <span class="home-base-cover-glyph"><?php echo bcc_base_icon_svg($isFeature ? 64 : 34, $base['name']); ?></span>
+        </span>
+        <div class="home-base-icon">
             <?php echo bcc_base_icon_svg(20, $base['name']); ?>
         </div>
         <div class="home-base-info">
             <div class="home-base-name"><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></div>
+            <?php if ($isFeature && $description !== ''): ?>
+                <?php // Açıklama SUNUCUDA zaten sorgulanıyordu ama hiç basılmıyordu. ?>
+                <div class="home-base-desc"><?php echo htmlspecialchars($description, ENT_QUOTES, 'UTF-8'); ?></div>
+            <?php endif; ?>
+            <?php if ($tableCount !== null): ?>
+                <div class="home-base-stats"><span class="home-base-stat"><?php echo (int) $tableCount; ?> tablo</span></div>
+            <?php endif; ?>
             <div class="home-base-meta">
                 <span class="home-base-meta-star" aria-hidden="true">
                     <svg width="11" height="11" viewBox="0 0 20 20"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="#f5b400"/></svg>
@@ -3792,7 +3848,14 @@ function bcc_render_home_create_base_tile()
 // alanı olup olmadığını hesaplayıp geçer (bkz. dashboard.php). Varsayılan false
 // — starred.php gibi "oluştur" akışı olmayan sayfalar imzalarını değiştirmeden
 // eskisi gibi çalışır.
-function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array(), $canCreateBase = false)
+// $bento: true ise ilk kart 'feature' (2x2) olarak basılır ve ızgara bento
+// kurallarına göre yerleşir. Varsayılan false — starred.php gibi çağıranlar
+// bugünkü düz ızgarada kalır, imzalarını değiştirmeden.
+//
+// Kural TABANLI, sabit 3 karta göre DEĞİL: tek base'de feature + oluştur yan
+// yana, 2-3'te 1 feature + kalanlar 1x1, 4+'ta yalnızca ilki feature ve geri
+// kalanı auto-fill ile akar. Böylece 0/1/2/12 base'te de bozulmaz.
+function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array(), $canCreateBase = false, $bento = false, $tableCounts = array())
 {
     if (empty($bases)) {
         ?>
@@ -3814,7 +3877,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
         return;
     }
     ?>
-    <div class="home-base-grid" id="home-base-grid">
+    <div class="home-base-grid<?php echo $bento ? ' home-base-grid--bento' : ''; ?>" id="home-base-grid">
         <div class="home-list-header" aria-hidden="true">
             <div class="home-list-header-icon"></div>
             <div class="home-list-header-info">
@@ -3823,7 +3886,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             </div>
             <div class="home-list-header-workspace">Çalışma alanı</div>
         </div>
-        <?php foreach ($bases as $b):
+        <?php foreach ($bases as $bIdx => $b):
             $isStarred = isset($starredBaseIds[(int) $b['id']]);
             $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
             $iconColor = bcc_base_icon_color($b['id']);
@@ -3831,7 +3894,9 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             // Airtable paritesi: base silme de ekleme ile AYNI yetki satırında
             // ("Add and delete bases…") — eşik tek yerde, bkz. src/auth.php.
             $canDelete = $role !== null && bcc_can_manage_bases($role);
-            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete, $role);
+            $variant = ($bento && $bIdx === 0) ? 'feature' : 'standard';
+            $tc = isset($tableCounts[(int) $b['id']]) ? (int) $tableCounts[(int) $b['id']] : null;
+            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete, $role, $variant, $tc);
         endforeach; ?>
         <?php if ($canCreateBase) { bcc_render_home_create_base_tile(); } ?>
     </div>

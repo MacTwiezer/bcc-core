@@ -120,6 +120,11 @@ if (!empty($teamIds)) {
     }
 }
 
+// Kart rozetindeki "N tablo" için tablo sayıları — TEK GROUP BY sorgusu
+// (bcc_base_table_counts), kart başına ayrı sorgu YOK. Base yoksa hiç
+// çalışmaz (fonksiyon boş dizide erken döner).
+$baseTableCounts = bcc_base_table_counts(array_column($bases, 'id'));
+
 // Liste görünümünün "Çalışma alanı" kolonu için — $teams zaten yukarıda çekildi,
 // yeni sorgu yazılmıyor.
 $teamNamesById = array();
@@ -129,6 +134,9 @@ foreach ($teams as $t) {
 
 $homeActiveNav = 'home';
 $homePageTitle = 'BCC-Core — Ana Sayfa';
+// home.css'ten SONRA yüklenir (bkz. home_shell_top.php) — bento kuralları
+// taban kart kurallarını bilinçli olarak eziyor.
+$homeExtraCss = array('home-bento.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
@@ -178,7 +186,22 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         $emptyMessage = empty($teams)
             ? 'Hesabınız etkin ama henüz bir ekibe eklenmediniz. Bir yöneticinin sizi bir ekibe eklemesini bekleyin.'
             : 'Henüz erişebileceğiniz bir base yok.';
-        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase);
+        ?>
+
+        <?php if (!empty($bases)): ?>
+        <?php // Bölüm başlığı (Framer'daki "Featured Picks" satırının karşılığı):
+              // küçük etiket solda, sayaç sağda, üstünde saç teli çizgi. ?>
+        <div class="home-section-head">
+            <h2 class="home-section-title">Base'leriniz</h2>
+            <span class="home-section-meta"><?php echo count($bases); ?> base</span>
+        </div>
+        <?php endif; ?>
+
+        <?php
+        // $bento = true: ilk kart (sorgu b.name'e göre sıralı) 2x2 "feature"
+        // olarak basılır. Liste görünümünde bento sınıfı CSS ile devre dışı
+        // kalır — mod değiştirme bugünkü gibi çalışmaya devam eder.
+        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, true, $baseTableCounts);
         ?>
 
         <?php if ($canCreateBase): ?>

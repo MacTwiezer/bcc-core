@@ -91,9 +91,115 @@
             return { fragment: frag, marks: marks };
         }
 
+        // Bir hücredeki önceki vurguları GERİ ALIR: her <mark>'ı kendi metin
+        // çocuklarıyla değiştirir, sonra normalize() ile bölünmüş metin
+        // düğümlerini yeniden birleştirir.
+        //
+        // Bulunan gerçek bug: eskiden temizleme `view.textContent = text` ile
+        // yapılıyordu. Bu, hücrenin TÜM ELEMAN ÇOCUKLARINI siler — seçim
+        // rozetleri (.choice-chip), yıldızlar (.rating-view), ek dosya
+        // linkleri (.attachment-cell-view) düz metne dönüşüyordu. Canlı
+        // testte doğrulandı: arama kutusuna tek bir harf yazmak tablodaki 5
+        // rozeti kalıcı olarak yok ediyordu (arama temizlenince de geri
+        // gelmiyorlardı, yalnızca sayfa yenilemesi düzeltiyordu).
+        // Yalnızca <mark>'ları söküp geri kalan DOM'a hiç dokunmamak bu sınıf
+        // hatayı tamamen ortadan kaldırıyor.
+        //
+        // normalize() ŞART: "sil" + "silesi" gibi ayrı metin düğümlerine
+        // bölünmüş kalan bir hücrede, sonraki arama sınırı aşan bir kelimeyi
+        // ("silsilesi") bulamazdı.
+        function clearMarks(root) {
+            var old = root.querySelectorAll('mark.grid-search-mark');
+            if (!old.length) {
+                return; // hiç vurgu yoksa metin düğümleri de bölünmemiştir
+            }
+            Array.prototype.forEach.call(old, function (mark) {
+                var parent = mark.parentNode;
+                while (mark.firstChild) {
+                    parent.insertBefore(mark.firstChild, mark);
+                }
+                parent.removeChild(mark);
+            });
+            root.normalize();
+        }
+
+        // Hücrenin İÇİNDEKİ metin düğümlerini tek tek gezip eşleşmeleri
+        // <mark>'lar. Eleman yapısına (chip'ler, <strong>/<a> gibi zengin
+        // metin etiketleri) DOKUNMAZ — bu yüzden zengin metin hücreleri de
+        // artık diğer sütunlarla AYNI yoldan aranabiliyor; eski koddaki
+        // "isRichText ise yalnızca say, vurgulama" özel durumu KALDIRILDI.
+        // O özel durum yüzünden yalnızca Notlar'da geçen bir kelime aramada
+        // "0 / 0" gösteriyor ve ▲▼ düğmeleri ölü kalıyordu (satır sayacı ise
+        // "1 / 5 kayıt" diyordu — iki sayaç birbiriyle çelişiyordu).
+        //
+        // Metin düğümleri ÖNCE toplanır, sonra değiştirilir: yürüyüş sırasında
+        // DOM'u değiştirmek TreeWalker'ı geçersiz kılar.
+        function highlightTextNodes(root, q) {
+            var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+            var textNodes = [];
+            var node;
+            while ((node = walker.nextNode())) {
+                textNodes.push(node);
+            }
+
+            var marks = [];
+            textNodes.forEach(function (textNode) {
+                var text = textNode.nodeValue;
+                if (text === '' || text.toLowerCase().indexOf(q) === -1) {
+                    return;
+                }
+                var result = buildHighlightedFragment(text, q);
+                result.marks.forEach(function (mark) { marks.push(mark); });
+                textNode.parentNode.replaceChild(result.fragment, textNode);
+            });
+
+            return marks;
+        }
+
         function setNavVisible(show) {
             if (navEl) {
                 navEl.hidden = !show;
+            }
+        }
+
+        // scrollIntoView() DONMUŞ (sticky) sütunları bilmez: hedefi kaydırma
+        // alanının SOL KENARINA getirmekle yetinir, ama o kenarın üstünü
+        // donmuş sütunlar (satır no + .grid-frozen-cell, bkz.
+        // grid-freeze-columns.js) örtüyor olabilir — eşleşme "görünür" sayılıp
+        // aslında panelin ALTINDA kalır.
+        //
+        // Canlı testte doğrulandı: sağa kaydırılmış bir tabloda "Bursa"
+        // aratınca aktif eşleşme 333px'e getiriliyordu, donmuş sütunlar ise
+        // 537px'e kadar uzanıyordu — kullanıcı "1 / 1" görüyor ama vurguyu
+        // GÖREMİYORDU. Burada aradaki fark kadar geri kaydırılıyor.
+        function revealPastFrozenColumns(el) {
+            // Eşleşmenin KENDİSİ donmuş bir sütundaysa zaten hep görünür;
+            // düzeltme uygulanırsa gereksiz yere sola kayardı.
+            if (el.closest('td.grid-rownum, td.grid-frozen-cell')) {
+                return;
+            }
+
+            var wrap = el.closest('.grid-wrap');
+            var row = el.closest('tr');
+            if (!wrap || !row) {
+                return;
+            }
+
+            // Donmuş grubun sağ kenarı, AYNI satırın donmuş hücrelerinden
+            // ölçülür (genişlikler görünüme göre değişebiliyor).
+            var frozenRight = wrap.getBoundingClientRect().left;
+            Array.prototype.forEach.call(
+                row.querySelectorAll('td.grid-rownum, td.grid-frozen-cell'),
+                function (cell) {
+                    frozenRight = Math.max(frozenRight, cell.getBoundingClientRect().right);
+                }
+            );
+
+            var gap = frozenRight - el.getBoundingClientRect().left;
+            if (gap > 0) {
+                // scrollLeft AZALTMAK içeriği SAĞA kaydırır; +8px nefes payı.
+                // Tarayıcı değeri 0'ın altına düşürmez, ayrıca kırpma gerekmez.
+                wrap.scrollLeft -= gap + 8;
             }
         }
 
@@ -118,6 +224,7 @@
             var mark = matches[activeIndex];
             mark.classList.add('is-active');
             mark.scrollIntoView({ block: 'center', inline: 'nearest' });
+            revealPastFrozenColumns(mark);
 
             if (matchCountEl) {
                 matchCountEl.textContent = (activeIndex + 1) + ' / ' + matches.length;
@@ -134,41 +241,25 @@
 
             var matchedRowIds = {};
 
+            // Tek yol, TÜM sütun tipleri için: önce eski vurgular sökülür,
+            // sonra (sorgu varsa) metin düğümleri gezilerek yeniden vurgulanır.
+            // Tip'e göre dallanma YOK — düz metin, seçim rozeti, sayı, tarih ve
+            // zengin metin aynı mekanizmadan geçer, bu yüzden hepsi eşleşme
+            // sayacına ve ▲▼ gezinmesine dahildir.
             cellViews.forEach(function (view) {
-                var text = view.textContent;
-                // Zengin metin (long_text) hücreleri vurgulanmaz/yeniden
-                // YAZILMAZ — .textContent = '' + yeniden ekleme, kalın/italik/
-                // link biçimlendirmesini (gerçek <strong>/<a> etiketlerini)
-                // kaybederdi. Yalnızca eşleşme SAYIMI için metni okunur.
-                var isRichText = view.classList.contains('rich-text-view');
+                clearMarks(view);
 
                 if (q === '') {
-                    if (!isRichText) {
-                        view.textContent = text; // önceki <mark>'ları temizler
-                    }
                     return;
                 }
 
-                if (isRichText) {
-                    if (text.toLowerCase().indexOf(q) !== -1) {
-                        var richTr = view.closest('tr[data-record-id]');
-                        if (richTr) {
-                            matchedRowIds[richTr.getAttribute('data-record-id')] = true;
-                        }
-                    }
-                    return;
-                }
-
-                var result = buildHighlightedFragment(text, q);
-                view.textContent = '';
-                view.appendChild(result.fragment);
-
-                if (result.marks.length) {
+                var found = highlightTextNodes(view, q);
+                if (found.length) {
                     var tr = view.closest('tr[data-record-id]');
                     if (tr) {
                         matchedRowIds[tr.getAttribute('data-record-id')] = true;
                     }
-                    result.marks.forEach(function (mark) {
+                    found.forEach(function (mark) {
                         matches.push(mark);
                     });
                 }
@@ -179,6 +270,9 @@
                 setNavVisible(false);
                 if (prevBtn) { prevBtn.disabled = true; }
                 if (nextBtn) { nextBtn.disabled = true; }
+                // Sayacı da sıfırla: panel gizlense de içinde eski "1 / 1"
+                // metni kalıyordu, sonraki aramada bir an için görünüyordu.
+                if (matchCountEl) { matchCountEl.textContent = ''; }
                 return;
             }
 

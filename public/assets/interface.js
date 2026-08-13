@@ -130,6 +130,18 @@
             rows.forEach(function (r) { r.classList.remove('is-selected'); });
             row.classList.add('is-selected');
 
+            // Seçim liste görünümünün dışına taşabilir (klavye okları ve ▲▼
+            // düğmeleri sıradaki kaydı ekranda olup olmadığına bakmadan seçer).
+            // Burada, selectRow'un İÇİNDE duruyor: her iki yol da (ve fare
+            // tıklaması da) tek bir kaydırma davranışını paylaşsın, ikinci bir
+            // kopya yazılmasın. 'nearest' zaten tamamen görünür olan satırda
+            // HİÇBİR ŞEY yapmaz — yani fareyle tıklamada no-op, yalnızca
+            // kısmen/tamamen dışarıda kalan satırı en az hareketle içeri alır.
+            // behavior:'smooth' BİLEREK kullanılmadı: ok tuşu basılı tutulunca
+            // yumuşak kaydırmalar kuyruğa girip listeyi seçimin gerisinde
+            // bırakıyor, gezinme takip edilemez hale geliyor.
+            row.scrollIntoView({ block: 'nearest' });
+
             var fields = [];
             try {
                 fields = JSON.parse(row.getAttribute('data-detail-fields') || '[]');
@@ -182,6 +194,72 @@
             row.addEventListener('click', function () {
                 selectRow(row);
             });
+        });
+
+        // ---- Klavye ile kayıt gezinme (↑/↓) --------------------------------
+        // ▲▼ düğmeleriyle AYNI navigateDetail() yolunu kullanır — ikinci bir
+        // seçim/render mekanizması YAZILMADI, yani sınır kontrolü (listenin
+        // başında ↑ / sonunda ↓) ve "gizli satırı atlama" davranışı oradan
+        // olduğu gibi devralınır.
+
+        // Yazarken ok tuşları imleci hareket ettirir; listeyi gezdirmemeli.
+        // SELECT de dahil: kapalı bir <select> üzerinde ok tuşu seçeneği
+        // değiştirir, o da bir "yazma" eylemidir.
+        function isTypingTarget(el) {
+            if (!el) {
+                return false;
+            }
+            if (el.isContentEditable) {
+                return true;
+            }
+            var tag = el.tagName;
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+        }
+
+        // Paylaşım modalı açıkken liste ARKADA kalır — ok tuşu, kullanıcının
+        // göremediği bir seçimi değiştirmemeli. Kimliğe göre değil
+        // [aria-modal="true"] ile aranıyor: ileride eklenecek başka bir modal
+        // da bu korumadan kendiliğinden yararlansın.
+        // getClientRects() kullanılıyor, offsetParent DEĞİL: overlay
+        // position:fixed olduğunda offsetParent görünür bir modalda da null
+        // döner ve modal yanlışlıkla "kapalı" sayılırdı.
+        function modalIsOpen() {
+            var dlg = document.querySelector('[aria-modal="true"]');
+            return !!(dlg && dlg.getClientRects().length);
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+                return;
+            }
+            // Modifier'lı kombinasyonlar (ör. tarayıcının kendi kısayolları)
+            // bu gezinmeye ait değil.
+            if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+                return;
+            }
+            if (isTypingTarget(e.target) || modalIsOpen()) {
+                return;
+            }
+
+            var visible = getVisibleRows();
+            if (!visible.length) {
+                return;
+            }
+
+            // Sayfanın kendi dikey kaydırması devreye girmesin; konumlandırmayı
+            // selectRow içindeki scrollIntoView yapıyor.
+            e.preventDefault();
+
+            // Henüz seçim yoksa — ya da arama seçili kaydı gizlediyse
+            // (indexOf === -1, bu durumda navigateDetail hiçbir şey yapamazdı) —
+            // yön ne olursa olsun görünür listenin ilk kaydından başla. Böylece
+            // liste, önce fareyle bir kayda tıklamak gerekmeden gezilebilir.
+            if (!currentDetailRow || visible.indexOf(currentDetailRow) === -1) {
+                selectRow(visible[0]);
+                return;
+            }
+
+            navigateDetail(e.key === 'ArrowDown' ? 1 : -1);
         });
 
         // Arama: TAM içerikte (yalnızca listede görünen kırpılmış önizlemede

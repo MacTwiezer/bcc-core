@@ -973,21 +973,81 @@ $gridUser = current_user();
         <?php endif; ?>
 
         <?php if ($canEdit): ?>
+        <?php // Backdrop (.gs-view-desc-overlay) PAYLAŞILIYOR — yalnızca iç kutu
+              // .gs-import-modal modifier'ıyla ayrışıyor. .gs-view-desc-modal'ın
+              // KENDİSİ değiştirilmedi: onu "görünüm açıklamasını düzenle"
+              // popover'ı da kullanıyor, genişlik/dolgu oradan da değişirdi. ?>
         <div class="gs-view-desc-overlay" id="gs-table-import-overlay" hidden>
-            <div class="gs-view-desc-modal">
-                <div class="gs-view-desc-title">Veri içe aktar (Excel)</div>
-                <p class="gs-import-help">
-                    Dosyadaki ilk satır alan adları olmalı. Yalnızca tablodaki
-                    alan adlarıyla BİREBİR eşleşen sütunlar aktarılır, eşleşmeyenler
-                    atlanır. Yalnızca <strong>.xlsx</strong> dosyaları desteklenir
-                    ("Excel indir" ile aldığınız dosyayla aynı format).
-                    Dosya eki (attachment) alanları içe aktarılamaz.
-                </p>
-                <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            <div class="gs-view-desc-modal gs-import-modal" role="dialog" aria-modal="true" aria-labelledby="gs-import-title">
+                <div class="gs-import-header">
+                    <span class="gs-import-header-icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6"/>
+                            <path d="m9 13 6 6"/>
+                            <path d="m15 13-6 6"/>
+                        </svg>
+                    </span>
+                    <div class="gs-import-header-text">
+                        <div class="gs-import-title" id="gs-import-title">Veri içe aktar</div>
+                        <div class="gs-import-subtitle">Excel tablosundan yeni kayıtlar ekleyin</div>
+                    </div>
+                    <button type="button" class="gs-import-close" id="gs-table-import-close" aria-label="Kapat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M18 6 6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <?php // Dropzone bir <label>: tıklama, dosya seçiciyi ikinci bir JS
+                      // dinleyicisi olmadan açar ve klavyeyle de odaklanılabilir.
+                      // <input> görsel olarak gizli ama DOM'da duruyor (display:none
+                      // DEĞİL — o hâlde bazı tarayıcılar odaklanmayı reddediyor). ?>
+                <label class="gs-import-dropzone" id="gs-table-import-dropzone" for="gs-table-import-file" tabindex="0">
+                    <span class="gs-import-dropzone-icon" aria-hidden="true">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <path d="M7 9l5-5 5 5"/>
+                            <path d="M12 4v12"/>
+                        </svg>
+                    </span>
+                    <span class="gs-import-dropzone-text">
+                        Excel dosyanızı buraya sürükleyin veya <strong>dosya seçin</strong>
+                    </span>
+                    <span class="gs-import-badges">
+                        <span class="gs-import-badge">.xlsx</span>
+                        <span class="gs-import-badge gs-import-badge-muted">en fazla 10MB</span>
+                    </span>
+                    <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                </label>
+
+                <?php // Seçim sonrası önizleme kartı — dropzone'un YERİNE geçer
+                      // (ikisi aynı anda görünmez, bkz. grid-table-data.js). ?>
+                <div class="gs-import-file-card" id="gs-table-import-file-card" hidden>
+                    <span class="gs-import-file-check" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 6 9 17l-5-5"/>
+                        </svg>
+                    </span>
+                    <span class="gs-import-file-meta">
+                        <span class="gs-import-file-name" id="gs-table-import-file-name"></span>
+                        <span class="gs-import-file-size" id="gs-table-import-file-size"></span>
+                    </span>
+                    <button type="button" class="gs-import-file-change" id="gs-table-import-file-change">Dosyayı Değiştir</button>
+                </div>
+
+                <div class="gs-import-callout">
+                    Dosyadaki ilk satır alan adları olmalı. Yalnızca tablodaki alan
+                    adlarıyla <strong>birebir eşleşen</strong> sütunlar aktarılır,
+                    eşleşmeyenler atlanır. "Excel indir" ile aldığınız dosya bu
+                    formattadır. Dosya eki (attachment) alanları içe aktarılamaz.
+                </div>
+
                 <div class="gs-import-result" id="gs-table-import-result" hidden></div>
-                <div class="gs-view-desc-actions">
-                    <button type="button" class="gs-table-tab-menu-item" id="gs-table-import-cancel">İptal</button>
-                    <button type="button" class="gs-btn-primary" id="gs-table-import-submit">İçe Aktar</button>
+
+                <div class="gs-view-desc-actions gs-import-actions">
+                    <button type="button" class="gs-import-btn-secondary" id="gs-table-import-cancel">İptal</button>
+                    <button type="button" class="gs-import-btn-primary" id="gs-table-import-submit">İçe Aktar</button>
                 </div>
             </div>
         </div>

@@ -84,7 +84,43 @@
         var resultBox = document.getElementById('gs-table-import-result');
         var submitBtn = document.getElementById('gs-table-import-submit');
         var cancelBtn = document.getElementById('gs-table-import-cancel');
+        var closeBtn = document.getElementById('gs-table-import-close');
+        var dropzone = document.getElementById('gs-table-import-dropzone');
+        var fileCard = document.getElementById('gs-table-import-file-card');
+        var fileNameEl = document.getElementById('gs-table-import-file-name');
+        var fileSizeEl = document.getElementById('gs-table-import-file-size');
+        var fileChangeBtn = document.getElementById('gs-table-import-file-change');
         var importTableId = null;
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) {
+                return bytes + ' B';
+            }
+            if (bytes < 1024 * 1024) {
+                return (bytes / 1024).toFixed(1) + ' KB';
+            }
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Dropzone <-> seçilen dosya kartı: ikisi asla aynı anda görünmez.
+        function renderSelectedFile() {
+            var file = (fileInput && fileInput.files && fileInput.files[0]) || null;
+            var hasFile = !!file;
+
+            if (dropzone) {
+                dropzone.hidden = hasFile;
+                dropzone.classList.remove('is-dragover');
+            }
+            if (fileCard) {
+                fileCard.hidden = !hasFile;
+            }
+            if (hasFile) {
+                // textContent: dosya adı kullanıcı verisidir, HTML olarak
+                // yorumlanmamalı.
+                if (fileNameEl) { fileNameEl.textContent = file.name; }
+                if (fileSizeEl) { fileSizeEl.textContent = formatBytes(file.size); }
+            }
+        }
 
         function resetImportModal() {
             if (fileInput) {
@@ -99,6 +135,7 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'İçe Aktar';
             }
+            renderSelectedFile();
         }
 
         function closeImportModal() {
@@ -121,6 +158,91 @@
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', closeImportModal);
             }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeImportModal);
+            }
+
+            fileInput.addEventListener('change', renderSelectedFile);
+
+            // "Dosyayı Değiştir": seçimi temizleyip dropzone'u geri getirir ve
+            // dosya seçiciyi yeniden açar. fileInput.value = '' ŞART — aynı
+            // dosya tekrar seçilirse 'change' aksi hâlde hiç tetiklenmezdi.
+            if (fileChangeBtn) {
+                fileChangeBtn.addEventListener('click', function () {
+                    fileInput.value = '';
+                    renderSelectedFile();
+                    fileInput.click();
+                });
+            }
+
+            if (dropzone) {
+                // dragover'da preventDefault ŞART: yoksa tarayıcı dosyayı
+                // sayfada AÇAR (varsayılan davranış) ve modal kaybolur.
+                ['dragenter', 'dragover'].forEach(function (evt) {
+                    dropzone.addEventListener(evt, function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.add('is-dragover');
+                    });
+                });
+
+                ['dragleave', 'dragend'].forEach(function (evt) {
+                    dropzone.addEventListener(evt, function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('is-dragover');
+                    });
+                });
+
+                dropzone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('is-dragover');
+
+                    var dropped = e.dataTransfer && e.dataTransfer.files;
+                    if (!dropped || !dropped.length) {
+                        return;
+                    }
+
+                    // Uzantı istemcide de kontrol ediliyor: sunucu zaten
+                    // reddediyor (api/table_import_xlsx.php, 422) ama kullanıcı
+                    // yanlış dosyayı bırakır bırakmaz görsün, yükleme turunu
+                    // beklemesin.
+                    var file = dropped[0];
+                    if (!/\.xlsx$/i.test(file.name)) {
+                        resultBox.hidden = false;
+                        resultBox.classList.add('gs-import-result-error');
+                        resultBox.textContent = 'Yalnızca .xlsx dosyaları desteklenir.';
+                        return;
+                    }
+
+                    // DataTransfer'ı doğrudan input'a bağlamak, dosyanın
+                    // gönderimde FormData'ya TEK yoldan girmesini sağlıyor
+                    // (ayrı bir "bırakılan dosya" değişkeni tutulmuyor).
+                    fileInput.files = e.dataTransfer.files;
+                    resultBox.hidden = true;
+                    resultBox.textContent = '';
+                    resultBox.classList.remove('gs-import-result-error');
+                    renderSelectedFile();
+                });
+
+                // Klavye: label'a odaklanıp Enter/Space ile dosya seçici açılır.
+                dropzone.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fileInput.click();
+                    }
+                });
+            }
+
+            // Modalın DIŞINA bırakılan bir dosyayı tarayıcı sayfada açar ve
+            // kullanıcı düzenlediği tabloyu kaybeder. Overlay açıkken bu
+            // varsayılan iptal edilir.
+            ['dragover', 'drop'].forEach(function (evt) {
+                overlay.addEventListener(evt, function (e) {
+                    e.preventDefault();
+                });
+            });
 
             window.bcc_bindDismissable(overlay, {
                 isOpen: function () { return !overlay.hidden; },

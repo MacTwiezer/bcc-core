@@ -29,6 +29,19 @@ if ($tableId === 0 && !empty($tables)) {
     $tableId = (int) $tables[0]['id'];
 }
 
+// Sekme başlığı/favicon için aktif tablonun adı (bkz. bcc_page_title).
+// Yukarıdaki çözümleme $tableId'yi kesinleştirdikten SONRA aranır — istenen
+// tablo bu base'e ait değilse ilk tabloya düşülüyor, başlık da o tabloyu
+// göstermeli. Base'de hiç tablo yoksa boş kalır ve başlık yalnız base adını
+// taşır.
+$activeTableName = '';
+foreach ($tables as $t) {
+    if ((int) $t['id'] === $tableId) {
+        $activeTableName = $t['name'];
+        break;
+    }
+}
+
 $fields = array();
 $primaryFieldId = null;
 $summaryField = null;
@@ -103,8 +116,11 @@ if (!empty($shareExistingIds)) {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>BCC-Core — <?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></title>
+<title><?php echo htmlspecialchars(bcc_page_title($base['name'], $activeTableName), ENT_QUOTES, 'UTF-8'); ?></title>
+<?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<?php echo bcc_page_identity_meta($base['id'], $base['name'], $activeTableName), "\n"; ?>
+<script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">

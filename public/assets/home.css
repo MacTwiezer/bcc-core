@@ -774,6 +774,11 @@ button.home-search-result {
     gap: 1rem;
 }
 
+/* Kart kutusu. Renkler HEX olarak DEĞİL token'la veriliyor: açık temada
+   --bcc-surface zaten #fff ve --bcc-border #e6e6e9 (istenen #ffffff/#e2e8f0
+   ile pratikte aynı), ama sabit hex yazılsaydı koyu temada beyaz kartlar koyu
+   sayfanın üstünde kalırdı. Token, istenen görünümü açık temada birebir verir
+   ve koyu temayı bozmaz. */
 .home-base-card {
     position: relative;
     display: flex;
@@ -781,10 +786,10 @@ button.home-search-result {
     gap: 0.85rem;
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
-    border-radius: 12px;
-    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    padding: 20px 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s ease;
+    transition: box-shadow 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
 
 /* ---------- Rol rozeti (kart modu) ----------
@@ -792,23 +797,43 @@ button.home-search-result {
    Viewer). Renkler settings-page.css'teki .sp-role--* ile AYNI token'lardan
    gelir; sınıf adı ayrıdır çünkü o kurallar ayarlar sayfası kabuğunun altına
    kapsanmış ve Home o kabuğu kullanmıyor.
-   `margin-left:auto` + `align-self:flex-end`: rozet sağ ALTA oturur, sağ ÜSTteki
-   hover aksiyonlarının (yıldız / ⋯, position:absolute) altında kalır — ikisi
-   çakışmaz. Akışta durduğu için .home-base-info'yu daraltır, uzun base adı
-   rozetin ALTINDAN geçmek yerine düzgünce kırpılır. */
+   `margin-left:auto` + `align-self:center`: rozet kartın SAĞ KENARINA, dikeyde
+   ortalanmış oturur. Sağ ÜSTe alınmadı: orası hover'da beliren yıldız/⋯
+   aksiyonlarının (position:absolute, top .6rem) yeri — rozet oraya konsaydı
+   hover'da üst üste binerlerdi. Akışta durduğu için .home-base-info'yu
+   daraltır, uzun base adı rozetin ALTINDAN geçmek yerine düzgünce kırpılır.
+   Kartın dolgusu 20px'e çıktığı için rozet artık aksiyon kümesinin altında
+   kalacak kadar aşağıda; ikisi aynı anda görünse de çakışmaz. */
 .home-base-role {
     margin-left: auto;
-    align-self: flex-end;
+    align-self: center;
     flex: none;
-    padding: 0.14rem 0.5rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
     border: 1px solid var(--bcc-border);
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text-muted);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    /* Küçük punto + majüskül + açılmış harf aralığı: rozet "etiket" gibi
+       okunur, base adıyla yarışmaz. 0.68 -> 0.66rem ama letter-spacing
+       arttığı için optik olarak daha net. */
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     white-space: nowrap;
+    transition: opacity 0.16s ease;
+}
+
+/* ÖLÇÜLEN ÇAKIŞMA: rozet dikeyde ortalanınca, sağ üstte hover'da beliren
+   yıldız/⋯ kümesiyle 13.2 x 2.7px örtüşüyordu (kart yüksekliği 88px, aksiyonlar
+   9.6-37.6px, rozet 32-56px arası). Hover'da rozet SÖNÜYOR ve köşeyi aksiyonlara
+   bırakıyor: rol bilgisi tarama anında (hover YOKken) zaten görünür, hover ise
+   zaten "bu kartla bir şey yapacağım" anı. Alternatif olan "rozeti sola kaydır"
+   uzun base adlarının üstüne binebiliyordu (transform akışı değiştirmez). */
+.home-base-card:hover .home-base-role {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .home-base-role--owner {
@@ -1010,7 +1035,7 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 }
 
 .home-base-card:hover {
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.06);
     border-color: var(--bcc-border-strong);
     transform: translateY(-2px);
 }
@@ -1021,9 +1046,19 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
    değil <button> olduğundan tarayıcının buton varsayılanları (font, hizalama,
    genişlik) açıkça sıfırlanır. Kesikli kenarlık onu "veri" değil "aksiyon"
    olarak ayırır. */
+/* Kesikli 2px kenarlık + sönük zemin: kutucuk "veri" değil "aksiyon" olduğunu
+   ilk bakışta söyler. Kenarlık kalınlaştı ama kutu ÖLÇÜSÜ değişmez
+   (* { box-sizing: border-box }), yani grid satırındaki hizası korunur. */
 .home-base-create {
-    border-style: dashed;
-    background: transparent;
+    /* Kutucuk bir base DEĞİL, marka rengi de yok. --bi-solid burada NÖTR bir
+       griye sabitleniyor: ikon zemini color-mix ile ondan türediği için, koyu
+       tema kuralı (`:root[data-theme="dark"] .home-base-icon`, dosyada daha
+       sonra ve aynı özgüllükte) devreye girdiğinde bile mavi değil gri çıkar.
+       Alternatif her tema için ayrı ezme kuralı yazmaktı; tek değişken
+       üçünü birden çözüyor. */
+    --bi-solid: #9a9aa0;
+    border: 2px dashed var(--bcc-border-strong);
+    background: var(--bcc-surface-sunken);
     box-shadow: none;
     width: 100%;
     font-family: inherit;
@@ -1033,11 +1068,17 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
     cursor: pointer;
 }
 
+/* Hover'da kenarlık KESİKLİ kalır (solid'e dönmez): "henüz yok, eklenebilir"
+   anlamını taşıyan şey kesiklilik — yalnızca rengi markaya döner, zemin
+   yumuşak maviye geçer. */
 .home-base-create:hover {
-    background: var(--bcc-surface);
-    border-style: solid;
+    background: var(--bcc-accent-soft);
     border-color: var(--bcc-accent);
     color: var(--bcc-accent-strong);
+    /* Diğer kartların yükselme gölgesi burada İSTENMİYOR — kutucuk düz kalır,
+       böylece gerçek base kartlarından ayrıştığı belli olur. */
+    box-shadow: none;
+    transform: none;
 }
 
 /* Kutucuğun içi <div> değil <span>'lerden oluşuyor (<button> içinde geçerli
@@ -1053,14 +1094,30 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
 /* Kutucuğun ikonu base kimliği TAŞIMAZ (bir base'e ait değil) — pastel palet
    yerine nötr/accent zemin; --bi-* değişkenleri hiç basılmadığı için
    .home-base-icon'un yedek değerleri devreye girerdi, burada açıkça eziliyor. */
-.home-base-create-icon {
+/* Kutucuğun ikonu DURAĞAN hâlde NÖTR kalmalı: mavi ancak hover'da gelsin ki
+   "tıklanabilir" sinyali gerçekten hover'a ait olsun.
+   Seçici `.home-base-card.home-base-create` ile yazıldı (0,3,0): sade
+   `.home-base-create-icon` (0,1,0), dosyada DAHA SONRA gelen `.home-base-icon`
+   (0,1,0) ile berabere kalıp kaybediyordu — ve o kural --bi-solid'i
+   basılmadığında #2d7ff9'a düşürdüğü için kutucuğun ikonu durağan hâlde
+   maviye boyanıyordu. */
+.home-base-card.home-base-create .home-base-create-icon {
     background: var(--bcc-surface-hover);
     color: var(--bcc-text-muted);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
-.home-base-create:hover .home-base-create-icon {
-    background: var(--bcc-accent-soft);
+/* İkon hover'da belirgin şekilde büyür (1.06 değil 1.12): kutucuğun tek
+   görsel odağı o, "+" hareketi tıklanabilirliği anlatıyor.
+   Seçici bilerek `.home-base-card.home-base-create` ile yazıldı: sade hâli
+   (.home-base-create:hover .home-base-create-icon) ile aşağıdaki genel
+   `.home-base-card:hover .home-base-icon` kuralı AYNI özgüllükte (0,3,0) ve o
+   dosyada DAHA SONRA geldiği için 1.06'yı dayatıyordu. */
+.home-base-card.home-base-create:hover .home-base-create-icon {
+    background: var(--bcc-surface);
     color: var(--bcc-accent-strong);
+    transform: scale(1.12);
+    box-shadow: inset 0 0 0 1px var(--bcc-accent);
 }
 
 /* Hiç base'i olmayan ama base ekleyebilen kullanıcı için boş durum içindeki
@@ -1092,41 +1149,71 @@ html.home-view-list .home-base-card.is-starred .home-base-meta-star,
    Yedek değerler (var(..., #eee)) grid.php/interface.php gibi değişkeni
    basmayan, kendi düz rengini inline veren çağıranlar içindir. */
 .home-base-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    /* İKİ KATMANLI ZEMİN — sıra önemli:
+       1) var(--bi-bg): hazır pastel. color-mix desteklemeyen tarayıcı BURADA
+          kalır, rozet eskisi gibi görünür (bozulmaz).
+       2) color-mix(--bi-solid): base'in CANLI marka renginin %14 saydam
+          karışımı. Destekleyen tarayıcı ikinci bildirimi kullanır. Saydam
+          olduğu için kartın zeminiyle (beyaz / koyu yüzey) kendiliğinden
+          uyumlanır — iki ayrı pastel tablosu tutmaya gerek kalmaz. */
     background: var(--bi-bg, var(--bcc-surface-sunken));
+    background: color-mix(in srgb, var(--bi-solid, #2d7ff9) 14%, transparent);
     color: var(--bi-fg, var(--bcc-text-muted));
     /* Pastel zemin açık arka planda kenarını kaybediyordu — 1px'lik içeriden
-       halka (box-shadow inset, layout'u ETKİLEMEZ; gerçek bir border 42px'i
-       44px yapıp liste modunun piksel hizasını bozardı). */
+       halka. Halka da marka renginden: düz siyah %6, canlı zeminin üstünde
+       kirli görünüyordu. */
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.12s ease;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bi-solid, #2d7ff9) 22%, transparent);
+    transition: transform 0.16s ease;
 }
+
+/* Kutu 42 -> 48px büyüdü; glif de orantılı büyümeli, yoksa rozetin içinde
+   kaybolur. PHP 20px basıyor (bcc_base_icon_svg), burada eziliyor. */
+.home-base-card .home-base-icon svg { width: 22px; height: 22px; }
 
 /* Koyu tema — theme.css'teki ÜÇ durumun aynısı: açıkça seçilmiş koyu,
    sistem tercihi koyu (ve kullanıcı "Açık"ı açıkça seçmemiş). */
+/* Koyu temada karışım oranı %14 -> %22: aynı saydamlık koyu yüzeyin üstünde
+   neredeyse görünmez kalıyordu. Yedek (color-mix yok) yine hazır --bi-bg-dark. */
 :root[data-theme="dark"] .home-base-icon {
     background: var(--bi-bg-dark, var(--bcc-surface-sunken));
+    background: color-mix(in srgb, var(--bi-solid, #2d7ff9) 22%, transparent);
     color: var(--bi-fg-dark, var(--bcc-text-muted));
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bi-solid, #2d7ff9) 34%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]):not([data-theme="dark"]) .home-base-icon {
         background: var(--bi-bg-dark, var(--bcc-surface-sunken));
+        background: color-mix(in srgb, var(--bi-solid, #2d7ff9) 22%, transparent);
         color: var(--bi-fg-dark, var(--bcc-text-muted));
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bi-solid, #2d7ff9) 34%, transparent);
     }
 }
 
 /* Kart hover'ında ikon hafifçe büyür — kartın kendi yükselmesiyle (aşağıdaki
    translateY) aynı 0.12s'de, "canlı ama sakin" his için. */
 .home-base-card:hover .home-base-icon { transform: scale(1.06); }
+
+/* Hareketi azalt tercihi: yükselme/ölçek kapanır, renk ve gölge geçişi kalır.
+   Kartlar bir ızgarada onlarca adet — hepsinin imleç gezdikçe zıplaması
+   vestibüler rahatsızlığı olan kullanıcı için en agresif hâl. */
+@media (prefers-reduced-motion: reduce) {
+    .home-base-card:hover,
+    .home-base-card:hover .home-base-icon,
+    .home-base-card.home-base-create:hover .home-base-create-icon {
+        transform: none;
+    }
+}
 
 .home-base-info { min-width: 0; }
 
@@ -1160,13 +1247,30 @@ html.home-view-list .home-base-grid,
     overflow: hidden;
 }
 
+/* Kart modunun yeni ölçüleri (20px/24px dolgu, 48px ikon, 14px köşe) liste
+   modunda GERİ ALINIR. Sebep: bu mod .home-list-header ile piksel piksel
+   hizalanan bir tablo — başlık satırı 1.1rem yatay dolgu ve 42px ikon
+   genişliğine göre sabitlenmiş (bkz. .home-list-header-icon). Kart dolgusu
+   buraya sızsaydı başlıklar ile hücreler kayardı. Kutucuğun 2px kesikli
+   kenarlığı da burada 1px alt çizgiye iner, satırlar eşit yükseklikte kalsın. */
 html.home-view-list .home-base-card,
 .view-mode-list .home-base-card {
     border: none;
     border-bottom: 1px solid var(--bcc-border);
     border-radius: 0;
     box-shadow: none;
+    padding: 1rem 1.1rem;
 }
+
+html.home-view-list .home-base-icon,
+.view-mode-list .home-base-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+}
+
+html.home-view-list .home-base-card .home-base-icon svg,
+.view-mode-list .home-base-card .home-base-icon svg { width: 20px; height: 20px; }
 
 html.home-view-list .home-base-card:last-child,
 .view-mode-list .home-base-card:last-child { border-bottom: none; }

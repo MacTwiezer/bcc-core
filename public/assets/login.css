@@ -22,13 +22,15 @@
     margin: 1.5rem;
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
-    border-radius: 20px;
+    border-radius: 16px;
     overflow: hidden;
-    /* Önceki sürüm burada tek başına 0 24px 60px rgba(0,0,0,.45) gibi çok
-       koyu/geniş bir gölgeyle taşınıyordu, çünkü kart ve sayfa arka planı
-       birebir aynıydı. Artık tanım işini asıl border + sunken-page kontrastı
-       yapıyor; gölge yalnızca ince bir "kaldırma" hissi için kalıyor. */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.08);
+    /* Kartın tanımını asıl BORDER + sunken sayfa kontrastı yapıyor; gölge
+       yalnızca "kaldırma" hissi veriyor. (Çok eski bir sürüm kart ile sayfa
+       aynı renkte olduğu için 0 24px 60px rgba(0,0,0,.45) gibi ağır bir
+       gölgeye mecburdu — o durum artık yok.)
+       Negatif yayılma (-5px) gölgeyi kartın altında toplayıp kenarlardan
+       çekiyor: yüksek ama dağılmamış, modern bir yükselti. */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
 }
 
 .login-logo {
@@ -95,6 +97,9 @@
     border-radius: 10px;
     font-size: 0.95rem;
     font-family: inherit;
+    /* Odak halkası ANİDEN değil yumuşak açılsın. background/color da geçişte:
+       koyu temaya geçişte alan bir kare gibi zıplamıyor. */
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 /* Şifre göster/gizle düğmesinin dikey hizası.
@@ -119,15 +124,15 @@
     display: block;
     width: 100%;
     box-sizing: border-box;
-    /* Düğme sağdan 12px'te ve 28px genişliğinde: metin tam düğmenin
-       başladığı yerde bitsin diye 12 + 28 = 40px. */
-    padding-right: 40px;
+    /* Düğme sağdan 14px'te ve 28px genişliğinde: metin tam düğmenin
+       başladığı yerde bitsin diye 14 + 28 = 42px. */
+    padding-right: 42px;
 }
 
 .input-toggle-btn {
     position: absolute;
     top: 50%;
-    right: 12px;
+    right: 14px;
     transform: translateY(-50%);
     width: 28px;
     height: 28px;
@@ -143,10 +148,14 @@
 
 .input-toggle-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text-muted); }
 
+/* Odak: mavi kenarlık + 4px'lik yumuşak halka. Halka `box-shadow` ile
+   çiziliyor (outline değil) — böylece 10px köşe yarıçapını takip ediyor.
+   outline: none tek başına bırakılmadı; halka görünür bir odak göstergesi
+   olarak onun YERİNE geçiyor (klavyeyle gezen kullanıcı alanı kaybetmez). */
 .login-field input:focus {
     outline: none;
     border-color: var(--bcc-accent);
-    box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.15);
+    box-shadow: 0 0 0 4px var(--bcc-accent-soft);
 }
 
 .login-submit {
@@ -156,17 +165,52 @@
        değişken koyu temada koyu renge döner, buton metni okunmaz hale gelirdi. */
     color: var(--bcc-on-accent);
     border: none;
-    padding: 0.8rem 1rem;
-    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     margin-top: 0.25rem;
-    transition: background-color 0.12s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
+/* Hover: 1px yukarı + renkli gölge. Ölçek 1.01'de bırakıldı — daha fazlası
+   tam genişlikteki bir butonda kenarları bulanıklaştırıp "titreme" hissi
+   veriyor. */
 .login-submit:hover {
     background: var(--bcc-accent-strong);
+    transform: translateY(-1px) scale(1.01);
+    /* Renkli gölge SAYDAM accent ile: --bcc-accent-soft opak bir renk
+       (#e8f0fe / #1c2b4d), 16px bulanıklıkta yayıldığında gölge değil düz bir
+       mavi pus gibi görünüyordu. Odak halkasında ise opak olması sorun değil,
+       orada bulanıklık yok (bkz. theme.css'teki aynı desen). */
+    box-shadow: 0 6px 16px -4px rgba(45, 127, 249, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Basılı halde yükselti geri alınıyor: tıklamanın fiziksel karşılığı. */
+.login-submit:active {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.login-submit:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--bcc-accent-soft);
+}
+
+/* Hareketi azalt tercihi: dönüşüm/ölçek tamamen kapanır, renk geçişi kalır.
+   Vestibüler rahatsızlığı olan kullanıcılar için zıplayan buton sorun. */
+@media (prefers-reduced-motion: reduce) {
+    .login-field input,
+    .login-submit {
+        transition: background-color 0.16s ease, border-color 0.16s ease;
+    }
+
+    .login-submit:hover,
+    .login-submit:active {
+        transform: none;
+    }
 }
 
 .login-register {

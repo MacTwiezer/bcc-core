@@ -3520,7 +3520,13 @@ function bcc_base_icon_style_attr($baseId)
 {
     $t = bcc_base_icon_theme($baseId);
 
-    return '--bi-bg: ' . $t['bg'] . '; --bi-fg: ' . $t['fg']
+    // --bi-solid: paletin CANLI ana rengi. Home kartındaki ikon rozeti zemini
+    // artık hazır pastelden (--bi-bg) değil, bu rengin YARI SAYDAM bir
+    // karışımından üretiliyor (home.css, color-mix) — böylece rozet base'in
+    // marka rengini taşır ve kartın zeminine göre kendini ayarlar. --bi-bg
+    // yine basılıyor: color-mix desteklemeyen tarayıcıda yedek o.
+    return '--bi-solid: ' . $t['solid']
+        . '; --bi-bg: ' . $t['bg'] . '; --bi-fg: ' . $t['fg']
         . '; --bi-bg-dark: ' . $t['bgDark'] . '; --bi-fg-dark: ' . $t['fgDark'] . ';';
 }
 

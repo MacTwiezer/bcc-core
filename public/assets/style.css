@@ -209,13 +209,28 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 
 /* ---- Grid (Faz 3) ---------------------------------------------------- */
 
+/* Tam genişlik/yükseklik (Airtable "edge-to-edge"). Bu kutu YALNIZCA
+   grid.php'de var (interface.php'de yalnızca bir yorumda geçiyor), bu yüzden
+   kural doğrudan burada tam-kanama olacak şekilde tanımlandı; ayrı bir
+   modifier sınıfı yok.
+
+   flex:1 + min-height:0 -> .gs-main'in (flex sütun) kalan TÜM yüksekliğini
+   alır; önceden yalnızca içerik boyundaydı ve altında 361px boşluk kalıyordu.
+   min-height:0 olmadan flex çocuğunun varsayılan min-height:auto'su kutunun
+   içeriğinden küçülmesini engeller, yani kaydırma hiç oluşmaz ve tablo
+   pencereden taşardı.
+
+   Kenarlık/yuvarlatma/alt boşluk KALDIRILDI: pencere kenarına dayanan bir
+   kutuda yuvarlak köşe ve dış çerçeve "kart" izlenimi verip tam-kanamayı
+   bozuyordu. Üstteki ayrım çizgisini .gs-view-toolbar'ın kendi border-bottom'u,
+   iç yapıyı ise hücrelerin kendi kenarlıkları taşıyor. */
 .grid-wrap {
     background: var(--bcc-surface);
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 8px;
+    border: none;
+    border-radius: 0;
     overflow: auto;
-    max-width: 100%;
-    margin-bottom: 1rem;
+    flex: 1;
+    min-height: 0;
     /* Sütun genişliği şeritlerinin (.grid-col-resize-layer, grid-column-resize.js)
        konum atası. GÜVENLİ: bu kutunun içindeki TEK mutlak konumlu öğeler
        başlığın kendi çocukları (dondurma/boyutlandırma tutamaçları — atası
@@ -252,12 +267,17 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     background: transparent;
 }
 
+/* Yoğunluk (Airtable paritesi): ölçüler rem DEĞİL px. rem, kullanıcının
+   tarayıcı yazı boyu ayarıyla ölçekleniyor ve "32px satır" hedefi o zaman
+   tutmuyor; veri ızgarasında satır adımının sabit kalması okunabilirlikten
+   önce geliyor (Airtable de sabit px kullanır). */
 table.grid {
     border-collapse: separate;
     border-spacing: 0;
     width: auto;
     min-width: 100%;
-    font-size: 0.9rem;
+    font-size: 13px;
+    line-height: 1.3;
 }
 
 table.grid thead th {
@@ -268,9 +288,34 @@ table.grid thead th {
     border-bottom: 2px solid var(--bcc-border-strong);
     border-right: 1px solid var(--bcc-border);
     white-space: nowrap;
-    padding: 0.5rem 0.75rem;
+    padding: 4px 8px;
+    height: 32px;
+    font-size: 12px;
+    /* line-height:1 — satır kutusunun "strut"unu (görünmez taban kutu)
+       küçültür. 1.3 mirası bırakılsaydı strut 15.6px olur, en uzun çocukla
+       (16px menü düğmesi) üst üste binerek kutuyu 32'nin üstüne taşırdı. */
+    line-height: 1;
     font-weight: 600;
 }
+
+/* Bulunan gerçek bug: height:32px verilmesine rağmen başlık 35.6px kalıyordu.
+   Sebep <th>'nin satır kutusu: çocukların vertical-align'ları KARIŞIKTI
+   (.field-badge -2px, .grid-th-label bottom, .grid-th-menu middle). `bottom`
+   ile `middle` aynı satır kutusunda buluşunca kutu ikisini de sığdırmak için
+   büyüyor — 15.6px'lik satır 25.6px'e çıkıp dolgu+kenarlıkla 35.6'yı
+   veriyordu.
+   <th>'ye display:flex VERİLMEDİ: bu dosyadaki .grid-rownum-inner notunun
+   anlattığı hata aynen burada da olurdu (flex'e çevrilen bir tablo hücresi,
+   tablonun otomatik yükseklik eşitlemesinin DIŞINDA kalır). Bunun yerine
+   hizalama tek bir değere sabitleniyor — satır kutusu artık en uzun çocuk
+   kadar (16px) ve başlık tam 32px'e oturuyor.
+
+   İkinci seçici ŞART: .grid-th-label'a `vertical-align: bottom` veren kural
+   `table.grid.grid-has-col-widths .grid-th-label` (üç sınıf) ve çıplak
+   `table.grid thead th > *` (tek sınıf) ondan ZAYIF kalıyordu — yani ilk
+   denemede başlık 35.6px'te kalmıştı. */
+table.grid thead th > *,
+table.grid.grid-has-col-widths thead th > .grid-th-label { vertical-align: middle; }
 
 .field-badge {
     display: inline-block;
@@ -338,12 +383,18 @@ table.grid thead th:hover .grid-th-menu-btn,
     text-align: left;
 }
 
+/* height burada ASGARİ gibi davranır (tablo hücresi içeriğinden küçülemez):
+   satır adımının gerçekten 32px olması, .cell-view'ün dolgu+satır yüksekliği
+   toplamının 32'yi AŞMAMASINA bağlı — 13px * 1.3 = 16.9 + 2*4 = ~25px, yani
+   sınırın altında kalıyor ve satır tam 32px'e oturuyor. Eskiden .cell-view
+   dolgusu 6.4px ve yazı 14.4px olduğu için içerik 32'yi aşıp satırı 37px'e
+   itiyordu. */
 table.grid td {
     border-right: 1px solid var(--bcc-border);
     border-bottom: 1px solid var(--bcc-border);
     padding: 0;
     vertical-align: middle;
-    height: 2rem;
+    height: 32px;
 }
 
 table.grid .grid-rownum {
@@ -353,9 +404,9 @@ table.grid .grid-rownum {
     background: var(--bcc-surface);
     color: var(--bcc-text-muted);
     text-align: left;
-    padding: 0.4rem 0.5rem;
+    padding: 4px 6px;
     border-right: none;
-    min-width: 2.5rem;
+    min-width: 40px;
     /* Bulunan gerçek bug: grid-freeze-columns.js'teki yorum burada "statik CSS
        zaten hallediyor, dokunma" diyordu, ama border-right hep none'du — yatay
        kaydırmada donuk satır-no sütununun sağında HİÇBİR ayraç/gölge yoktu,
@@ -383,7 +434,11 @@ table.grid tbody tr:hover td {
    (.is-row-selected) hover'dan bağımsız görünür kalır — Starred kartındaki
    yıldız ikonuyla AYNI opacity/display deseni. */
 table.grid tbody .grid-rownum {
-    min-width: 3.8rem;
+    /* 3.8rem (60.8px) -> 40px: yoğunluk için. İçerik hover'da YER
+       DEĞİŞTİRİYOR (sayı gizlenir, checkbox+genişlet gelir), yani ikisi asla
+       yan yana durmuyor — 13px checkbox + 12px genişlet + 6px aralık + 2*6px
+       dolgu = ~40px yetiyor. */
+    min-width: 40px;
 }
 
 /* Bulunan gerçek bug: satır no/checkbox/genişlet düğmesini yan yana dizmek
@@ -1345,7 +1400,7 @@ table.grid.grid-has-col-widths td.editing { overflow: visible; }
 .cell-view {
     box-sizing: border-box;
     height: 100%;
-    padding: 0.4rem 0.75rem;
+    padding: 4px 8px;
     min-height: 1.2rem;
     white-space: nowrap;
     overflow: hidden;
@@ -1409,9 +1464,10 @@ td:hover .cell-link-icon,
 
 .choice-chip {
     display: inline-block;
-    padding: 0.1rem 0.55rem;
+    padding: 2px 8px;
     border-radius: 999px;
-    font-size: 0.85rem;
+    font-size: 11px;
+    line-height: 1.35;
     color: var(--bcc-text);
     margin: 0 0.25rem 0.15rem 0;
     white-space: nowrap;
@@ -2203,12 +2259,25 @@ td.cell-flash-error {
 
 .grid-add-field-menu { position: relative; }
 
+/* Bulunan gerçek bug: bu düğme 2.1rem (33.6px) SABİT yükseklikteydi ve
+   .grid-add-field-th'nin dolgusu 0 olduğu için başlık satırının EN UZUN
+   içeriği oydu. Tablo satırı en uzun hücreye göre boylandığından, <th>'lere
+   height:32px verilmesine rağmen başlık 35.6px'te takılı kalıyordu — üstelik
+   suçlu, ölçtüğüm sütun değil tablonun EN SAĞINDAKİ "+" sütunuydu.
+   Sabit yükseklik yerine hücreyi doldurur: başlık yoğunluğu ileride yine
+   değişirse düğme kendiliğinden uyar, ikinci bir sabit güncellenmez. */
 .grid-add-field-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 2.1rem;
+    /* height:100% bir tablo hücresinin torununda güvenilir çözülmüyor (yüzde,
+       ölçüsü belirsiz bir ataya dayanamıyor) — bu yüzden asıl ölçüyü
+       min-height veriyor. 30px = 32px başlık eksi 2px alt kenarlık, yani
+       hücrenin İÇ yüksekliğinin tamamı: hover zemini başlığı tam dolduruyor
+       ama satırı 32'nin üstüne İTMİYOR. */
+    height: 100%;
+    min-height: 30px;
     cursor: pointer;
     color: var(--bcc-text-muted);
     font-size: 1.1rem;

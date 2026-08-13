@@ -865,6 +865,23 @@ $GLOBALS['BCC_MAX_COLUMN_WIDTH'] = 800;  // tek sütun tabloyu yutmasın
 // olduğu için her sütunun bir genişliği OLMAK ZORUNDA.
 $GLOBALS['BCC_DEFAULT_COLUMN_WIDTH'] = 180;
 
+// Satır no / seçim sütununun (.grid-rownum) genişliği. Kaydedilmiş haritadan
+// OKUNMUYOR, her zaman bu sabit basılıyor.
+//
+// Neden: bu sütun SÜRÜKLENEMEZ — grid-column-resize.js yalnızca
+// th[data-col-key] olan başlıklara tutamaç takıyor, satır no <th>'sinde ise o
+// öznitelik yok. Haritadaki 'row' anahtarı bu yüzden kullanıcı TERCİHİ değil,
+// "tüm genişlikleri kaydet" turunda o an CSS'in ürettiği değerin ÖLÇÜLMÜŞ bir
+// anlık görüntüsü (mevcut görünümlerde 80px ve 93px gibi değerler böyle
+// oluşmuş). Yoğunluk küçüldüğünde o eski ölçüm satır içi <col style="width">
+// olarak basılıp CSS'i yeniyordu (table-layout:fixed'te satır içi genişlik
+// kazanır), yani sütun 40px'e inemiyordu.
+//
+// BCC_MIN_COLUMN_WIDTH (80) buna UYGULANMAZ: o alt sınır okunabilirliği olan
+// VERİ sütunları için; burada yalnızca sayı/checkbox/genişlet ikonu var ve
+// ikisi hover'da yer değiştirdiği için asla yan yana durmuyorlar.
+$GLOBALS['BCC_ROW_COLUMN_WIDTH'] = 44;
+
 // views.config JSON'ından sütun genişliklerini SAVUNMACI biçimde okur
 // (bcc_get_frozen_column_count ile AYNI disiplin: NULL/bozuk JSON/eksik anahtar/
 // beklenmedik tip -> sessizce boş dizi, hata fırlatmaz).
@@ -3898,6 +3915,104 @@ function bcc_fetch_attachments_by_record($recordIds)
 // hücre düzenlemesi cell_values'a yazar, records'a DOKUNMAZ) MAX(cell_values.
 // updated_at)'e dayanır — hücre içeriği değişince gerçekten "son güncelleme"
 // ilerlesin diye. Hiç hücresi olmayan (yeni, boş) kayıt records.created_at'e düşer.
+// Çok seviyeli gruplama: $records üzerinde TEK geçişte, sıralı gelen kayıtları
+// iç içe bir ağaca böler. Segmentleme HAM DEĞER (group_raw_value_N, SQL'in
+// GROUP BY değil ORDER BY ile getirdiği ham kolon) üzerinden karşılaştırılır;
+// cell_display_text() yalnızca başlıkta GÖSTERİM için çağrılır, karşılaştırmaya
+// hiç girmez. Bir seviyenin ham değeri bir önceki kayıttan farklıysa, o seviye
+// VE ondan sonraki (daha iç) tüm seviyeler için yeni segment açılır — iç
+// sayaçlar bu noktada sıfırlanır (bkz. $counters), böylece dıştaki bir grup
+// değişince içteki "0-1" gibi bir path yanlışlıkla eski sayaçtan devam etmez.
+// Tüm tipler (checkbox dahil — cell_display_text() artık 'İşaretli'/'İşaretsiz'
+// döndürüyor) cell_display_text() ile (tarih formatı, seçim etiketleri vb.
+// doğru çıksın diye) biçimlendirilir. (Empty) davranışı: tek seviyeli
+// gruplamadaki gibi.
+//
+// Dönüş: düğüm dizisi. Her düğüm:
+//   'level'    => 0 tabanlı seviye
+//   'path'     => hiyerarşik segment yolu, ör. "0-2-1" (data-group-path'e gider)
+//   'display'  => başlıkta gösterilecek metin
+//   'count'    => bu düğümün altındaki TOPLAM kayıt sayısı (iç içe seviyelerde
+//                 tüm alt dallardaki kayıtların toplamı)
+//   'is_leaf'  => bu, gruplamanın en iç (son) seviyesi mi
+//   'children' => is_leaf değilse, alt düğüm dizisi (aksi halde null)
+//   'records'  => is_leaf ise, bu segmentteki kayıt dizisi (aksi halde null)
+function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
+{
+    $levelCount = count($groupRules);
+    $tree = array();
+
+    if ($levelCount === 0) {
+        return $tree;
+    }
+
+    $openNodes = array();
+    $counters = array_fill(0, $levelCount, -1);
+    $prevKeys = null;
+
+    foreach ($records as $record) {
+        $keys = array();
+        for ($lvl = 0; $lvl < $levelCount; $lvl++) {
+            $keys[$lvl] = $record['group_raw_value_' . $lvl];
+        }
+
+        $divergeLevel = 0;
+        if ($prevKeys !== null) {
+            $divergeLevel = $levelCount; // sentinel: hiçbir seviye değişmedi
+            for ($lvl = 0; $lvl < $levelCount; $lvl++) {
+                if ($keys[$lvl] !== $prevKeys[$lvl]) {
+                    $divergeLevel = $lvl;
+                    break;
+                }
+            }
+        }
+
+        for ($lvl = $divergeLevel; $lvl < $levelCount; $lvl++) {
+            $counters[$lvl] = ($lvl === $divergeLevel) ? $counters[$lvl] + 1 : 0;
+
+            $rule = $groupRules[$lvl];
+            $rawValue = $keys[$lvl];
+
+            if ($rawValue === null) {
+                $display = '(Boş)';
+            } else {
+                $display = cell_display_text($rule['field_type'], bcc_group_cell_row($rule['column'], $rawValue), $usersById, $rule['options']);
+            }
+
+            $isLeaf = ($lvl === $levelCount - 1);
+            $node = array(
+                'level' => $lvl,
+                'path' => implode('-', array_slice($counters, 0, $lvl + 1)),
+                'display' => $display,
+                'count' => 0,
+                'is_leaf' => $isLeaf,
+                'children' => $isLeaf ? null : array(),
+                'records' => $isLeaf ? array() : null,
+            );
+
+            if ($lvl === 0) {
+                $tree[] = $node;
+                $openNodes[0] = &$tree[count($tree) - 1];
+            } else {
+                $openNodes[$lvl - 1]['children'][] = $node;
+                $openNodes[$lvl] = &$openNodes[$lvl - 1]['children'][count($openNodes[$lvl - 1]['children']) - 1];
+            }
+        }
+
+        $openNodes[$levelCount - 1]['records'][] = $record;
+
+        for ($lvl = 0; $lvl < $levelCount; $lvl++) {
+            $openNodes[$lvl]['count']++;
+        }
+
+        $prevKeys = $keys;
+    }
+
+    unset($openNodes);
+
+    return $tree;
+}
+
 function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, $searchTerm = null)
 {
     $sql = "SELECT r.id, r.created_at,

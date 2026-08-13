@@ -325,6 +325,73 @@ if (!empty($shareExistingIds)) {
             <input type="text" id="if-search-input" placeholder="Ara..." aria-label="Ara" autocomplete="off">
         </div>
 
+        <?php
+        // Grupla / Filtrele / Sırala — grid.php'nin panelleriyle AYNI PARAMETRE
+        // ADLARINI üretirler (group_field_N, filter_field_N/filter_cond_N/
+        // filter_value_N/filter_logic, sort_field_N/sort_dir_N) ve sunucuda
+        // grid.php'nin kullandığı AYNI ayrıştırma + SQL fonksiyonlarına gider
+        // (bkz. public/api/interface_records.php). Buradaki tek fark UYGULAMA
+        // BİÇİMİ: grid.php formu GET ile gönderip sayfayı yeniliyor, burada
+        // istemci aynı parametreleri fetch ile yolluyor ve mevcut satırları
+        // yeniden sıralayıp gösterip gizliyor — sayfa yenilenmiyor.
+        //
+        // Alanlar/operatörler JS'e SUNUCUDAN veriliyor: seçenek listesi ikinci
+        // kez (istemcide) tanımlanmıyor, tek kaynak BCC_FILTER_OPERATORS.
+        $ifToolFields = array();
+        foreach ($fields as $f) {
+            $ifToolFields[] = array(
+                'id' => (int) $f['id'],
+                'name' => $f['name'],
+                'type' => $f['field_type'],
+            );
+        }
+        ?>
+        <div class="if-tools" id="if-tools">
+            <details class="if-tool" name="if-tool">
+                <summary class="if-tool-btn" title="Grupla">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M6 10h11M9 15h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <span>Grupla</span><span class="if-tool-badge" data-tool-badge="group" hidden></span>
+                </summary>
+                <div class="if-tool-panel" data-tool-panel="group">
+                    <div class="if-tool-rows" data-tool-rows></div>
+                    <button type="button" class="if-tool-add" data-tool-add>+ Gruplama ekle</button>
+                </div>
+            </details>
+
+            <details class="if-tool" name="if-tool">
+                <summary class="if-tool-btn" title="Filtrele">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                    <span>Filtrele</span><span class="if-tool-badge" data-tool-badge="filter" hidden></span>
+                </summary>
+                <div class="if-tool-panel" data-tool-panel="filter">
+                    <p class="if-tool-hint">Görmek istediklerinizi tarif edin.</p>
+                    <div class="if-tool-rows" data-tool-rows></div>
+                    <button type="button" class="if-tool-add" data-tool-add>+ Koşul ekle</button>
+                </div>
+            </details>
+
+            <details class="if-tool" name="if-tool">
+                <summary class="if-tool-btn" title="Sırala">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M6 4v12M6 16l-2.5-2.5M6 16l2.5-2.5M14 16V4M14 4l-2.5 2.5M14 4l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Sırala</span><span class="if-tool-badge" data-tool-badge="sort" hidden></span>
+                </summary>
+                <div class="if-tool-panel" data-tool-panel="sort">
+                    <div class="if-tool-rows" data-tool-rows></div>
+                    <button type="button" class="if-tool-add" data-tool-add>+ Sıralama ekle</button>
+                </div>
+            </details>
+        </div>
+
+        <script>
+            var BCC_IF_FIELDS = <?php echo json_encode($ifToolFields, JSON_UNESCAPED_UNICODE); ?>;
+            var BCC_IF_OPERATORS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
+            var BCC_IF_MAX = {
+                filter: <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>,
+                sort: <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>,
+                group: 3
+            };
+        </script>
+
         <div class="if-record-list" id="if-record-list" data-table-id="<?php echo (int) $tableId; ?>">
             <?php if (empty($tables)): ?>
                 <!-- Bulunan gerçek bug: base'de HİÇ tablo yokken (henüz yeni oluşturulmuş,

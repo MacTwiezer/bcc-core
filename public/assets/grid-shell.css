@@ -10,7 +10,16 @@ body.gs-body {
     background: var(--bcc-surface);
     color: var(--bcc-text);
     display: flex;
-    min-height: 100vh;
+    /* min-height DEĞİL height + overflow:hidden: kabuk TAM olarak pencere
+       kadar, sayfanın kendisi HİÇ kaymıyor — tek kaydırılan öğe .grid-wrap
+       (Airtable modeli). min-height olsaydı grid alanı "kalan yüksekliği
+       doldur" diyemezdi (esnek bir kutunun yüzdesi/flex'i, ölçüsü belirsiz
+       bir ataya dayanamaz) ve tablo bugünkü gibi yalnızca içerik boyunda
+       kalırdı.
+       body.gs-body YALNIZCA grid.php'de; interface.php body.if-page
+       kullanıyor, bu yüzden orası etkilenmiyor. */
+    height: 100vh;
+    overflow: hidden;
 }
 
 body.gs-body a { text-decoration: none; color: inherit; }
@@ -951,26 +960,60 @@ html.is-mac .gs-kbd-other { display: none; }
     min-height: 0;
 }
 
+/* Tam genişlik/yükseklik (Airtable "edge-to-edge"): dolgu KALDIRILDI, artık
+   yatay boşluğu sayfanın kendisi değil İÇİNDEKİ öğeler (bkz. .gs-fields-link /
+   .gs-grid-footer) taşıyor — böylece .grid-wrap sağ ve alt pencere kenarına
+   kadar uzanabiliyor.
+
+   overflow:auto -> hidden + flex sütun: kaydırma tek bir yerde, .grid-wrap'te
+   toplanıyor. Aksi hâlde iç içe iki kaydırıcı olur ve sticky başlık/donmuş
+   sütunlar yanlış kaydırıcıya göre konumlanır.
+   min-height:0 ŞART: flex çocuğunun varsayılan min-height:auto değeri,
+   .grid-wrap'in kendi içeriğinden KÜÇÜLMESİNİ engelleyip taşmaya yol açardı. */
 .gs-main {
     flex: 1;
-    padding: 1rem 1.25rem 1.5rem;
     min-width: 0;
-    overflow: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .gs-fields-link {
-    margin: 0 0 0.75rem;
+    margin: 0;
+    padding: 0.6rem 1rem 0.5rem;
     font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* .gs-main'in dolgusu tam-kanama için kaldırıldı; IZGARA DIŞINDAKİ çocukları
+   artık kendi yatay boşluklarını taşımak zorunda. Aksi hâlde flash mesajı
+   (src/partials/flash.php -> p.error / p.ok) ve "bu tabloda henüz alan yok"
+   kartı pencerenin sol kenarına yapışık çıkardı. flex-shrink:0 — bunlar
+   .grid-wrap gibi esnememeli, kendi boylarında kalmalı. */
+.gs-main > .card,
+.gs-main > .error,
+.gs-main > .ok {
+    margin-left: 1rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
 }
 
 .gs-fields-link a { color: var(--bcc-accent); font-weight: 600; }
 
+/* Alt bilgi çubuğu ("N kayıt") artık akışın sonunda DEĞİL, .gs-main flex
+   sütununun sabit son öğesi: .grid-wrap flex:1 ile kalan yüksekliği aldığı
+   için bu çubuk her zaman pencerenin ALT KENARINA yapışık kalıyor ve tabloyla
+   birlikte kaymıyor (Airtable'daki gibi). Kenar çizgisi tam genişlikte,
+   yazının boşluğunu ise kendi yatay dolgusu veriyor (eskiden .gs-main'in
+   dolgusundan geliyordu). */
 .gs-grid-footer {
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.1rem 0;
+    padding: 0.45rem 1rem;
     border-top: 1px solid var(--bcc-border);
-    margin-top: 0.5rem;
+    margin-top: 0;
+    flex-shrink: 0;
 }
 
 .gs-grid-footer .grid-row-count {

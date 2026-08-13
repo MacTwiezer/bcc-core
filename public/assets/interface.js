@@ -90,7 +90,19 @@
         // burada arama gerçekten row.hidden yaptığı için (aşağıda applyVisibility)
         // gizli satırlar arasında ▲▼ atlama yapmamalı).
         function getVisibleRows() {
-            return rows.filter(function (r) { return !r.hidden; });
+            // DOM'dan TAZE okunuyor, önbellekteki `rows` dizisinden DEĞİL.
+            // Bulunan gerçek bug: filtre/sıralama/gruplama satırları DOM'da
+            // yeniden SIRALIYOR (renderItems), ama `rows` sayfa yüklenirken
+            // yakalanmış ESKİ sırayı taşıyor. Ondan türetilen liste yüzünden
+            // ▲▼ düğmeleri ve ok tuşları ekranda görünenden BAŞKA bir sırada
+            // geziyordu (canlı testte: gruplanmış listede ilk ok "Beta
+            // Yazilim" yerine "Ceta Lojistik"e gidiyordu).
+            // querySelectorAll belge sırasını döndürür — yeniden sıralamadan
+            // sonra bu, kullanıcının GÖRDÜĞÜ sıradır.
+            return Array.prototype.filter.call(
+                recordList.querySelectorAll('.if-record-row'),
+                function (r) { return !r.hidden; }
+            );
         }
 
         function updateDetailNavState() {
@@ -262,64 +274,304 @@
             navigateDetail(e.key === 'ArrowDown' ? 1 : -1);
         });
 
-        // Arama: TAM içerikte (yalnızca listede görünen kırpılmış önizlemede
-        // değil) eşleşmesi gerektiği için sunucuya gider (public/api/
-        // interface_search.php, bcc_interface_fetch_records() — sayfanın ilk
-        // yüklemesiyle AYNI fonksiyon). 200ms debounce ile istek sayısı sınırlı;
-        // yanıt yalnızca eşleşen record_id listesi, HTML DEĞİL — zaten basılı
-        // satırlar gösterilip/gizlenir, ikinci bir render yolu yok.
-        if (searchInput && recordList) {
-            var tableId = recordList.getAttribute('data-table-id') || '';
-            var debounceTimer = null;
-            var activeRequestId = 0;
+        // ---- Grupla / Filtrele / Sırala ------------------------------------
+        //
+        // Kurallar burada YALNIZCA toplanıyor; anlamlandırma (hangi operatör
+        // hangi tipte geçerli, SQL nasıl kurulur, gruplar nasıl ağaçlanır)
+        // TAMAMEN sunucuda ve grid.php ile AYNI fonksiyonlarda
+        // (parse_grid_*_rules -> bcc_build_grid_records_query ->
+        // bcc_build_grouped_tree, bkz. public/api/interface_records.php).
+        // Üretilen parametre adları da grid.php'ninkiyle birebir aynı.
+        var toolsWrap = document.getElementById('if-tools');
+        var groupHeaders = []; // istemcide üretilen grup başlığı düğümleri
 
-            function applyVisibility(matchIds) {
-                var visibleCount = 0;
-                rows.forEach(function (row) {
-                    var id = parseInt(row.getAttribute('data-record-id'), 10);
-                    var matches = matchIds === null || matchIds.indexOf(id) !== -1;
-                    row.hidden = !matches;
-                    if (matches) {
-                        visibleCount++;
-                    }
+        function fieldById(id) {
+            for (var i = 0; i < BCC_IF_FIELDS.length; i++) {
+                if (BCC_IF_FIELDS[i].id === id) { return BCC_IF_FIELDS[i]; }
+            }
+            return null;
+        }
+
+        function makeSelect(cls, options, selected) {
+            var sel = document.createElement('select');
+            sel.className = cls;
+            options.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.label;
+                if (String(o.value) === String(selected)) { opt.selected = true; }
+                sel.appendChild(opt);
+            });
+            return sel;
+        }
+
+        function fieldOptions(kind) {
+            var out = [];
+            BCC_IF_FIELDS.forEach(function (f) {
+                // Filtre/sıralama için operatör tablosunda karşılığı olmayan
+                // tipler (ör. attachment) atlanır — sunucu da onları sessizce
+                // eliyor (parse_grid_*_rules), liste boşuna göstermesin.
+                if (kind !== 'group' && !BCC_IF_OPERATORS[f.type]) { return; }
+                out.push({ value: f.id, label: f.name });
+            });
+            return out;
+        }
+
+        function buildRow(panel, kind) {
+            var row = document.createElement('div');
+            row.className = 'if-tool-row';
+
+            var opts = fieldOptions(kind);
+            if (!opts.length) { return null; }
+
+            var fieldSel = makeSelect('if-tool-field', opts, opts[0].value);
+            row.appendChild(fieldSel);
+
+            if (kind === 'filter') {
+                var condSel = makeSelect('if-tool-cond', [], '');
+                row.appendChild(condSel);
+                var val = document.createElement('input');
+                val.type = 'text';
+                val.className = 'if-tool-value';
+                val.placeholder = 'Değer';
+                row.appendChild(val);
+
+                // Operatör listesi SEÇİLEN ALANIN TİPİNE bağlı — sunucudaki
+                // BCC_FILTER_OPERATORS'ın aynısı, ikinci bir tablo yok.
+                var syncOps = function () {
+                    var f = fieldById(parseInt(fieldSel.value, 10));
+                    var map = (f && BCC_IF_OPERATORS[f.type]) || {};
+                    condSel.textContent = '';
+                    Object.keys(map).forEach(function (op) {
+                        var o = document.createElement('option');
+                        o.value = op;
+                        o.textContent = map[op];
+                        condSel.appendChild(o);
+                    });
+                    // empty / not_empty değer almaz.
+                    var noVal = condSel.value === 'empty' || condSel.value === 'not_empty';
+                    val.hidden = noVal;
+                };
+                fieldSel.addEventListener('change', function () { syncOps(); apply(); });
+                condSel.addEventListener('change', function () {
+                    val.hidden = (condSel.value === 'empty' || condSel.value === 'not_empty');
+                    apply();
                 });
-                if (noResults) {
-                    noResults.hidden = !(matchIds !== null && visibleCount === 0);
-                }
-                updateDetailNavState();
+                val.addEventListener('input', debounceApply);
+                syncOps();
+            } else {
+                var dirSel = makeSelect('if-tool-dir', [
+                    { value: 'asc', label: 'A → Z' },
+                    { value: 'desc', label: 'Z → A' }
+                ], 'asc');
+                row.appendChild(dirSel);
+                fieldSel.addEventListener('change', apply);
+                dirSel.addEventListener('change', apply);
             }
 
-            function runSearch() {
-                var q = searchInput.value.trim();
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'if-tool-del';
+            del.setAttribute('aria-label', 'Kaldır');
+            del.textContent = '×';
+            del.addEventListener('click', function () {
+                row.parentNode.removeChild(row);
+                apply();
+            });
+            row.appendChild(del);
 
-                if (q === '') {
-                    applyVisibility(null);
-                    return;
-                }
+            return row;
+        }
 
-                var requestId = ++activeRequestId;
+        // Panel position:fixed (bkz. interface.css'teki not: .if-list-panel'in
+        // overflow:hidden'ı absolute bir paneli kırpıyordu). Konumu açılışta
+        // burada hesaplanıyor — düğmenin altına hizalanır, sağdan taşacaksa
+        // pencere içine çekilir.
+        function positionToolPanel(details) {
+            var panel = details.querySelector('.if-tool-panel');
+            var btn = details.querySelector('.if-tool-btn');
+            if (!panel || !btn) { return; }
 
-                fetch('/api/interface_search.php?table_id=' + encodeURIComponent(tableId) + '&q=' + encodeURIComponent(q))
-                    .then(function (res) { return res.json(); })
-                    .then(function (data) {
-                        // Yarışı önle: yalnızca EN SON isteğin sonucu uygulanır
-                        // (yavaş bir yanıt, daha yeni bir yanıtı EZMESİN).
-                        if (requestId !== activeRequestId) {
-                            return;
-                        }
-                        if (data && data.ok) {
-                            applyVisibility(data.record_ids);
-                        }
-                    })
-                    .catch(function () {});
+            var r = btn.getBoundingClientRect();
+            panel.style.top = (r.bottom + 4) + 'px';
+            panel.style.left = r.left + 'px';
+
+            // Genişliği ölçmek için önce yerleştirildi; taşma varsa sola kaydır.
+            var pr = panel.getBoundingClientRect();
+            var overflowRight = pr.right - (window.innerWidth - 8);
+            if (overflowRight > 0) {
+                panel.style.left = Math.max(8, r.left - overflowRight) + 'px';
             }
+        }
 
-            searchInput.addEventListener('input', function () {
-                if (debounceTimer) {
-                    clearTimeout(debounceTimer);
+        if (toolsWrap && window.BCC_IF_FIELDS) {
+            Array.prototype.forEach.call(toolsWrap.querySelectorAll('.if-tool'), function (details) {
+                details.addEventListener('toggle', function () {
+                    if (details.open) { positionToolPanel(details); }
+                });
+            });
+            window.addEventListener('resize', function () {
+                Array.prototype.forEach.call(toolsWrap.querySelectorAll('.if-tool[open]'), positionToolPanel);
+            });
+
+            Array.prototype.forEach.call(toolsWrap.querySelectorAll('.if-tool-panel'), function (panel) {
+                var kind = panel.getAttribute('data-tool-panel');
+                var rows = panel.querySelector('[data-tool-rows]');
+                var addBtn = panel.querySelector('[data-tool-add]');
+
+                addBtn.addEventListener('click', function () {
+                    if (rows.children.length >= (BCC_IF_MAX[kind] || 3)) { return; }
+                    var row = buildRow(panel, kind);
+                    if (row) { rows.appendChild(row); }
+                    // Filtrede yeni satır tek başına sonucu değiştirmez (değer
+                    // boş) ama sıralama/gruplama hemen etkilidir.
+                    if (kind !== 'filter') { apply(); }
+                });
+
+                // Filtre paneli VE/VEYA bağlacı — sunucuda tek değer olarak
+                // tüm kurallara uygulanır (grid.php ile aynı kısıt).
+                if (kind === 'filter') {
+                    var logic = makeSelect('if-tool-logic', [
+                        { value: 'and', label: 'Tüm koşullar (VE)' },
+                        { value: 'or', label: 'Herhangi biri (VEYA)' }
+                    ], 'and');
+                    logic.setAttribute('data-tool-logic', '');
+                    logic.addEventListener('change', apply);
+                    panel.insertBefore(logic, rows);
                 }
-                debounceTimer = setTimeout(runSearch, 200);
             });
         }
+
+        // Toplanan kuralları grid.php'nin parametre adlarına çevirir.
+        function collectParams() {
+            var p = new URLSearchParams();
+            p.set('table_id', recordList.getAttribute('data-table-id') || '');
+            if (searchInput && searchInput.value.trim() !== '') {
+                p.set('q', searchInput.value.trim());
+            }
+            if (!toolsWrap) { return p; }
+
+            Array.prototype.forEach.call(toolsWrap.querySelectorAll('.if-tool-panel'), function (panel) {
+                var kind = panel.getAttribute('data-tool-panel');
+                var slot = 0;
+                Array.prototype.forEach.call(panel.querySelectorAll('.if-tool-row'), function (row) {
+                    var field = row.querySelector('.if-tool-field');
+                    if (!field || !field.value) { return; }
+                    slot++;
+                    if (kind === 'filter') {
+                        var cond = row.querySelector('.if-tool-cond');
+                        var val = row.querySelector('.if-tool-value');
+                        if (!cond || !cond.value) { slot--; return; }
+                        p.set('filter_field_' + slot, field.value);
+                        p.set('filter_cond_' + slot, cond.value);
+                        p.set('filter_value_' + slot, val && !val.hidden ? val.value : '');
+                    } else {
+                        var dir = row.querySelector('.if-tool-dir');
+                        p.set(kind + '_field_' + slot, field.value);
+                        p.set(kind + '_dir_' + slot, dir ? dir.value : 'asc');
+                    }
+                });
+                if (kind === 'filter') {
+                    var lg = panel.querySelector('[data-tool-logic]');
+                    if (lg) { p.set('filter_logic', lg.value); }
+                }
+            });
+            return p;
+        }
+
+        function setBadge(kind, n) {
+            var el = toolsWrap && toolsWrap.querySelector('[data-tool-badge="' + kind + '"]');
+            if (!el) { return; }
+            el.hidden = !n;
+            el.textContent = n ? String(n) : '';
+        }
+
+        // Sunucudan gelen sırayı DOM'a uygular: satırlar YENİDEN ÜRETİLMEZ,
+        // mevcut düğümler taşınır (detay panelindeki data-detail-fields ve
+        // dinleyiciler korunur). Grup başlıkları istemcide üretilir.
+        function renderItems(items) {
+            groupHeaders.forEach(function (h) { if (h.parentNode) { h.parentNode.removeChild(h); } });
+            groupHeaders = [];
+
+            var byId = {};
+            rows.forEach(function (r) {
+                byId[r.getAttribute('data-record-id')] = r;
+                r.hidden = true;
+            });
+
+            var frag = document.createDocumentFragment();
+            items.forEach(function (it) {
+                if (it.t === 'g') {
+                    var h = document.createElement('div');
+                    h.className = 'if-group-header if-group-level-' + it.level;
+                    var label = document.createElement('span');
+                    label.className = 'if-group-label';
+                    label.textContent = it.label;           // kullanıcı verisi
+                    var count = document.createElement('span');
+                    count.className = 'if-group-count';
+                    count.textContent = it.count;
+                    h.appendChild(label);
+                    h.appendChild(count);
+                    groupHeaders.push(h);
+                    frag.appendChild(h);
+                    return;
+                }
+                var row = byId[String(it.id)];
+                if (row) {
+                    row.hidden = false;
+                    frag.appendChild(row);
+                }
+            });
+
+            // noResults kutusu listenin sonunda kalmalı.
+            recordList.insertBefore(frag, noResults || null);
+
+            if (noResults) {
+                noResults.hidden = items.length !== 0;
+            }
+            updateDetailNavState();
+        }
+
+        var applyTimer = null;
+        var applyReqId = 0;
+
+        function apply() {
+            var reqId = ++applyReqId;
+            fetch('/api/interface_records.php?' + collectParams().toString())
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    // Yarış koruması: yalnızca EN SON isteğin sonucu uygulanır
+                    // (arama kutusundaki debounce deseniyle aynı).
+                    if (reqId !== applyReqId || !data || !data.ok) { return; }
+                    renderItems(data.items);
+                    setBadge('filter', data.counts.filters);
+                    setBadge('sort', data.counts.sorts);
+                    setBadge('group', data.counts.groups);
+                })
+                .catch(function () {});
+        }
+
+        function debounceApply() {
+            if (applyTimer) { clearTimeout(applyTimer); }
+            applyTimer = setTimeout(apply, 200);
+        }
+
+        // Arama artık AYNI apply() yolundan geçiyor (public/api/
+        // interface_records.php, q parametresi). Eskiden ayrı bir uç nokta
+        // (interface_search.php) çağırıp yalnızca satır gizliyordu; filtre/
+        // sıralama eklenince iki yol BİRBİRİNİ EZERDİ — arama sonucu sıralamayı,
+        // sıralama aramayı geri alırdı. Tek yol olunca arama ile filtre KESİŞİR
+        // ve sonuç her zaman aktif sıralama/gruplamayla tutarlı kalır.
+        //
+        // interface_search.php SİLİNMEDİ: hâlâ kendi başına geçerli bir
+        // uç nokta ve interface_records.php aramayı ONUN üzerinden yapıyor
+        // (bcc_interface_fetch_records), yani arama mantığı tek yerde.
+        if (searchInput && recordList) {
+            searchInput.addEventListener('input', debounceApply);
+        }
+
+        // İlk yükleme: sunucu satırları zaten doğru sırada bastı, bu yüzden
+        // açılışta istek YAPILMIYOR — apply() yalnızca kullanıcı bir kural
+        // değiştirdiğinde çalışır.
     });
 })();

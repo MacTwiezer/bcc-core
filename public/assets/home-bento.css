@@ -1,0 +1,328 @@
+/* Bento ızgarası + yeniden tasarlanan base kartı (Framer Community esinli).
+ *
+ * home.css'ten AYRI bir dosyada: home.css 2890 satır ve dört sayfa tarafından
+ * paylaşılıyor; bu görsel katman ayrı durunca tek başına geri alınabiliyor.
+ * Yükleme sırası home.css'ten SONRA (bkz. home_shell_top.php $homeExtraCss),
+ * yani buradaki kurallar oradaki taban kart kurallarını bilinçli olarak eziyor.
+ *
+ * Renkler token: --bcc-canvas/--bcc-surface/--bcc-border. Kartın kendi rengi
+ * ise --bi-solid'den (bcc_base_icon_style_attr, base id'sinden deterministik)
+ * color-mix ile türetiliyor — sabit hex yazılsaydı koyu tema bozulurdu ve her
+ * base aynı renge düşerdi.
+ */
+
+/* ---------- Sayfa zemini ve ölçü ---------- */
+
+body.home-page,
+body.home-page .home-main {
+    background: var(--bcc-canvas);
+}
+
+.home-main {
+    /* Geniş ekranda kartlar sonsuza kadar esnemesin — Framer'ın da içeriği
+       sabit bir kolon genişliğinde tutması gibi. */
+    max-width: 1400px;
+    padding: 2rem 2.25rem 4rem;
+}
+
+/* ---------- Tipografi ölçeği ----------
+   "Yüksek zanaat" izleniminin çoğu buradan geliyor: büyük başlıkta SIKI
+   negatif harf aralığı + net ağırlık kademeleri. Yazı tipi ailesi
+   DEĞİŞTİRİLMEDİ (sistem yığını kalıyor): bir web fontu yerel uygulamada ağ
+   bağımlılığı ve FOUT riski demekti. */
+
+.home-main-header h1 {
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.35rem;
+}
+
+.home-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 2rem 0 0.85rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+/* İlk bölüm başlığı araç çubuğunun hemen altında — orada saç teli çizgi ve
+   büyük üst boşluk gereksiz. */
+.home-toolbar + .home-section-head {
+    margin-top: 0.35rem;
+    padding-top: 0;
+    border-top: none;
+}
+
+.home-section-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--bcc-text);
+}
+
+.home-section-meta {
+    font-size: 12px;
+    color: var(--bcc-text-muted);
+}
+
+/* ---------- Bento ızgarası ----------
+   Taban ızgara (home.css) auto-fill/260px. Bento'da satır yüksekliği SABİT
+   bir birime bağlanıyor ki feature kart tam iki satırı kaplasın. */
+
+.home-base-grid--bento {
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    grid-auto-rows: 132px;
+    gap: 14px;
+}
+
+/* Feature kart: 2 kolon x 2 satır. Yalnızca kart modunda ve yeterince geniş
+   ekranda — dar ekranda (tek/iki kolon) 2 kolon kaplamak kartı ezerdi. */
+@media (min-width: 760px) {
+    .home-base-grid--bento .home-base-card--feature {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+}
+
+/* ---------- Kart ---------- */
+
+.home-base-grid--bento .home-base-card {
+    /* Taban kart yatay bir şerit (display:flex, align-items:center).
+       Bento'da içerik ALTA yaslanıyor: üstte kapak, altta metin — Framer'ın
+       görsel + scrim düzeninin karşılığı. */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: 0;
+    overflow: hidden;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.home-base-grid--bento .home-base-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--bi-solid) 45%, var(--bcc-border));
+    box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--bi-solid) 42%, transparent),
+                0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- Kapak ----------
+   Base'lerin görseli YOK; kapak kartın kendi renginden üretiliyor. Glif
+   filigran olarak sağ üstte, taşan kısmı overflow:hidden kırpıyor. */
+
+.home-base-cover {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 58%;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--bi-solid) 22%, var(--bcc-surface)),
+        color-mix(in srgb, var(--bi-solid) 6%, var(--bcc-surface))
+    );
+    /* Metnin başladığı yerde yumuşak biterek "scrim" hissi verir. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    pointer-events: none;
+}
+
+.home-base-cover-glyph {
+    position: absolute;
+    top: -10px;
+    right: -8px;
+    display: block;
+    color: var(--bi-solid);
+    opacity: 0.16;
+}
+
+.home-base-card--feature .home-base-cover-glyph {
+    top: -14px;
+    right: -10px;
+    opacity: 0.2;
+}
+
+/* Kapak yalnızca bento kart modunda; liste modunda ve bento dışı ızgaralarda
+   (starred.php) hiç görünmez, çünkü orada kart yatay şerit olarak kalıyor. */
+.home-base-cover { display: none; }
+.home-base-grid--bento .home-base-cover { display: block; }
+
+/* ---------- Kart içeriği ---------- */
+
+.home-base-grid--bento .home-base-icon {
+    position: relative;
+    z-index: 1;
+    align-self: flex-start;
+    margin-bottom: auto;
+}
+
+.home-base-grid--bento .home-base-info {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.home-base-grid--bento .home-base-name {
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+
+.home-base-card--feature .home-base-name {
+    font-size: 20px;
+    letter-spacing: -0.02em;
+}
+
+/* Açıklama YALNIZCA feature kartta (yer var). Sunucu bunu zaten sorguluyordu
+   ama hiç basmıyordu — bento'nun getirdiği asıl içerik kazancı bu. */
+.home-base-desc {
+    margin-top: 0.3rem;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--bcc-text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.home-base-stats {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
+
+/* Bento'da rozet YALNIZCA feature kartta. Bulunan gerçek bug: 1x1 kart 132px
+   ve içerik alta yaslı (justify-content:flex-end); ada + rozete + meta'ya
+   birlikte yer yok, rozet eklenince ikon kartın ÜST kenarından taşıp
+   kırpılıyordu (ekran görüntüsüyle yakalandı). Plandaki bölüşüm de buydu:
+   açıklama ve istatistik feature'a, ad + meta standarda.
+   Bento DIŞI ızgaralarda (starred.php) kart yatay şerit olarak kaldığı için
+   rozet oraya sığıyor ve gösterilmeye devam ediyor. */
+.home-base-grid--bento .home-base-card:not(.home-base-card--feature) .home-base-stats {
+    display: none;
+}
+
+.home-base-stat {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bi-solid) 12%, var(--bcc-surface));
+    border: 1px solid color-mix(in srgb, var(--bi-solid) 22%, transparent);
+    color: var(--bcc-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.home-base-grid--bento .home-base-meta {
+    margin-top: 0.3rem;
+    font-size: 12px;
+}
+
+/* ---------- "Yeni Base Oluştur" kutucuğu ---------- */
+
+.home-base-grid--bento .home-base-create {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px dashed var(--bcc-border-strong);
+    box-shadow: none;
+}
+
+.home-base-grid--bento .home-base-create:hover {
+    border-style: dashed;
+    border-color: var(--bcc-accent);
+    background: color-mix(in srgb, var(--bcc-accent) 6%, transparent);
+    transform: translateY(-2px);
+}
+
+.home-base-grid--bento .home-base-create .home-base-icon {
+    align-self: center;
+    margin-bottom: 0;
+}
+
+.home-base-grid--bento .home-base-create .home-base-info {
+    flex: none;
+}
+
+/* ---------- Liste modu dokunulmadı ----------
+   DİKKAT: .view-mode-list sınıfı BODY'ye değil IZGARANIN KENDİSİNE ekleniyor
+   (assets/home.js:491, grid.classList.toggle) — bu yüzden seçiciler torun
+   değil AYNI ELEMAN üzerinde birleşiyor (.home-base-grid--bento.view-mode-list).
+   İlk denemede torun olarak yazılmıştı ve hiç eşleşmedi: liste moduna
+   geçildiğinde ızgara bento ölçülerinde kalıyordu. */
+
+.home-base-grid--bento.view-mode-list {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 0;
+}
+
+.home-base-grid--bento.view-mode-list .home-base-card--feature {
+    grid-column: auto;
+    grid-row: auto;
+}
+
+/* Liste satırı yeniden yatay şerit: bento'nun kolon düzeni burada geçersiz. */
+.home-base-grid--bento.view-mode-list .home-base-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.85rem;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+}
+
+.home-base-grid--bento.view-mode-list .home-base-icon {
+    align-self: center;
+    margin-bottom: 0;
+}
+
+.home-base-grid--bento.view-mode-list .home-base-cover,
+.home-base-grid--bento.view-mode-list .home-base-desc,
+.home-base-grid--bento.view-mode-list .home-base-stats {
+    display: none;
+}
+
+/* "Yeni Base Oluştur" kutucuğu liste modunda home.css'teki ÖZGÜN görünümüne
+   döner. Bento sınıfı ızgarada kaldığı için yukarıdaki bento kuralları liste
+   modunda da eşleşiyordu (saydam zemin + 1px kesikli kenarlık), yani satır
+   diğer liste satırlarından farklı duruyordu. Değerler home.css'ten
+   KOPYALANMADI, yalnızca bento ezmesi geri alınıyor (initial/unset yerine
+   açık değerler: initial, kalıtımı da sıfırlayıp rengi bozardı). */
+.home-base-grid--bento.view-mode-list .home-base-create {
+    border: 2px dashed var(--bcc-border-strong);
+    background: var(--bcc-surface-sunken);
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.home-base-grid--bento.view-mode-list .home-base-create:hover {
+    background: var(--bcc-accent-soft);
+    border-color: var(--bcc-accent);
+    transform: none;
+}
+
+/* Hareketi azalt tercihi: yükselti/kayma kapanır, renk geçişleri kalır. */
+@media (prefers-reduced-motion: reduce) {
+    .home-base-grid--bento .home-base-card,
+    .home-base-grid--bento .home-base-card:hover,
+    .home-base-grid--bento .home-base-create:hover {
+        transform: none;
+        transition: border-color 0.18s ease, background-color 0.18s ease;
+    }
+}

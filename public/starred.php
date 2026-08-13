@@ -60,6 +60,9 @@ $starredBases = $bases;
 
 $homeActiveNav = 'starred';
 $homePageTitle = 'BCC-Core — Yıldızlılar';
+// Dashboard ile AYNI görsel katman: tipografi ölçeği, zemin ve kart cilası
+// burada da geçerli olsun (bento ızgarası açılmıyor, bkz. grid çağrısı).
+$homeExtraCss = array('home-bento.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
@@ -77,5 +80,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             </div>
         </div>
 
-        <?php bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz yıldızladığınız bir base yok.', $roleByTeamId); ?>
+        <?php
+        // Dashboard ile AYNI kart bileşeni ve AYNI "N tablo" rozeti — tek
+        // GROUP BY sorgusu. Bento KAPALI ($bento=false): burası "yıldızlılar"
+        // listesi, öne çıkarılacak tek bir base yok, hepsi eşit ağırlıkta.
+        $starredTableCounts = bcc_base_table_counts(array_column($bases, 'id'));
+        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz yıldızladığınız bir base yok.', $roleByTeamId, false, false, $starredTableCounts);
+        ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

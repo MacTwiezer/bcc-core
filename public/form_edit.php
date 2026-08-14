@@ -185,24 +185,9 @@ function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
     <?php
 }
 
-// Sol panel "Yıldızlılar" listesi — table_fields.php/slack_settings.php/
-// workspaces.php ile AYNI desen.
-//
-// ⚠️ Bu blok EKSİKTİ: kabuk $starredBases'i bekliyor ama bu sayfa hiç
-// ayarlamıyordu, dolayısıyla sol paneldeki yıldızlı base listesi bu sayfada
-// (ve YALNIZCA bu sayfada) HER ZAMAN boş görünüyordu — kardeş sayfalarda
-// doluyken. display_errors kapalı olduğu için ortada bir hata mesajı da yoktu.
-$starredBases = array();
-$teamIdsForStar = current_user_team_ids();
-if (!empty($teamIdsForStar)) {
-    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
-    $starredBases = bcc_fetch_all(
-        "SELECT b.id, b.name FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
-         WHERE usb.user_id = ? ORDER BY b.name",
-        array_merge($teamIdsForStar, array((int) $user['id']))
-    );
-}
+// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
+// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
+// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 // Sayfa iskeleti: table_fields.php/slack_settings.php ile AYNI kabuk
 // (home_shell_top/bottom) — yeni bir sayfa şablonu YAZILMADI.

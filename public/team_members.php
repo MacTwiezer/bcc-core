@@ -125,18 +125,9 @@ $invitedByMap = bcc_team_members_invited_by($teamId);
 // hâlâ yalnızca platform admin'de), yalnızca var olan aktif kullanıcılar arasından seçim.
 $allUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY email');
 
-// Sol panel "Yıldızlılar" listesi — workspaces.php ile AYNI desen.
-$starredBases = array();
-$teamIdsForStar = current_user_team_ids();
-if (!empty($teamIdsForStar)) {
-    $starredPlaceholders = implode(',', array_fill(0, count($teamIdsForStar), '?'));
-    $starredBases = bcc_fetch_all(
-        "SELECT b.id, b.name FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
-         WHERE usb.user_id = ? ORDER BY b.name",
-        array_merge($teamIdsForStar, array((int) $user['id']))
-    );
-}
+// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
+// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
+// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'workspaces';
 $homePageTitle = 'BCC-Core — ' . $team['name'] . ' Üyeleri';

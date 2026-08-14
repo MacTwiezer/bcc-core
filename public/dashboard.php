@@ -98,27 +98,13 @@ if (!empty($teams)) {
     $bases = bcc_fetch_all($sql, $teamIds);
 }
 
-// Yıldızlı base'ler: takım üyeliği bırakılmış ama satır silinmemiş olabilir
-// (user_starred_bases.base_id CASCADE yalnızca BASE silinince temizler,
-// takımdan ayrılmayı değil) — bu yüzden b.team_id IN (...) ile ana base
-// sorgusuyla AYNI şekilde her seferinde yeniden süzülür, DB'de saklı bir
-// erişim bayrağına güvenilmez.
-$starredBases = array();
-$starredBaseIds = array();
-if (!empty($teamIds)) {
-    $starredPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $starredBases = bcc_fetch_all(
-        "SELECT b.id, b.name
-         FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
-         WHERE usb.user_id = ?
-         ORDER BY b.name",
-        array_merge($teamIds, array((int) $user['id']))
-    );
-    foreach ($starredBases as $sb) {
-        $starredBaseIds[(int) $sb['id']] = true;
-    }
-}
+// Yıldızlı base'ler — sorgu src/schema.php'de TEK yerde
+// (bcc_starred_bases_for_current_user); takım süzgeci ve deleted_at koşulunun
+// gerekçesi orada yazılı. Bu sayfa listeyi kabuktan ÖNCE de istiyor, çünkü
+// $starredBaseIds kart grid'ine yıldız durumunu dağıtıyor — fonksiyon statik
+// önbellekli olduğu için kabuk aynı veriyi ikinci kez sorgulamaz.
+$starredBases = bcc_starred_bases_for_current_user();
+$starredBaseIds = bcc_starred_base_ids_for_current_user();
 
 // Kart rozetindeki "N tablo" için tablo sayıları — TEK GROUP BY sorgusu
 // (bcc_base_table_counts), kart başına ayrı sorgu YOK. Base yoksa hiç

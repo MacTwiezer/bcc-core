@@ -56,6 +56,11 @@ if (!empty($teamIds)) {
     }
 }
 
+// BİLEREK elle ayarlanıyor: kabuk normalde listeyi kendisi çeker
+// (bcc_starred_bases_for_current_user), ama bu sayfanın ana grid sorgusu ZATEN
+// aynı kümeyi — üstelik daha fazla kolonla — getirdi. Atama yapılmazsa kabuk
+// aynı veri için İKİNCİ bir sorgu açardı. Kabuğun isset() kontrolü tam da bu
+// durum için duruyor (bkz. src/partials/home_shell_top.php).
 $starredBases = $bases;
 
 $homeActiveNav = 'starred';

@@ -25,23 +25,13 @@ $teams = bcc_fetch_all(
     array('uid' => $user['id'])
 );
 
-// Sol panelin Starred alt-listesi için — dashboard.php/starred.php/workspaces.php
-// ile AYNI desen.
+// Sol panelin Starred alt-listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
+// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
+// kendisi çağırıyor. $teamIds KALIYOR — aşağıdaki sağ sütun sayaçları
+// (KVKK izolasyonu) onu kullanıyor.
 $teamIds = array();
 foreach ($teams as $t) {
     $teamIds[] = (int) $t['id'];
-}
-$starredBases = array();
-if (!empty($teamIds)) {
-    $starredPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $starredBases = bcc_fetch_all(
-        "SELECT b.id, b.name
-         FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
-         WHERE usb.user_id = ?
-         ORDER BY b.name",
-        array_merge($teamIds, array((int) $user['id']))
-    );
 }
 
 // ---- Sağ sütun widget'ları -------------------------------------------------

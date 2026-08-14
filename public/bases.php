@@ -61,17 +61,10 @@ if (!empty($teams)) {
         $basesByTeam[$b['team_id']][] = $b;
     }
 }
-// Sol panel "Yıldızlılar" listesi — workspaces.php/team_members.php ile AYNI desen.
-$starredBases = array();
-if (!empty($teamIds)) {
-    $starredPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $starredBases = bcc_fetch_all(
-        "SELECT b.id, b.name FROM user_starred_bases usb
-         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($starredPlaceholders) AND b.deleted_at IS NULL
-         WHERE usb.user_id = ? ORDER BY b.name",
-        array_merge($teamIds, array((int) $user['id']))
-    );
-}
+// Sol panel "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
+// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
+// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
+// ($teamIds yukarıdaki base listesi için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'bases';
 $homePageTitle = "BCC-Core — Base'ler";

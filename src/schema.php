@@ -3679,6 +3679,81 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
 // $role: kullanıcının bu base'in çalışma alanındaki rolü ('owner'|'editor'|
 // 'commenter'|'viewer'|null) — kartın sağ üstündeki rol rozeti için. null ise
 // rozet hiç basılmaz.
+// Sol paneldeki "Yıldızlı base'ler" listesi — [['id'=>.., 'name'=>..], ...],
+// alfabetik.
+//
+// TEK KAYNAK. Bu sorgu ONBİR ayrı sayfada (dashboard, starred, workspaces,
+// account, bases, base_tables, form_edit, slack_settings, table_fields ve dört
+// admin sayfası) BİREBİR kopyalanmıştı; kopyalar yalnızca yerel değişken adında
+// ($teamIds / $teamIdsForStar) ve boşlukta ayrışıyordu.
+//
+// Bulunan gerçek bug: kopyalamanın kaçınılmaz sonucu, bloğu EKLEMEYİ UNUTAN bir
+// sayfaydı. form_edit.php'de tam olarak bu oldu — kabuk partial'ı $starredBases
+// üzerinde foreach çalıştırdı, değişken tanımsızdı ve sol paneldeki liste
+// SESSİZCE boş kaldı (display_errors kapalı olduğu için ekranda hiçbir uyarı
+// yok; Apache error.log'unda 11-12 Ağustos boyunca "Undefined variable:
+// starredBases" + "Invalid argument supplied for foreach()" satırları birikti).
+// Partial'a eklenen array() varsayılanı SEMPTOMU susturur, NEDENİ değil: liste
+// yine boş kalırdı. Asıl çözüm bu fonksiyonun kabuğun İÇİNDEN çağrılmasıdır
+// (bkz. src/partials/home_shell_top.php) — böylece bir sayfanın "unutması"
+// artık MÜMKÜN DEĞİL.
+//
+// Takım süzgeci HER SEFERİNDE yeniden uygulanır: user_starred_bases.base_id
+// CASCADE'i yalnızca BASE silinince temizler, kullanıcının takımdan AYRILMASINI
+// değil. Bu yüzden b.team_id IN (...) koşulu şart — DB'de saklı bir erişim
+// bayrağına güvenilmez (dashboard.php'nin ana base sorgusuyla AYNI ilke).
+// deleted_at IS NULL: Trash'e taşınmış base sol panelde görünmemeli.
+//
+// Takım listesi current_user_team_ids()'ten gelir (auth.php'de zaten statik
+// olarak önbelleklenir), çağıranın kendi $teams sorgusundan DEĞİL — her sayfada
+// o liste zaten "bu kullanıcının üyelikleri" ile birebir aynıydı.
+//
+// Sonuç istek başına bir kez hesaplanır: kabuk her sayfada bir kez çağırıyor,
+// ama dashboard.php yıldız durumunu kartlara dağıtmak için AYNI veriyi kabuktan
+// ÖNCE de istiyor — statik önbellek ikinci bir sorguyu engeller.
+function bcc_starred_bases_for_current_user($forceReload = false)
+{
+    static $cache = null;
+
+    if ($cache !== null && !$forceReload) {
+        return $cache;
+    }
+
+    $user = current_user();
+    $teamIds = current_user_team_ids();
+
+    if ($user === null || empty($teamIds)) {
+        $cache = array();
+
+        return $cache;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
+    $cache = bcc_fetch_all(
+        "SELECT b.id, b.name
+         FROM user_starred_bases usb
+         INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
+         WHERE usb.user_id = ?
+         ORDER BY b.name",
+        array_merge($teamIds, array((int) $user['id']))
+    );
+
+    return $cache;
+}
+
+// bcc_starred_bases_for_current_user()'ın id => true haritası hâli — kart
+// grid'i "bu base yıldızlı mı?" sorusunu O(1) sorar. Ayrı bir sorgu AÇMAZ,
+// yukarıdaki önbellekten türetir.
+function bcc_starred_base_ids_for_current_user()
+{
+    $ids = array();
+    foreach (bcc_starred_bases_for_current_user() as $row) {
+        $ids[(int) $row['id']] = true;
+    }
+
+    return $ids;
+}
+
 // Base kartındaki "N tablo" rozeti için tablo sayıları. TEK sorgu, GROUP BY —
 // kart başına ayrı sorgu (N+1) AÇILMAZ; çağıran bütün base id'lerini bir kerede
 // verir ve haritayı kartlara dağıtır. tables_meta'da soft-delete kolonu yok

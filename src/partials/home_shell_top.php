@@ -7,7 +7,11 @@
 //
 // Beklenen değişkenler (include eden sayfa ayarlar):
 //   $user           - current_user() dizisi
-//   $starredBases   - array, [['id'=>.., 'name'=>..], ...] (team-scoped, alfabetik)
+//   $starredBases   - (OPSİYONEL, artık kabuk kendi doldurur) array,
+//                     [['id'=>.., 'name'=>..], ...]. Ayarlanmazsa aşağıda
+//                     bcc_starred_bases_for_current_user()'dan gelir; yalnızca
+//                     listeyi BİLEREK değiştiren sayfalar (starred.php kendi
+//                     grid sorgusunu yeniden kullanır) elle ayarlar.
 //   $homeActiveNav  - 'home' | 'starred' | 'workspaces'
 //   $homePageTitle  - <title> metni
 //   $homeIdentityMeta - (opsiyonel) bcc_page_identity_meta() çıktısı. YALNIZCA
@@ -28,15 +32,24 @@ if (!isset($homeActiveNav)) {
 if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {
     $homeExtraCss = array();
 }
-// Bulunan gerçek bug: $starredBases, yukarıdaki ikisinin AKSİNE varsayılana
-// düşmüyordu — ayarlamayı unutan bir sayfada aşağıdaki foreach tanımsız
-// değişkenle çalışıyor, sol paneldeki "Yıldızlılar" listesi SESSİZCE boş
-// kalıyordu (display_errors kapalı olduğu için ekranda hiçbir uyarı yok).
-// form_edit.php'de tam olarak bu oldu. Varsayılan, listeyi doldurmaz —
-// yalnızca kabuğu bir sonraki unutkan sayfada da tutarlı kılar; sayfanın
-// KENDİSİ listeyi doldurmakla yükümlü (bkz. table_fields.php).
+// Yıldızlı base listesi ARTIK KABUĞUN KENDİ SORUMLULUĞU.
+//
+// Bulunan gerçek bug: bu liste onbir sayfada tek tek kopyalanmış bir sorgu
+// bloğuyla dolduruluyordu ve form_edit.php bloğu eklemeyi UNUTMUŞTU — kabuk
+// tanımsız bir değişken üzerinde foreach çalıştırdı, sol panel SESSİZCE boş
+// kaldı (display_errors kapalı, ekranda uyarı yok; Apache error.log'unda
+// "Undefined variable: starredBases" satırları birikti).
+//
+// Önceki düzeltme burada yalnızca array() varsayılanı bırakıyordu: warning
+// susuyordu ama liste HÂLÂ boş kalıyordu, yani kullanıcının gördüğü hata
+// aynen duruyordu. Artık kabuk veriyi KENDİSİ çekiyor (tek kaynak:
+// bcc_starred_bases_for_current_user(), bkz. src/schema.php) — bir sayfanın
+// "unutması" artık mümkün değil, çünkü sayfadan hiçbir şey beklenmiyor.
+//
+// isset() kontrolü KALIYOR: starred.php listeyi BİLEREK kendi grid sorgusundan
+// besliyor (aynı veri, tek sorgu) — o sayfada ikinci bir sorgu açılmamalı.
 if (!isset($starredBases) || !is_array($starredBases)) {
-    $starredBases = array();
+    $starredBases = bcc_starred_bases_for_current_user();
 }
 ?>
 <!doctype html>

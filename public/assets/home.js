@@ -369,7 +369,7 @@
                     return res.json().catch(function () { return { ok: false }; });
                 }).then(function (data) {
                     if (data && data.ok && data.id) {
-                        // Yeni base doğrudan açılır (Airtable de oluşturur
+                        // Yeni base doğrudan açılır (OpsFlow de oluşturur
                         // oluşturmaz base'e girer). Kartı DOM'a elle eklemeye
                         // gerek yok — sayfa zaten terk ediliyor.
                         window.location.href = '/base.php?base_id=' + encodeURIComponent(data.id);

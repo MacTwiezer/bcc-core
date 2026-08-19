@@ -10,7 +10,7 @@
 //     (config/mail.local.php), record_send.php ise Office 365'ten
 //     (config/mail_record_send.local.php) gönderiyordu. Aynı üründen iki farklı
 //     alan adıyla mail çıkması spam açısından en kötü kombinasyondu: görünen ad
-//     kurumsal ("BCC-Core"), adres kişisel bir Gmail — alıcı sunucular bunu
+//     kurumsal ("BCC İletişim"), adres kişisel bir Gmail — alıcı sunucular bunu
 //     "display name spoofing" kalıbı olarak puanlar. Artık ikisi de AYNI dosyayı
 //     (mail_record_send.local.php) okuyor, yani aynı kutudan çıkıyor.
 //     Dosya adı tarihsel: o config artık "kaydı gönder"e değil, PROJENİN TEK

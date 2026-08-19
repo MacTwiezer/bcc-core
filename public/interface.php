@@ -128,7 +128,7 @@ if (!empty($shareExistingIds)) {
      tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
      kopya YAZILMADI. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
-<!-- E3/E1: "Bcc-Core ▾" menüsü + Share popover, grid.php'nin .gs-table-tab-menu-*/
+<!-- E3/E1: "opsflow.bcccrm.com ▾" menüsü + Share popover, grid.php'nin .gs-table-tab-menu-*/
      .share-popover-* sınıflarını kullanıyor — ikinci bir kopya YAZILMADI,
      grid-shell.css bu yüzden burada da yüklü (yalnızca .gs-*/.share-popover-*
      kapsamlı kurallar geçerli olur, grid.php'ye özgü .gs-body/.gs-rail vb.
@@ -146,7 +146,7 @@ if (!empty($shareExistingIds)) {
 <div class="if-shell">
     <nav class="if-nav" id="if-nav">
         <div class="if-nav-top">
-            <!-- E3 — Airtable referansı (support.airtable.com/docs/getting-started-with-airtable-interface-designer,
+            <!-- E3 — OpsFlow davranışı (docs/GEREKSINIMLER.md — arayüz tasarımcısı,
                  "Interface dropdown menu"): base adının yanındaki ok, "View data"
                  (temel base/grid'e döner) ve "Back to home" (hesap ana ekranı)
                  sunar. Bizde "Edit" YOK (interface builder'ımız yok). Diğer
@@ -228,7 +228,7 @@ if (!empty($shareExistingIds)) {
         <div class="if-nav-bottom">
 
             <div class="if-nav-util-row">
-            <!-- D1 — grid.php'deki AYNI Airtable Share paritesi (collab-popover-*),
+            <!-- D1 — grid.php'deki AYNI OpsFlow Share davranışı (collab-popover-*),
                  ikinci bir kopya YOK. .if-nav-bottom içindeki konumlandırma
                  düzeltmesi (sağa açılma) interface.css'te. -->
             <details class="if-nav-collab-share gs-tool-details collab-popover-trigger" name="if-nav-share">

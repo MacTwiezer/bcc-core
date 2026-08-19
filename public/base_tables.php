@@ -180,7 +180,7 @@ $tables = bcc_fetch_all(
 
 $homeActiveNav = 'bases';
 // Bu ekranın bir tablo/görünüm bağlamı yok (base'in tablo LİSTESİ), bu yüzden
-// ikinci parça boş: başlık "Base — BCC-Core" olur. Sekme ikonu ise base'in
+// ikinci parça boş: başlık "Base — opsflow.bcccrm.com" olur. Sekme ikonu ise base'in
 // kendi rozetine döner — base.php tablosuz bir base'e girilince buraya
 // yönlendirdiği için, kullanıcının base'e ilk açılan ekranı burasıdır.
 $homePageTitle = bcc_page_title($base['name']);

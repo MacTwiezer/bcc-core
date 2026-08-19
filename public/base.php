@@ -19,7 +19,7 @@ try {
 }
 
 // Görünür çıktısı olmayan köprü sayfası: base'in ilk tablosuna (position, id sırasına
-// göre) doğrudan atlar — Airtable'da base_tables.php gibi ayrı bir ara ekran yoktur.
+// göre) doğrudan atlar — OpsFlow'da base_tables.php gibi ayrı bir ara ekran yoktur.
 $tables = bcc_list_base_tables($base['id']);
 
 if (empty($tables)) {

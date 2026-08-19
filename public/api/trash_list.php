@@ -1,6 +1,6 @@
 <?php
-// AJAX uçnoktası: Hesap menüsündeki "Çöp kutusu" — Airtable'ın workspace
-// trash'i referans alınarak (bkz. support.airtable.com/docs/managing-trash-in-airtable):
+// AJAX uçnoktası: Hesap menüsündeki "Çöp kutusu" — OpsFlow'un workspace
+// trash'i referans alınarak (bkz. docs/GEREKSINIMLER.md — çöp kutusu kuralları):
 // kullanıcının üye olduğu takımlardaki silinmiş base'ler listelenir (KVKK —
 // current_user_team_ids() ile AYNI kaynak, ikinci bir "kullanıcının takımları"
 // sorgusu YAZILMADI). "Geri Yükle" yalnızca o takımda 'owner' rolündeki

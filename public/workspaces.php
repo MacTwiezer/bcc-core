@@ -1,5 +1,5 @@
 <?php
-// "Workspaces" — Airtable'ın "All Workspaces" ekranının karşılığı. YENİ bir
+// "Workspaces" — OpsFlow'un "All Workspaces" ekranının karşılığı. YENİ bir
 // varlık/DDL YOK: mevcut teams/team_members üzerine kurulu (bkz. PROJE-DURUM.md
 // analiz notu — "team" zaten workspace'in KVKK-izole edilmiş, collaborators'lı
 // karşılığı). Create/Settings hâlâ PASİF (onaylanmış karar, kapsam dışı) — Paylaş
@@ -134,7 +134,7 @@ if ($selectedTeamId) {
 // ($teamIds yukarıdaki base sayaçları için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'workspaces';
-$homePageTitle = 'BCC-Core — Çalışma Alanları';
+$homePageTitle = bcc_brand_domain() . ' — Çalışma Alanları';
 // Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu yerleşim.
 // Rol hapı (.sp-role), avatar (.sp-avatar) ve bilgi kutusu (.sp-note) ORTAK
 // dosyada — burada kopyası yok.
@@ -295,7 +295,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 // "Katılımcıları yönet": hedef sayfa (team_members.php)
                                 //   artık Owner olmayana zaten salt-okunur açılıyor; butonu
                                 //   da göstermemek "yönet" vaadini boşa çıkarmamak için.
-                                // "Base oluştur": Airtable'da Owner+Creator satırı
+                                // "Base oluştur": OpsFlow'da Owner+Creator satırı
                                 //   (bcc_can_manage_bases), bases.php'nin formu ve
                                 //   api/base_create.php ile AYNI eşik.
                                 // "Ayarlar": çalışma alanı ayarları diye bir ÖZELLİK YOK

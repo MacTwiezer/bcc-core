@@ -127,8 +127,8 @@ function current_user_role_in_team($teamId)
     return $row ? $row['role'] : null;
 }
 
-// Bir rütbenin ATAYABİLECEĞİ rolleri döndürür — Airtable paritesi ("at or
-// below your permission level", eşit dahil, bkz. support.airtable.com/docs/base-permissions
+// Bir rütbenin ATAYABİLECEĞİ rolleri döndürür — OpsFlow davranışı ("at or
+// below your permission level", eşit dahil, bkz. docs/GEREKSINIMLER.md — base yetkileri
 // + managing-billable-collaborators FAQ). team_members.php (tam Collaborators
 // paneli) VE grid.php'nin Paylaş popup'ı (hızlı atama) AYNI mantığı kullanır —
 // kopya YOK. $myRank çağıran tarafından hesaplanır (current_user_role_in_team()
@@ -157,14 +157,14 @@ function bcc_assignable_roles($myRank)
 //
 // Rol rütbeleri: viewer(1) < commenter(2) < editor(3) < owner(4).
 //
-// Airtable eşlemesi (support.airtable.com/docs/workspace-permissions):
+// OpsFlow eşlemesi (docs/GEREKSINIMLER.md — çalışma alanı yetkileri):
 //   Owner + Creator -> bizde 'owner'   (ayrı bir 'creator' rolü YOK; bkz.
 //                                       src/demo_accounts.php'deki uzun not)
 //   Editor          -> 'editor'
 //   Commenter       -> 'commenter'
 //   Read-only       -> 'viewer'
 
-// Base EKLEME/SİLME. Airtable izin matrisi:
+// Base EKLEME/SİLME. OpsFlow izin matrisi:
 //   "Add and delete bases in the shared workspace" → Owner ✅ Creator ✅
 //                                                    Editor ✗ Commenter ✗ Read-only ✗
 //   "Access all bases ... at your assigned permission level" → BEŞ rolde de ✅
@@ -178,7 +178,7 @@ function bcc_can_manage_bases($role)
 
 // ÜYE yönetimi: ekibe kullanıcı ekleme, rol atama/değiştirme, üyeyi çıkarma.
 //
-// DİKKAT — bu, Airtable'ın kendi matrisinden BİLEREK DAHA KATI: orada "Invite
+// DİKKAT — bu, OpsFlow'un kendi matrisinden BİLEREK DAHA KATI: orada "Invite
 // users at the same or below your permission level" satırı BEŞ rolde de ✅'dir
 // (bir Read-only bile kendi seviyesinde davet edebilir). Bu uygulamada ürün
 // kararı olarak üye yönetimi YALNIZCA Owner'a bırakıldı (kullanıcı talebi).
@@ -196,7 +196,7 @@ function bcc_can_manage_members($role)
 }
 
 // ŞEMA değişikliği: alan (field) ve tablo oluşturma/silme/düzenleme.
-// Airtable'da Editor kayıt düzenler ama şemaya dokunamaz — bu uygulamada zaten
+// OpsFlow'da Editor kayıt düzenler ama şemaya dokunamaz — bu uygulamada zaten
 // owner-only'di (table_fields.php, base_tables.php, api/field_create.php);
 // burası o dağınık kontrolleri tek isim altında toplar.
 function bcc_can_manage_schema($role)
@@ -205,13 +205,13 @@ function bcc_can_manage_schema($role)
 }
 
 // KAYIT düzenleme: satır ekleme/güncelleme/silme, içe aktarma, görünüm
-// yapılandırması. Airtable: Editor ve üzeri.
+// yapılandırması. OpsFlow: Editor ve üzeri.
 function bcc_can_edit_records($role)
 {
     return $role === 'editor' || $role === 'owner';
 }
 
-// YORUM yazma. Airtable: Commenter ve üzeri (Read-only hariç).
+// YORUM yazma. OpsFlow: Commenter ve üzeri (Read-only hariç).
 function bcc_can_comment($role)
 {
     return $role === 'commenter' || $role === 'editor' || $role === 'owner';
@@ -296,4 +296,64 @@ function logout_user()
     }
 
     session_destroy();
+}
+
+define('BCC_PRESENCE_TOUCH_INTERVAL', 60);
+
+define('BCC_PRESENCE_WINDOW_MINUTES', 5);
+
+function bcc_touch_user_activity() {
+    if (empty($_SESSION['user_id'])) {
+        return;
+    }
+
+    $now = time();
+    $last = isset($_SESSION['bcc_activity_touched_at']) ? (int) $_SESSION['bcc_activity_touched_at'] : 0;
+
+    if ($now - $last < BCC_PRESENCE_TOUCH_INTERVAL) {
+        return;
+    }
+
+    $_SESSION['bcc_activity_touched_at'] = $now;
+
+    bcc_execute(
+        'UPDATE users SET last_activity_at = NOW() WHERE id = :id',
+        array('id' => $_SESSION['user_id'])
+    );
+}
+
+function bcc_online_user_count() {
+    static $count = null;
+
+    if ($count === null) {
+        $count = (int) bcc_fetch_column(
+            'SELECT COUNT(*) FROM users
+            WHERE is_active = 1
+            AND last_activity_at IS NOT NULL
+            AND last_activity_at >= (NOW() - INTERVAL :mins MINUTE)',
+        array('mins' => BCC_PRESENCE_WINDOW_MINUTES)
+        );
+    }
+    return $count;
+}
+
+/**
+ * Çevrimiçi kullanıcıların kendisi (en son aktif olan en üstte).
+ *
+ * LIMIT YOK — istenen davranış bu: son BCC_PRESENCE_WINDOW_MINUTES dakikada
+ * etkin olan HERKES dönüyor. Sonuç kümesi zaten doğal olarak sınırlı, çünkü
+ * WHERE koşulu yalnızca son birkaç dakikada istek yapmış aktif kullanıcıları
+ * seçiyor — üst sınır, o an sistemi kullanan kişi sayısı kadar.
+ */
+function bcc_online_users()
+{
+    return bcc_fetch_all(
+        'SELECT id, full_name, email, last_activity_at
+         FROM users
+         WHERE is_active = 1
+           AND last_activity_at IS NOT NULL
+           AND last_activity_at >= (NOW() - INTERVAL :mins MINUTE)
+         ORDER BY last_activity_at DESC',
+        array('mins' => BCC_PRESENCE_WINDOW_MINUTES)
+    );
 }

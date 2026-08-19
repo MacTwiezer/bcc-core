@@ -1,8 +1,8 @@
 <?php
 // AJAX uçnoktası: bir kayda yeni yorum ekler (grid-row-detail.js, satır
-// genişletme paneli). Güvenlik: CSRF + require_role('commenter') — Airtable'da
+// genişletme paneli). Güvenlik: CSRF + require_role('commenter') — OpsFlow'da
 // "Comment on records" Owner/Editor/Commenter'da açık, Read-only'de KAPALI
-// (bkz. docs/PROJE-DURUM.md Airtable parite araştırması). team_id record_id
+// (bkz. docs/PROJE-DURUM.md OpsFlow davranış araştırması). team_id record_id
 // üzerinden bcc_find_record() ile DB'den türetilir (istekten değil, KVKK).
 
 require __DIR__ . '/../../src/api_bootstrap.php';

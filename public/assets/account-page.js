@@ -19,7 +19,7 @@
             });
         }
 
-        // ---- Ad Soyad / E-posta satırları — Airtable'daki "Edit name" deseni:
+        // ---- Ad Soyad / E-posta satırları — OpsFlow'daki "Edit name" deseni:
         // "Düzenle" tıklanınca görünüm satırı gizlenip inline form açılır, aynı
         // form hem Kaydet hem İptal'i yönetir. İkisi de AYNI genel davranışı
         // paylaşır (data-account-field/data-account-endpoint) — ikinci bir kopya

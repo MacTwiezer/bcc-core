@@ -63,7 +63,7 @@ try {
     // AYNI transaction'da — ayrı commit edilseydi araya düşen bir hata
     // "form görünümü var ama token'ı yok, linki hiç üretilemez" durumu bırakırdı.
     // random_bytes: CSPRNG (csrf_token() ile AYNI kaynak). 16 bayt = 32 hex.
-    // form_enabled = 1: yeni form doğrudan açık gelir (Airtable davranışı);
+    // form_enabled = 1: yeni form doğrudan açık gelir (OpsFlow davranışı);
     // kolonun DEFAULT'u 0 (fail-closed), burada AÇIKÇA 1 yapılıyor.
     if ($viewType === 'form') {
         bcc_execute(
@@ -74,7 +74,7 @@ try {
 
     // Kanban: tablodaki İLK single_select alanı varsayılan sütunlama alanı olur —
     // kullanıcı görünümü açar açmaz çalışan bir tahta görsün, önce ayar paneline
-    // gitmek zorunda kalmasın (Airtable'ın "hemen kullanılabilir" hissi).
+    // gitmek zorunda kalmasın (OpsFlow'un "hemen kullanılabilir" hissi).
     //
     // Hiç single_select yoksa kanban_field_id HİÇ yazılmaz (bcc_kanban_config_from_view
     // 0 döndürür = "seçilmemiş") — bu HATA DEĞİL, tasarlanmış bir boş durum:

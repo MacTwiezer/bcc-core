@@ -183,7 +183,7 @@ $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 $mail->CharSet = 'UTF-8';
 $mail->setFrom('no-reply@ornek.test', 'BCC İletişim');
 $mail->addAddress('alici@ornek.test');
-$mail->Subject = 'BCC-Core hesabınızı etkinleştirin';
+$mail->Subject = 'opsflow.bcccrm.com hesabınızı etkinleştirin';
 $mail->isHTML(true);
 $mail->Body = $html;
 $mail->AltBody = $text;

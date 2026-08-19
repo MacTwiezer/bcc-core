@@ -1,5 +1,5 @@
 <?php
-// BCC-Core — e-posta gönderim ayarları.
+// opsflow.bcccrm.com — e-posta gönderim ayarları.
 //
 // $MAIL_MODE:
 //   'log'    (varsayılan) — gerçek e-posta GÖNDERİLMEZ, storage/mail/ altına
@@ -28,11 +28,11 @@
 // buradaki eski $MAIL_SMTP_HOST/PORT/USER/PASS değişkenlerine düşer.
 
 $MAIL_MODE = 'log';
-$MAIL_FROM_EMAIL = 'no-reply@bcc-core.local';
+$MAIL_FROM_EMAIL = 'no-reply@opsflow.bcccrm.com';
 
 // GÖRÜNEN GÖNDEREN ADI. 'smtp' modunda From ADRESİ config/mail_record_send.local.php'den
 // gelir (Office 365 kimlik doğrulanan kutudan farklı bir From'u reddeder), ama
-// görünen ad buradan okunur. "BCC-Core" yerine kurumsal ad kullanılıyor:
+// görünen ad buradan okunur. Ürün adı ("OpsFlow") yerine KURUMSAL ad kullanılıyor:
 // görünen adın kurumsal, adresin başka bir alan adına ait olması alıcı
 // sunucularda "display name spoofing" olarak puanlanıyordu — ikisi de artık
 // bcciletisim.com.tr'ye ait.

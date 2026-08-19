@@ -1,6 +1,6 @@
 <?php
 // AJAX uçnoktası: bir kaydın yorumlarını listeler (grid-row-detail.js, satır
-// genişletme paneli). Salt-okunur — Airtable'da "Access and view" dört rolde de
+// genişletme paneli). Salt-okunur — OpsFlow'da "Access and view" dört rolde de
 // (viewer dahil) açık, bu yüzden require_role('editor') YOK, view_export_xlsx.php
 // ile AYNI desen (yalnızca require_team_access). team_id record_id üzerinden
 // bcc_find_record() ile DB'den türetilir (istekten değil, KVKK).

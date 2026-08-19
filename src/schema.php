@@ -14,7 +14,7 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
     'time' => 'Saat',
     'user' => 'Kullanıcı',
     'attachment' => 'Dosya eki',
-    // Otomatik/salt-okunur alanlar (Airtable "Created time"/"Created by" paritesi,
+    // Otomatik/salt-okunur alanlar (OpsFlow "Created time"/"Created by" davranışı,
     // Grup B1) — DDL YOK, değer zaten records.created_at/created_by'da sağlam
     // duruyor (bkz. docs/PROJE-DURUM.md teşhis notu).
     'created_time' => 'Oluşturulma zamanı',
@@ -307,7 +307,7 @@ function bcc_update_view_config($viewId, array $changes)
 }
 
 // Kayıt çoğaltmada (record_duplicate.php) BİRİNCİL ALANIN sonuna " copy" eklenen
-// tipler — Airtable'daki "Kayıt copy" davranışı.
+// tipler — OpsFlow'daki "Kayıt copy" davranışı.
 //
 // ⚠️ BU BİR WHITELIST: yalnızca burada AÇIKÇA sayılan tipler ek alır, diğer HER
 // ŞEY (bugünküler ve gelecekte eklenecek olanlar) değeri OLDUĞU GİBİ kopyalar.
@@ -580,7 +580,7 @@ $GLOBALS['BCC_SLACK_ROUTING_OPERATORS'] = array(
 );
 
 // Grid gruplama (Grid araçları Adım 2a): alan tipine göre yön dropdown etiketleri
-// (mantık her zaman artan/azalan — yalnızca metin değişir, Airtable'daki gibi).
+// (mantık her zaman artan/azalan — yalnızca metin değişir, OpsFlow'daki gibi).
 $GLOBALS['BCC_GROUP_DIR_LABELS'] = array(
     'single_line_text' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
     'long_text' => array('asc' => 'A → Z', 'desc' => 'Z → A'),
@@ -811,7 +811,7 @@ function bcc_max_frozen_columns($visibleFieldCount)
 //
 // 2 = satır no + İLK VERİ SÜTUNU. Yani yatay kaydırmada ilk veri sütunu
 // yerinde kalır, ikinci sütundan itibaren hepsi onun arkasından kayar.
-// Airtable'ın varsayılan davranışı bu; önceki değer 1'di (yalnızca satır no
+// OpsFlow'un varsayılan davranışı bu; önceki değer 1'di (yalnızca satır no
 // donuyordu, hiçbir veri sütunu donmuyordu).
 //
 // ⚠️ Bu YALNIZCA VARSAYILAN. Sayı hâlâ görünüm başına ayarlanabilir (sütun
@@ -1249,7 +1249,7 @@ function bcc_create_field($tableId, $teamId, $postData)
         $newId = bcc_last_insert_id();
 
         // Autonumber (Grup C2): tablo ZATEN DOLUYSA mevcut kayıtlar 1'den
-        // başlayarak numaralanır ve sayaç oradan devam eder (Airtable paritesi).
+        // başlayarak numaralanır ve sayaç oradan devam eder (OpsFlow davranışı).
         // ⚠️ bcc_last_insert_id() çağrısından SONRA — bcc_backfill_autonumber_field()
         // içindeki UPDATE ... GREATEST(...) LAST_INSERT_ID kullanmasa da,
         // bcc_assign_autonumbers() ile AYNI sıralama disiplini korunuyor.
@@ -1581,11 +1581,39 @@ function bcc_find_attachment($attachmentId)
     );
 }
 
-// Ek dosyaların diskteki gerçek yolu — storage/attachments/, public/ DIŞINDA
+// Ek dosyaların saklandığı DİZİN — storage/attachments/, public/ DIŞINDA
 // (bkz. attachment_download.php yorumu: tek erişim yolu KVKK kontrollü uç nokta).
+//
+// Bulunan gerçek bug: attachment_upload.php bu dizini
+// `dirname(bcc_attachment_storage_path(''))` ile hesaplıyordu. O çağrı sonu
+// "/" ile biten bir yol döndürdüğü için dirname() BİR SEVİYE FAZLA kırpıyor ve
+// "storage/attachments" yerine "storage" veriyordu. storage/ genelde var
+// olduğundan (storage/backups) `is_dir()` koruması geçiyor, mkdir HİÇ
+// çalışmıyor ve move_uploaded_file() olmayan dizine yazamayıp
+// "Dosya kaydedilemedi." (500) ile düşüyordu. Hata yalnızca
+// storage/attachments/ silinmişken ortaya çıkıyordu — dizin durduğu sürece
+// yıllarca sessiz kaldı. Dizin adı artık TEK YERDE, sondaki "/" olmadan.
+function bcc_attachment_storage_dir()
+{
+    return __DIR__ . '/../storage/attachments';
+}
+
+// Dizinin var olduğundan emin olur ve yolunu döndürür. Yükleme akışı bunu
+// çağırır: klasör elle silinse bile ilk yüklemede kendini onarır.
+function bcc_attachment_storage_dir_ensured()
+{
+    $dir = bcc_attachment_storage_dir();
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    return $dir;
+}
+
+// Tek bir ek dosyanın diskteki tam yolu.
 function bcc_attachment_storage_path($storedName)
 {
-    return __DIR__ . '/../storage/attachments/' . $storedName;
+    return bcc_attachment_storage_dir() . '/' . $storedName;
 }
 
 // Bir kayıt/alan SİLİNMEDEN ÖNCE çağrılmalı: attachments satırları ON DELETE
@@ -1773,7 +1801,7 @@ function cell_display_text($fieldType, $cellRow, $usersById = array(), $options 
             $decimals = isset($curOpts['decimal_places']) ? (int) $curOpts['decimal_places'] : 2;
             return $symbol . number_format((float) $cellRow['value_number'], $decimals, ',', '.');
         // percent: normalize_cell_value()'un TERSİ — DB'deki ondalık (0.45) ×100
-        // yapılıp "%" ile gösterilir (Airtable paritesi, araştırılıp netleştirilen karar).
+        // yapılıp "%" ile gösterilir (OpsFlow davranışı, araştırılıp netleştirilen karar).
         case 'percent':
             if ($cellRow['value_number'] === null) {
                 return '';
@@ -1953,7 +1981,7 @@ function bcc_assign_autonumbers($tableId, $recordId)
 
 // Autonumber backfill — bir autonumber alanı, İÇİNDE ZATEN KAYIT OLAN bir
 // tabloya eklendiğinde mevcut kayıtları 1'den başlayarak numaralar ve sayacı
-// oradan devam ettirir (Airtable paritesi). İKİ yerden çağrılır:
+// oradan devam ettirir (OpsFlow davranışı). İKİ yerden çağrılır:
 //   (1) bcc_create_field() — yeni bir autonumber alanı oluşturulurken,
 //   (2) table_fields.php update_field — mevcut bir alanın TİPİ autonumber'a
 //       çevrilirken (bu form tip değiştirmeye izin veriyor; atlanırsa alan var
@@ -2037,7 +2065,7 @@ function bcc_cell_row_for_field($fieldType, $record, $cellsByRecord, $fieldId)
         return bcc_group_cell_row('value_date', $record['updated_at']);
     }
     if ($fieldType === 'last_modified_by') {
-        // Airtable paritesi: hiç düzenlenmemiş bir kayıtta "Son değiştiren"
+        // OpsFlow davranışı: hiç düzenlenmemiş bir kayıtta "Son değiştiren"
         // OLUŞTURAN kişiyi gösterir ("son değişiklik" == "oluşturma"). Yalnızca
         // GRİD/DETAY RENDER'ı için (bkz. filter_condition_sql — filtre/sıralama
         // HAM updated_by üzerinde çalışmaya devam eder, bu fallback'i görmez).
@@ -2113,7 +2141,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                 <?php if ($canEdit): ?>
                     <input type="checkbox" class="grid-row-select" aria-label="Satırı seç">
                 <?php endif; ?>
-                <!-- Genişlet paneli TÜM rollere açık (Airtable: kayıt görüntüleme herkese
+                <!-- Genişlet paneli TÜM rollere açık (OpsFlow: kayıt görüntüleme herkese
                      açık) — düzenleme/yorum yetkisi panel İÇİNDE BCC_CAN_EDIT/BCC_CAN_COMMENT
                      ile ayrıca kısıtlanır, bkz. grid-row-detail.js. -->
                 <button type="button" class="grid-row-expand" aria-label="Genişlet" title="Genişlet">
@@ -2126,7 +2154,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
             $rawValue = cell_raw_value($f['field_type'], $cellRow);
             $displayText = cell_display_text($f['field_type'], $cellRow, $usersById, $f['options']);
             $isSelectType = is_select_field_type($f['field_type']);
-            // created_time/created_by: Airtable'daki gibi kullanıcı tarafından
+            // created_time/created_by: OpsFlow'daki gibi kullanıcı tarafından
             // asla düzenlenemez — grid.js'nin tıkla-düzenle mantığı YALNIZCA
             // 'editable' class'ına bakıyor (bkz. grid.js td.editable), bu class
             // hiç eklenmezse ikinci bir JS kontrolüne gerek kalmaz.
@@ -2567,7 +2595,7 @@ function bcc_sanitize_rich_text_node($node, $allowedTags)
     return '<' . $tag . '>' . $childrenHtml . '</' . $tag . '>';
 }
 
-// KAPALI grid hücresinde gösterilecek zengin metin HTML'i (Airtable paritesi:
+// KAPALI grid hücresinde gösterilecek zengin metin HTML'i (OpsFlow davranışı:
 // hücre HER ZAMAN TEK SATIR, taşan kısım "..." ile kesilir).
 //
 // TEK İŞİ: <br> etiketlerini BOŞLUĞA indirmek. Neden CSS değil de burası —
@@ -2663,7 +2691,7 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
 
             return array('ok' => true, 'column' => $column, 'value' => (float) $raw);
 
-        // percent: Airtable paritesi (araştırılıp netleştirilen karar) —
+        // percent: OpsFlow davranışı (araştırılıp netleştirilen karar) —
         // kullanıcı "45" yazar (%45 niyetiyle), DB'ye ONDALIK (0.45) yazılır.
         // cell_display_text() bunun TERSİNİ yapıp ×100 + "%" ile gösterir.
         case 'percent':
@@ -2786,7 +2814,7 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
             return array('ok' => true, 'column' => $column, 'value' => $userId);
 
         // created_time/created_by/last_modified_time/last_modified_by:
-        // Airtable'daki gibi kullanıcı tarafından ASLA düzenlenemez — backend'de
+        // OpsFlow'daki gibi kullanıcı tarafından ASLA düzenlenemez — backend'de
         // son söz burası (grid-row-detail.js'in buildFieldWidget() dalı zaten
         // frontend'de engelliyor, ama bypass ihtimaline karşı gerçek karar
         // burada). $columnMap'te (BCC_FIELD_VALUE_COLUMN) bu dört tip VAR (aksi
@@ -2882,7 +2910,7 @@ function parse_grid_sort_rules($params, $fieldsById)
 // kuralı dizide 2. sıraya (index 1) düşer. Bu sıkıştırma ayrı bir adım değil,
 // doğrudan 1..3 taramasının bir sonucudur.
 //
-// Aynı alan iki seviyede birden seçilemez (Airtable davranışı): FAZ 4'teki
+// Aynı alan iki seviyede birden seçilemez (OpsFlow davranışı): FAZ 4'teki
 // panel zaten kullanılmış alanları dropdown'dan düşürecek, ama URL elle
 // değiştirilebildiği için burada da bir güvenlik ağı var — bir field_id daha
 // önceki (daha düşük) bir seviyede zaten kullanıldıysa, sonraki tekrarı
@@ -3001,7 +3029,7 @@ function parse_grid_filter_rules($params, $fieldsById)
 
 // Grid'in "Hide fields" panelinden gelen görünürlük tercihini doğrular ve gizlenecek
 // alan id'lerini döndürür. Birincil alan ($primaryFieldId — position/id'ye göre bu
-// tablonun ilk alanı) HİÇBİR ZAMAN gizlenemez, URL'e elle yazılsa bile (Airtable'daki
+// tablonun ilk alanı) HİÇBİR ZAMAN gizlenemez, URL'e elle yazılsa bile (OpsFlow'daki
 // gibi) — bu fonksiyon onu iki yolda da sonuçtan düşürür.
 // İki girdi şekli kabul edilir:
 //  - visible_fields[]=ID&visible_fields[]=ID...: panelin kendi formu (toggle'lar
@@ -3552,7 +3580,7 @@ function bcc_base_icon_style_attr($baseId)
 // ADINDAN türetilir. Kural: aşağıdaki liste SIRAYLA taranır, İLK eşleşen kazanır;
 // bu yüzden alana özgü sözcükler (rol, export, finans...) genel olan 'test'ten
 // ÖNCE gelir — "Export Test" dışa aktarma ikonunu alır, "RoleTest Base" yetki
-// ikonunu, hiçbiri eşleşmeyen "Bcc-Core" ise varsayılan veritabanı ikonunu.
+// ikonunu, hiçbiri eşleşmeyen "Arşiv" ise varsayılan veritabanı ikonunu.
 // Eşleşme küçük harfe indirgenmiş ad üzerinde substring'dir; Türkçe sözcüklerin
 // hem şapkalı hem şapkasız yazımı listede vardır (kullanıcı "butce" de yazar).
 function bcc_base_icon_category($baseName)
@@ -3599,7 +3627,7 @@ $GLOBALS['BCC_BASE_ICON_PATHS'] = array(
 );
 
 // Dashboard/Starred kartındaki ikonun SVG'si — grid.php üst barı ve
-// interface.php'nin "Bcc-Core ▾" menüsünde de AYNEN kullanılır, ikinci bir
+// interface.php'nin base menüsünde de AYNEN kullanılır, ikinci bir
 // kopya YOK. $baseName verilmezse (veya kategori bilinmiyorsa) varsayılan
 // veritabanı gliftir — eski tek-argümanlı çağrılar bu yüzden bozulmaz.
 function bcc_base_icon_svg($size = 20, $baseName = null)
@@ -3629,7 +3657,12 @@ function bcc_base_icon_paths($baseName = null)
 
 // ---- Sekme kimliği: <title> + favicon ------------------------------------
 //
-// Airtable'ın sekme biçimi: "[Base]: [Tablo/Görünüm] — BCC-Core".
+// Sekme biçimi: "[Base]: [Tablo/Görünüm] — opsflow.bcccrm.com".
+//
+// Marka metni burada LİTERAL YAZILMAZ: bcc_brand_domain() (config/app.php)
+// tek kaynaktır. Bu dosya bootstrap'ta config/app.php'den ÖNCE include edilir,
+// ama sorun değil — fonksiyon gövdesi ancak istek anında, bootstrap bittikten
+// sonra çalışır.
 //
 // Başlık SUNUCUDA basılır (JS'siz de doğrudur ve sayfa açılırken yanlış bir
 // başlığın bir an görünüp düzelmesi — "title flash" — hiç yaşanmaz). Favicon
@@ -3643,14 +3676,15 @@ function bcc_page_title($baseName, $contextName = null)
 {
     $base = trim((string) $baseName);
     $ctx = trim((string) $contextName);
+    $brand = bcc_brand_domain();
 
     if ($base === '') {
-        return $ctx !== '' ? $ctx . ' — BCC-Core' : 'BCC-Core';
+        return $ctx !== '' ? $ctx . ' — ' . $brand : $brand;
     }
 
     return $ctx !== ''
-        ? $base . ': ' . $ctx . ' — BCC-Core'
-        : $base . ' — BCC-Core';
+        ? $base . ': ' . $ctx . ' — ' . $brand
+        : $base . ' — ' . $brand;
 }
 
 // page-identity.js'in okuduğu <meta> etiketleri. Base ikonu VERİTABANINDA
@@ -3664,7 +3698,11 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
         return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     };
 
-    return '<meta name="bcc-base-name" content="' . $esc($baseName) . '">' . "\n"
+    // bcc-brand: page-identity.js başlığı sayfa yenilenmeden yeniden kurarken
+    // marka metnini KENDİ İÇİNE yazmasın diye. Marka tek kaynak config/app.php;
+    // JS onu buradan okur, ikinci bir literal kopya oluşmaz.
+    return '<meta name="bcc-brand" content="' . $esc(bcc_brand_domain()) . '">' . "\n"
+        . '<meta name="bcc-base-name" content="' . $esc($baseName) . '">' . "\n"
         . '<meta name="bcc-context-name" content="' . $esc($contextName) . '">' . "\n"
         . '<meta name="bcc-base-color" content="' . $esc(bcc_base_icon_color($baseId)) . '">' . "\n"
         . '<meta name="bcc-base-icon" content="' . $esc(bcc_base_icon_paths($baseName)) . '">';
@@ -3674,7 +3712,7 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
 // şekilde kullanılır). $isStarred true ise yıldız butonu hover'dan bağımsız
 // hep görünür kalır (CSS: .home-base-star-btn[aria-pressed="true"]).
 // $canDelete: bu base'in takımında 'owner' rolündeyse true — Trash özelliği
-// (Airtable referansı: yalnızca Owner silebilir/geri yükleyebilir), "⋯"
+// (OpsFlow davranışı: yalnızca Owner silebilir/geri yükleyebilir), "⋯"
 // menüsündeki "Sil" öğesi buna göre gösterilir/gizlenir.
 // $role: kullanıcının bu base'in çalışma alanındaki rolü ('owner'|'editor'|
 // 'commenter'|'viewer'|null) — kartın sağ üstündeki rol rozeti için. null ise
@@ -3793,7 +3831,7 @@ function bcc_base_table_counts($baseIds)
 // hiç basılmaz (uydurma sayı YOK).
 function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false, $role = null, $variant = 'standard', $tableCount = null)
 {
-    // $workspaceName artık BASILMIYOR (kasıtlı) — Airtable referansı Workspace
+    // $workspaceName artık BASILMIYOR (kasıtlı) — OpsFlow davranışı Workspace
     // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
     // parametre imzası geriye dönük uyumluluk için duruyor (çağıranlar hâlâ
     // $teamNamesById hesaplayıp geçiriyor), yalnızca çıktı kaldırıldı.
@@ -3850,7 +3888,7 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
         <?php if ($role !== null && isset($GLOBALS['BCC_ROLE_LABELS'][$role])): ?>
             <?php
             // Rol rozeti — kullanıcının BU base'in çalışma alanındaki yetkisi.
-            // Airtable'ın "assigned permission level"ının kart üstünde görünür
+            // OpsFlow'un "assigned permission level"ının kart üstünde görünür
             // karşılığı: aynı listede farklı çalışma alanlarından base'ler yan
             // yana durabildiği için, hangisinde neyi yapabildiği (ör. yalnızca
             // Owner'da "Sil" çıkması) kartın kendisinden okunabilsin diye.
@@ -3966,7 +4004,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $workspaceName = isset($teamNamesById[(int) $b['team_id']]) ? $teamNamesById[(int) $b['team_id']] : '';
             $iconColor = bcc_base_icon_color($b['id']);
             $role = isset($roleByTeamId[(int) $b['team_id']]) ? $roleByTeamId[(int) $b['team_id']] : null;
-            // Airtable paritesi: base silme de ekleme ile AYNI yetki satırında
+            // OpsFlow davranışı: base silme de ekleme ile AYNI yetki satırında
             // ("Add and delete bases…") — eşik tek yerde, bkz. src/auth.php.
             $canDelete = $role !== null && bcc_can_manage_bases($role);
             $variant = ($bento && $bIdx === 0) ? 'feature' : 'standard';

@@ -622,7 +622,7 @@
         italicBtn.style.fontStyle = 'italic';
 
         // Emoji (🔗) yerine SVG ikon — B/i metin glifleriyle (Google Docs/Notion
-        // paritesi, tanıdık bir konvansiyon) tutarlı olsun diye tarayıcıya/işletim
+        // davranışı, tanıdık bir konvansiyon) tutarlı olsun diye tarayıcıya/işletim
         // sistemine göre renkli/farklı render olan emoji yerine, uygulamanın geri
         // kalanındaki ince çizgili ikon diliyle (bkz. grid.php'deki diğer SVG'ler)
         // aynı stil kullanılıyor.
@@ -1054,7 +1054,7 @@
             handleFileSelected(fileInput.files[0]);
         });
 
-        // Airtable'daki "Drop files here or click to browse" paritesi: TÜM kutu
+        // OpsFlow'daki "Drop files here or click to browse" davranışı: TÜM kutu
         // tıklanabilir (native <label> davranışı) + sürükle-bırak. Projede daha
         // önce hiç drag/drop altyapısı yoktu (grep ile doğrulandı), burada
         // eklendi — yalnızca preventDefault + görsel .is-dragover durumu,
@@ -1198,7 +1198,7 @@
             // Rating: checkbox İLE AYNI "girmeden doğrudan tıkla-kaydet" deseni —
             // startEdit()'in input-aç/blur-ile-kaydet akışına HİÇ girmez. Aynı
             // yıldıza TEKRAR tıklamak değerlendirmeyi TEMİZLER (0'a döner) —
-            // Airtable'ın kendi davranışı, "yanlışlıkla verdiğim puanı nasıl
+            // OpsFlow'un kendi davranışı, "yanlışlıkla verdiğim puanı nasıl
             // sileceğim" sorusuna native bir cevap.
             var star = e.target.closest('.rating-star');
             if (star) {
@@ -1254,7 +1254,7 @@
         });
 
         // Rating hover-önizleme: fareyle üzerine gelince o yıldıza kadar
-        // GEÇİCİ olarak dolu gösterir (Airtable paritesi), fare ayrılınca
+        // GEÇİCİ olarak dolu gösterir (OpsFlow davranışı), fare ayrılınca
         // GERÇEK değere (data-value) geri döner — mouseover/mouseout event
         // delegation ile (grid'e TEK dinleyici, satır sayısına göre çoğalmaz).
         grid.addEventListener('mouseover', function (e) {

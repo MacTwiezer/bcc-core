@@ -5,7 +5,7 @@
 //   ör. "Trendyol kanalı", "Yves Rocher kanalı") — koşullu yönlendirme
 //   kuralları bunlardan birine işaret eder.
 // - Takım-geneli webhook (table_id NULL, team_id = bu takım) — takımın TÜM
-//   tablolarında tetiklenir, tek satır (Airtable'daki tek "Otherwise" yedek
+//   tablolarında tetiklenir, tek satır (OpsFlow'daki tek "Otherwise" yedek
 //   kanalı gibi) — DEĞİŞMEDİ.
 // - Koşullu yönlendirme kuralları (slack_routing_rules) — bir alanın (yalnızca
 //   tekli seçim tipi) DEĞERİNE göre hangi webhook'a gidileceğini belirler.
@@ -288,7 +288,7 @@ function bcc_slack_masked_url($webhook)
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'fields';
-$homePageTitle = 'BCC-Core — ' . $table['name'] . ' — Slack';
+$homePageTitle = bcc_brand_domain() . ' — ' . $table['name'] . ' — Slack';
 // Ortak tasarım sistemi (table_fields / base_tables / account ile PAYLAŞILAN) +
 // yalnızca bu sayfaya ait yerleşim. Durum hapı, toggle, bilgi kutusu ve
 // maskeli-sır rozeti ORTAK dosyada (settings-page.css) — burada kopyası yok.

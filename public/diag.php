@@ -57,7 +57,7 @@ header('Content-Type: text/html; charset=utf-8');
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>BCC-Core — Tanı Sayfası</title>
+<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Tanı Sayfası', ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <style>
     body { font-family: Segoe UI, Arial, sans-serif; margin: 2rem; background: #f5f5f7; color: #1d1d1f; }
@@ -71,7 +71,7 @@ header('Content-Type: text/html; charset=utf-8');
 </style>
 </head>
 <body>
-<h1>BCC-Core — Faz 0 Tanı Sayfası</h1>
+<h1><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, 'UTF-8'); ?> — Faz 0 Tanı Sayfası</h1>
 
 <div class="card">
     <h2>Veritabanı Bağlantısı</h2>

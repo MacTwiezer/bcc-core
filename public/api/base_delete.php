@@ -1,8 +1,8 @@
 <?php
 // AJAX uçnoktası: dashboard/starred kartının "⋯" menüsündeki "Sil" — Trash
-// özelliği (Airtable workspace trash referansı). Gerçek DELETE DEĞİL,
+// özelliği (OpsFlow workspace trash referansı). Gerçek DELETE DEĞİL,
 // soft-delete (deleted_at/deleted_by) — geri alınabilir (bkz. base_restore.php,
-// trash_list.php). Yalnızca 'owner' rolü silebilir (Airtable'da da sadece
+// trash_list.php). Yalnızca 'owner' rolü silebilir (OpsFlow'da da sadece
 // Owner silip geri yükleyebiliyor).
 
 require __DIR__ . '/../../src/api_bootstrap.php';

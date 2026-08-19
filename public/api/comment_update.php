@@ -1,7 +1,7 @@
 <?php
 // AJAX uçnoktası: bir yorumu düzenler. Güvenlik: CSRF + require_role('commenter')
 // + SAHİPLİK kontrolü — yalnızca yorumu yazan kullanıcı düzenleyebilir, owner
-// dahil KİMSE başkasının yorumunu düzenleyemez (Airtable araştırması: resmi SSS
+// dahil KİMSE başkasının yorumunu düzenleyemez (OpsFlow araştırması: resmi SSS
 // "deaktif kullanıcının yorumu silinemez" — owner'a admin-override yetkisi
 // verilmediğinin kanıtı, bkz. docs/PROJE-DURUM.md). team_id, comment -> record
 // zincirinden bcc_find_record() ile DB'den türetilir.

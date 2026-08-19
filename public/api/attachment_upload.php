@@ -97,10 +97,12 @@ if (!$detectedMime || !in_array($detectedMime, $ALLOWED[$ext]['mimes'], true)) {
 }
 
 $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
-$destDir = dirname(bcc_attachment_storage_path(''));
-if (!is_dir($destDir)) {
-    mkdir($destDir, 0755, true);
-}
+// Dizin adı ve "yoksa oluştur" mantığı src/schema.php'de TEK YERDE
+// (bcc_attachment_storage_dir_ensured) — burada dirname() ile yeniden
+// hesaplanmıyor. Gerekçe o fonksiyonun başında yazılı: eski dirname() hesabı
+// bir seviye fazla kırpıp "storage"ı işaret ediyordu, bu yüzden
+// storage/attachments/ silinmişse yükleme "Dosya kaydedilemedi." ile düşüyordu.
+bcc_attachment_storage_dir_ensured();
 $destPath = bcc_attachment_storage_path($storedName);
 
 if (!move_uploaded_file($upload['tmp_name'], $destPath)) {

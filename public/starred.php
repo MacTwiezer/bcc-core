@@ -64,7 +64,7 @@ if (!empty($teamIds)) {
 $starredBases = $bases;
 
 $homeActiveNav = 'starred';
-$homePageTitle = 'BCC-Core — Yıldızlılar';
+$homePageTitle = bcc_brand_domain() . ' — Yıldızlılar';
 // Dashboard ile AYNI görsel katman: tipografi ölçeği, zemin ve kart cilası
 // burada da geçerli olsun (bento ızgarası açılmıyor, bkz. grid çağrısı).
 $homeExtraCss = array('home-bento.css');

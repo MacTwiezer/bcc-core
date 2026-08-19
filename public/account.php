@@ -1,5 +1,5 @@
 <?php
-// "Hesap Özeti" — Airtable'ın "Account Overview" ekranının karşılığı (hesap
+// "Hesap Özeti" — OpsFlow'un "Account Overview" ekranının karşılığı (hesap
 // menüsündeki, önceden işlevsiz "Hesap" öğesi artık buraya bağlanıyor, bkz.
 // src/partials/account_menu.php). Ad/e-posta/şifre değişikliği ROLDEN
 // BAĞIMSIZ — require_role() BURADA KULLANILMAZ, yalnızca require_login()
@@ -148,7 +148,7 @@ function bcc_account_format_dt($value)
 }
 
 $homeActiveNav = 'account';
-$homePageTitle = 'BCC-Core — Hesap Özeti';
+$homePageTitle = bcc_brand_domain() . ' — Hesap Özeti';
 // Ortak tasarım sistemi (table_fields.php / base_tables.php ile PAYLAŞILAN) +
 // yalnızca bu sayfaya ait iki sütunlu yerleşim ve widget'lar.
 $homeExtraCss = array('settings-page.css', 'account.css');

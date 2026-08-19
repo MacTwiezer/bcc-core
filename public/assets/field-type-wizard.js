@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Tip-önce-isim-sonra alan ekleme akışı (Airtable tarzı) — table_fields.php
+    // Tip-önce-isim-sonra alan ekleme akışı (OpsFlow) — table_fields.php
     // (tam sayfa form) VE grid.php'nin "+" popup'ı TARAFINDAN PAYLAŞILIR, ikinci
     // bir kopya YOK. Her iki sayfada da aynı element ID'leri (#new-field-*)
     // kullanılır; sayfa başına yalnızca TEK bir sihirbaz örneği olduğu için

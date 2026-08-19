@@ -258,7 +258,7 @@ try {
     check('VE: Renk=Kirmizi VE Miktar>=10 -> sadece Elma', $names === array('Elma'), 'bulunan: ' . implode(',', $names));
     // Bagac kontrolu artik radyo dugmesi DEGIL, 2. satirdaki <select>.
     // Eski kontrol 'value="and" checked' ariyordu (radyonun isareti); panel
-    // Airtable paritesine gore yeniden tasarlaninca o markup kalkti. Sunucu
+    // OpsFlow davranışına gore yeniden tasarlaninca o markup kalkti. Sunucu
     // sozlesmesi AYNI: hala tek bir name="filter_logic" gonderiliyor, yalnizca
     // secili degeri gosteren isaret 'checked' yerine 'selected'.
     check('VE modunda bagac select i "VE" secili',

@@ -89,7 +89,7 @@ $p = $accountMenuPrefix;
     </div>
 </div>
 
-<!-- Trash — Airtable'ın workspace trash referansı (bkz. api/trash_list.php
+<!-- Trash — OpsFlow'un workspace trash referansı (bkz. api/trash_list.php
      yorumu). Sayfa-geneli bir overlay olduğu için .X-account'ın dışında,
      tek kopya (bu partial sayfa başına zaten tek kez require ediliyor).
      Jenerik (prefix'siz) .bcc-trash-* sınıflar — home.css'te TEK yerde

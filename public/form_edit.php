@@ -192,7 +192,7 @@ function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
 // Sayfa iskeleti: table_fields.php/slack_settings.php ile AYNI kabuk
 // (home_shell_top/bottom) — yeni bir sayfa şablonu YAZILMADI.
 $homeActiveNav = 'fields';
-$homePageTitle = 'BCC-Core — Form: ' . $table['name'];
+$homePageTitle = bcc_brand_domain() . ' — Form: ' . $table['name'];
 // Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu oluşturucu.
 $homeExtraCss = array('settings-page.css', 'form-edit.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';

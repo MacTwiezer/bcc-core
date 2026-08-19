@@ -2,7 +2,7 @@
     'use strict';
 
     // Satır seçimi (checkbox) + satır genişletme paneli. Panel artık TÜM takım
-    // rollerine açık (Airtable paritesi: kayıt görüntüleme herkese açık, yorum
+    // rollerine açık (OpsFlow davranışı: kayıt görüntüleme herkese açık, yorum
     // commenter+, hücre düzenleme editor+) — bu yüzden window.BCC_GRID (grid.js)
     // varlığına SERTÇE bağımlı değil: grid.js yalnızca editor/owner'da yüklenir
     // (bkz. grid.php script sırası), viewer/commenter'da hiç yoktur. Düzenleme
@@ -214,7 +214,7 @@
 
         function buildFieldWidget(tr, field) {
             // created_time/created_by/last_modified_time/last_modified_by:
-            // Airtable'daki gibi kullanıcı tarafından ASLA düzenlenemez — rol
+            // OpsFlow'daki gibi kullanıcı tarafından ASLA düzenlenemez — rol
             // fark etmeksizin (owner dahil) her zaman salt-okunur render'a
             // düşer. Zaten var olan buildReadOnlyFieldWidget() (viewer/commenter
             // için kullanılan AYNI desen) yeniden kullanılıyor, ikinci bir
@@ -418,7 +418,7 @@
             getRowFields(tr).forEach(function (field, index) {
                 var row = document.createElement('div');
                 // Birincil alan (index 0): mevcut tam genişlik/etiket-üstte
-                // şablonda kalır, dokunulmadı. Diğer TÜM alanlar Airtable'daki
+                // şablonda kalır, dokunulmadı. Diğer TÜM alanlar OpsFlow'daki
                 // gibi iki sütuna (sol dar etiket / sağ değer) geçer.
                 row.className = index === 0 ? 'grid-detail-field grid-detail-field-primary' : 'grid-detail-field grid-detail-field-inline';
 
@@ -426,7 +426,7 @@
                 label.className = 'grid-detail-field-label';
                 // .field-badge / --field-icon: theme.css'te zaten var olan, tüm
                 // alan tiplerini kapsayan ikon seti (grid başlığı/alan sihirbazında
-                // kullanılan AYNI ikonlar) — Airtable parite isteği için ikinci
+                // kullanılan AYNI ikonlar) — OpsFlow davranış isteği için ikinci
                 // bir ikon seti icat edilmedi, burada yeniden kullanılıyor.
                 var badge = document.createElement('span');
                 badge.className = 'field-badge field-badge--' + field.field_type;
@@ -451,7 +451,7 @@
         }
 
         // --- Yorumlar (comment_list/add/update/delete.php) ----------------------
-        // Airtable paritesi: görüntüleme herkese açık (bkz. grid.php $canComment
+        // OpsFlow davranışı: görüntüleme herkese açık (bkz. grid.php $canComment
         // yalnızca FORM/hint'i belirler, listeyi DEĞİL), ekleme/kendi yorumunu
         // düzenleme-silme yalnızca commenter+ — sunucu zaten require_role('commenter')
         // + sahiplik kontrolü ile aynı kuralı uyguluyor, burası yalnızca UI.
@@ -1007,7 +1007,7 @@
             });
         }
 
-        // "Kaydı gönder" modalı (Airtable "Send record" paritesi) — alan
+        // "Kaydı gönder" modalı (OpsFlow "Send record" davranışı) — alan
         // önizlemesi YAZDIRDAKİ fieldPrintText()'i AYNEN çağırır (KOPYALAMA
         // yok, fonksiyon zaten print'e özel bir şey içermiyordu). Bu tek
         // döngü hem EKRANDAKİ önizlemeyi (renderSendPreview, ikonlu DOM

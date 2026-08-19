@@ -1,4 +1,4 @@
-/* Airtable Data ekranı benzeri kabuk/çerçeve — sadece grid.php tarafından kullanılır.
+/* OpsFlow Data ekranı benzeri kabuk/çerçeve — sadece grid.php tarafından kullanılır.
    Grid işlevselliği (hücre düzenleme, arama, sıralama, filtre) style.css + grid*.js
    içinde kalır; bu dosya yalnızca görünüm ekler. */
 
@@ -12,7 +12,7 @@ body.gs-body {
     display: flex;
     /* min-height DEĞİL height + overflow:hidden: kabuk TAM olarak pencere
        kadar, sayfanın kendisi HİÇ kaymıyor — tek kaydırılan öğe .grid-wrap
-       (Airtable modeli). min-height olsaydı grid alanı "kalan yüksekliği
+       (OpsFlow modeli). min-height olsaydı grid alanı "kalan yüksekliği
        doldur" diyemezdi (esnek bir kutunun yüzdesi/flex'i, ölçüsü belirsiz
        bir ataya dayanamaz) ve tablo bugünkü gibi yalnızca içerik boyunda
        kalırdı.
@@ -816,7 +816,7 @@ html.is-mac .gs-kbd-other { display: none; }
 
 /* ---------- Görünüm listesi paneli (hamburger) ---------- */
 
-/* Airtable'da tablo sekmelerinin altında sol tarafta duran kalıcı görünüm
+/* OpsFlow'da tablo sekmelerinin altında sol tarafta duran kalıcı görünüm
    paneli — önceden #gs-view-panel-toggle'ın açtığı yüzen bir dropdown'du,
    şimdi .gs-body-row'un normal-akış bir sütunu (bkz. grid.php). Daraltma,
    Home sayfasının #home-sidebar-toggle'ıyla AYNI desen: width sıfırlanır,
@@ -960,7 +960,7 @@ html.is-mac .gs-kbd-other { display: none; }
     min-height: 0;
 }
 
-/* Tam genişlik/yükseklik (Airtable "edge-to-edge"): dolgu KALDIRILDI, artık
+/* Tam genişlik/yükseklik (OpsFlow "edge-to-edge"): dolgu KALDIRILDI, artık
    yatay boşluğu sayfanın kendisi değil İÇİNDEKİ öğeler (bkz. .gs-fields-link /
    .gs-grid-footer) taşıyor — böylece .grid-wrap sağ ve alt pencere kenarına
    kadar uzanabiliyor.
@@ -1004,7 +1004,7 @@ html.is-mac .gs-kbd-other { display: none; }
 /* Alt bilgi çubuğu ("N kayıt") artık akışın sonunda DEĞİL, .gs-main flex
    sütununun sabit son öğesi: .grid-wrap flex:1 ile kalan yüksekliği aldığı
    için bu çubuk her zaman pencerenin ALT KENARINA yapışık kalıyor ve tabloyla
-   birlikte kaymıyor (Airtable'daki gibi). Kenar çizgisi tam genişlikte,
+   birlikte kaymıyor (OpsFlow'daki gibi). Kenar çizgisi tam genişlikte,
    yazının boşluğunu ise kendi yatay dolgusu veriyor (eskiden .gs-main'in
    dolgusundan geliyordu). */
 .gs-grid-footer {
@@ -1516,7 +1516,7 @@ html.is-mac .gs-kbd-other { display: none; }
     color: #c62828;
 }
 
-/* ---------- "Paylaş" modalı (Airtable Collaborators diyaloğu) ----------
+/* ---------- "Paylaş" modalı (OpsFlow Collaborators diyaloğu) ----------
    Backdrop YENİDEN KULLANILIYOR: .gs-view-desc-overlay (yukarıda) — aynı
    position:fixed/inset:0/z-index:60/blur'suz koyu zemin + [hidden] kuralı,
    ikinci bir kopya YOK. grid-export.css o sınıfı zaten gizlediği için

@@ -103,7 +103,7 @@ echo "\n--- C) dashboard.php yetki sinirlari ---\n";
 
 $expectCreate = array(
     'owner@bcc.local' => true,
-    'creator@bcc.local' => true,   // rolu 'owner' (Airtable Creator eslemesi)
+    'creator@bcc.local' => true,   // rolu 'owner' (OpsFlow Creator eslemesi)
     'editor@bcc.local' => false,
     'viewer@bcc.local' => false,
 );
@@ -122,7 +122,7 @@ foreach ($expectCreate as $email => $shouldSee) {
     check($email . ': olusturma modali ' . ($shouldSee ? 'basilir' : 'HTML\'de HIC YOK'), $hasModal === $shouldSee);
     check($email . ': "Sil" ogesi ' . ($shouldSee ? 'var' : 'YOK'), $hasDelete === $shouldSee);
 
-    // Herkes base'leri GORUR (Airtable: "Access all bases ... at your assigned
+    // Herkes base'leri GORUR (OpsFlow: "Access all bases ... at your assigned
     // permission level" bes rolde de acik).
     check($email . ': demo base\'leri goruyor (erisim rolden bagimsiz)',
         strpos($html, 'Demo CRM') !== false);

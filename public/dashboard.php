@@ -19,14 +19,14 @@ $teams = bcc_fetch_all(
 );
 
 // Trash: yalnızca 'owner' rolündeki kullanıcı bir base'i silebilir/geri
-// yükleyebilir (Airtable referansı) — kart "⋯" menüsündeki "Sil" öğesi bu
+// yükleyebilir (OpsFlow davranışı) — kart "⋯" menüsündeki "Sil" öğesi bu
 // haritaya bakarak gösterilir/gizlenir. Aynı harita kartın rol rozetini de besler.
 $roleByTeamId = array();
 foreach ($teams as $t) {
     $roleByTeamId[(int) $t['id']] = $t['role'];
 }
 
-// "+ Yeni Base Oluştur" — Airtable izin matrisinde base EKLEME yalnızca Owner ve
+// "+ Yeni Base Oluştur" — OpsFlow izin matrisinde base EKLEME yalnızca Owner ve
 // Creator'a açıktır (bkz. src/auth.php bcc_can_manage_bases(); Editor kayıt/alan
 // düzenler ama base ekleyemez). Kullanıcının BİRDEN ÇOK çalışma alanı olabilir ve
 // her birinde farklı rolde olabilir; bu yüzden tek bir "yetkili mi" bayrağı
@@ -119,9 +119,12 @@ foreach ($teams as $t) {
 }
 
 $homeActiveNav = 'home';
-$homePageTitle = 'BCC-Core — Ana Sayfa';
-// home.css'ten SONRA yüklenir (bkz. home_shell_top.php) — bento kuralları
-// taban kart kurallarını bilinçli olarak eziyor.
+$homePageTitle = bcc_brand_domain() . ' — Ana Sayfa';
+// home.css'ten SONRA yüklenir (bkz. home_shell_top.php). Bento IZGARASI artık
+// açılmıyor (aşağıdaki grid çağrısında $bento=false), ama bu dosya ızgaradan
+// ibaret değil: tipografi ölçeği, zemin ve kart cilası da burada. starred.php
+// AYNI dosyayı AYNI gerekçeyle yüklüyor — iki sayfa birebir aynı görünsün diye
+// bu satır ikisinde de duruyor.
 $homeExtraCss = array('home-bento.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -184,10 +187,18 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php endif; ?>
 
         <?php
-        // $bento = true: ilk kart (sorgu b.name'e göre sıralı) 2x2 "feature"
-        // olarak basılır. Liste görünümünde bento sınıfı CSS ile devre dışı
-        // kalır — mod değiştirme bugünkü gibi çalışmaya devam eder.
-        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, true, $baseTableCounts);
+        // $bento = false: bento ızgarası KAPALI. Bir dönem ilk kart (b.name'e
+        // göre sıralı olduğu için "Demo CRM") 2x2 "feature" varyantıyla, kendi
+        // kapak/açıklama/rozet düzeni ve vurgulu zeminiyle basılıyordu. Bu,
+        // aynı ızgarada iki farklı kart boyutu ve iki farklı iç yapı demekti;
+        // hangi base'in öne çıkacağı da alfabetik sıranın yan etkisiydi, yani
+        // anlamlı bir "öne çıkan" seçimi değildi.
+        //
+        // Artık starred.php ile AYNI çağrı: tüm base kartları — ve $canCreateBase
+        // ile basılan "Yeni Base Oluştur" kutucuğu — tek tip, eşit ölçüde.
+        // Kart bileşeni ($variant='standard') ve "N tablo" rozeti iki sayfada da
+        // aynı; ayrı bir stil dalı kalmadı.
+        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, false, $baseTableCounts);
         ?>
 
         <?php if ($canCreateBase): ?>
@@ -218,7 +229,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <span class="home-modal-label">Çalışma alanı</span>
                         <?php
                         // Tek seçenek varsa açılır liste yerine sabit metin +
-                        // hidden input — Airtable da tek çalışma alanı olan
+                        // hidden input — OpsFlow da tek çalışma alanı olan
                         // kullanıcıya seçici göstermiyor.
                         ?>
                         <?php if (count($creatableTeams) === 1): ?>

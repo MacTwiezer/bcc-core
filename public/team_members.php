@@ -3,8 +3,8 @@
 // (owner'a özel değil) kendi rütbesi ve ALTINDAKİ (eşit dahil) kullanıcıları
 // yönetebildiği üye/rol yönetimi. admin/assign_team.php'nin (platform admin,
 // TÜM takımlar) YANINDA, ondan BAĞIMSIZ ek bir yetki katmanı — o dosyaya
-// dokunulmadı, hâlâ her şeyi atayabiliyor. Airtable'ın "invite/assign at or
-// below your permission level" kuralı (support.airtable.com/docs/base-permissions,
+// dokunulmadı, hâlâ her şeyi atayabiliyor. OpsFlow'un "invite/assign at or
+// below your permission level" kuralı (docs/GEREKSINIMLER.md — base yetkileri,
 // "Invite users at or below your permission level" ✅ dört rolde de +
 // managing-billable-collaborators FAQ: "can also add collaborators at the SAME
 // or a lower permission level") burada BCC_ROLE_RANK üzerinden uygulanıyor —
@@ -32,7 +32,7 @@ $myRank = $GLOBALS['BCC_ROLE_RANK'][$myRole];
 
 // ÜYE YÖNETİMİ YETKİSİ — tek kaynak: src/auth.php bcc_can_manage_members()
 // (yalnızca owner). Sayfanın KENDİSİ dört role de açık kalır (herkes ekipte
-// kimin olduğunu ve rolünü GÖRÜR — Airtable'da da katılımcı listesi görünür),
+// kimin olduğunu ve rolünü GÖRÜR — OpsFlow'da da katılımcı listesi görünür),
 // ama listeyi DEĞİŞTİREN her şey bu bayrağa bağlıdır.
 //
 // Bulunan gerçek açık (canlı doğrulandı, bu satır eklenmeden önce): yetki
@@ -130,7 +130,7 @@ $allUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_activ
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'workspaces';
-$homePageTitle = 'BCC-Core — ' . $team['name'] . ' Üyeleri';
+$homePageTitle = bcc_brand_domain() . ' — ' . $team['name'] . ' Üyeleri';
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">

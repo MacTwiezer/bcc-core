@@ -1,4 +1,4 @@
--- Autonumber (Airtable paritesi, Grup C2): her autonumber ALANININ kendi
+-- Autonumber (OpsFlow davranışı, Grup C2): her autonumber ALANININ kendi
 -- bağımsız sayacı.
 --
 -- Neden yeni bir sayaç kolonu gerekiyor (önceki teşhis turunda kanıtlandı):

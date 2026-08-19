@@ -1,5 +1,5 @@
 <?php
-// "Paylaş" modalı — Airtable'ın Collaborators diyaloğunun karşılığı.
+// "Paylaş" modalı — OpsFlow'un Collaborators diyaloğunun karşılığı.
 // grid.php'nin "Paylaş" popover'ındaki "N kişinin erişimi var" bağlantısı ARTIK
 // team_members.php'ye YÖNLENDİRMİYOR; bu overlay'i açıyor (assets/share-modal.js).
 //
@@ -50,7 +50,7 @@
                     autocomplete="off"
                 >
                 <?php // <datalist>: takımda HENÜZ olmayan aktif kullanıcılar —
-                      // Airtable'ın typeahead'i gibi davranır ama serbest metin
+                      // OpsFlow'un typeahead'i gibi davranır ama serbest metin
                       // girişini de engellemez (sunucu e-postayı yine çözer). ?>
                 <datalist id="gs-share-invite-suggestions" data-share-suggestions></datalist>
                 <select class="gs-share-invite-role" data-share-invite-role aria-label="Rol"></select>

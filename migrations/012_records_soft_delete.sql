@@ -1,4 +1,4 @@
--- Trash özelliği (Airtable paritesi, "Kaydı sil" — 7 gün çöp kutusu + geri
+-- Trash özelliği (OpsFlow davranışı, "Kaydı sil" — 7 gün çöp kutusu + geri
 -- yükleme, bases'teki AYNI desen, bkz. migrations/008_bases_soft_delete.sql):
 -- kayıt silme artık gerçek DELETE değil, geri alınabilir soft-delete.
 -- deleted_by ON DELETE SET NULL — created_by/uploaded_by/audit_log.user_id/

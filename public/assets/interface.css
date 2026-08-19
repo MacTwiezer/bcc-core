@@ -66,7 +66,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin-bottom: 1rem;
 }
 
-/* E3 — "Bcc-Core ▾" menüsü: .if-nav-back artık bir <a> değil, <details>
+/* E3 — "opsflow.bcccrm.com ▾" menüsü: .if-nav-back artık bir <a> değil, <details>
    içindeki <summary> (bkz. .gs-table-tab-menu-panel'in varsayılan
    position:absolute;top:100%;left:0'ı için position:relative burada). */
 .if-nav-menu { position: relative; }

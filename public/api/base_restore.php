@@ -1,7 +1,7 @@
 <?php
 // AJAX uçnoktası: Trash modalındaki "Geri Yükle" — base_delete.php'nin
 // TERSİ (deleted_at/deleted_by NULL'lanır). Yalnızca 'owner' rolü geri
-// yükleyebilir (Airtable referansı — base_delete.php ile AYNI kural).
+// yükleyebilir (OpsFlow davranışı — base_delete.php ile AYNI kural).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 

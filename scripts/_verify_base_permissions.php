@@ -2,7 +2,7 @@
 // Home (dashboard.php) base olusturma yetkisi + kart ikonu/rol rozeti testi.
 //
 // Neyi dogruluyor:
-//   A) Airtable izin matrisi karsiligi (src/auth.php bcc_can_manage_bases):
+//   A) OpsFlow izin matrisi karsiligi (src/auth.php bcc_can_manage_bases):
 //      base EKLEME/SILME yalnizca 'owner'a acik, editor/commenter/viewer'a kapali.
 //   B) SUNUCU TARAFI RENDER: yetkisi olmayan kullanicinin HTML'inde ne "+ Yeni
 //      Base Olustur" kutucugu ne de "Sil" ogesi bulunur (CSS ile gizleme YOK).
@@ -56,7 +56,7 @@ function check($label, $passed, $detail = null)
 echo "--- A) Yetki esigi (bcc_can_manage_bases) ---\n";
 
 check('owner base ekleyebilir', bcc_can_manage_bases('owner') === true);
-check('editor base EKLEYEMEZ (Airtable: Editor bu satirda yok)', bcc_can_manage_bases('editor') === false);
+check('editor base EKLEYEMEZ (OpsFlow: Editor bu satirda yok)', bcc_can_manage_bases('editor') === false);
 check('commenter base ekleyemez', bcc_can_manage_bases('commenter') === false);
 check('viewer base ekleyemez', bcc_can_manage_bases('viewer') === false);
 check('rolsuz (null) base ekleyemez', bcc_can_manage_bases(null) === false);
@@ -67,7 +67,7 @@ check('bilinmeyen rol base ekleyemez', bcc_can_manage_bases('creator') === false
 // ---------------------------------------------------------------------------
 echo "\n--- D) Ikon kategorisi ve rengi ---\n";
 
-check('"Bcc-Core" -> varsayilan veritabani glifi', bcc_base_icon_category('Bcc-Core') === 'database', bcc_base_icon_category('Bcc-Core'));
+check('"Arsiv" -> varsayilan veritabani glifi', bcc_base_icon_category('Arsiv') === 'database', bcc_base_icon_category('Arsiv'));
 check('"Export Test" -> disa aktarma glifi (export, testten ONCE taranir)', bcc_base_icon_category('Export Test') === 'export', bcc_base_icon_category('Export Test'));
 check('"RoleTest Base" -> yetki/kalkan glifi', bcc_base_icon_category('RoleTest Base') === 'shield', bcc_base_icon_category('RoleTest Base'));
 check('"Satis CRM" -> kisiler glifi', bcc_base_icon_category('Satis CRM') === 'users', bcc_base_icon_category('Satis CRM'));

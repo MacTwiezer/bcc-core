@@ -2,7 +2,7 @@
 // AJAX uçnoktası: Çöp kutusu modalının "Kayıtlar" bölümündeki "Geri Yükle" —
 // record_soft_delete.php'nin TERSİ (deleted_at/deleted_by NULL'lanır).
 // base_restore.php ile AYNI desen — TEK fark: bases'te yalnızca 'owner' geri
-// yükleyebiliyor, kayıtlarda Airtable paritesi gereği editor+owner (task'ta
+// yükleyebiliyor, kayıtlarda OpsFlow davranışı gereği editor+owner (task'ta
 // AÇIKÇA belirtildi, base_restore.php'nin owner-only kuralı KÖRLEMESİNE
 // kopyalanmadı).
 

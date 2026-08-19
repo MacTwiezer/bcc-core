@@ -1,5 +1,5 @@
 <?php
-// BCC-Core — ORTAK HTML e-posta şablonu.
+// opsflow.bcccrm.com — ORTAK HTML e-posta şablonu.
 //
 // Neden tablo tabanlı layout ve inline CSS: e-posta istemcileri (özellikle
 // Outlook, Word render motorunu kullanıyor) flexbox/grid/harici <style>
@@ -369,7 +369,7 @@ HTML;
                 </tr>
 
                 <tr>
-                    <td bgcolor="{$panel}" style="padding: 14px 32px 20px; background-color: {$panel}; border-top: 1px solid {$line}; font-family: {$font}; font-size: 11px; line-height: 17px; color: {$faint};">&copy; {$year} bcc İletişim Hizmetleri A.Ş. Bu e-posta BCC-Core hesap işlemleri için gönderilmiştir.</td>
+                    <td bgcolor="{$panel}" style="padding: 14px 32px 20px; background-color: {$panel}; border-top: 1px solid {$line}; font-family: {$font}; font-size: 11px; line-height: 17px; color: {$faint};">&copy; {$year} bcc İletişim Hizmetleri A.Ş. Bu e-posta opsflow.bcccrm.com hesap işlemleri için gönderilmiştir.</td>
                 </tr>
 
             </table>

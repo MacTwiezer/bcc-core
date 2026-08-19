@@ -1,5 +1,5 @@
 <?php
-// Zengin metin (long_text) hucresinin KAPALI grid gorunumu: Airtable paritesi
+// Zengin metin (long_text) hucresinin KAPALI grid gorunumu: OpsFlow davranışı
 // TEK SATIR + yatay akis.
 //
 // Kapsam:

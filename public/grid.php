@@ -20,7 +20,7 @@ $canComment = bcc_can_comment($role);            // yorum (Read-only hariç)
 $isOwner = bcc_can_manage_schema($role);         // alan/tablo şeması
 $canManageMembers = bcc_can_manage_members($role); // "Paylaş" popup'ındaki atama
 
-// D1 "Paylaş" popup (Airtable Share paritesi, görsel 1) — "People with access"
+// D1 "Paylaş" popup (OpsFlow Share davranışı, görsel 1) — "People with access"
 // özeti. Katılımcı EKLEME/ROL DEĞİŞTİRME/ÇIKARMA artık sayfa üstünde açılan
 // "Paylaş" MODALINDA (src/partials/share_modal.php + assets/share-modal.js);
 // popup'ın eskiden team_members.php'ye tam sayfa POST eden hızlı atama formu
@@ -172,7 +172,7 @@ foreach ($fields as $f) {
 // Alan gizleme (Grid araçları Adım 1): hidden_fields=ID,ID,... (ya da panelin kendi
 // formundan gelen visible_fields[]) GET parametresi, yalnızca bu tabloya ait alan
 // id'leri kabul edilir (whitelist). Birincil alan ($fields zaten position,id sırayla
-// çekildiği için ilk eleman) Airtable'daki gibi hiçbir zaman gizlenemez — bu kural
+// çekildiği için ilk eleman) OpsFlow'daki gibi hiçbir zaman gizlenemez — bu kural
 // parse_grid_hidden_fields() içinde uygulanır, URL'e elle yazılsa bile bozulmaz.
 // Gizli alan hâlâ filtrelenebilir/sıralanabilir — SQL sorgusu ve $fieldsById her
 // zaman $fields'in tamamını kullanır; $visibleFields yalnızca render (thead/tbody)
@@ -315,7 +315,7 @@ $hideAllFieldsQueryString = http_build_query($baseState + $sortState + $filterSt
 // D4 — sütun başlığı "▾" menüsü: her alan için Sort/Filter/Group/Hide
 // linkleri, MEVCUT panel state helper'ları ÜZERİNE inşa edilir (yeni bir
 // state mantığı YOK). Sort/Group tek tıkla UYGULANIR ve slot 1'e YAZILIR —
-// diğer sort/group kurallarının YERİNİ alır (Airtable'ın tek-tık kısayolu
+// diğer sort/group kurallarının YERİNİ alır (OpsFlow'un tek-tık kısayolu
 // gibi hızlı/şaşırtıcı-olmayan davranış, onaylandı). Filter ise değer
 // gerektirdiği için yalnızca panelde bu alanı ÖN SEÇİLİ+AÇIK gösterir,
 // mevcut filtre kurallarına dokunmaz (bkz. aşağıdaki $openFilterFieldId).
@@ -838,14 +838,14 @@ $gridUser = current_user();
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                         Excel indir
                     </button>
-<?php // Etiket "Görünümü yazdır" DEĞİL "PDF olarak indir": aksiyon (window.print())
+<?php // Etiket "Görünümü yazdır" DEĞİL "Yazdır": aksiyon (window.print())
                           // ve id AYNEN korundu, ikinci bir kalem EKLENMEDİ — tarayıcının print
-                          // diyaloğunda varsayılan hedef zaten "PDF olarak kaydet", etiket
+                          // diyaloğunda varsayılan hedef zaten "Yazdır", etiket
                           // kullanıcının gördüğü sonucu anlatıyor. Excel/PNG kardeşleriyle de
                           // artık aynı "<format> olarak indir" kalıbında. ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-print-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="3" width="10" height="5" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="8" width="14" height="6" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="6" y="12" width="8" height="5" stroke="#5f6368" stroke-width="1.3"/></svg>
-                        PDF olarak indir
+                        Yazdır
                     </button>
 <?php // html2canvas YEREL dosya (assets/vendor/, MIT 1.4.1) — CDN YOK. Yol
                           // buradan veriliyor: bcc_asset_url mtime cache-bust'ını üretsin ve
@@ -1002,7 +1002,7 @@ $gridUser = current_user();
                     <div class="hide-fields-list" data-hide-fields-list>
                         <?php foreach ($fields as $f):
                             if ((int) $f['id'] === $primaryFieldId) {
-                                continue; // birincil alan Airtable'daki gibi panelde listelenmez, hep görünür
+                                continue; // birincil alan OpsFlow'daki gibi panelde listelenmez, hep görünür
                             }
                         ?>
                             <label class="hide-field-row">
@@ -1076,7 +1076,7 @@ $gridUser = current_user();
                     //
                     // Gerçek kontrol 2. SATIRDAKİ <select name="filter_logic">;
                     // 3. ve sonraki satırlar aynı değeri YANSITAN, ada sahip olmayan
-                    // (yani forma girmeyen) devre dışı kopyalardır — Airtable de
+                    // (yani forma girmeyen) devre dışı kopyalardır — OpsFlow de
                     // tekdüze mantıkta sonraki bağlaçları pasif gösterir.
                     // Tek satır varken 2. satır yoktur; değer kaybolmasın diye
                     // gizli input basılır (JS ikinci satırı eklerken onu kaldırıp
@@ -1851,7 +1851,7 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('grid-add-field.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($fields)): ?>
-<!-- Genişlet paneli TÜM takım üyelerine açık (Airtable: kayıt görüntüleme
+<!-- Genişlet paneli TÜM takım üyelerine açık (OpsFlow: kayıt görüntüleme
      herkese açık, yorum commenter+, hücre düzenleme editor+) — grid-row-detail.js
      içeride BCC_CAN_EDIT/BCC_CAN_COMMENT'e göre salt-okunur/düzenlenebilir/
      yorum-yazılabilir dallara ayrılır, ikinci bir panel YOK. -->
@@ -1941,7 +1941,7 @@ $gridUser = current_user();
         <div class="grid-detail-print-meta" id="grid-detail-print-meta-bottom"></div>
     </div>
 </div>
-<!-- "Kaydı gönder" modalı (Airtable "Send record" paritesi) — kayıt detay
+<!-- "Kaydı gönder" modalı (OpsFlow "Send record" davranışı) — kayıt detay
      overlay'inden AYRI, kendi backdrop'ı olan bir ikinci overlay (grid-shell.css
      .gs-view-desc-overlay/grid-table-data.js import overlay'iyle AYNI kanıtlanmış
      [hidden]+açık override deseni, bkz. style.css). Konu/Mesaj/alan önizlemesi

@@ -21,7 +21,7 @@ if (!isset($fieldWizardShowRequired)) {
     $fieldWizardShowRequired = true;
 }
 ?>
-<!-- Adım 1: önce TİP (Airtable gibi) — liste $fieldTypeLabels'tan gelir, elle tekrar yazılmaz. -->
+<!-- Adım 1: önce TİP (OpsFlow gibi) — liste $fieldTypeLabels'tan gelir, elle tekrar yazılmaz. -->
 <div id="new-field-type-step">
     <p class="hint">Alan tipini seçin</p>
     <div class="field-type-grid">

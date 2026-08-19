@@ -1,0 +1,322 @@
+/* Kabuk cilası (üst bar, sol gezinme, global arama, araç çubuğu) — bento
+ * kartlarıyla AYNI tasarım dili.
+ *
+ * Neden ayrı dosya ve neden KABUK PARTIAL'INDAN yükleniyor:
+ * src/partials/home_shell_top.php'yi 12 sayfa paylaşıyor (dashboard, starred,
+ * workspaces, account, base_tables, bases, form_edit, grid, kanban,
+ * slack_settings, table_fields, team_members). Bu kurallar yalnızca
+ * dashboard'a yüklenseydi kabuk sayfadan sayfaya DEĞİŞİRDİ — istenen tam
+ * tersi: tek bir çerçeve. Bu yüzden partial'ın kendisi basıyor.
+ *
+ * Yükleme sırası: home.css -> BU DOSYA -> $homeExtraCss (home-bento.css).
+ * Yani taban kuralları eziyor ama sayfaya özel katman hâlâ en sonda.
+ *
+ * Renkler token; sabit hex YOK (koyu tema aynı değişkenleri yeniden
+ * tanımlıyor). --bcc-canvas bu iş için theme.css'e eklenmişti.
+ */
+
+/* ---------- 4) Ortak zemin ----------
+   Üst bar, sol panel ve gövde AYNI zemine oturuyor; yalnızca KARTLAR
+   --bcc-surface ile yükseliyor. Önceden üst bar #fff, sol panel #fafafb ve
+   gövde #fff idi — üç ayrı ton, hiçbiri kartı öne çıkarmıyordu. */
+
+body.home-page {
+    background: var(--bcc-canvas);
+}
+
+.home-topbar {
+    background: var(--bcc-canvas);
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+/* Yatay dolgu 0.75rem (12px): gezinme ikonlarının sol kenarını üst bardaki
+   hamburger ikonuyla HİZALAR. 12px panel dolgusu + 10px öğe dolgusu = 22px,
+   hamburger de tam 22px'te (ölçüldü). Eski değerlerle 20px'teydi, yani sol
+   sütun 2px kayıktı. */
+.home-sidebar {
+    background: var(--bcc-canvas);
+    border-right: 1px solid var(--bcc-border);
+    padding: 0.85rem 0.75rem;
+}
+
+/* ---------- 1) Sol gezinme ---------- */
+
+.home-sidenav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Bölümler ve başlıkları */
+
+.home-nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.home-nav-section + .home-nav-section { margin-top: 1.1rem; }
+
+.home-nav-section-label {
+    padding: 0 0.625rem 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+    white-space: nowrap;
+    /* Uzun etiket daraltılmış panelde kırpılırken satır atlamasın. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Hiç yıldızlı base yokken bölümün TAMAMI (başlık dahil) gizlenir.
+   :empty ancak kutunun içinde metin düğümü de yoksa eşleşir — bu yüzden
+   partial'da liste tek satırda, boşluksuz basılıyor. İlk yıldız JS ile
+   eklendiğinde :empty düşer ve bölüm kendiliğinden görünür. */
+.home-nav-section--starred:has(> .home-starred-list:empty) { display: none; }
+
+.home-sidenav-item {
+    padding: 0.5rem 0.625rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--bcc-text-muted);
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+/* İkonlar tek ölçüde ve sabit kutuda: SVG'lerin doğal boyutu 17px ama
+   viewBox'ları farklı optik ağırlıkta çiziyor. Sabit 18x18 kutu, ikon ne
+   olursa olsun metnin AYNI x'te başlamasını garanti eder. */
+.home-sidenav-item > svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--bcc-text-muted);
+    transition: color 0.16s ease;
+}
+
+.home-sidenav-item:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+.home-sidenav-item:hover > svg { color: var(--bcc-text); }
+
+/* Aktif hap: dolgu + ağırlık + ikon rengi birlikte değişir. Yalnızca zemin
+   değiştirmek (eski hâl) 0.9rem/500'de yeterince okunmuyordu. */
+.home-sidenav-item.is-active {
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-weight: 600;
+}
+
+.home-sidenav-item.is-active > svg { color: var(--bcc-accent-strong); }
+
+/* Yıldızlı base kısayolları — kendi bölümünde, gezinme öğelerinden bir
+   kademe hafif. Girinti/dikey çizgi KALDIRILDI: liste artık ayrı bir
+   bölüm, "Yıldızlılar" öğesinin alt dalı değil. */
+.home-starred-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.home-starred-item {
+    padding: 0.4rem 0.625rem;
+    font-size: 0.82rem;
+    font-weight: 450;
+}
+
+.home-starred-item-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    margin: 0 6px 0 6px;
+    border-radius: 50%;
+    background: var(--bcc-border-strong);
+}
+
+.home-starred-item:hover .home-starred-item-dot { background: var(--bcc-text-muted); }
+
+/* ---------- Daraltılmış panel ----------
+   home.css öğe metinlerini ve yıldız listesini zaten gizliyor; bölüm
+   başlıkları YENİ olduğu için burada ele alınıyor — aksi hâlde 56px'lik
+   şeritte "GENEL" yazısı kırpılmış hâlde asılı kalırdı. */
+.home-sidebar.is-collapsed .home-nav-section-label { display: none; }
+.home-sidebar.is-collapsed .home-nav-section + .home-nav-section { margin-top: 0.5rem; }
+
+.home-sidebar.is-collapsed:hover .home-nav-section-label { display: block; }
+.home-sidebar.is-collapsed:hover .home-nav-section + .home-nav-section { margin-top: 1.1rem; }
+
+/* ---------- 1b) Logo ve daraltma düğmesi ---------- */
+
+.home-logo {
+    border-radius: 9px;
+    transition: background-color 0.16s ease;
+}
+
+.home-logo:hover { background: var(--bcc-surface-hover); }
+
+/* İkon düğmeleri (menü, bildirim, görünüm modu) tek bir yüzey dilinde:
+   şeffaf duruyor, hover'da yumuşak dolgu, basılıyken hafif çöküyor. */
+.home-icon-btn {
+    border-radius: 8px;
+    color: var(--bcc-text-muted);
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.home-icon-btn:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+.home-icon-btn:active { transform: translateY(1px); }
+
+/* ---------- 2) Global arama ----------
+   Kart yüzeyiyle aynı token: --bcc-surface + --bcc-border. Odakta/açıkken
+   accent kenarlık + 4px yumuşak halka ("backdrop glow"). */
+
+.home-search-trigger {
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 10px;
+    padding: 0.45rem 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.home-search-trigger:hover {
+    background: var(--bcc-surface);
+    border-color: var(--bcc-border-strong);
+}
+
+.home-search[open] > .home-search-trigger,
+.home-search-trigger:focus-visible {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 4px var(--bcc-accent-soft);
+}
+
+.home-search-trigger-label {
+    font-size: 0.86rem;
+    letter-spacing: -0.01em;
+}
+
+/* Arama ikonu sabit gri (#8a8a8e) basılıyor; koyu temada zeminle çakışmasın
+   diye currentColor'a çevriliyor — SVG stroke'u "currentColor" değil sabit
+   olduğu için renk buradan sürülemez, bu yüzden opacity ile dengeleniyor. */
+.home-search-trigger svg { opacity: 0.75; }
+
+.home-search-kbd {
+    border-radius: 5px;
+    border-color: var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* ---------- 2b) Bildirim + avatar ---------- */
+
+.home-avatar {
+    border: 1px solid var(--bcc-border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.home-avatar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.22);
+}
+
+/* Açılır menüler kartlarla AYNI kenarlık/gölge/yarıçap dilinde. */
+.home-account-menu,
+.home-search-popover,
+.home-filter-menu {
+    border-radius: 14px;
+    border: 1px solid var(--bcc-border);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- 3) Sayfa başlığı ve araç çubuğu ---------- */
+
+.home-main-header h1 {
+    letter-spacing: -0.02em;
+}
+
+/* Araç çubuğu kontrolleri gerçek bir yüzey kazanıyor: eskiden çıplak
+   metin+ikon olarak boşlukta duruyorlardı. */
+.home-filter-btn,
+.home-toolbar .home-icon-btn {
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--bcc-text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.home-filter-btn:hover,
+.home-toolbar .home-icon-btn:hover {
+    border-color: var(--bcc-border-strong);
+    background: var(--bcc-surface);
+}
+
+.home-filter[open] > .home-filter-btn {
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 4px var(--bcc-accent-soft);
+}
+
+/* Görünüm modu ikonları kare kalmalı — yukarıdaki 6px/12px yatay dolgu onları
+   dikdörtgene çevirirdi. */
+.home-toolbar .home-icon-btn {
+    padding: 6px;
+    width: 30px;
+    height: 30px;
+}
+
+/* Segment hissi: iki düğme bitişik, aradaki kenarlık tekilleşiyor. */
+.home-view-toggle {
+    display: flex;
+    gap: 0;
+}
+
+.home-view-toggle .home-icon-btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.home-view-toggle .home-icon-btn:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
+}
+
+/* Seçili mod: accent dolgu + accent ikon. aria-pressed SUNUCUDAN/JS'ten
+   zaten doğru geliyor (home.js), ikinci bir durum bayrağı eklenmedi. */
+.home-toolbar .home-icon-btn[aria-pressed="true"] {
+    background: var(--bcc-accent-soft);
+    border-color: var(--bcc-accent);
+    color: var(--bcc-accent-strong);
+    z-index: 1;
+}
+
+.home-toolbar .home-icon-btn[aria-pressed="true"] svg path,
+.home-toolbar .home-icon-btn[aria-pressed="true"] svg rect {
+    stroke: var(--bcc-accent-strong);
+}
+
+/* ---------- Erişilebilirlik ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .home-icon-btn:active,
+    .home-avatar:hover {
+        transform: none;
+    }
+}

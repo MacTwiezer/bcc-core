@@ -48,3 +48,5 @@ function bcc_asset_url($relativePath)
 }
 
 header('Content-Type: text/html; charset=utf-8');
+
+bcc_touch_user_activity();

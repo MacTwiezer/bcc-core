@@ -1,4 +1,4 @@
--- "Last modified by" (Airtable paritesi, Grup B2): records.updated_at zaten
+-- "Last modified by" (OpsFlow davranışı, Grup B2): records.updated_at zaten
 -- var ama HİÇBİR YAZMA NOKTASI bunu güncellemiyordu (bkz. docs/PROJE-DURUM.md
 -- teşhis notu) — bu migration yalnızca EKSİK OLAN "kim" kolonunu ekliyor,
 -- "ne zaman" için yeni kolon YOK. deleted_by (migrations/012) ile AYNI ilke:

@@ -1,4 +1,4 @@
--- Trash özelliği (Airtable workspace trash referansı): base silme artık
+-- Trash özelliği (OpsFlow workspace trash referansı): base silme artık
 -- gerçek DELETE değil, geri alınabilir soft-delete. deleted_by ON DELETE
 -- SET NULL — mevcut created_by/uploaded_by/audit_log.user_id ile AYNI desen
 -- (silen kullanıcının hesabı silinirse base'in kendisi/trash kaydı bozulmaz,

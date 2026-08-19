@@ -1,5 +1,5 @@
--- BCC-Core — Faz 0 şeması
--- Airtable benzeri EAV (Entity-Attribute-Value) veri modeli.
+-- opsflow.bcccrm.com — Faz 0 şeması
+-- OpsFlow EAV (Entity-Attribute-Value) veri modeli.
 -- Karakter seti: utf8mb4 / utf8mb4_unicode_ci (her yerde, Türkçe karakter desteği için).
 -- Motor: InnoDB (foreign key desteği için).
 --
@@ -36,10 +36,14 @@ CREATE TABLE IF NOT EXISTS users (
     email_verify_token           VARCHAR(64) NULL,
     email_verify_expires_at      DATETIME NULL,
     last_seen_notifications_at  DATETIME NULL,
+    -- Son etkinlik damgası (çevrimiçi göstergesi, bkz. migrations/017).
+    -- src/auth.php:bcc_touch_user_activity() en fazla 60 saniyede bir tazeler.
+    last_activity_at            DATETIME NULL,
     created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
-    KEY idx_users_email_verify_token (email_verify_token)
+    KEY idx_users_email_verify_token (email_verify_token),
+    KEY idx_users_last_activity (last_activity_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
@@ -151,7 +155,7 @@ CREATE TABLE IF NOT EXISTS records (
     position    INT NOT NULL DEFAULT 0,
     created_by  INT UNSIGNED DEFAULT NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- "Last modified time" (Airtable paritesi, Grup B2, migrations/013):
+    -- "Last modified time" (OpsFlow davranışı, Grup B2, migrations/013):
     -- ON UPDATE CURRENT_TIMESTAMP kendisi TEK BAŞINA yeterli değildi — hiçbir
     -- yazma noktası (ör. cell_update.php) bu satırı DOĞRUDAN güncellemiyordu,
     -- yalnızca cell_values'a yazıyordu. Artık bcc_touch_record_modified()
@@ -224,13 +228,13 @@ CREATE TABLE IF NOT EXISTS attachments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
--- comments — kayıt yorumları (Airtable "Comment on records" paritesi, MVP).
+-- comments — kayıt yorumları (OpsFlow "Comment on records" davranışı, MVP).
 -- team_id YOK: KVKK izolasyonu record_id -> records.table_id -> tables_meta.base_id
 -- -> bases.team_id zinciriyle sorgu zamanında türetilir (cell_values/attachments
 -- ile AYNI desen — bkz. bcc_find_record(), src/schema.php).
 -- fk_comments_user ON DELETE SET NULL (CASCADE DEĞİL): account_delete.php gerçek
 -- bir hard-delete yapıyor — bir kullanıcı hesabını silerse yorumları kaybolmamalı
--- (Airtable'ın "deaktif kullanıcının yorumu kalır" davranışı). user_id NULL ise
+-- (OpsFlow'un "deaktif kullanıcının yorumu kalır" davranışı). user_id NULL ise
 -- arayüz "Silinmiş kullanıcı" gösterir. deleted_at ile soft-delete (bases/
 -- attachments ile AYNI desen).
 -- ---------------------------------------------------------------------------
@@ -319,7 +323,7 @@ CREATE TABLE IF NOT EXISTS slack_webhooks (
 -- ---------------------------------------------------------------------------
 -- slack_routing_rules — alan DEĞERİNE göre farklı webhook'a yönlendirme (ör.
 -- "Marka" tekli seçim alanı "Trendyol" ise X kanalı, "Yves Rocher" ise Y kanalı).
--- İlk eşleşen kural (position sırasına göre) kazanır — Airtable'ın "Conditional
+-- İlk eşleşen kural (position sırasına göre) kazanır — OpsFlow'un "Conditional
 -- groups" modeliyle aynı ilke. Hiç kural yoksa/eşleşme olmazsa bcc_find_slack_webhook()
 -- mevcut tablo-özel/ekip-geneli davranışına aynen düşer (geriye dönük uyumlu).
 -- ---------------------------------------------------------------------------

@@ -252,7 +252,7 @@ button {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='9' y1='6' x2='21' y2='6'/%3E%3Cline x1='9' y1='12' x2='21' y2='12'/%3E%3Cline x1='9' y1='18' x2='21' y2='18'/%3E%3Cline x1='4' y1='6' x2='4' y2='6'/%3E%3Cline x1='4' y1='12' x2='4' y2='12'/%3E%3Cline x1='4' y1='18' x2='4' y2='18'/%3E%3C/svg%3E");
 }
 /* created_time/last_modified_time AYNI saat ikonunu paylaşıyor (yeni SVG
-   çizilmedi) — Airtable'da da "Created time"/"Last modified time" ikonları
+   çizilmedi) — OpsFlow'da da "Created time"/"Last modified time" ikonları
    "Time" alanınınkiyle aynı ruhta (saat/zaman damgası). */
 .field-badge--time, .field-type-badge--time,
 .field-badge--created_time, .field-type-badge--created_time,
@@ -282,7 +282,7 @@ button {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/%3E%3C/svg%3E");
 }
 /* autonumber: 'number' ile AYNI kavram ailesinden ama ayırt edilebilir olmalı —
-   "#" işareti + artan bir çubuk (sayaç), Airtable'ın autonumber ikonuyla aynı ruhta. */
+   "#" işareti + artan bir çubuk (sayaç), OpsFlow'un autonumber ikonuyla aynı ruhta. */
 .field-badge--autonumber, .field-type-badge--autonumber {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='8' x2='15' y2='8'/%3E%3Cline x1='3' y1='14' x2='15' y2='14'/%3E%3Cline x1='8' y1='3' x2='6' y2='19'/%3E%3Cline x1='13' y1='3' x2='11' y2='19'/%3E%3Cpolyline points='18 15 21 18 18 21'/%3E%3C/svg%3E");
 }

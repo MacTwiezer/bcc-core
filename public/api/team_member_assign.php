@@ -41,7 +41,7 @@ $myRank = $GLOBALS['BCC_ROLE_RANK'][$myRole];
 $assignableRoles = bcc_assignable_roles($myRank);
 
 try {
-    // Modalın davet kutusu E-POSTA alır (Airtable paritesi), rol satırındaki
+    // Modalın davet kutusu E-POSTA alır (OpsFlow davranışı), rol satırındaki
     // <select> ise doğrudan user_id gönderir. E-posta yolunda kullanıcıyı
     // BURADA çözüyoruz ki istemci bir kullanıcı listesi taşımak zorunda
     // kalmasın ve hata mesajı "hesap yok" ile "yetki yok" arasında ayrışsın.

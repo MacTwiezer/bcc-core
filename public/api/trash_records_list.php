@@ -16,7 +16,7 @@
 // ikinci bir sorgu YAZILMADI, listeleme sorgusunun sonucu yeniden kullanılır.
 // Tetikleme noktası BİLEREK grid.php DEĞİL, bu uçnokta (çöp kutusu açılışı)
 // — grid çok daha sık ziyaret ediliyor, gecikmeli temizlik kabul edilebilir
-// (Airtable'ın kendisi de bunu "bir noktada" arka planda yapıyor).
+// (OpsFlow'un kendisi de bunu "bir noktada" arka planda yapıyor).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -43,7 +43,7 @@ if (!empty($teamIds)) {
     );
 
     // 7 günü geçenler: aynı tarama sonucundan ayıklanır, ikinci bir SELECT
-    // YAZILMAZ. Gerçek DELETE burada DOĞRU ve BEKLENEN — Airtable'ın 7 gün
+    // YAZILMAZ. Gerçek DELETE burada DOĞRU ve BEKLENEN — OpsFlow'un 7 gün
     // sonrası davranışı budur, bu noktadan sonra geri dönüş yok.
     $expiredRows = array();
     $activeRows = array();

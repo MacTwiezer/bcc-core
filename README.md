@@ -1,8 +1,14 @@
-# BCC-Core
+# OpsFlow — opsflow.bcccrm.com
 
-Airtable benzeri iç araç — PHP 7.3 + MariaDB (XAMPP MySQL) + mysqli. BCC şirketi
-için geliştirilen, KVKK ekip izolasyonlu (TY / GULF / ATP), Slack entegrasyonlu
-bir Airtable klonu.
+İç araç — PHP 7.3 + MariaDB (XAMPP MySQL) + mysqli. BCC İletişim için
+geliştirilen, KVKK ekip izolasyonlu (TY / GULF / ATP), Slack entegrasyonlu
+tablo/veritabanı platformu.
+
+> **Ad ve dizin ayrımı:** ürün adı **OpsFlow**, canlı adres
+> **opsflow.bcccrm.com**. Depo dizini (`bcc-core`), veritabanı adı (`bcc_core`),
+> PHP fonksiyon önekleri (`bcc_*`) ve CSS değişkenleri (`--bcc-*`) İÇ
+> TANIMLAYICILARDIR; kullanıcıya hiçbir yerde görünmezler ve bilerek
+> değiştirilmemiştir (bkz. `config/app.php` marka bölümü).
 
 - **Projenin güncel/canlı durumu için:** `docs/PROJE-DURUM.md` — her özellik
   bittiğinde orası güncellenir, bu README güncellenmez. Yeni bir sohbete

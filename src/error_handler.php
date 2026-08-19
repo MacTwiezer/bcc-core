@@ -11,8 +11,8 @@
 // — PHP'nin klasik notice/warning/deprecated mesajları (ör. "Undefined variable",
 // "Undefined array key") bambaşka bir mekanizma ve hiç yakalanmıyordu. Canlı
 // test ile doğrulandı: php.ini'de display_errors etkin olduğu için basit bir
-// notice bile tarayıcıya DOĞRUDAN "Notice: ... in C:\xampp\htdocs\bcc-core\...
-// on line N" biçiminde, TAM SUNUCU DOSYA YOLUYLA birlikte basılıyordu — tam da bu
+// notice bile tarayıcıya DOĞRUDAN "Notice: ... in <DocumentRoot>\src\... on
+// line N" biçiminde, TAM SUNUCU DOSYA YOLUYLA birlikte basılıyordu — tam da bu
 // dosyanın önlemeyi amaçladığı bilgi sızıntısının (dosya yolu + iç kod yapısı)
 // aynısı, farklı bir hata sınıfından. log_errors zaten açık (hatalar sunucu
 // log'una yine düşüyor), yalnızca TARAYICIYA basılması kapatılıyor.

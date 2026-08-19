@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // "Paylaş" modalı (src/partials/share_modal.php) — Airtable'ın
+    // "Paylaş" modalı (src/partials/share_modal.php) — OpsFlow'un
     // Collaborators diyaloğunun karşılığı. Önceden "N kişinin erişimi var"
     // bağlantısı team_members.php'ye YÖNLENDİRİYORDU; artık sayfadan
     // çıkılmadan aynı iş burada yapılıyor.
@@ -241,7 +241,7 @@
                 opt.textContent = r.label;
                 inviteRole.appendChild(opt);
             });
-            // Airtable varsayılanı gibi en dar yetki değil, listenin en
+            // OpsFlow varsayılanı gibi en dar yetki değil, listenin en
             // alt rütbesi seçili gelsin: yanlışlıkla owner atamak yerine
             // bilinçli bir yükseltme gerektirsin.
             if (state.assignable_roles.length) {

@@ -1,6 +1,6 @@
 <?php
 // AJAX uçnoktası: bir Excel (.xlsx) dosyasını mevcut tabloya YENİ kayıtlar
-// olarak aktarır (Airtable'ın sekme dropdown'ındaki "Import data" karşılığı —
+// olarak aktarır (OpsFlow'un sekme dropdown'ındaki "Import data" karşılığı —
 // üstüne yazmaz, ekler). Sekme dropdown'ından çağrılır (public/grid.php,
 // assets/grid-table-data.js). Format: view_export_xlsx.php'nin ÜRETTİĞİ AYNI
 // düzen (ilk satır alan adları) — dış kütüphane YOK, src/xlsx_reader.php

@@ -209,7 +209,7 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
 
 /* ---- Grid (Faz 3) ---------------------------------------------------- */
 
-/* Tam genişlik/yükseklik (Airtable "edge-to-edge"). Bu kutu YALNIZCA
+/* Tam genişlik/yükseklik (OpsFlow "edge-to-edge"). Bu kutu YALNIZCA
    grid.php'de var (interface.php'de yalnızca bir yorumda geçiyor), bu yüzden
    kural doğrudan burada tam-kanama olacak şekilde tanımlandı; ayrı bir
    modifier sınıfı yok.
@@ -238,7 +238,7 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
        position:fixed. Yani hiçbir mevcut öğenin koordinat kaynağı değişmiyor. */
     position: relative;
     /* Kalın/gri, işletim sistemi varsayılanı sürükleme çubuğu yerine ince,
-       Airtable tarzı bir kaydırma çubuğu (bkz. ::-webkit-scrollbar altta) —
+       OpsFlow bir kaydırma çubuğu (bkz. ::-webkit-scrollbar altta) —
        Firefox için standart karşılığı. */
     scrollbar-width: thin;
     scrollbar-color: var(--bcc-border-strong) transparent;
@@ -267,10 +267,10 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     background: transparent;
 }
 
-/* Yoğunluk (Airtable paritesi): ölçüler rem DEĞİL px. rem, kullanıcının
+/* Yoğunluk (OpsFlow davranışı): ölçüler rem DEĞİL px. rem, kullanıcının
    tarayıcı yazı boyu ayarıyla ölçekleniyor ve "32px satır" hedefi o zaman
    tutmuyor; veri ızgarasında satır adımının sabit kalması okunabilirlikten
-   önce geliyor (Airtable de sabit px kullanır). */
+   önce geliyor (OpsFlow de sabit px kullanır). */
 table.grid {
     border-collapse: separate;
     border-spacing: 0;
@@ -411,7 +411,7 @@ table.grid .grid-rownum {
        zaten hallediyor, dokunma" diyordu, ama border-right hep none'du — yatay
        kaydırmada donuk satır-no sütununun sağında HİÇBİR ayraç/gölge yoktu,
        arkadan kayan sütun içeriği ona yapışık/üst üste biniyormuş gibi
-       görünüyordu. .grid-frozen-edge'in kullandığı sert border yerine Airtable
+       görünüyordu. .grid-frozen-edge'in kullandığı sert border yerine OpsFlow
        referansındaki gibi yumuşak bir "kaldırma" gölgesi — donuk sütun az da
        olsa altındaki içerikten ayrışıyor. */
     box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.18);
@@ -618,7 +618,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     padding: 1rem 1.1rem;
 }
 
-/* Airtable parite: kutular arası dikey boşluk önceki 0.9rem'den daha
+/* OpsFlow davranış: kutular arası dikey boşluk önceki 0.9rem'den daha
    ferah (bkz. PROJE-DURUM.md "Kayıt detay modalı" notu). */
 .grid-detail-field { margin-bottom: 1.4rem; }
 
@@ -635,7 +635,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
    ikinci bir boşluk kuralı eklenmiyor, ikon+etiket arası tek kaynaktan geliyor. */
 .grid-detail-field-label .field-badge { flex-shrink: 0; }
 
-/* Airtable parite: birincil alan (index 0, JS'te ayrılıyor) tam genişlik/
+/* OpsFlow davranış: birincil alan (index 0, JS'te ayrılıyor) tam genişlik/
    etiket-üstte kalır; diğer TÜM alanlar sol dar etiket / sağ değer iki
    sütununa geçer. */
 .grid-detail-field-inline {
@@ -677,7 +677,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-size: 0.9rem;
 }
 
-/* Airtable parite: birincil alanın (grid-detail-field-primary, JS'te index
+/* OpsFlow davranış: birincil alanın (grid-detail-field-primary, JS'te index
    0'a veriliyor) DEĞERİ öne çıkar — etiket (.grid-detail-field-label)
    BİLEREK burada hedeflenmiyor, küçük/gri kalmaya devam ediyor. Kutunun
    kendisi (border/padding) diğer alanlarla tutarlı kalsın diye burada
@@ -1021,7 +1021,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     }
 }
 
-/* ---------- "Kaydı gönder" modalı (Airtable "Send record" paritesi) ---------- */
+/* ---------- "Kaydı gönder" modalı (OpsFlow "Send record" davranışı) ---------- */
 
 .grid-send-overlay {
     position: fixed;
@@ -1990,7 +1990,7 @@ td.cell-flash-error {
     min-width: 320px;
 }
 
-/* Siralama paneli kurallari dosyanin SONUNA tasindi (Airtable paritesi
+/* Siralama paneli kurallari dosyanin SONUNA tasindi (OpsFlow davranışı
    yeniden tasarimi) — eski .sort-row/.sort-actions kurallari kaldirildi. */
 
 .grid-row-count {
@@ -2013,7 +2013,7 @@ td.cell-flash-error {
     min-width: 420px;
 }
 
-/* Filtre paneli kurallari dosyanin SONUNA tasindi (Airtable paritesi
+/* Filtre paneli kurallari dosyanin SONUNA tasindi (OpsFlow davranışı
    yeniden tasarimi). .filter-logic-row KALDIRILDI: alt taraftaki radyo
    dugmeleri yerini 2. satirdaki bagac <select>'ine birakti. */
 
@@ -2119,7 +2119,7 @@ td.cell-flash-error {
     max-width: 90vw;
 }
 
-/* ---------- D1 "Paylaş" popup (Airtable Share paritesi) ----------
+/* ---------- D1 "Paylaş" popup (OpsFlow Share davranışı) ----------
    Konumlandırma/kutu stili yukarıdaki .share-popover-form ile PAYLAŞILIYOR
    (kopya yok); burada yalnızca içeriğe özgü kurallar var. */
 
@@ -2321,7 +2321,7 @@ td.cell-flash-error {
 }
 
 /* .hide-field-row'un YERLESIMI .hide-fields-form ile nitelenmis olarak
-   asagida (Airtable paritesi bolumu). Toggle gorseli (asagidaki
+   asagida (OpsFlow davranışı bolumu). Toggle gorseli (asagidaki
    .hide-field-toggle kurallari) DEGISMEDI. */
 
 .hide-field-toggle-input {
@@ -2386,7 +2386,7 @@ td.cell-flash-error {
     border-top: 1px solid var(--bcc-border);
 }
 
-/* ---------- "Grupla" paneli (Airtable "Group" paritesi) ---------------------
+/* ---------- "Grupla" paneli (OpsFlow "Group" davranışı) ---------------------
    Eskiden İKİ AYRI görünüm vardı: gruplama yokken bir alan listesi, varken
    <select>'li bir form. Artık TEK panel: üstte aktif seviyeler (rozet + yön
    düğmesi + kaldır), altta her zaman görünen aranabilir alan listesi.
@@ -2925,7 +2925,7 @@ table.grid.wrap-headers thead th {
     color: var(--bcc-text-muted);
 }
 
-/* ---------- "Alanları gizle" paneli (Airtable "Hide fields" paritesi) --------
+/* ---------- "Alanları gizle" paneli (OpsFlow "Hide fields" davranışı) --------
    ⚠️ KAPSAM UYARISI: .hide-fields-search ve .hide-fields-actions sınıflarını
    GRUPLAMA paneli de kullanıyor (grid.php'deki .group-form). Bu yüzden aşağıdaki
    yeni görünüm kuralları .hide-fields-form ile NİTELENDİ — çıplak yazılsalardı
@@ -3004,7 +3004,7 @@ table.grid.wrap-headers thead th {
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    /* Airtable'daki gibi daha nefesli satır + tam genişlikte hover alanı. */
+    /* OpsFlow'daki gibi daha nefesli satır + tam genişlikte hover alanı. */
     padding: 0.4rem 0.45rem;
     border-radius: 7px;
     font-size: 0.87rem;
@@ -3112,7 +3112,7 @@ table.grid.wrap-headers thead th {
 .hide-fields-form.is-pending .hide-fields-list { opacity: 0.6; }
 .hide-fields-form.is-pending .hide-fields-actions { pointer-events: none; opacity: 0.6; }
 
-/* ---------- Filtre paneli (Airtable "Filter" paritesi) ----------------------
+/* ---------- Filtre paneli (OpsFlow "Filter" davranışı) ----------------------
    Sunucu sözleşmesi DEĞİŞMEDİ (filter_field_N/filter_cond_N/filter_value_N +
    tek filter_logic); burada yalnızca panelin görünümü var.
 
@@ -3381,7 +3381,7 @@ a.filter-btn:hover {
     .filter-row { min-width: 460px; }
 }
 
-/* ---------- Sıralama paneli (Airtable "Sort" paritesi) ---------------------
+/* ---------- Sıralama paneli (OpsFlow "Sort" davranışı) ---------------------
    Sunucu sözleşmesi (sort_field_N / sort_dir_N) DEĞİŞMEDİ; burada yalnızca
    panelin görünümü var. Satırlar IZGARA: sıra rozeti, tip ikonu, alan, yön ve
    sil hücreleri satırlar arasında BİREBİR hizalı. Eskiden flex + flex:1 vardı

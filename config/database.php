@@ -1,5 +1,5 @@
 <?php
-// BCC-Core — mysqli veritabanı bağlantısı
+// opsflow.bcccrm.com — mysqli veritabanı bağlantısı
 // Ortam: MariaDB 10.4 (XAMPP MySQL), 127.0.0.1:3306, DB: bcc_core, user: root, şifre: yok.
 // Bu varsayılanlar YALNIZCA bu makine içindir — farklı bir MySQL/MariaDB kurulumu
 // (başka kullanıcı/şifre/port) kullanan geliştiriciler bunları DEĞİŞTİRMEK yerine

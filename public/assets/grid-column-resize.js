@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    // Sütun genişliğini SÜTUN AYIRAÇ ÇİZGİSİNDEN sürükleyerek ayarlama (Airtable
-    // paritesi). Kalıcılık views.config.column_widths (api/view_config_update.php,
+    // Sütun genişliğini SÜTUN AYIRAÇ ÇİZGİSİNDEN sürükleyerek ayarlama (OpsFlow
+    // davranışı). Kalıcılık views.config.column_widths (api/view_config_update.php,
     // frozen_column_count ile AYNI oku-değiştir-yaz mekanizması) + localStorage
     // yedeği (aşağıda).
     //

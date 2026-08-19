@@ -1,10 +1,10 @@
--- comments — kayıt yorumları (Airtable "Comment on records" paritesi, MVP).
+-- comments — kayıt yorumları (OpsFlow "Comment on records" davranışı, MVP).
 -- team_id YOK: KVKK izolasyonu record_id -> records.table_id -> tables_meta.base_id
 -- -> bases.team_id zinciriyle sorgu zamanında türetilir (cell_values/attachments
 -- ile AYNI desen — bkz. bcc_find_record(), src/schema.php).
 -- fk_comments_user ON DELETE SET NULL (CASCADE DEĞİL): account_delete.php artık
 -- gerçek bir hard-delete yapıyor — bir kullanıcı hesabını silerse yorumları
--- kaybolmamalı (Airtable'ın "deaktif kullanıcının yorumu kalır" davranışı).
+-- kaybolmamalı (OpsFlow'un "deaktif kullanıcının yorumu kalır" davranışı).
 -- user_id NULL ise arayüz "Silinmiş kullanıcı" gösterir.
 -- deleted_at ile soft-delete: bases/attachments ile AYNI desen.
 CREATE TABLE IF NOT EXISTS comments (

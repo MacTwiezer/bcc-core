@@ -1,5 +1,5 @@
 <?php
-// AJAX uçnoktası: "Kaydı sil" (Airtable soft-delete/çöp kutusu paritesi,
+// AJAX uçnoktası: "Kaydı sil" (OpsFlow soft-delete/çöp kutusu davranışı,
 // Adım 3b — SADECE işaretleme, sorguların bunu gizlemesi Adım 3c'de).
 // comment_add.php/record_send.php/record_duplicate.php ile AYNI desen,
 // team_id record_id üzerinden bcc_find_record() ile DB'den (istekten değil).

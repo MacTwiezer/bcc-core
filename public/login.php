@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>BCC-Core — Giriş</title>
+<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Giriş', ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <img src="/assets/logo.png" alt="BCC-Core">
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Hoş geldiniz</h1>
@@ -78,6 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </button>
                 </div>
             </div>
+            <p class="login-forgot">
+                <a href="/forgot-password.php">Şifremi unuttum?</a>
+            </p>
             <button type="submit" class="login-submit">Giriş yap</button>
         </form>
 
@@ -127,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <div class="login-legal">
-            <p class="login-tagline">BCC-Core — ekiplerin verilerini güvenle yönettiği iç platform.</p>
+            <p class="login-tagline"><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, "UTF-8"); ?> — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>

@@ -1,6 +1,6 @@
 <?php
 // AJAX uçnoktası: tablodaki TÜM kayıtları siler, alan/kolon yapısını KORUR
-// (Airtable'ın "Clear data" karşılığı — "Delete table"dan farklı, tablo kalır,
+// (OpsFlow'un "Clear data" karşılığı — "Delete table"dan farklı, tablo kalır,
 // yalnızca içi boşalır). Sekme dropdown'ından çağrılır (public/grid.php,
 // assets/grid-table-data.js).
 // Güvenlik: CSRF + require_role('editor') + table_id doğrulaması.

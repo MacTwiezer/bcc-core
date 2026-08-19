@@ -37,14 +37,14 @@ $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
 $safeLink = htmlspecialchars($verifyLink, ENT_QUOTES, 'UTF-8');
 
 $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
-    . '<p style="margin: 0 0 14px;">BCC-Core hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
+    . '<p style="margin: 0 0 14px;">opsflow.bcccrm.com hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
     . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
 $noteHtml = '<p style="margin: 12px 0 0;">Buton çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>'
     . '<a href="' . $safeLink . '" style="color: #2d7ff9; word-break: break-all;">' . $safeLink . '</a></p>'
     . '<p style="margin: 12px 0 0;">Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>';
 
 $html = bcc_mail_html_shell('Hesabınızı etkinleştirin', $introHtml, 'Hesabımı Etkinleştir', $verifyLink, $noteHtml);
-$text = "Merhaba {$fullName},\n\nBCC-Core hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
+$text = "Merhaba {$fullName},\n\nopsflow.bcccrm.com hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
     . $verifyLink . "\n\nBu bağlantı 24 saat geçerlidir.\n\nBu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
     . bcc_mail_text_footer();
 
@@ -99,7 +99,7 @@ check('B) duz metin parcasi HTML den turetilmemis (elle yazilmis)',
 check('B) mailer multipart destekliyor (AltBody)',
     strpos(file_get_contents(__DIR__ . '/../src/mailer.php'), '$mail->AltBody = $bodyText;') !== false);
 check('B) konu sade (uzun tire / gereksiz onek yok)',
-    strpos('BCC-Core hesabınızı etkinleştirin', '—') === false);
+    strpos('opsflow.bcccrm.com hesabınızı etkinleştirin', '—') === false);
 
 // =====================================================================
 // C) SABLON ICERIGI: logo + iletisim linkleri
@@ -199,7 +199,7 @@ echo "\nHTML onizleme: " . realpath($previewPath) . "\n";
 if (isset($argv[1]) && $argv[1] !== '') {
     $to = $argv[1];
     echo "\n--- F) GERCEK gonderim: {$to} ---\n";
-    $ok = bcc_send_mail($to, 'BCC-Core hesabınızı etkinleştirin', $text, $html);
+    $ok = bcc_send_mail($to, 'opsflow.bcccrm.com hesabınızı etkinleştirin', $text, $html);
     check('F) bcc_send_mail true dondu', $ok === true);
     if (!$ok) {
         $errors = glob(__DIR__ . '/../storage/mail/*SMTP*');

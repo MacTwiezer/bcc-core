@@ -41,7 +41,7 @@ function bcc_send_recipient_error($email)
 }
 
 // "Tablo düzenini kullan" AÇIK: tek satırlık bir tablo (başlık satırı =
-// etiketler, veri satırı = değerler) — Airtable'daki grid görünümünün
+// etiketler, veri satırı = değerler) — OpsFlow'daki grid görünümünün
 // minimal karşılığı. KAPALI: alt alta liste (etiket kalın, değer altında).
 // İkisi de preview_fields'ı (istemcinin ÇIKARDIĞI, burada yeniden
 // üretilmeyen veri) yalnızca escape'leyip biçimlendirir.

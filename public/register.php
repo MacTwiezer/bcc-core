@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // türetilmiyor) — multipart'ın text/plain tarafı da okunaklı olsun.
             // Sadece-HTML mail spam puanını yükseltiyor, bu yüzden ikisi de var.
             $bodyText = "Merhaba {$fullName},\n\n"
-                . "BCC-Core hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
+                . "opsflow.bcccrm.com hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
                 . $verifyLink . "\n\n"
                 . "Bu bağlantı 24 saat geçerlidir.\n\n"
                 . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
 
             $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
-                . '<p style="margin: 0 0 14px;">BCC-Core hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
+                . '<p style="margin: 0 0 14px;">opsflow.bcccrm.com hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
                 . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
 
             // Ham bağlantı ARTIK burada biçimlenmiyor: şablona $fallbackUrl
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $verifyLink
             );
 
-            // Konu sade ve net: eski "BCC-Core — e-postanızı doğrulayın"daki
+            // Konu sade ve net: eski "opsflow.bcccrm.com — e-postanızı doğrulayın"daki
             // uzun tire ve ürün öneki spam filtrelerinde gereksiz gürültüydü.
             //
             // TEK ÇAĞRI, TEK GÖNDERİM: $skipVerificationMail yalnızca yukarıdaki
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // yeniden göndermesini de engelliyor — iki koruma birbirini
             // tamamlıyor, birbirinin yerine geçmiyor.
             if (!$skipVerificationMail) {
-                bcc_send_mail($email, 'BCC-Core hesabınızı etkinleştirin', $bodyText, $bodyHtml);
+                bcc_send_mail($email, 'opsflow.bcccrm.com hesabınızı etkinleştirin', $bodyText, $bodyHtml);
             }
 
             header('Location: /login.php?registered=1');
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>BCC-Core — Kayıt ol</title>
+<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Kayıt ol', ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <img src="/assets/logo.png" alt="BCC-Core">
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Kayıt ol</h1>
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </p>
 
         <div class="login-legal">
-            <p class="login-tagline">BCC-Core — ekiplerin verilerini güvenle yönettiği iç platform.</p>
+            <p class="login-tagline">opsflow.bcccrm.com — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>

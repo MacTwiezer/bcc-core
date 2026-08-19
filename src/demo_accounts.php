@@ -10,13 +10,13 @@
 // "Creator" hakkında (bilinçli karar, kullanıcı onayladı)
 // ---------------------------------------------------------------------------
 // team_members.role sabit bir ENUM'dur: ('owner','editor','commenter','viewer')
-// — 'creator' DİYE BİR ROL YOK ve eklenmedi (DDL yok). Airtable'ın izin
+// — 'creator' DİYE BİR ROL YOK ve eklenmedi (DDL yok). OpsFlow'un izin
 // matrisinde Owner ve Creator, "Add and delete bases in the shared workspace"
 // satırında AYNI hücreyi paylaşır (ikisi de ✅); bu uygulamada o ikilinin
 // karşılığı tek 'owner' rolüdür (bkz. src/auth.php bcc_can_manage_bases()).
 // Bu yüzden creator@bcc.local rolü de 'owner'dır ve owner@bcc.local ile
 // DAVRANIŞ OLARAK BİREBİR AYNIDIR — ayrı bir yetki seviyesi test etmez,
-// yalnızca "Airtable'daki Creator bizde Owner'a denk düşüyor" eşlemesini
+// yalnızca "OpsFlow'daki Creator bizde Owner'a denk düşüyor" eşlemesini
 // ekranda görünür kılar. Gerçekten FARKLI davranan dördüncü bir seviye test
 // etmek istenirse 'commenter' rolü kullanılmalıdır.
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ function bcc_demo_password()
 }
 
 // Tüm demo hesapları. 'role' değeri team_members.role ENUM'undaki GERÇEK
-// değerdir; 'label' yalnızca ekranda görünen etikettir (Airtable adlandırması).
+// değerdir; 'label' yalnızca ekranda görünen etikettir (OpsFlow adlandırması).
 //
 // Şifre yerelde tanımlı değilse BOŞ dizi döner (yukarıdaki nota bakın).
 function bcc_demo_accounts()
@@ -78,10 +78,10 @@ function bcc_demo_accounts()
             'email' => 'creator@bcc.local',
             'password' => $password,
             'full_name' => 'Demo Creator',
-            // Airtable Creator -> bu uygulamada 'owner' (yukarıdaki nota bakın).
+            // OpsFlow Creator -> bu uygulamada 'owner' (yukarıdaki nota bakın).
             'role' => 'owner',
             'label' => 'Creator',
-            'hint' => "Airtable'da Creator = bizde Owner",
+            'hint' => "OpsFlow'da Creator = bizde Owner",
         ),
         array(
             'email' => 'editor@bcc.local',

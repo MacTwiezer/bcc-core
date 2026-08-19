@@ -11,7 +11,7 @@
 //     kuralları position sırasına göre dener; kaydın kuralın alanındaki
 //     DEĞERİ (cell_values.value_text) kuralın beklediği değerle eşleşirse
 //     (operator'e göre) o kuralın webhook'u döner. İLK EŞLEŞEN kazanır
-//     (Airtable'ın "Conditional groups" modeliyle aynı ilke) — sonraki
+//     (OpsFlow'un "Conditional groups" modeliyle aynı ilke) — sonraki
 //     kurallar hiç değerlendirilmez.
 // (2) Hiçbir kural yoksa/eşleşmezse (ya da $recordId hiç verilmemişse) —
 //     ESKİ davranışa aynen düşülür: tablo-özel bir webhook varsa o, yoksa
@@ -336,7 +336,7 @@ function bcc_slack_send_test($webhookId, $teamId, $userFullName = null)
     }
 
     $text = "✅ *Slack Integration Connected Successfully*\n"
-        . "BCC-Core bu kanala bağlandı. Bu bir test mesajıdır.\n";
+        . bcc_brand_name() . " bu kanala bağlandı. Bu bir test mesajıdır.\n";
     if ($row['channel_name']) {
         $text .= 'Kanal: ' . bcc_slack_escape($row['channel_name']) . "\n";
     }

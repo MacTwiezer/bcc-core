@@ -15,7 +15,7 @@ $success = null;
 // tablo altındaki "İşlemler" (bulk) menüsü AYNI action isimlerini ve AYNI
 // user_ids[] listesini POST eder, tek yerde işlenir (iki ayrı uç nokta yok).
 // Admin'in kendi hesabını admin'likten düşürmesi / pasif yapması KASITLI
-// olarak engellenir (Airtable admin panelindeki aynı kural), sessizce
+// olarak engellenir (OpsFlow admin panelindeki aynı kural), sessizce
 // listeden çıkarılır — işlem geri kalan seçili kullanıcılar için devam eder.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
@@ -104,11 +104,51 @@ foreach ($memberRows as $row) {
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
-$homePageTitle = 'BCC-Core — Admin';
+$homePageTitle = bcc_brand_domain() . ' — Admin';
 require __DIR__ . '/../../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">
             <h1>Admin</h1>
+        </div>
+
+        <?php
+        // Şu an çevrimiçi olanlar. Üst bardaki rozet yalnızca SAYIYI gösteriyor;
+        // burada KİM olduğu listeleniyor — admin için asıl değerli olan bu.
+        //
+        // bcc_online_users() LIMIT KULLANMAZ (bkz. src/auth.php): son
+        // BCC_PRESENCE_WINDOW_MINUTES dakikada etkin olan herkes döner. Sayı da
+        // count($bccOnlineUsers)'tan geliyor, ayrı bir sorgudan değil — iki
+        // gösterge birbirinden ayrışamaz.
+        $bccOnlineUsers = bcc_online_users();
+        ?>
+        <div class="settings-card">
+            <div class="admin-section-header">
+                <h2>Şu an çevrimiçi</h2>
+                <span class="admin-section-count"><?php echo count($bccOnlineUsers); ?></span>
+            </div>
+
+            <?php if (!$bccOnlineUsers): ?>
+                <?php // Boş <ul> basıp kullanıcıyı "bozuk mu?" diye düşündürmek
+                      // yerine açık bir cümle. ?>
+                <p class="admin-muted">Son <?php echo (int) BCC_PRESENCE_WINDOW_MINUTES; ?> dakika içinde etkin olan kullanıcı yok.</p>
+            <?php else: ?>
+                <ul class="admin-online-list">
+                    <?php foreach ($bccOnlineUsers as $bccOu): ?>
+                        <li class="admin-online-item">
+                            <div class="admin-avatar"><?php echo htmlspecialchars(bcc_user_initial($bccOu), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div>
+                                <div class="admin-user-name"><?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="admin-user-email"><?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            </div>
+                            <?php // bcc_time_ago() referans saati bcc_db_now()'dan, yani
+                                  // VERİTABANINDAN alıyor; last_activity_at da NOW() ile
+                                  // yazılıyor. Bu ortamda PHP UTC / MySQL +03 çalıştığı için
+                                  // bu eşleşme şart, yoksa herkes "3 saat önce" görünürdü. ?>
+                            <span class="admin-online-when"><?php echo htmlspecialchars(bcc_time_ago($bccOu['last_activity_at']), ENT_QUOTES, 'UTF-8'); ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         </div>
 
         <div class="settings-card">

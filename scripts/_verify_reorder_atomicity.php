@@ -2,7 +2,7 @@
 // bcc_reorder_sibling() + rename/move aksiyonlarinin ATOMIKLIGI.
 //
 // ⚠️ /browse KULLANILMAZ — sunucu-tarafli HTTP (gercek oturum, gercek uc noktalar).
-// ⚠️ IZOLE: kendi test base'ini yaratir; GERCEK Bcc-Core base'ine (15) dokunmaz,
+// ⚠️ IZOLE: kendi test base'ini yaratir; GERCEK uretim base'ine (15) dokunmaz,
 //    once/sonra sayaclariyla kanitlanir.
 //
 // EN KRITIK TEST: "yarim takas" senaryosu. bcc_reorder_sibling() IKI ayri UPDATE

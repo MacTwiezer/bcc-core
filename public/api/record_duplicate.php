@@ -1,5 +1,5 @@
 <?php
-// AJAX uçnoktası: "Kaydı çoğalt" (Airtable "Duplicate record" paritesi).
+// AJAX uçnoktası: "Kaydı çoğalt" (OpsFlow "Duplicate record" davranışı).
 // record_add.php ile AYNI iskelet + "araya ekleme" (position kaydırma)
 // mantığı — çoğaltma özünde "değerleri önceden dolu, orijinalin hemen
 // altına eklenen yeni kayıt". Güvenlik: comment_add.php ile AYNI desen,
@@ -19,7 +19,7 @@
 //     Yeni satırın kendi created_by/created_at'i INSERT'te zaten tazedir.
 //   * autonumber (Grup C2) — değeri cell_values'ta GERÇEKTEN var, yani toplu
 //     kopya onu SESSİZCE TAŞIRDI. Kasıtlı karar: kopya YENİ bir numara alır
-//     (Airtable "her kayıt kendine özgü" mantığı; iki kayıt aynı autonumber'ı
+//     (OpsFlow "her kayıt kendine özgü" mantığı; iki kayıt aynı autonumber'ı
 //     paylaşırsa "tekil kimlik" amacı bozulur). Bu yüzden $excludeIds'e eklenip
 //     kopya sonrası bcc_assign_autonumbers() ile taze numara veriliyor.
 //

@@ -1,4 +1,4 @@
-/* Airtable Home benzeri panel görünümü — sadece dashboard.php tarafından kullanılır. */
+/* OpsFlow Home benzeri panel görünümü — sadece dashboard.php tarafından kullanılır. */
 
 * { box-sizing: border-box; }
 
@@ -35,8 +35,9 @@ a { text-decoration: none; color: inherit; }
 
 /* Üst barın sol köşesindeki "Ana sayfa" düğmesi — içinde marka logosu.
    YÜKSEKLİK sabit (32px, yanındaki .home-icon-btn ile aynı dokunma hedefi),
-   GENİŞLİK auto: logo 94x44 yani ~2.14:1, kare bir kutuya sıkıştırılsaydı
-   ezilirdi. flex-shrink:0 — .home-topbar-left daralsa bile logo sıkışmaz. */
+   GENİŞLİK auto: kelime işareti 150x32 yani ~4.7:1, kare bir kutuya
+   sıkıştırılsaydı ezilirdi. flex-shrink:0 — .home-topbar-left daralsa bile
+   logo sıkışmaz. */
 .home-logo {
     height: 32px;
     width: auto;
@@ -47,6 +48,11 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
     border-radius: 6px;
     transition: background 0.12s ease;
+    /* Kelime işareti currentColor ile çizilir (bkz. src/partials/brand_logo.php)
+       — rengi BURADAN devralır, böylece koyu temada da okunur kalır. Bağlantı
+       olduğu için varsayılan link rengini almasın diye açıkça metin rengi. */
+    color: var(--bcc-text);
+    text-decoration: none;
 }
 
 /* Ölçü YALNIZCA yükseklikten sürülür; width:auto en-boy oranını korur, yani
@@ -55,11 +61,19 @@ a { text-decoration: none; color: inherit; }
    + ~51px logo = ~95px, .home-topbar-left'in 240px'inin çok altında.
    display:block: satır içi görselin taban çizgisi altında bıraktığı boşluğu
    kaldırır (kutu tam ortalanmış görünsün). */
-.home-logo img {
+.home-logo img,
+.home-logo svg {
     display: block;
     height: 24px;
     width: auto;
     max-width: 100%;
+}
+
+/* SVG'yi saran <span aria-hidden> flex akışında fazladan satır yüksekliği
+   getirmesin — kutu tam ortalanmış kalsın. */
+.home-logo > span {
+    display: flex;
+    align-items: center;
 }
 
 .home-logo:hover {
@@ -117,7 +131,7 @@ a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
 }
 
-/* Ctrl+K popover — Airtable tarzı: sayfanın üstünde sabit konumlu,
+/* Ctrl+K popover — OpsFlow: sayfanın üstünde sabit konumlu,
    arkası kararmış (overlay) yüzen panel. <details> açma/kapama +
    dışarı-tık deseni #home-filter ile aynı (bkz. home.js). */
 .home-search-overlay {
@@ -407,7 +421,7 @@ button.home-search-result {
 
 .bcc-account-menu-check.is-active { display: block; }
 
-/* Trash modalı — Airtable workspace trash referansı, home/gs/if 3
+/* Trash modalı — OpsFlow workspace trash referansı, home/gs/if 3
    prefix'inde de AYNI görünüm (sayfa-geneli overlay, tema/renk farkı
    gerekmiyor), bu yüzden tek yerde (home.css) tanımlı. */
 .bcc-trash-overlay {
@@ -567,7 +581,7 @@ button.home-search-result {
     transition: width 0.15s ease;
 }
 
-/* Daraltılmış hal: tamamen kaybolmak yerine ikon şeridi (Airtable referansı).
+/* Daraltılmış hal: tamamen kaybolmak yerine ikon şeridi (OpsFlow davranışı).
    Menü yazıları ve yıldızlı base alt listesi gizlenir, yalnızca ikonlar kalır. */
 .home-sidebar.is-collapsed {
     width: 56px;
@@ -873,7 +887,7 @@ html.home-view-list .home-base-role,
     gap: 0.25rem;
 }
 
-/* Yıldız butonu — Airtable referansı çıplak ikon (kutu/arka plan/gölge YOK),
+/* Yıldız butonu — OpsFlow tasarımında çıplak ikon (kutu/arka plan/gölge YOK),
    ⋯ butonundan (aşağıda) kasıtlı olarak ayrı tutulur. Akıştan çıkarılıp
    (position:absolute) varsayılan olarak ⋯ ile AYNI konuma (actions
    kutusunun sağ üst köşesi) oturtulur — hover olmadan görünürken (starred)
@@ -1511,7 +1525,7 @@ a.ws-detail-btn:hover {
 /* .tm-msg-error/-success KALDIRILDI (ölü kod denetimi): team_members.php
    hata/başarı mesajlarını ortak flash partial'ı ile basıyor. */
 
-/* ---------- team_members.php — görsel 2 (Airtable "Collaborators" tam paneli):
+/* ---------- team_members.php — görsel 2 (OpsFlow "Collaborators" tam paneli):
    arama/filtre/Excel indir toolbar + toplu seçim + tablo. .ws-detail'in 640px max-width'i
    5 kolonlu bir tablo için dar kalıyor, .tm-detail ile genişletiliyor. */
 
@@ -1899,7 +1913,7 @@ a.ws-detail-btn:hover {
 .account-row-form { display: flex; flex-direction: column; gap: 0.5rem; }
 .account-row-form[hidden] { display: none; }
 
-/* Ad Soyad/E-posta gibi TEK alanlı formlar — Airtable referansı: input +
+/* Ad Soyad/E-posta gibi TEK alanlı formlar — OpsFlow davranışı: input +
    Kaydet/İptal AYNI satırda, tek input veya alt alta 3 alanlı Şifre
    formunun (.account-row-form, DEĞİŞMEDİ) aksine ayrı bir "form" hissi
    vermez. Şifre/Hesap Sil formları bu class'ı KULLANMAZ, sütun kalır. */
@@ -2298,7 +2312,7 @@ a.ws-detail-btn:hover {
 
 .settings-cancel-link:hover { color: var(--bcc-text); }
 
-/* ---------- Admin paneli (Airtable benzeri liste/pill görünümü) ----------
+/* ---------- Admin paneli (OpsFlow liste/pill görünümü) ----------
    style.css'ten TAŞINDI (admin/index.php home-shell'e geçti, başka kullanan
    yok, ikinci bir kopya YOK). */
 
@@ -2887,4 +2901,74 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 .home-modal-btn-primary:disabled {
     opacity: 0.6;
     cursor: default;
+}
+
+/* ---------------------------------------------------------------------------
+   Çevrimiçi kullanıcı göstergesi (presence)
+   - Rozet: src/partials/home_shell_top.php, üst barın sağ bloğunda
+   - Liste : public/admin/index.php, "Şu an çevrimiçi" kartı
+   Renkler theme.css değişkenlerinden geliyor; sabit renk YALNIZCA yeşil noktada
+   (canlı/aktif anlamı iki temada da aynı yeşille taşınıyor).
+   --------------------------------------------------------------------------- */
+
+.home-online-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    margin-right: 0.35rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 999px;
+    background: var(--bcc-surface);
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+    white-space: nowrap;
+}
+
+/* flex: none — dar ekranda 7px'lik nokta ezilip ovalleşmesin.
+   Halka ayrı bir eleman yerine box-shadow ile çiziliyor. */
+.home-online-dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34a853;
+    box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.16);
+}
+
+.home-online-count {
+    font-weight: 700;
+    color: var(--bcc-text);
+}
+
+/* Dar ekranda yalnızca nokta + sayı kalır: üst bar zaten arama kutusuyla
+   yarışıyor, "çevrimiçi" kelimesi ilk feda edilecek parça. */
+@media (max-width: 720px) {
+    .home-online-label { display: none; }
+}
+
+/* --- Admin panelindeki çevrimiçi kullanıcı listesi --- */
+
+.admin-online-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.admin-online-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.admin-online-item:last-child { border-bottom: none; }
+
+/* Göreli zaman ("2 dakika önce") sağa yaslanır. */
+.admin-online-when {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+    white-space: nowrap;
 }

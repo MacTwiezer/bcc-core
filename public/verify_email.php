@@ -75,7 +75,7 @@ if ($error === null && !$pending) {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>BCC-Core — E-posta doğrulama</title>
+<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — E-posta doğrulama', ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
@@ -84,7 +84,7 @@ if ($error === null && !$pending) {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <img src="/assets/logo.png" alt="BCC-Core">
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Şifreni oluştur</h1>

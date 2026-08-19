@@ -77,7 +77,7 @@
         });
     });
 
-    // Trash — Airtable workspace trash referansı. Overlay .X-account'ın
+    // Trash — OpsFlow workspace trash referansı. Overlay .X-account'ın
     // DIŞINDA (sayfa-geneli), bu yüzden document üzerinden aranıyor; tek
     // sayfada en fazla bir tane olur (account_menu.php sayfa başına tek kez
     // require ediliyor). Adım 3d: aynı modale "Kayıtlar" bölümü eklendi —

@@ -1,4 +1,4 @@
-# BCC-Core — Airtable Kopyası / Gereksinim Dokümanı
+# OpsFlow (opsflow.bcccrm.com) — Gereksinim Dokümanı
 
 > Bu doküman, Öykü hanım'ın ekran ekran anlattıklarının ve konuşulan tüm isterlerin
 > derli toplu halidir. Emre / Öykü hanım ile üzerinden geçilip onaylanması önerilir.
@@ -16,8 +16,8 @@ Son güncelleme: 2026-07-30
 
 ## 1. Amaç
 
-Şirket içinde (BCC) kullanılan Airtable tabanlı "Bcc-Core" çalışma alanının,
-kendi sunucumuzda çalışan bir kopyasını (klon) yazmak. Airtable'ın ücretli plan
+Şirket içinde kullanılan "OpsFlow" (opsflow.bcccrm.com) çalışma alanının,
+kendi sunucumuzda çalışan bir kopyasını (klon) yazmak. OpsFlow'un ücretli plan
 sınırlarına (özellikle 5 editör limiti) takılmadan, kendi kontrolümüzde, MySQL
 veritabanı üzerinde çalışan bir iç araç.
 
@@ -25,9 +25,9 @@ Teknoloji: **PHP 7.3 + MariaDB (XAMPP MySQL) + mysqli**, Apache (XAMPP) üzerind
 
 ---
 
-## 2. Kaynak: Mevcut Airtable Yapısı (Bcc-Core)
+## 2. Kaynak: Mevcut OpsFlow Yapısı
 
-Airtable'daki mevcut "base" içinde şu tablolar (sekmeler) var. Alan adları ekran
+OpsFlow'daki mevcut "base" içinde şu tablolar (sekmeler) var. Alan adları ekran
 görüntülerinden çıkarıldı; birebir doğrulanmalı.
 
 | Tablo (sekme)     | Alanlar (kolonlar)                                                        |
@@ -38,7 +38,7 @@ görüntülerinden çıkarıldı; birebir doğrulanmalı.
 | **ITSM-GULF**     | Seller ID, Bölge, Marka&Kategori, Not, Kimden, Son Güncelleme            |
 | **SÜREÇ**         | Kanal, Talep Nedeni, Kontrol Aşamaları, Ret Nedenleri                    |
 
-Not: Kullanıcı Airtable'da tabloları ve alanları kendi ekliyor. Bu yüzden klon da
+Not: Kullanıcı OpsFlow'da tabloları ve alanları kendi ekliyor. Bu yüzden klon da
 **kullanıcı tanımlı tablo/alan** desteklemeli (sabit şema değil) — bkz. Bölüm 5.
 
 ---
@@ -46,11 +46,11 @@ Not: Kullanıcı Airtable'da tabloları ve alanları kendi ekliyor. Bu yüzden k
 ## 3. Fonksiyonel Gereksinimler
 
 ### F1 — Tablolar + tipli alanlar + Grid (tablo) görünümü  *(ÇEKİRDEK)*
-Airtable'ın kalbi. Kullanıcı tablo oluşturur, tipli alanlar ekler, satır (kayıt)
+OpsFlow'un kalbi. Kullanıcı tablo oluşturur, tipli alanlar ekler, satır (kayıt)
 girer. Hücreye tıkla-düzenle-kaydet mantığı (AJAX ile anlık kayıt).
 
 ### F2 — Alan tipleri
-Airtable'da görülen tipler desteklenmeli:
+OpsFlow'da görülen tipler desteklenmeli:
 Single line text, Long text (zengin metin), Attachment (dosya eki), Checkbox,
 Multiple select, Single select, User (kullanıcı), Date, Phone number, Email, URL,
 Number, Currency, Percent, Link (tablolar arası bağlantı), Created/Last modified time.
@@ -63,7 +63,7 @@ Number, Currency, Percent, Link (tablolar arası bağlantı), Created/Last modif
 > bkz. Bölüm 5 notu). Created/Last modified time de yapılmadı.
 
 ### F3 — Duyuru (Interface / yayınlanmış görünüm)
-Airtable "Interfaces" özelliğinin karşılığı. Ekranlardan çıkan davranış:
+OpsFlow "Interfaces" özelliğinin karşılığı. Ekranlardan çıkan davranış:
 - Solda **navigasyon** (SÜREÇ, DUYURU, ITSM, ITSM-GULF, EMTİA BİLGİLERİ).
 - Ortada **liste paneli**: duyurular listelenir, **en yeni en üstte** (yeni eklenen
   başa gelir).
@@ -78,11 +78,11 @@ Temsilciler bu yayınlanmış Duyuru arayüzünü **sadece görür** (düzenleye
 
 ### F5 — Slack'e otomatik duyuru
 Yeni bir duyuru eklendiğinde, seçilen bir Slack kanalına otomatik mesaj gitmeli
-(ör. "duyuru-bcc-ty-seller-fraud" kanalı): "şu duyuru eklendi …" gibi. Airtable'da
+(ör. "duyuru-bcc-ty-seller-fraud" kanalı): "şu duyuru eklendi …" gibi. OpsFlow'da
 yapılamayan, özellikle istenen bir özellik. Teknik olarak Slack Incoming Webhook ile.
 
 ### F6 — Zengin metin (notlar/uzun metin alanında)
-Şu an Airtable uzun metinde punto/font büyütme yok, link gömülemiyor (sadece emoji
+Şu an OpsFlow uzun metinde punto/font büyütme yok, link gömülemiyor (sadece emoji
 eklenebiliyor). İstenen: **kalın/italik**, **font büyüklüğü**, **link gömme** ve
 temel biçimlendirme. (Teknik: alanda sınırlı/temizlenmiş HTML saklanır.)
 
@@ -103,11 +103,11 @@ KVKK gereği ekipler birbirinin süreçlerini **göremez**. **ATP** de ayrı tut
 Kullanıcı yalnızca üyesi olduğu ekiplerin verisini görür.
 
 ### F9 — Editör limiti yok
-Airtable Free planında maksimum 5 editör var; çoğu kişi "Read only" kalıyor. Kendi
+OpsFlow Free planında maksimum 5 editör var; çoğu kişi "Read only" kalıyor. Kendi
 sistemimizde böyle bir sınır olmayacak; herkese uygun yetki verilebilecek.
 
 ### F10 — İzin seviyeleri
-En az: **owner / editor / commenter / viewer**. (Airtable'daki Editor / Read-only
+En az: **owner / editor / commenter / viewer**. (OpsFlow'daki Editor / Read-only
 ayrımının genişletilmiş hali.)
 
 ---

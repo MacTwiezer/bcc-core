@@ -62,7 +62,7 @@ if (!isset($starredBases) || !is_array($starredBases)) {
 <?php // Yalnızca TEK bir base bağlamı olan sayfalarda (ör. base_tables.php).
       // Dashboard/Starred/Workspaces birçok base listeler — orada sekme
       // ikonu tek bir base'e ait olamaz, bu yüzden bu blok hiç basılmaz ve
-      // yukarıdaki genel BCC-Core favicon'u kalır. ?>
+      // yukarıdaki genel opsflow.bcccrm.com favicon'u kalır. ?>
 <?php echo $homeIdentityMeta, "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <?php endif; ?>
@@ -97,14 +97,10 @@ if (!isset($starredBases) || !is_array($starredBases)) {
         </button>
         <?php
         // Üst barın sol köşesi: marka logosu, "Ana sayfa" düğmesi olarak.
-        // Bir dönem burada Lucide "house" simgesi vardı; logo geri alındı —
-        // login/register/verify_email'de kimlik olarak zaten duran AYNI dosya
-        // (assets/logo.png), ikinci bir varlık eklenmedi.
+        // Bir dönem burada Lucide "house" simgesi vardı; logo geri alındı.
         //
         // bcc_asset_url(): dosya değişince ?v=filemtime ile önbellek kırılır —
-        // diğer varlıklarla AYNI yol. (login.php/register.php/verify_email.php
-        // bu logoyu hâlâ düz "/assets/logo.png" ile basıyor; oraya
-        // dokunulmadı, bu işin kapsamı üst gezinme çubuğu.)
+        // diğer varlıklarla AYNI yol.
         //
         // alt="": <a> zaten aria-label="Ana sayfa" taşıyor. Görsele ayrıca
         // alt metni verilseydi ekran okuyucu bağlantıyı İKİ KEZ okurdu.
@@ -123,6 +119,22 @@ if (!isset($starredBases) || !is_array($starredBases)) {
     </div>
 
     <div class="home-topbar-right">
+        <?php
+        // Çevrimiçi rozeti. Bu kabuk dashboard/starred/workspaces/admin/
+        // base_tables/form_edit tarafından paylaşıldığı için tek ekleme tüm ana
+        // sayfalara düşüyor. Bildirim zilinin SOLUNDA: okuma sırası "durum
+        // bilgisi -> eylemler" olsun (rozet tıklanabilir bir öge değil).
+        $bccOnlineCount = bcc_online_user_count();
+        ?>
+        <span class="home-online-badge"
+              title="Son <?php echo (int) BCC_PRESENCE_WINDOW_MINUTES; ?> dakika içinde etkin olan kullanıcı sayısı">
+            <?php // Nokta salt dekoratif — ekran okuyucu okumasın, sayı ve
+                  // "çevrimiçi" kelimesi zaten metin olarak orada. ?>
+            <span class="home-online-dot" aria-hidden="true"></span>
+            <span class="home-online-count"><?php echo (int) $bccOnlineCount; ?></span>
+            <span class="home-online-label">çevrimiçi</span>
+        </span>
+
         <?php
         $notifUser = $user;
         $notifTriggerClass = 'home-icon-btn';

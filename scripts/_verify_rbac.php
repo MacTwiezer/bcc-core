@@ -273,7 +273,7 @@ foreach (array('owner@bcc.local' => 'owner', 'editor@bcc.local' => 'editor', 'vi
 }
 
 // ---------------------------------------------------------------------------
-// E) SEMA: editor alan/tablo ekleyemez (Airtable: Editor sema degistiremez)
+// E) SEMA: editor alan/tablo ekleyemez (OpsFlow: Editor sema degistiremez)
 // ---------------------------------------------------------------------------
 echo "\n--- E) Sema kilidi (editor kayit duzenler, sema DEGISTIREMEZ) ---\n";
 
@@ -337,7 +337,7 @@ foreach (array('owner@bcc.local' => true, 'creator@bcc.local' => true,
     check($email . ': satir ici "yonet" kisayolu ' . ($shouldSee ? 'var' : 'YOK'),
         (strpos($html, 'wsx-member-manage') !== false) === $shouldSee);
 
-    // Katilimci listesi HERKESE gorunur (Airtable'da da oyle).
+    // Katilimci listesi HERKESE gorunur (OpsFlow'da da oyle).
     check($email . ': katilimci listesi goruluyor', strpos($html, 'wsx-collab-grid') !== false);
 
     if (!$shouldSee) {

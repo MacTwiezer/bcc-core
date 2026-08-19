@@ -1,4 +1,4 @@
-# BCC-Core — UI & Navigasyon Yapılacaklar Planı
+# opsflow.bcccrm.com — UI & Navigasyon Yapılacaklar Planı
 
 > `PROJE-DURUM.md` ile birlikte kullanılır.
 > Her iş için: hedef → mevcut durum → teknik → dikkat → test.

@@ -135,9 +135,206 @@
             nextBtn.addEventListener('click', function () { navigateDetail(1); });
         }
 
+        // ---- Temsilci not inceleme takibi ---------------------------------
+        // api/note_view_start.php + note_view_end.php. Tek bağlanma noktası
+        // selectRow(): notu açmanın ÜÇ yolu da (fare, ▲▼ düğmeleri, ↑↓ ok
+        // tuşları) oradan geçtiği için ikinci bir kopya YAZILMADI.
+        //
+        // Rol kararı SUNUCUDAN gelir (BCC_IF_TRACK_VIEWS, interface.php) —
+        // burada rol mantığı ÇÖZÜLMEZ. Bayrak yoksa (bu betiği yükleyen başka
+        // bir sayfa) izleme tamamen kapalıdır.
+        var trackViews = (typeof BCC_IF_TRACK_VIEWS !== 'undefined') && BCC_IF_TRACK_VIEWS === true;
+        var auditCsrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var auditCsrf = auditCsrfMeta ? auditCsrfMeta.content : '';
+
+        // Açık incelemenin sunucudaki satır id'si (yoksa null).
+        var currentViewId = null;
+        // "Açılış" isteği GECİKMELİ gönderilir (aşağıya bakın); bekleyen zamanlayıcı.
+        var viewStartTimer = null;
+
+        // Ok tuşuyla listede hızlı gezinmek saniyede birkaç selectRow tetikler.
+        // Eşik olmasaydı her basış bir INSERT olurdu ve "inceleme" sayılmayacak
+        // 200 ms'lik geçişler tabloyu doldururdu. 2 saniyeden kısa bakışlar
+        // HİÇ kaydedilmez — istek bile atılmaz.
+        var VIEW_START_DELAY_MS = 2000;
+
+        function endNoteView() {
+            if (viewStartTimer !== null) {
+                clearTimeout(viewStartTimer);
+                viewStartTimer = null;
+            }
+            if (currentViewId === null) {
+                return;
+            }
+
+            var body = new FormData();
+            body.append('view_id', currentViewId);
+            body.append('csrf_token', auditCsrf);
+            currentViewId = null;
+
+            // sendBeacon: sayfa KAPANIRKEN de teslim edilir (fetch iptal edilir).
+            // FormData ile gönderildiği için istek multipart/form-data olur ve
+            // PHP $_POST'u doldurur — mevcut api_require_csrf() değişmeden çalışır.
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/api/note_view_end.php', body);
+                return;
+            }
+            // Yedek yol (sendBeacon yoksa): keepalive ile sayfa kapanışına dayan.
+            fetch('/api/note_view_end.php', { method: 'POST', body: body, keepalive: true })
+                .catch(function () {});
+        }
+
+        function startNoteView(row) {
+            if (!trackViews || !row) {
+                return;
+            }
+            var recordId = row.getAttribute('data-record-id');
+            if (!recordId) {
+                return;
+            }
+
+            viewStartTimer = setTimeout(function () {
+                viewStartTimer = null;
+
+                var body = new FormData();
+                body.append('record_id', recordId);
+                body.append('csrf_token', auditCsrf);
+
+                fetch('/api/note_view_start.php', { method: 'POST', body: body })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        // view_id null gelebilir: sunucu "temsilci değilsin"
+                        // dediğinde sessiz no-op döner (bkz. uçnokta yorumu).
+                        if (data && data.ok && data.view_id) {
+                            currentViewId = data.view_id;
+                        }
+                    })
+                    .catch(function () {});
+            }, VIEW_START_DELAY_MS);
+        }
+
+        // ---- "Temsilci İnceleme Geçmişi" paneli ----------------------------
+        // api/note_view_list.php. Blok interface.php'de YALNIZCA yetkili role
+        // basılır, yani auditEl yoksa bu bölümün tamamı sessizce no-op olur
+        // (home.js'in bu sayfadaki diğer blokları gibi — null-check deseni).
+        //
+        // TEMBEL YÜKLEME: liste satır seçilince DEĞİL, panel AÇILINCA çekilir.
+        // Aksi hâlde kullanıcının hiç bakmadığı her not tıklaması bir istek
+        // daha üretirdi.
+        var auditEl = document.getElementById('if-audit');
+        var auditList = auditEl ? auditEl.querySelector('[data-audit-list]') : null;
+        var auditEmpty = auditEl ? auditEl.querySelector('[data-audit-empty]') : null;
+        var auditError = auditEl ? auditEl.querySelector('[data-audit-error]') : null;
+        var auditCount = auditEl ? auditEl.querySelector('[data-audit-count]') : null;
+        // Yüklenen geçmişin hangi kayda ait olduğu — aynı notta paneli kapatıp
+        // açmak ikinci bir istek atmasın diye.
+        var auditLoadedFor = null;
+
+        function resetAuditPanel() {
+            if (!auditEl) {
+                return;
+            }
+            auditEl.open = false;
+            auditLoadedFor = null;
+            auditList.textContent = '';
+            auditEmpty.hidden = true;
+            auditError.hidden = true;
+            auditCount.hidden = true;
+            auditCount.textContent = '';
+        }
+
+        function renderAuditRows(views) {
+            auditList.textContent = '';
+
+            views.forEach(function (v) {
+                var row = document.createElement('div');
+                row.className = 'if-audit-item';
+
+                var name = document.createElement('span');
+                name.className = 'if-audit-item-name';
+                // textContent: isim kullanıcı verisidir, innerHTML KULLANILMAZ.
+                name.textContent = v.user_name;
+                row.appendChild(name);
+
+                var date = document.createElement('span');
+                date.className = 'if-audit-item-date';
+                date.textContent = v.opened_at_display;
+                row.appendChild(date);
+
+                var dur = document.createElement('span');
+                dur.className = 'if-audit-item-duration';
+                if (v.is_open) {
+                    // Süresi olmayan satır GİZLENMEZ: "baktı ama ne kadar
+                    // baktığı bilinmiyor" da bir denetim bilgisidir (tarayıcı
+                    // kapanmış olabilir, bkz. uçnokta yorumu).
+                    dur.classList.add('is-open');
+                    dur.textContent = 'süre kaydedilmedi';
+                } else {
+                    dur.textContent = v.duration_display;
+                }
+                row.appendChild(dur);
+
+                auditList.appendChild(row);
+            });
+        }
+
+        if (auditEl) {
+            auditEl.addEventListener('toggle', function () {
+                if (!auditEl.open || !currentDetailRow) {
+                    return;
+                }
+
+                var recordId = currentDetailRow.getAttribute('data-record-id');
+                if (!recordId || auditLoadedFor === recordId) {
+                    return; // Aynı notun geçmişi zaten yüklü — istek atma.
+                }
+                auditLoadedFor = recordId;
+
+                auditError.hidden = true;
+                auditEmpty.hidden = true;
+
+                fetch('/api/note_view_list.php?record_id=' + encodeURIComponent(recordId))
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (!data || !data.ok) {
+                            auditLoadedFor = null;
+                            auditError.hidden = false;
+                            return;
+                        }
+                        renderAuditRows(data.views);
+                        auditEmpty.hidden = data.views.length > 0;
+                        auditCount.hidden = data.views.length === 0;
+                        auditCount.textContent = data.views.length;
+                    })
+                    .catch(function () {
+                        auditLoadedFor = null; // Tekrar denenebilsin.
+                        auditError.hidden = false;
+                    });
+            });
+        }
+
+        // Sekme gizlenince/sayfa terk edilince açık incelemeyi kapat.
+        // beforeunload BİLEREK kullanılmadı: mobil tarayıcılarda güvenilmez ve
+        // içindeki fetch iptal edilir. visibilitychange + pagehide ikilisi
+        // sekme kapatma, pencere kapatma ve başka sayfaya gitmeyi kapsar.
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') {
+                endNoteView();
+            } else if (currentDetailRow) {
+                // Kullanıcı sekmeye GERİ döndü ve hâlâ bir not açık — bu YENİ
+                // bir incelemedir (istenen davranış: her açılış ayrı kayıt).
+                startNoteView(currentDetailRow);
+            }
+        });
+        window.addEventListener('pagehide', endNoteView);
+
         // Satır tıklama: sağ detay paneli, satırın data-detail-fields JSON'undan
         // (sunucu tarafında bir kez gömülmüş) kurulur — ikinci bir AJAX/sorgu YOK.
         function selectRow(row) {
+            // ÖNCE önceki incelemeyi kapat, SONRA yenisini başlat — sıra önemli:
+            // tersi olsaydı iki satır aynı anda açık kalırdı.
+            endNoteView();
+
             currentDetailRow = row;
             rows.forEach(function (r) { r.classList.remove('is-selected'); });
             row.classList.add('is-selected');
@@ -200,6 +397,13 @@
             detailPlaceholder.hidden = true;
             detailContent.hidden = false;
             updateDetailNavState();
+
+            // Geçmiş paneli KAPANIR ve içeriği atılır: açık kalsaydı yeni
+            // seçilen notun altında ESKİ notun geçmişi görünmeye devam ederdi.
+            resetAuditPanel();
+
+            // Yeni incelemeyi başlat (2 sn eşiğinden sonra, yukarıya bakın).
+            startNoteView(row);
         }
 
         rows.forEach(function (row) {

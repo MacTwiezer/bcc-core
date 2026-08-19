@@ -217,6 +217,17 @@ function bcc_can_comment($role)
     return $role === 'commenter' || $role === 'editor' || $role === 'owner';
 }
 
+// TEMSİLCİ tespiti - "not inceleme takipi"
+function bcc_is_representative($role)
+{
+    return $role === 'commenter';
+}
+// İnceleme geçmişini GÖRÜNTÜLEME yetkisi
+function bcc_can_view_record_audits($role)
+{
+    return $role === 'owner';
+}
+
 // Bir ekibin verisine (base/tablo/kayıt) erişen HER sorgudan önce çağrılmalı.
 function require_team_access($teamId)
 {

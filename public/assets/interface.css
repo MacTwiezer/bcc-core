@@ -770,3 +770,116 @@ body.if-page a { text-decoration: none; color: inherit; }
     white-space: pre-wrap;
     word-break: break-word;
 }
+
+/* ---------------------------------------------------------------------------
+   Temsilci İnceleme Geçmişi (.if-audit) — detay panelindeki açılır alan.
+   Blok interface.php'de yalnızca yetkili role basılır, bkz. $canViewNoteAudits.
+
+   .if-tool ile AYNI <details> deseni ama position:absolute YOK: .if-detail-panel
+   kaydırılabilir bir sütun, mutlak konumlu panel kırpılırdı (aynı ders:
+   .if-nav-scroll yorumu). Panel AKIŞ İÇİNDE açılır, alanlar aşağı kayar.
+
+   Renkler theme.css token'larından — sabit renk yazılmaz, yoksa koyu temada
+   okunmaz hale gelir (bu dosyanın geri kalanıyla AYNI kural).
+   --------------------------------------------------------------------------- */
+.if-audit {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 6px;
+    background: var(--bcc-surface-sunken);
+}
+
+.if-audit-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+/* <summary>'nin varsayılan üçgen işareti — iki tarayıcı ailesi için de
+   kapatılır (bu dosyada .if-tool-btn/.if-nav-back'te AYNI ikili kural). */
+.if-audit-summary::-webkit-details-marker { display: none; }
+
+.if-audit-summary:hover { color: var(--bcc-text); }
+
+.if-audit-count {
+    min-width: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-size: 0.72rem;
+    line-height: 1.15rem;
+    text-align: center;
+}
+
+/* Ok, açıkken 180° döner — .if-tool ile aynı görsel dil. */
+.if-audit-chevron {
+    margin-left: auto;
+    transition: transform 0.15s ease;
+}
+
+.if-audit[open] .if-audit-chevron { transform: rotate(180deg); }
+
+.if-audit-panel {
+    padding: 0 0.7rem 0.6rem;
+    border-top: 1px solid var(--bcc-border);
+}
+
+.if-audit-note,
+.if-audit-empty,
+.if-audit-error {
+    margin: 0.55rem 0 0;
+    font-size: 0.76rem;
+    color: var(--bcc-text-muted);
+}
+
+.if-audit-error { color: var(--bcc-danger); }
+
+.if-audit-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.42rem 0;
+    font-size: 0.82rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.if-audit-item:last-child { border-bottom: 0; }
+
+.if-audit-item-name {
+    font-weight: 600;
+    color: var(--bcc-text);
+    /* Uzun ad diğer iki sütunu ezmesin; kısalarak yer açar. */
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.if-audit-item-date {
+    flex: 0 0 auto;
+    color: var(--bcc-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.if-audit-item-duration {
+    flex: 0 0 auto;
+    min-width: 5.2rem;
+    text-align: right;
+    color: var(--bcc-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tamamlanmamış inceleme (closed_at NULL) — süresi yok, sessizce ayrışsın. */
+.if-audit-item-duration.is-open {
+    color: var(--bcc-text-muted);
+    font-style: italic;
+}

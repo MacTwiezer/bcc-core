@@ -204,8 +204,13 @@ foreach (array('editor@bcc.local', 'viewer@bcc.local') as $email) {
         'action' => 'remove_bulk', 'user_ids' => array($uid['owner@bcc.local'], $uid['creator@bcc.local']),
     ));
     check($email . ': POST remove_bulk -> 403', $r['status'] === 403, 'HTTP ' . $r['status']);
-    check($email . ': toplu cikarma sonrasi uye sayisi 4',
-        (int) bcc_fetch_column('SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId)) === 4);
+    // Beklenen uye sayisi SABIT YAZILMAZ: bcc_demo_accounts() listesinden
+    // turetilir. Onceki hali "=== 4" idi ve listeye besinci hesap
+    // (commenter@bcc.local) eklendiginde kirildi — testin dogruladigi sey
+    // "kimse cikarilamadi"dir, ekibin kac kisilik oldugu DEGIL.
+    $expectedMembers = count(bcc_demo_accounts());
+    check($email . ': toplu cikarma sonrasi uye sayisi ' . $expectedMembers . ' (kimse cikarilamadi)',
+        (int) bcc_fetch_column('SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId)) === $expectedMembers);
 }
 
 // Owner GERCEKTEN yapabiliyor mu (kapi fazla kapanmadi mi)?

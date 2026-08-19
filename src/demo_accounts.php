@@ -92,6 +92,19 @@ function bcc_demo_accounts()
             'hint' => 'Kayıt/alan düzenler, base OLUŞTURAMAZ',
         ),
         array(
+            // Yukarıdaki "Creator" notunun işaret ettiği DÖRDÜNCÜ seviye: owner/
+            // editor/viewer'dan gerçekten AYRI davranan tek rol bu (yorum yazar
+            // ama kayıt/alan düzenleyemez, bkz. src/auth.php bcc_can_comment()
+            // ile bcc_can_edit_records() farkı). Liste rol rütbesine göre azalan
+            // sırada olduğu için editor(3) ile viewer(1) ARASINA konuldu.
+            'email' => 'commenter@bcc.local',
+            'password' => $password,
+            'full_name' => 'Demo Commenter',
+            'role' => 'commenter',
+            'label' => 'Commenter',
+            'hint' => 'Yorum yazar, kayıt/alan DÜZENLEYEMEZ',
+        ),
+        array(
             'email' => 'viewer@bcc.local',
             'password' => $password,
             'full_name' => 'Demo Viewer',

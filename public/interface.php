@@ -90,6 +90,17 @@ require_once __DIR__ . '/../src/share_modal_payload.php';
 $shareRole = current_user_role_in_team($base['team_id']);
 $canManageMembers = bcc_can_manage_members($shareRole);
 
+// Temsilci not inceleme takibi (record_view_log — api/note_view_start.php,
+// note_view_end.php, note_view_list.php). $shareRole YUKARIDA zaten
+// hesaplandı; rol için İKİNCİ bir sorgu YAPILMAZ.
+//
+// İki AYRI soru, iki AYRI fonksiyon (bkz. src/auth.php'deki notlar):
+//   $trackNoteViews    -> "bu kişi temsilci mi" (izlenen taraf, commenter)
+//   $canViewNoteAudits -> "bu kişi geçmişi görebilir mi" (izleyen taraf, owner)
+// Bir kullanıcı bunların ikisine birden EVET olamaz.
+$trackNoteViews = bcc_is_representative($shareRole);
+$canViewNoteAudits = bcc_can_view_record_audits($shareRole);
+
 $shareModalPayload = bcc_share_modal_payload($base['team_id'], $shareRole);
 $shareModalTeamId = (int) $base['team_id'];
 $shareModalTeamName = $base['name'];
@@ -390,6 +401,15 @@ if (!empty($shareExistingIds)) {
                 sort: <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>,
                 group: 3
             };
+            // Temsilci not inceleme takibi — SUNUCUDAN gelen rol kararı.
+            // interface.js rolü kendi başına ÇÖZMEZ (istemcide rol mantığı
+            // kopyası olmaz); yalnızca bu bayrağa bakar. Bayrak false ise
+            // hiç istek atılmaz — owner/editor/viewer gezinirken boşuna
+            // trafik oluşmasın diye. Bu bir OPTİMİZASYON, güvenlik sınırı
+            // DEĞİL: api/note_view_start.php aynı kontrolü sunucuda TEKRAR
+            // yapar (önbellekten gelen eski bir sayfa bayrağı ezemesin).
+            var BCC_IF_TRACK_VIEWS = <?php echo $trackNoteViews ? 'true' : 'false'; ?>;
+            var BCC_IF_CAN_VIEW_AUDITS = <?php echo $canViewNoteAudits ? 'true' : 'false'; ?>;
         </script>
 
         <div class="if-record-list" id="if-record-list" data-table-id="<?php echo (int) $tableId; ?>">
@@ -495,6 +515,34 @@ if (!empty($shareExistingIds)) {
                 <span class="if-detail-meta-label">Son Güncelleme</span>
                 <span id="if-detail-last-update"></span>
             </div>
+
+            <?php // Temsilci İnceleme Geçmişi — YALNIZCA yetkili role BASILIR.
+                  // CSS ile gizlenmiş bir blok DEĞİL: yetkisi olmayan kullanıcı
+                  // bu HTML'i kaynağında da göremez (interface.php:249-253'teki
+                  // "sunucu tarafı gate" deseniyle AYNI). Sunucu tarafı ayrıca
+                  // api/note_view_list.php'de de kontrol ediyor.
+                  //
+                  // .if-tool ile AYNI <details> deseni (bu sayfada zaten var),
+                  // ama position:absolute YOK — .if-detail-panel kaydırılabilir
+                  // bir sütun, mutlak konumlu panel kırpılırdı (bkz.
+                  // interface.css'teki .if-nav-scroll overflow notu). ?>
+            <?php if ($canViewNoteAudits): ?>
+                <details class="if-audit" id="if-audit">
+                    <summary class="if-audit-summary">
+                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.4"/><path d="M10 6v4.2l2.6 1.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Temsilci İnceleme Geçmişi</span>
+                        <span class="if-audit-count" data-audit-count hidden></span>
+                        <svg class="if-audit-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </summary>
+                    <div class="if-audit-panel">
+                        <p class="if-audit-note">Son 15 gün gösterilir, en yeni inceleme en üstte.</p>
+                        <div class="if-audit-list" data-audit-list></div>
+                        <p class="if-audit-empty" data-audit-empty hidden>Bu notu henüz inceleyen temsilci yok.</p>
+                        <p class="if-audit-error" data-audit-error hidden>Geçmiş yüklenemedi.</p>
+                    </div>
+                </details>
+            <?php endif; ?>
+
             <div class="if-detail-fields" id="if-detail-fields"></div>
         </div>
     </aside>

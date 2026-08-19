@@ -253,6 +253,39 @@ CREATE TABLE IF NOT EXISTS comments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- record_view_log - "temsilci not inceleme takibi" (Duyuru ekranı, interface.php)
+-- Bir kullanıcının bir kaydı (notu) AÇTIĞI an, KAPATTIĞI an ve arada geçen süre.
+-- Yalnızca 'commenter' rolü için yazılır (temsilci tanımı) - kısıt UYGULAMA
+-- katmanındadır, şemada DEĞİL: rol politikası değişirse tablo değişmesin.
+-- team_id BURADA VAR (comment'ten farklı): comments KVKK zincirini sorgu
+-- zamanında türetir, burada 15 günlük temizlik/raporlama o üç JOIN'i her
+-- bcc_find_record() zincirinden geçer, bu kolon güvenlik kaynağı DEĞİLDİR.
+-- role_at_view: kullanıcının O ANDAKİ rolü (rol sonrasında değişirse geçmiş
+-- kayıt yanlış yorumlansın). ENUM team_members.role ile BİREBİR AYNI.
+-- fk_rvl_user ON DELETE CASCADE (comments'teki SET NULL DEĞİL): satırın tamamı
+-- "kim baktı" bilgisidir, kullanıcı silinince anlamsızlaşır.
+-- closed_at NULL = TAMAMLANMAMIŞ inceleme (tarayıcı çökmesi/sekme kapanması).
+-- Bkz. migrations/018_note_view_log.sql
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS record_view_log (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    record_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    team_id INT UNSIGNED DEFAULT NULL,
+    role_at_view ENUM('owner', 'editor', 'commenter', 'viewer') NOT NULL,
+    opened_at DATETIME NOT NULL,
+    closed_at         DATETIME NULL DEFAULT NULL,
+    duration_seconds  INT UNSIGNED NULL DEFAULT NULL,
+    PRIMARY KEY (id),
+    KEY idx_rvl_record_opened (record_id, opened_at),
+    KEY idx_rvl_user (user_id),
+    KEY idx_rvl_opened (opened_at),
+    CONSTRAINT fk_rvl_record FOREIGN KEY (record_id) REFERENCES records(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rvl_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rvl_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- views — görünümler (grid ve "interface"/duyuru arayüzü ayarları)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS views (

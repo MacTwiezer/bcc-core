@@ -40,6 +40,14 @@ try {
         json_fail(422, 'Görünüm adı en fazla 150 karakter olabilir.');
     }
 
+    // Aynı tabloda başka bir görünüm bu adı kullanıyor mu? GÖRÜNÜMÜN KENDİSİ
+    // hariç tutulur (4. argüman) — yoksa adı değiştirmeden kaydetmek hata
+    // verirdi. Başka bir TABLODA aynı ad serbesttir (bkz. src/schema.php
+    // bcc_name_taken() scope haritası).
+    if (bcc_name_taken('views', $view['table_id'], $name, $view['id'])) {
+        json_fail(422, bcc_name_taken_error('views', 'görünüm'));
+    }
+
     // UPDATE + log_audit AYNI transaction'da — record_add.php ve diğer view_*.php
     // dosyalarında bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit()
     // istisna atarsa (nadir ama mümkün) UPDATE zaten commit edilmiş olurdu,

@@ -73,42 +73,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     die('Bu alan bu tabloya ait değil.');
                 }
 
-                // Transaction (Grup C2): bcc_create_field() ile AYNI gerekçe —
-                // tip autonumber'a çevrildiğinde UPDATE + backfill + sayaç
-                // güncellemesi ATOMİK olmalı.
-                try {
-                    bcc_begin_transaction();
+                // Aynı tabloda başka bir alan bu adı kullanıyor mu? KAYDIN
+                // KENDİSİ hariç tutulur (4. argüman) — yoksa yalnızca tipini
+                // değiştirip adı aynı bırakmak "zaten kullanılıyor" hatası
+                // verir ve alan hiç düzenlenemezdi.
+                if (bcc_name_taken('fields', $table['id'], $name, $fieldId)) {
+                    $error = bcc_name_taken_error('fields', 'alan');
+                } else {
+                    // Transaction (Grup C2): bcc_create_field() ile AYNI gerekçe —
+                    // tip autonumber'a çevrildiğinde UPDATE + backfill + sayaç
+                    // güncellemesi ATOMİK olmalı.
+                    try {
+                        bcc_begin_transaction();
 
-                    bcc_execute(
-                        'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
-                        array(
-                            'name' => $name,
-                            'field_type' => $fieldType,
-                            'options' => $optionsResult['options'],
-                            'is_required' => $isRequired,
-                            'id' => $fieldId,
-                        )
-                    );
+                        bcc_execute(
+                            'UPDATE fields SET name = :name, field_type = :field_type, options = :options, is_required = :is_required WHERE id = :id',
+                            array(
+                                'name' => $name,
+                                'field_type' => $fieldType,
+                                'options' => $optionsResult['options'],
+                                'is_required' => $isRequired,
+                                'id' => $fieldId,
+                            )
+                        );
 
-                    // Mevcut bir alanın TİPİ autonumber'a çevrildiğinde de backfill
-                    // şart — atlanırsa alan var ama tüm kayıtlar boş görünürdü.
-                    // bcc_backfill_autonumber_field() yalnızca NUMARASI OLMAYAN
-                    // kayıtları doldurur ve sayacı GERİ SARMAZ, bu yüzden
-                    // autonumber -> number -> autonumber çevriminde eski numaralar
-                    // KORUNUR (tasarım kararı) ve bu çağrı zararsız bir no-op olur.
-                    if ($fieldType === 'autonumber') {
-                        bcc_backfill_autonumber_field($fieldId, (int) $table['id']);
+                        // Mevcut bir alanın TİPİ autonumber'a çevrildiğinde de backfill
+                        // şart — atlanırsa alan var ama tüm kayıtlar boş görünürdü.
+                        // bcc_backfill_autonumber_field() yalnızca NUMARASI OLMAYAN
+                        // kayıtları doldurur ve sayacı GERİ SARMAZ, bu yüzden
+                        // autonumber -> number -> autonumber çevriminde eski numaralar
+                        // KORUNUR (tasarım kararı) ve bu çağrı zararsız bir no-op olur.
+                        if ($fieldType === 'autonumber') {
+                            bcc_backfill_autonumber_field($fieldId, (int) $table['id']);
+                        }
+
+                        log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
+
+                        bcc_commit();
+                    } catch (Throwable $e) {
+                        bcc_rollback();
+                        throw $e;
                     }
 
-                    log_audit('field.update', 'field', $fieldId, array('name' => $name, 'field_type' => $fieldType), $table['team_id']);
-
-                    bcc_commit();
-                } catch (Throwable $e) {
-                    bcc_rollback();
-                    throw $e;
+                    $success = 'Alan güncellendi: ' . $name;
                 }
-
-                $success = 'Alan güncellendi: ' . $name;
             }
         }
     } elseif ($action === 'delete_field' || $action === 'move_field') {

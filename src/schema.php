@@ -1216,6 +1216,14 @@ function bcc_create_field($tableId, $teamId, $postData)
         return array('ok' => false, 'error' => 'Geçersiz alan tipi.');
     }
 
+    // Aynı tabloda aynı alan adı olamaz — başka tabloda serbest. Bu kontrol
+    // ÖZELLİKLE önemli: iki "Telefon" sütunu grid'de ayırt edilemez, dışa
+    // aktarmada aynı başlığı üretir ve içe aktarmada hangisine yazılacağı
+    // belirsizleşir (bkz. api/table_import_xlsx.php başlık eşlemesi).
+    if (bcc_name_taken('fields', $tableId, $name)) {
+        return array('ok' => false, 'error' => bcc_name_taken_error('fields', 'alan'));
+    }
+
     $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($postData['colors']) ? $postData['colors'] : null, $postData);
     if (!$optionsResult['ok']) {
         return array('ok' => false, 'error' => $optionsResult['error']);
@@ -3443,6 +3451,84 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
     return array($recordsSql, $recordsParams);
 }
 
+// ---------------------------------------------------------------------------
+// İSİM BENZERSİZLİĞİ — SCOPE HARİTASI VE TEK KONTROL NOKTASI
+// ---------------------------------------------------------------------------
+// Kural: bir isim GLOBAL olarak değil, YALNIZCA ait olduğu üst yapı içinde
+// benzersizdir. "Müşteriler" tablosu Base A'da da Base B'de de olabilir; ama
+// AYNI base içinde iki kez olamaz.
+//
+// Scope'lar veri modelindeki gerçek sahiplik zincirinden türetildi:
+//   bases        -> team_id   (bir çalışma alanı içinde)
+//   tables_meta  -> base_id   (bir base içinde)
+//   fields       -> table_id  (bir tablo içinde)
+//   views        -> table_id  (bir tablo içinde)
+//
+// KAPSAM DIŞI — bilinçli:
+//   teams.name  GLOBAL kalır. teams veri modelindeki EN ÜST yapıdır, üstünde
+//               scope alınacak bir şey yok; uq_teams_name (name) indeksi ve
+//               admin/create_team.php'deki kontrol DOĞRU. Ekip adı KVKK
+//               izolasyonunun kimliği, iki "TY" ayırt edilemez olurdu.
+//   users.email GLOBAL kalır — e-posta kimlik bilgisidir, giriş anahtarıdır.
+//   records     İSMİ YOKTUR (EAV modeli, birincil alan bir hücre değeridir).
+//
+// ⚠️ BÜYÜK/KÜÇÜK HARF: tablolar utf8mb4_unicode_ci ile karşılaştırır, yani
+// "Users" ile "users" AYNI sayılır ve çakışır. Bu bilinçli — kullanıcı için
+// ayırt edilemez iki isim ayrı sayılmamalı. Uygulama kontrolü ile veritabanı
+// indeksi AYNI kuralı uygular, ikisi ayrışamaz.
+$GLOBALS['BCC_NAME_SCOPES'] = array(
+    'bases'       => array('scope' => 'team_id',  'soft_delete' => true,  'label' => 'çalışma alanında'),
+    'tables_meta' => array('scope' => 'base_id',  'soft_delete' => false, 'label' => "base'de"),
+    'fields'      => array('scope' => 'table_id', 'soft_delete' => false, 'label' => 'tabloda'),
+    'views'       => array('scope' => 'table_id', 'soft_delete' => false, 'label' => 'tabloda'),
+);
+
+// $entity: BCC_NAME_SCOPES anahtarı. $scopeId: üst yapının id'si. $excludeId:
+// GÜNCELLEMEDE kaydın KENDİSİ — verilmezse "Tablo 1"i yine "Tablo 1" yapmak
+// kendi kendine çakışır ve yeniden adlandırma hiç kaydedilemezdi.
+//
+// GÜVENLİK: tablo ve kolon adları SQL'e gömülür, ama YALNIZCA yukarıdaki
+// whitelist'ten gelir — istekten gelen hiçbir değer buraya ulaşmaz (view_type
+// whitelist'iyle AYNI desen). İsim ve id'ler prepared statement'a bağlanır.
+function bcc_name_taken($entity, $scopeId, $name, $excludeId = null)
+{
+    if (!isset($GLOBALS['BCC_NAME_SCOPES'][$entity])) {
+        // Programlama hatası (whitelist dışı varlık) — sessizce "boşta" demek
+        // benzersizliği SESSİZCE kapatırdı, o yüzden gürültülü başarısızlık.
+        throw new InvalidArgumentException('Bilinmeyen isim scope\'u: ' . $entity);
+    }
+
+    $cfg = $GLOBALS['BCC_NAME_SCOPES'][$entity];
+
+    $sql = 'SELECT id FROM ' . $entity . ' WHERE ' . $cfg['scope'] . ' = :scope_id AND name = :name';
+    $params = array('scope_id' => $scopeId, 'name' => trim((string) $name));
+
+    // Çöp kutusundaki bir base ismi BLOKE ETMEZ: kullanıcı sildiği bir base'in
+    // adını yeniden kullanabilmeli. (Bu yüzden bases'te veritabanı indeksi de
+    // YOK — MySQL'de kısmi/koşullu UNIQUE index desteklenmiyor, indeks silinmiş
+    // satırları da sayardı. Bkz. migrations/019.)
+    if ($cfg['soft_delete']) {
+        $sql .= ' AND deleted_at IS NULL';
+    }
+
+    if ($excludeId !== null) {
+        $sql .= ' AND id <> :exclude_id';
+        $params['exclude_id'] = (int) $excludeId;
+    }
+
+    return bcc_fetch_one($sql . ' LIMIT 1', $params) !== false;
+}
+
+// Duplicate durumunda gösterilecek mesaj. Scope'u AÇIKÇA söyler, çünkü asıl
+// kafa karışıklığı "ama başka base'de bu isim var, neden şimdi olmuyor?"
+// sorusudur — mesaj kuralın kapsamını da öğretmeli.
+function bcc_name_taken_error($entity, $what)
+{
+    $label = isset($GLOBALS['BCC_NAME_SCOPES'][$entity]) ? $GLOBALS['BCC_NAME_SCOPES'][$entity]['label'] : 'kapsamda';
+
+    return 'Bu ' . $what . ' adı aynı ' . $label . ' zaten kullanılıyor.';
+}
+
 // Base oluşturmanın TEK yolu: public/bases.php'nin klasik form POST'u VE
 // Home'daki "+ Yeni Base Oluştur" kartının AJAX uçnoktası (api/base_create.php)
 // ikisi de burayı çağırır — doğrulama, INSERT ve audit kaydı tek yerdedir.
@@ -3471,6 +3557,12 @@ function bcc_create_base($teamId, $name, $description, $userId)
 
     if (mb_strlen($description, 'UTF-8') > 500) {
         return array('ok' => false, 'error' => 'Açıklama en fazla 500 karakter olabilir.', 'id' => null);
+    }
+
+    // Aynı çalışma alanında aynı base adı olamaz — ama BAŞKA bir çalışma
+    // alanında aynı ad serbesttir (bkz. bcc_name_taken() scope haritası).
+    if (bcc_name_taken('bases', $teamId, $name)) {
+        return array('ok' => false, 'error' => bcc_name_taken_error('bases', 'base'), 'id' => null);
     }
 
     bcc_execute(

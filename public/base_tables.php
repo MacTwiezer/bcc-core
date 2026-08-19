@@ -39,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (mb_strlen($description, 'UTF-8') > 500) {
             // tables_meta.description VARCHAR(500) — aynı sessiz kırpılma riski.
             $error = 'Açıklama en fazla 500 karakter olabilir.';
+        } elseif (bcc_name_taken('tables_meta', $base['id'], $name)) {
+            // Aynı base'de aynı tablo adı olamaz; BAŞKA bir base'de aynı ad
+            // serbesttir (bkz. src/schema.php bcc_name_taken() scope haritası).
+            $error = bcc_name_taken_error('tables_meta', 'tablo');
         } else {
             $nextPos = (int) bcc_fetch_column(
                 'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM tables_meta WHERE base_id = :base_id',
@@ -99,6 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Tablo adı en fazla 150 karakter olabilir.';
             } elseif (mb_strlen($description, 'UTF-8') > 500) {
                 $error = 'Açıklama en fazla 500 karakter olabilir.';
+            } elseif (bcc_name_taken('tables_meta', $base['id'], $name, $table['id'])) {
+                // Yeniden adlandırmada KAYDIN KENDİSİ hariç tutulur (4. argüman)
+                // — yoksa yalnızca açıklamayı değiştirip adı aynı bırakmak
+                // "bu ad zaten kullanılıyor" hatası verirdi.
+                $error = bcc_name_taken_error('tables_meta', 'tablo');
             } else {
                 // UPDATE + log_audit AYNI transaction'da — create_table/
                 // delete_table ile AYNI gerekçe.

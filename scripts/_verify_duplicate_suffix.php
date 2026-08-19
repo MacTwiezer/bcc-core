@@ -113,9 +113,17 @@ try {
     // Bir tip icin: BIRINCIL alani o tip olan bir tablo kurar, tek kayit yazar,
     // gercek /api/record_duplicate.php ucnoktasindan cogaltir ve kopyanin
     // birincil degerini dondurur.
-    $duplicateWithPrimary = function ($fieldType, $storedValue, $options = null) use ($baseId, $userId, $cookie) {
+    // Tablo adina SIRA NUMARASI eklenir: ayni tip birden fazla kez test
+    // ediliyor (ornegin single_line_text hem dolu hem BOS birincil degerle) ve
+    // tablo adlari artik AYNI BASE ICINDE benzersiz olmak zorunda
+    // (migrations/019, uq_tables_meta_base_name). Numara olmadan ikinci cagri
+    // "Duplicate entry" ile patliyordu — bu bir FIKSTUR sorunuydu, urun
+    // davranisi dogru: ayni base'de iki ayni adli tablo OLMAMALI.
+    $tableSeq = 0;
+    $duplicateWithPrimary = function ($fieldType, $storedValue, $options = null) use ($baseId, $userId, $cookie, &$tableSeq) {
+        $tableSeq++;
         bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b, :n, 0)',
-            array(':b' => $baseId, ':n' => 'T_' . $fieldType));
+            array(':b' => $baseId, ':n' => 'T_' . $fieldType . '_' . $tableSeq));
         $tableId = (int) bcc_last_insert_id();
 
         // position 0 = BIRINCIL alan.

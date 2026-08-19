@@ -75,6 +75,14 @@ CREATE TABLE IF NOT EXISTS bases (
     deleted_at   DATETIME NULL,
     deleted_by   INT UNSIGNED NULL,
     PRIMARY KEY (id),
+    -- ⚠️ UNIQUE(team_id, name) BİLEREK YOK. Base adı da scope'lu benzersizdir
+    -- (aynı çalışma alanında iki "Satış" olamaz, başka alanda serbest) ama bu
+    -- kural YALNIZCA uygulamada uygulanır (src/schema.php bcc_name_taken()):
+    -- burada soft-delete var ve UNIQUE index ÇÖP KUTUSUNDAKİ satırları da
+    -- sayardı — silinen bir base'in adı yeniden kullanılamaz hale gelir,
+    -- üstelik ekranda o base görünmediği için sebebi anlaşılamazdı.
+    -- MySQL/MariaDB koşullu (WHERE'li) UNIQUE index desteklemiyor. Bkz.
+    -- migrations/019 başındaki uzun not.
     KEY idx_bases_team (team_id),
     KEY idx_bases_deleted_at (deleted_at),
     CONSTRAINT fk_bases_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
@@ -112,6 +120,15 @@ CREATE TABLE IF NOT EXISTS tables_meta (
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- İsim benzersizliği SCOPE'LU: aynı base'de iki "Müşteriler" olamaz, ama
+    -- BAŞKA bir base'de aynı ad serbesttir (bkz. migrations/019 ve
+    -- src/schema.php bcc_name_taken()). utf8mb4_unicode_ci gereği "Users" ile
+    -- "users" AYNI sayılır — bilinçli.
+    UNIQUE KEY uq_tables_meta_base_name (base_id, name),
+    -- idx_tables_meta_base KALDIRILMADI: yukarıdaki UNIQUE base_id ile BAŞLADIĞI
+    -- için tek başına base_id sorgularını da karşılar, ama bu indeks fk
+    -- kısıtının dayanağı; migrations/009'daki "gereksiz indeks" temizliğinden
+    -- farklı olarak burada FK'yi kırma riski var, o yüzden bırakıldı.
     KEY idx_tables_meta_base (base_id),
     CONSTRAINT fk_tables_meta_base FOREIGN KEY (base_id) REFERENCES bases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -142,6 +159,11 @@ CREATE TABLE IF NOT EXISTS fields (
     autonumber_next INT UNSIGNED NOT NULL DEFAULT 1,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- İsim benzersizliği SCOPE'LU: aynı tabloda iki "Telefon" alanı olamaz
+    -- (grid'de ayırt edilemez, dışa aktarmada aynı başlığı üretir, içe
+    -- aktarmada hangisine yazılacağı belirsizleşir), başka tabloda serbest.
+    -- Bkz. migrations/019 ve src/schema.php bcc_name_taken().
+    UNIQUE KEY uq_fields_table_name (table_id, name),
     KEY idx_fields_table (table_id),
     CONSTRAINT fk_fields_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -315,6 +337,10 @@ CREATE TABLE IF NOT EXISTS views (
     updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_views_form_token (form_token),
+    -- İsim benzersizliği SCOPE'LU: aynı tabloda iki "Tablo 1" görünümü olamaz,
+    -- başka tabloda serbest. api/view_create.php'nin COUNT tabanlı otomatik adı
+    -- bu yüzden çakışana kadar ilerler. Bkz. migrations/019.
+    UNIQUE KEY uq_views_table_name (table_id, name),
     KEY idx_views_table (table_id),
     CONSTRAINT fk_views_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
     CONSTRAINT fk_views_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

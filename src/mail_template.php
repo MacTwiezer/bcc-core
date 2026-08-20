@@ -103,8 +103,13 @@ function bcc_mail_icon_img($key)
     $cid = htmlspecialchars($icon['cid'], ENT_QUOTES, 'UTF-8');
     $alt = htmlspecialchars($icon['alt'], ENT_QUOTES, 'UTF-8');
 
-    return '<img src="cid:' . $cid . '" width="16" height="16" alt="' . $alt . '"'
-        . ' style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px; border: 0;">';
+    // 14x14 ve display:block — ETİKET SATIRIYLA HİZALANSIN diye.
+    // Önceki hâli 16x16 + vertical-align:middle + margin-right idi: etiketin
+    // satır yüksekliği 14px olduğu için 16px'lik ikon 2-3px aşağı taşıyor ve
+    // dört kanalda da başlığın altına kayık duruyordu. margin-right kaldırıldı,
+    // aradaki boşluğu zaten ikon hücresinin sabit 22px genişliği veriyor.
+    return '<img src="cid:' . $cid . '" width="14" height="14" alt="' . $alt . '"'
+        . ' style="width: 14px; height: 14px; display: block; border: 0;">';
 }
 
 /**
@@ -130,7 +135,7 @@ function bcc_mail_contact_cell($iconKey, $label, $valueHtml)
     return <<<HTML
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                                             <tr>
-                                                <td width="22" valign="top" style="width: 22px; padding-top: 1px;">{$icon}</td>
+                                                <td width="22" valign="top" style="width: 22px; padding-top: 1px; line-height: 0; font-size: 0;">{$icon}</td>
                                                 <td valign="top" style="font-family: {$font}; font-size: 13px; line-height: 20px; color: {$muted};">
                                                     <div style="font-family: {$font}; font-size: 10px; line-height: 14px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: {$faint}; padding-bottom: 3px;">{$labelSafe}</div>
                                                     {$valueHtml}
@@ -173,6 +178,11 @@ HTML;
 function bcc_mail_html_shell($heading, $introHtml, $ctaText = null, $ctaUrl = null, $noteHtml = null, $badgeText = null, $fallbackUrl = null)
 {
     $logo = htmlspecialchars($GLOBALS['BCC_MAIL_LOGO_URL'], ENT_QUOTES, 'UTF-8');
+    // Telif satırında ALAN ADI değil ÜRÜN ADI yazar. Gerekçe: posta
+    // istemcileri (Gmail dahil) alan adı gibi görünen düz metni OTOMATİK
+    // bağlantıya çevirir — "opsflow.bcccrm.com" yazısı tıklanabilir oluyor ve
+    // kullanıcıyı canlı sunucuya götürüyordu. Ürün adında bu olmaz.
+    $brandName = htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8');
     $site = htmlspecialchars($GLOBALS['BCC_MAIL_SITE_URL'], ENT_QUOTES, 'UTF-8');
     $siteLabel = htmlspecialchars(preg_replace('#^https?://#', '', $GLOBALS['BCC_MAIL_SITE_URL']), ENT_QUOTES, 'UTF-8');
     $mailTo = htmlspecialchars($GLOBALS['BCC_MAIL_CONTACT_EMAIL'], ENT_QUOTES, 'UTF-8');
@@ -221,13 +231,22 @@ HTML;
     // gösterir. Sarmalayan <td bgcolor> ise <a>'nın arka planını tamamen
     // kırpan istemciler için üçüncü katman.
     $ctaHtml = '';
+    // Buton ORTALI (eskiden sola yaslıydı). align="center" td'de ŞART: Outlook
+    // (Word motoru) iç tablodaki margin:auto'yu yok sayar, hizalamayı yalnızca
+    // align özniteliğinden alır. margin:0 auto + text-align ise diğer
+    // istemcilerdeki ikinci güvence — üçü birlikte her yerde ortalar.
+    //
+    // ⚠️ Aşağısı HEREDOC: içine PHP açma/kapama etiketi yazılamaz, düz metin
+    // olarak maile basılır. Açıklamalar bu yüzden heredoc'un DIŞINDA.
+    // (Not: PHP kapatma etiketi TEK SATIRLIK YORUMUN İÇİNDE bile PHP modunu
+    // bitirir — bu yorumun ilk hâli tam olarak o yüzden dosyayı bozmuştu.)
     if ($ctaText !== null && $ctaUrl !== null) {
         $ctaUrlSafe = htmlspecialchars($ctaUrl, ENT_QUOTES, 'UTF-8');
         $ctaTextSafe = htmlspecialchars($ctaText, ENT_QUOTES, 'UTF-8');
         $ctaHtml = <<<HTML
                             <tr>
-                                <td style="padding: 26px 0 6px;">
-                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <td align="center" style="padding: 26px 0 6px; text-align: center;">
+                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
                                         <tr>
                                             <td bgcolor="{$accent}" style="background-color: {$accent}; background-image: linear-gradient(135deg, {$accent}, {$accentDark}); border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
                                                 <a href="{$ctaUrlSafe}" style="display: inline-block; padding: 14px 28px; font-family: {$font}; font-size: 15px; font-weight: 600; line-height: 20px; color: #ffffff; text-decoration: none; border-radius: 8px;">{$ctaTextSafe}</a>
@@ -369,7 +388,7 @@ HTML;
                 </tr>
 
                 <tr>
-                    <td bgcolor="{$panel}" style="padding: 14px 32px 20px; background-color: {$panel}; border-top: 1px solid {$line}; font-family: {$font}; font-size: 11px; line-height: 17px; color: {$faint};">&copy; {$year} bcc İletişim Hizmetleri A.Ş. Bu e-posta opsflow.bcccrm.com hesap işlemleri için gönderilmiştir.</td>
+                    <td bgcolor="{$panel}" style="padding: 14px 32px 20px; background-color: {$panel}; border-top: 1px solid {$line}; font-family: {$font}; font-size: 11px; line-height: 17px; color: {$faint};">&copy; {$year} bcc İletişim Hizmetleri A.Ş. Bu e-posta {$brandName} hesap işlemleri için gönderilmiştir.</td>
                 </tr>
 
             </table>

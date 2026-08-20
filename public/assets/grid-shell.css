@@ -914,6 +914,31 @@ html.is-mac .gs-kbd-other { display: none; }
     cursor: default;
 }
 
+/* "Boş tablo oluştur" satırı — görünüm türleriyle AYNI .gs-view-create-option
+   tabanını kullanır, yalnızca <a> döneminden kalan alt çizgi sıfırlaması ve
+   açık renk tanımı burada. Renk tema token'ından: sabit renk yazılırsa koyu
+   temada okunmaz olur (bu dosyanın geri kalanıyla AYNI kural). */
+.gs-view-create-option--table {
+    text-decoration: none;
+    color: var(--bcc-text);
+}
+
+.gs-view-create-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width:1.05rem;
+    height: 1.05rem;
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--bcc-text-muted);
+}
+
+.gs-view-create-option--table:hover .gs-view-create-plus {
+    color: var(--bcc-text);
+}
+
 .gs-view-drawer-search {
     display: flex;
     align-items: center;

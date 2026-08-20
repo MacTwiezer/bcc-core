@@ -78,6 +78,180 @@
             });
         });
 
+        // ---- Ad veya açıklama değiştir -------------------------------------
+        // Menü öğesi ve pencere YALNIZCA owner'a basılır (grid.php $isOwner);
+        // ikisi de yoksa bu blok sessizce no-op olur. Asıl yetki kapısı
+        // sunucuda: api/table_rename.php require_role('owner').
+        var renameModal = document.getElementById('gs-table-rename-modal');
+
+        if (renameModal) {
+            var renameForm = document.getElementById('gs-table-rename-form');
+            var renameError = document.getElementById('gs-table-rename-error');
+            var renameNameInput = renameForm.querySelector('input[name="name"]');
+            var renameDescInput = renameForm.querySelector('input[name="description"]');
+            var renameTargetId = null;
+
+            var closeRename = function () {
+                renameModal.hidden = true;
+                renameError.hidden = true;
+                renameTargetId = null;
+            };
+
+            Array.prototype.forEach.call(document.querySelectorAll('[data-table-rename]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    closeTabMenu(btn);
+                    renameTargetId = btn.getAttribute('data-table-rename');
+                    // Alanlar MEVCUT değerlerle DOLU açılır — boş açılsaydı
+                    // kullanıcı adı düzeltirken açıklamayı farkında olmadan
+                    // silerdi (bu yüzden bcc_list_base_tables description'ı da
+                    // seçiyor, bkz. src/schema.php).
+                    renameNameInput.value = btn.getAttribute('data-table-name') || '';
+                    renameDescInput.value = btn.getAttribute('data-table-desc') || '';
+                    renameError.hidden = true;
+                    renameModal.hidden = false;
+                    renameNameInput.focus();
+                    renameNameInput.select();
+                });
+            });
+
+            document.getElementById('gs-table-rename-close').addEventListener('click', closeRename);
+            document.getElementById('gs-table-rename-cancel').addEventListener('click', closeRename);
+            renameModal.addEventListener('click', function (e) {
+                if (e.target === renameModal) { closeRename(); }
+            });
+
+            renameForm.addEventListener('submit', function (e) {
+                e.preventDefault(); // sayfa terk edilmesin, gönderim AJAX
+                if (!renameTargetId) { return; }
+
+                var submit = renameForm.querySelector('button[type="submit"]');
+                submit.disabled = true;
+                renameError.hidden = true;
+
+                fetch('/api/table_rename.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        csrf_token: CSRF,
+                        table_id: renameTargetId,
+                        name: renameNameInput.value,
+                        description: renameDescInput.value
+                    }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () {
+                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                    });
+                }).then(function (data) {
+                    if (data && data.ok) {
+                        // Yenileme: sekme etiketi, sayfa başlığı ve "tüm tablolar"
+                        // listesi aynı adı taşıyor — üçünü elle güncellemek yerine
+                        // sunucunun ürettiği doğru hâli almak daha güvenli
+                        // (xlsx içe aktarmada da AYNI karar).
+                        window.location.reload();
+                        return;
+                    }
+                    submit.disabled = false;
+                    renameError.textContent = (data && data.error) || 'Tablo güncellenemedi.';
+                    renameError.hidden = false;
+                }).catch(function () {
+                    submit.disabled = false;
+                    renameError.textContent = 'Tablo güncellenemedi (bağlantı hatası).';
+                    renameError.hidden = false;
+                });
+            });
+        }
+
+        // ---- Tabloyu sil ----------------------------------------------------
+        // "Verileri temizle"den AYRI bir iş: o veriyi siler ve tabloyu bırakır
+        // (editor yetkisi), bu tablonun KENDİSİNİ siler (owner yetkisi).
+        var deleteModal = document.getElementById('gs-table-delete-modal');
+
+        if (deleteModal) {
+            var deleteSummary = document.getElementById('gs-table-delete-summary');
+            var deleteError = document.getElementById('gs-table-delete-error');
+            var deleteConfirm = document.getElementById('gs-table-delete-confirm');
+            var deleteTargetId = null;
+
+            var closeDelete = function () {
+                deleteModal.hidden = true;
+                deleteError.hidden = true;
+                deleteTargetId = null;
+                deleteConfirm.disabled = false;
+            };
+
+            Array.prototype.forEach.call(document.querySelectorAll('[data-table-delete]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    closeTabMenu(btn);
+                    deleteTargetId = btn.getAttribute('data-table-delete');
+                    var name = btn.getAttribute('data-table-name') || '';
+
+                    // Tablo adı KULLANICI VERİSİDİR. innerHTML ile birleştirmek
+                    // yerine DOM düğümleri kuruluyor: ad textContent ile
+                    // yazıldığı için "<img onerror=...>" adlı bir tablo script
+                    // çalıştıramaz. (Bu dosyada bir escapeHtml yardımcısı yok
+                    // ve yalnızca bunun için bir tane eklemek gereksizdi.)
+                    deleteSummary.textContent = '';
+
+                    var strong = document.createElement('strong');
+                    strong.textContent = name;
+                    deleteSummary.appendChild(strong);
+                    deleteSummary.appendChild(
+                        document.createTextNode(' tablosu kalıcı olarak silinecek.')
+                    );
+                    deleteSummary.appendChild(document.createElement('br'));
+                    deleteSummary.appendChild(
+                        document.createTextNode('Tüm alanları, kayıtları, görünümleri ve dosya ekleri de silinir.')
+                    );
+                    deleteSummary.appendChild(document.createElement('br'));
+
+                    var em = document.createElement('em');
+                    em.textContent = 'Bu işlem geri alınamaz.';
+                    deleteSummary.appendChild(em);
+
+                    deleteError.hidden = true;
+                    deleteModal.hidden = false;
+                });
+            });
+
+            document.getElementById('gs-table-delete-close').addEventListener('click', closeDelete);
+            document.getElementById('gs-table-delete-cancel').addEventListener('click', closeDelete);
+            deleteModal.addEventListener('click', function (e) {
+                if (e.target === deleteModal) { closeDelete(); }
+            });
+
+            deleteConfirm.addEventListener('click', function () {
+                if (!deleteTargetId) { return; }
+
+                deleteConfirm.disabled = true;
+                deleteError.hidden = true;
+
+                fetch('/api/table_delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ csrf_token: CSRF, table_id: deleteTargetId }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () {
+                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                    });
+                }).then(function (data) {
+                    if (data && data.ok) {
+                        // Nereye gidileceğini SUNUCU söyler: açık olan tablo
+                        // silinmiş olabilir. Base'de başka tablo varsa oraya,
+                        // yoksa tablo listesine.
+                        window.location.href = data.redirect_url;
+                        return;
+                    }
+                    deleteConfirm.disabled = false;
+                    deleteError.textContent = (data && data.error) || 'Tablo silinemedi.';
+                    deleteError.hidden = false;
+                }).catch(function () {
+                    deleteConfirm.disabled = false;
+                    deleteError.textContent = 'Tablo silinemedi (bağlantı hatası).';
+                    deleteError.hidden = false;
+                });
+            });
+        }
+
         // ---- Veri içe aktar (Import Excel) ----
         var overlay = document.getElementById('gs-table-import-overlay');
         var fileInput = document.getElementById('gs-table-import-file');

@@ -1937,6 +1937,45 @@ td.cell-flash-error {
     animation: cellFlashError 0.7s ease-out;
 }
 
+/* ---- Hücre seçimi: yapıştırma çapası ve hedef alanı -------------------- */
+/* Amaç: kullanıcı NEREYE yapıştıracağını yapıştırmadan ÖNCE görsün. Çapa
+   kesik çizgiyle, hedef alan hafif tonla işaretlenir; işlem bitince ikisi de
+   kalkar (grid-cell-select.js clearSelection). Renkler tema token'larından —
+   sabit renk yazılırsa koyu temada okunmaz olur. */
+
+td.grid-cell.is-paste-range {
+    background: var(--bcc-accent-soft);
+}
+
+/* Kesik çizgi: outline kullanılıyor, border DEĞİL — border hücre genişliğini
+   değiştirip tüm sütunu kaydırırdı (bu dosyada column-resize kuralları
+   piksel hassas). outline yerleşimi etkilemez. */
+td.grid-cell.is-paste-anchor {
+    outline: 2px dashed var(--bcc-accent);
+    outline-offset: -2px;
+    /* Komşu hücrelerin kenarlığı çizginin üstüne binmesin. */
+    position: relative;
+    z-index: 1;
+}
+
+/* Düzenleme açıkken çapa çizgisi girişin kenarlığıyla çakışıyordu. */
+td.grid-cell.is-paste-anchor.editing {
+    outline: none;
+}
+
+/* "Yürüyen karınca": kopyalanan alanın canlı olduğunu belli eder. Hareketi
+   kapatanlarda (prefers-reduced-motion) çizgi sabit kalır — bilgi kaybolmaz,
+   yalnızca animasyon durur. */
+@keyframes pasteAnchorAnts {
+    to { outline-offset: -6px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    td.grid-cell.is-paste-anchor {
+        animation: pasteAnchorAnts 0.9s linear infinite alternate;
+    }
+}
+
 /* ---- Grid araç çubuğu: arama + sıralama (Faz 4) ----------------------- */
 
 .grid-toolbar {

@@ -39,18 +39,15 @@
     padding: 2.25rem 2rem 0;
 }
 
-/* Marka işareti artık satır içi SVG kelime işareti (src/partials/brand_logo.php).
-   currentColor ile çizildiği için rengi buradan devralır — koyu temada da
-   okunur kalsın diye açıkça --bcc-text. */
-.login-logo img,
-.login-logo svg {
-    height: 34px;
+/* Marka işareti: YALNIZCA kurumsal logo, yanında yazı yok
+   (src/partials/brand_logo.php). Logo sabit renkli bir bitmap — koyu temada da
+   aynı görünür, çok renkli olduğu için okunurluk sorunu çıkarmaz.
+   44px = görselin GERÇEK yüksekliği (94x44): bire bir piksel, ölçeklenmediği
+   için en net hâli. */
+.login-logo .brand-logo {
+    height: 44px;
     width: auto;
     display: block;
-}
-
-.login-logo {
-    color: var(--bcc-text);
 }
 
 .login-card-body {

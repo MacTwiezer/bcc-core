@@ -182,8 +182,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Düz metin parçası ELLE yazılıyor (register.php:125 ile aynı
             // gerekçe): sadece-HTML mail spam puanını yükseltir.
+            // Marka adı bcc_brand_name()'den (config/app.php) — eskiden ALAN ADI
+            // literal yazılıydı. Kullanıcıya gösterilecek olan ÜRÜN ADIDIR;
+            // ayrıca posta istemcileri alan adı gibi görünen düz metni OTOMATİK
+            // bağlantıya çevirdiği için o yazı tıklanabilir oluyor ve kullanıcıyı
+            // yanlış yere götürüyordu (register.php'de de AYNI düzeltme).
             $bodyText = "Merhaba {$row['full_name']},\n\n"
-                . "opsflow.bcccrm.com hesabınız için şifre sıfırlama talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı açın:\n\n"
+                . bcc_brand_name() . " hesabınız için şifre sıfırlama talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı açın:\n\n"
                 . $resetLink . "\n\n"
                 . "Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir.\n\n"
                 . "Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmeden kalır."
@@ -194,7 +199,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $safeName = htmlspecialchars($row['full_name'], ENT_QUOTES, 'UTF-8');
 
             $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
-                . '<p style="margin: 0 0 14px;">opsflow.bcccrm.com hesabınız için bir şifre sıfırlama talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
+                . '<p style="margin: 0 0 14px;">' . htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8')
+                . ' hesabınız için bir şifre sıfırlama talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
                 . '<p style="margin: 0;">Bu bağlantı <strong>1 saat</strong> geçerlidir ve yalnızca <strong>bir kez</strong> kullanılabilir.</p>';
 
             $noteHtml = 'Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz — şifreniz değişmeden kalır.';
@@ -214,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Projenin TEK mail fonksiyonu (src/mailer.php:164). $MAIL_MODE='log'
             // iken gerçekten göndermez, storage/mail/ altına .txt + .html yazar.
-            bcc_send_mail($email, 'opsflow.bcccrm.com şifre sıfırlama talebi', $bodyText, $bodyHtml);
+            bcc_send_mail($email, bcc_brand_name() . ' şifre sıfırlama talebi', $bodyText, $bodyHtml);
 
             // Oturum AÇIK OLMADIĞI için user_id NULL kalır (audit_log.user_id
             // nullable, schema.sql:354); hedef kullanıcı entity_id'de taşınıyor.
@@ -231,8 +237,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Şifremi unuttum', ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<title><?php echo htmlspecialchars(bcc_brand_name() . ' — Şifremi unuttum', ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
@@ -240,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Şifremi unuttum</h1>

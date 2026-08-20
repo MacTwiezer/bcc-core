@@ -1,50 +1,30 @@
 <?php
-// OpsFlow marka işareti — TEK KAYNAK.
+// Marka işareti — TEK KAYNAK. Beş auth sayfası kullanır (login, register,
+// forgot-password, reset-password, verify_email).
 //
-// Eskiden burada assets/logo.png vardı: içinde "bcc" harfleri BASILI olan bir
-// bitmap. Marka adı değiştiğinde o dosyanın pikselleri değişmediği için üst
-// barda ve giriş/kayıt/doğrulama sayfalarında ESKİ ad görünmeye devam ediyordu
-// — sayfa başlıkları çoktan "opsflow.bcccrm.com" iken logo hâlâ "bcc"ydi.
+// YALNIZCA kurumsal logo (assets/logo.png) — yanında ürün adı YAZILMAZ.
+// Aynı görsel üst barda (src/partials/home_shell_top.php) ve sekme ikonunda
+// (assets/favicon.svg, kare tuvale gömülü hâli) da kullanılıyor: üç yüzey tek
+// görseli paylaşır.
 //
-// Neden <img> değil de SATIR İÇİ <svg>: kelime işareti currentColor ile
-// çiziliyor, yani .home-logo'nun devraldığı --bcc-text rengini alıyor ve KOYU
-// TEMADA da okunur kalıyor. Sabit renkli bir PNG/SVG dosyası koyu zeminde
-// kaybolurdu (eski logo bunu yalnızca çok renkli olduğu için atlatıyordu).
+// ⚠️ ÖNCEKİ İKİ HÂLİ: (1) satır içi SVG rozet + kelime işareti, (2) logo +
+// "OpsFlow" yazısı yan yana. İkisi de bırakıldı — logo tek başına duruyor.
+// Bu yüzden bcc_brand_name() BURADA KULLANILMIYOR; marka adı sayfa
+// başlığında (<title>) ve alt bilgideki bcc_brand_full() satırında zaten var.
 //
-// Ad metni bcc_brand_name()'den gelir (config/app.php) — bu dosyada da literal
-// marka yazmaz.
-//
-// $brandLogoClass: çağıran sayfanın vereceği sınıf (ör. topbar'da yok, giriş
-// sayfalarında ölçüyü login.css sürüyor). $brandLogoHeight: piksel yüksekliği.
+// $brandLogoClass: çağıran sayfanın vereceği sınıf. $brandLogoHeight: logonun
+// piksel yüksekliği.
 $brandLogoClass = isset($brandLogoClass) ? $brandLogoClass : '';
 $brandLogoHeight = isset($brandLogoHeight) ? (int) $brandLogoHeight : 32;
-$brandLogoName = bcc_brand_name();
 ?>
-<svg
-    class="brand-logo <?php echo htmlspecialchars($brandLogoClass, ENT_QUOTES, 'UTF-8'); ?>"
-    viewBox="0 0 150 32"
+<?php // alt DOLU: yanında artık markayı söyleyen bir yazı YOK, o yüzden görsel
+      // dekoratif değil — ekran okuyucu için tek marka bilgisi bu.
+      // width/height GERÇEK orandan (94x44) hesaplanıyor, yoksa görsel
+      // yüklenirken sayfa zıplardı. ?>
+<img
+    src="<?php echo bcc_asset_url('logo.png'); ?>"
+    alt="<?php echo htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8'); ?>"
     height="<?php echo $brandLogoHeight; ?>"
-    width="<?php echo (int) round($brandLogoHeight * 150 / 32); ?>"
-    role="img"
-    aria-label="<?php echo htmlspecialchars($brandLogoName, ENT_QUOTES, 'UTF-8'); ?>"
-    xmlns="http://www.w3.org/2000/svg"
+    width="<?php echo (int) round($brandLogoHeight * 94 / 44); ?>"
+    class="brand-logo <?php echo htmlspecialchars($brandLogoClass, ENT_QUOTES, 'UTF-8'); ?>"
 >
-    <?php // Rozet: marka aksanı. Renk temayla değişsin diye --bcc-accent. ?>
-    <rect x="0" y="2" width="28" height="28" rx="8" fill="var(--bcc-accent, #2d7ff9)"></rect>
-    <?php // İçindeki "akış" glifi: üst üste iki yay — "ops" akışını temsil eder.
-          // Beyaz, çünkü dolu aksan zeminin üstünde her iki temada da aynı. ?>
-    <g fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round">
-        <path d="M8 12h9a3.5 3.5 0 0 1 0 7H8"></path>
-        <path d="M8 23h12"></path>
-    </g>
-    <?php // Kelime işareti: currentColor -> .home-logo'nun metin rengi. ?>
-    <text
-        x="38"
-        y="22"
-        fill="currentColor"
-        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-        font-size="19"
-        font-weight="600"
-        letter-spacing="-0.3"
-    ><?php echo htmlspecialchars($brandLogoName, ENT_QUOTES, 'UTF-8'); ?></text>
-</svg>

@@ -148,3 +148,199 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* ---------- "Yeni Alan" 2. adımı: sayfa içi pencere ---------------------- */
+/* Tip seçilince açılan isim/seçenek formu artık sayfanın akışında DEĞİL, bir
+   pencerede. Perde ve başlık satırı assets/table-fields.js tarafından çalışma
+   anında ekleniyor — src/partials/field_type_wizard_fields.php grid.php'nin
+   "+" popup'ıyla PAYLAŞILDIĞI için ona dokunulmadı (orada 2. adım zaten yüzen
+   bir panelin içinde).
+
+   ⚠️ İKİNCİ SORUN: partial'daki alanlar çıplak <label>/<input> — .settings-field
+   sınıfı YOK, o yüzden settings-page.css'teki kurallar (.sp-page .settings-field
+   input) HİÇ eşleşmiyordu ve form "css'siz" görünüyordu. Aşağıdaki kurallar aynı
+   görünümü doğrudan bu adıma veriyor. */
+
+/* .sp-page ile KAPSANMAZ: perdeyi JS doğrudan <body>'ye ekliyor (formun içinde
+   olsaydı tıklama hedefi form alanlarıyla karışırdı), yani .sp-page'in altında
+   değil. Sınıf adı yalnızca bu sayfanın JS'i tarafından üretiliyor, çakışma yok. */
+.tf-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+/* Pencere <form>'un İÇİNDE kalıyor (fixed konumlandırma DOM ebeveyninden
+   bağımsızdır) — dışarı taşınsaydı alanlar forma dahil olmaz, gönderim boş
+   giderdi. */
+.sp-page #new-field-details-step:not([hidden]) {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 61;
+    width: min(460px, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.15rem 1.35rem 1.4rem;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 12px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+/* max-width kuralı artık pencerenin width'iyle çakışıyordu. */
+.sp-page #new-field-details-step { max-width: none; }
+
+/* .sp-page bir <div>; body onun ALTINDA değil, o yüzden kapsam YOK. */
+body.tf-modal-open { overflow: hidden; }
+
+/* ---- Başlık satırı ---- */
+.sp-page .tf-modal-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.15rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--bcc-border);
+}
+
+.sp-page .tf-modal-title {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+/* "Tip değiştir" — BUTON değil, METİN gibi görünmeli.
+   ⚠️ .link-btn kuralı style.css'te tanımlı ama bu sayfa style.css'i YÜKLEMİYOR
+   (yalnızca theme/home/settings-page/table-fields). Yani sınıf hiç stil almıyor
+   ve tarayıcının VARSAYILAN <button> görünümü (gri zemin + kenarlık + padding)
+   çıkıyordu. Buton görünümü burada tamamen sıfırlanıyor. */
+.sp-page .tf-modal-head .link-btn {
+    flex: 0 0 auto;
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1;
+    color: var(--bcc-accent);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.sp-page .tf-modal-head .link-btn:hover {
+    color: var(--bcc-accent-strong);
+}
+
+.sp-page .tf-modal-close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+
+.sp-page .tf-modal-close:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
+/* ---- Form alanları ---- */
+/* .settings-field ile AYNI görünüm; partial o sınıfı basmadığı için kurallar
+   burada eleman seçicileriyle veriliyor. */
+.sp-page #new-field-details-step > label,
+.sp-page #new-field-details-step > div > label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page #new-field-details-step input[type="text"],
+.sp-page #new-field-details-step input[type="number"],
+.sp-page #new-field-details-step textarea {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--bcc-text);
+    background: var(--bcc-surface-sunken);
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 6px;
+}
+
+.sp-page #new-field-details-step input[type="text"]:focus,
+.sp-page #new-field-details-step input[type="number"]:focus,
+.sp-page #new-field-details-step textarea:focus {
+    outline: none;
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+
+.sp-page #new-field-details-step textarea {
+    resize: vertical;
+    min-height: 5rem;
+}
+
+/* Currency/percent/rating satırları: iki alan yan yana. */
+.sp-page #new-field-currency-row:not([hidden]),
+.sp-page #new-field-percent-row:not([hidden]),
+.sp-page #new-field-rating-row:not([hidden]) {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.sp-page #new-field-currency-row > label,
+.sp-page #new-field-percent-row > label,
+.sp-page #new-field-rating-row > label {
+    flex: 1 1 0;
+}
+
+/* "Zorunlu alan" — onay kutusu yatay, diğerleri dikey. */
+.sp-page #new-field-required-row:not([hidden]) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--bcc-text);
+}
+
+/* ---- Gönder ---- */
+.sp-page #new-field-details-step button[type="submit"] {
+    align-self: flex-end;
+    margin-top: 0.2rem;
+    padding: 0.55rem 1.1rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--bcc-on-accent);
+    background: var(--bcc-accent);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.sp-page #new-field-details-step button[type="submit"]:hover {
+    background: var(--bcc-accent-strong);
+}

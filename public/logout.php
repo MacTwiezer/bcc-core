@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="utf-8">
 <title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Çıkış', ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
 </head>
 <body>

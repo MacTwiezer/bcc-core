@@ -416,6 +416,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
                     <?php
                     $fieldTypeLabels = $fieldTypes;
+                    // "Zorunlu alan" onay kutusu ALAN OLUŞTURMADA gösterilmiyor
+                    // (ürün kararı) — grid.php'nin "+" popup'ı bu bayrağı zaten
+                    // false veriyordu, aynı mekanizma. Paylaşılan partial'a
+                    // DOKUNULMADI.
+                    //
+                    // Yetenek kaybolmuyor: alan oluşturulduktan sonra "Düzenle"
+                    // formunda "Zorunlu alan" kutusu duruyor (bu dosyada, edit
+                    // dalında). Yeni alan zaten is_required=0 ile oluşuyor.
+                    $fieldWizardShowRequired = false;
                     require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
                     ?>
                 </form>

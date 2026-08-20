@@ -57,7 +57,7 @@ if (!isset($starredBases) || !is_array($starredBases)) {
 <head>
 <meta charset="utf-8">
 <title><?php echo htmlspecialchars($homePageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <?php if (!empty($homeIdentityMeta)): ?>
 <?php // Yalnızca TEK bir base bağlamı olan sayfalarda (ör. base_tables.php).
       // Dashboard/Starred/Workspaces birçok base listeler — orada sekme

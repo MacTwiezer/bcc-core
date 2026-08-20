@@ -74,7 +74,7 @@ if (!$view) {
 <?php /* Herkese açık bir sayfa: arama motorlarına girmesin. */ ?>
 <meta name="robots" content="noindex, nofollow">
 <title><?php echo $notFound ? 'Form bulunamadı' : htmlspecialchars($formTitle, ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">

@@ -26,8 +26,8 @@ foreach ($teams as $t) {
     $roleByTeamId[(int) $t['id']] = $t['role'];
 }
 
-// "+ Yeni Base Oluştur" — OpsFlow izin matrisinde base EKLEME yalnızca Owner ve
-// Creator'a açıktır (bkz. src/auth.php bcc_can_manage_bases(); Editor kayıt/alan
+// "+ Yeni Base Oluştur" — base EKLEME yalnızca Owner'a
+// açıktır (bkz. src/auth.php bcc_can_manage_bases(); Editor kayıt/alan
 // düzenler ama base ekleyemez). Kullanıcının BİRDEN ÇOK çalışma alanı olabilir ve
 // her birinde farklı rolde olabilir; bu yüzden tek bir "yetkili mi" bayrağı
 // yetmez — modaldaki çalışma alanı seçicisi YALNIZCA yetkili olduklarını

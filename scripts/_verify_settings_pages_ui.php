@@ -240,7 +240,10 @@ check('H) account-page.js DEGISMEDI (sp-*/ac-* bilmiyor)',
 foreach (array('data-account-field', 'data-account-display', 'data-account-edit-trigger',
                'data-account-edit-form', 'data-account-edit-cancel', 'data-account-value',
                'data-account-input', 'data-account-error', 'account-password-trigger',
-               'account-password-form', 'account-delete-trigger', 'account-delete-form') as $hook) {
+               // account-delete-* -> account-deactivate-*: hesap SILME kaldirildi,
+               // yerine kendi hesabini PASIFE ALMA geldi (bkz.
+               // public/api/account_deactivate.php bas yorumu).
+               'account-password-form', 'account-deactivate-trigger', 'account-deactivate-form') as $hook) {
     check("H) JS kancasi korundu: {$hook}", strpos($acPage, $hook) !== false);
 }
 // current_user() created_at/email_verify_token DONDURMUYOR -> $user uzerinden

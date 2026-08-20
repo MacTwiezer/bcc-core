@@ -13,7 +13,7 @@
 //             + team_members satiri OLUSTU.
 //
 // Fikstur: scripts/seed_demo_users.php'nin olusturdugu demo hesaplari
-// (owner/creator/editor/viewer @bcc.local). Betik KENDI gecici kurban
+// (owner/editor/commenter/viewer @bcc.local). Betik KENDI gecici kurban
 // uyeligini olusturur ve her durumda temizler; baska veriye DOKUNMAZ.
 //
 // Calistirma: C:\php73\php.exe scripts\_verify_rbac.php
@@ -127,8 +127,8 @@ foreach ($matrix as $role => $exp) {
 }
 
 check('bilinmeyen rol hicbir yetenege sahip degil',
-    !bcc_can_manage_bases('creator') && !bcc_can_manage_members('creator')
-    && !bcc_can_manage_schema('creator') && !bcc_can_edit_records('creator') && !bcc_can_comment('creator'));
+    !bcc_can_manage_bases('uydurma_rol') && !bcc_can_manage_members('uydurma_rol')
+    && !bcc_can_manage_schema('uydurma_rol') && !bcc_can_edit_records('uydurma_rol') && !bcc_can_comment('uydurma_rol'));
 check('null rol hicbir yetenege sahip degil',
     !bcc_can_manage_bases(null) && !bcc_can_manage_members(null)
     && !bcc_can_manage_schema(null) && !bcc_can_edit_records(null) && !bcc_can_comment(null));
@@ -146,7 +146,10 @@ $tmMarkers = array(
     'data-tm-select-all' => 'tumunu sec kutusu',
 );
 
-foreach (array('owner@bcc.local' => true, 'creator@bcc.local' => true,
+// creator@bcc.local KALDIRILDI (rolu zaten 'owner'di, owner@bcc.local ile ayni
+// seyi test ediyordu). Yerine commenter@bcc.local: GERCEKTEN farkli bir seviye,
+// ve bu yeteneklerin HICBIRINE sahip olmamali.
+foreach (array('owner@bcc.local' => true, 'commenter@bcc.local' => false,
                'editor@bcc.local' => false, 'viewer@bcc.local' => false) as $email => $shouldSee) {
     $html = render_as($uid[$email], 'team_members.php', 'team_id=' . $teamId);
 
@@ -200,17 +203,25 @@ foreach (array('editor@bcc.local', 'viewer@bcc.local') as $email) {
             array('t' => $teamId, 'u' => $uid['owner@bcc.local']))));
 
     // 4) TOPLU cikarma denemesi
+    //
+    // Uye sayisi ONCE olculur, SONRA karsilastirilir. Onceki iki hali de
+    // kirilgandi: once sabit "=== 4" yaziyordu (listeye besinci hesap
+    // eklenince kirildi), sonra count(bcc_demo_accounts())'tan turetiliyordu
+    // (bu sefer demo listesinden bir hesap CIKARILINCA kirildi, cunku ekipte
+    // listede olmayan eski uyeler kalabiliyor). Testin dogruladigi sey
+    // "KIMSE CIKARILAMADI"dir — ekibin kac kisilik oldugu HIC ONEMLI DEGIL.
+    $membersBefore = (int) bcc_fetch_column(
+        'SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId));
+
     $r = post_as($uid[$email], 'team_members.php', 'team_id=' . $teamId, array(
-        'action' => 'remove_bulk', 'user_ids' => array($uid['owner@bcc.local'], $uid['creator@bcc.local']),
+        'action' => 'remove_bulk', 'user_ids' => array($uid['owner@bcc.local'], $uid['commenter@bcc.local']),
     ));
     check($email . ': POST remove_bulk -> 403', $r['status'] === 403, 'HTTP ' . $r['status']);
-    // Beklenen uye sayisi SABIT YAZILMAZ: bcc_demo_accounts() listesinden
-    // turetilir. Onceki hali "=== 4" idi ve listeye besinci hesap
-    // (commenter@bcc.local) eklendiginde kirildi — testin dogruladigi sey
-    // "kimse cikarilamadi"dir, ekibin kac kisilik oldugu DEGIL.
-    $expectedMembers = count(bcc_demo_accounts());
-    check($email . ': toplu cikarma sonrasi uye sayisi ' . $expectedMembers . ' (kimse cikarilamadi)',
-        (int) bcc_fetch_column('SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId)) === $expectedMembers);
+
+    $membersAfter = (int) bcc_fetch_column(
+        'SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId));
+    check($email . ': toplu cikarma sonrasi uye sayisi DEGISMEDI (' . $membersBefore . ')',
+        $membersAfter === $membersBefore, 'once=' . $membersBefore . ' sonra=' . $membersAfter);
 }
 
 // Owner GERCEKTEN yapabiliyor mu (kapi fazla kapanmadi mi)?
@@ -329,7 +340,10 @@ check('viewer: kayit sayisi degismedi',
 // ---------------------------------------------------------------------------
 echo "\n--- F) workspaces.php buton gorunurlugu ---\n";
 
-foreach (array('owner@bcc.local' => true, 'creator@bcc.local' => true,
+// creator@bcc.local KALDIRILDI (rolu zaten 'owner'di, owner@bcc.local ile ayni
+// seyi test ediyordu). Yerine commenter@bcc.local: GERCEKTEN farkli bir seviye,
+// ve bu yeteneklerin HICBIRINE sahip olmamali.
+foreach (array('owner@bcc.local' => true, 'commenter@bcc.local' => false,
                'editor@bcc.local' => false, 'viewer@bcc.local' => false) as $email => $shouldSee) {
     $html = render_as($uid[$email], 'workspaces.php', 'team_id=' . $teamId);
 
@@ -355,7 +369,10 @@ foreach (array('owner@bcc.local' => true, 'creator@bcc.local' => true,
 // ---------------------------------------------------------------------------
 echo "\n--- G) dashboard.php / bases.php (regresyon) ---\n";
 
-foreach (array('owner@bcc.local' => true, 'creator@bcc.local' => true,
+// creator@bcc.local KALDIRILDI (rolu zaten 'owner'di, owner@bcc.local ile ayni
+// seyi test ediyordu). Yerine commenter@bcc.local: GERCEKTEN farkli bir seviye,
+// ve bu yeteneklerin HICBIRINE sahip olmamali.
+foreach (array('owner@bcc.local' => true, 'commenter@bcc.local' => false,
                'editor@bcc.local' => false, 'viewer@bcc.local' => false) as $email => $shouldSee) {
     $html = render_as($uid[$email], 'dashboard.php');
     check($email . ': dashboard "+ Yeni Base Oluştur" ' . ($shouldSee ? 'var' : 'YOK'),

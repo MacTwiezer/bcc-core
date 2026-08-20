@@ -314,17 +314,23 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
                 Tehlikeli Bölge
             </h3>
+            <?php // HESAP SİLME KALDIRILDI (ürün kararı): hiçbir kullanıcı, rolü ne
+                  // olursa olsun, kendi hesabını KALICI OLARAK SİLEMEZ. Yerine
+                  // "pasife alma" sunuluyor — geri alınabilir ve içerik/denetim
+                  // izleri bozulmadan kalır.
+                  //
+                  // ⚠️ Butonu gizlemek YETMEZ: api/account_delete.php uçnoktası
+                  // tamamen KALDIRILDI, yani istek elle gönderilse bile silecek
+                  // bir yol yok (bkz. api/account_deactivate.php baş yorumu). ?>
             <div class="account-row-display ac-danger-row" data-account-display>
                 <span class="account-row-value">
-                    <strong>Hesabı kalıcı olarak sil</strong>
-                    <span class="ac-danger-sub">Bu işlem geri alınamaz.</span>
+                    <strong>Hesabı pasife al</strong>
+                    <span class="ac-danger-sub">Giriş yapamazsınız; bir yönetici hesabınızı yeniden aktifleştirebilir.</span>
                 </span>
-                <?php // Ham metin link yerine gerçek bir tehlike butonu. id ve
-                      // davranış AYNEN korundu (account-page.js sözleşmesi). ?>
-                <button type="button" class="ac-btn-danger" id="account-delete-trigger">Hesabımı Sil</button>
+                <button type="button" class="ac-btn-danger" id="account-deactivate-trigger">Hesabımı Pasife Al</button>
             </div>
-            <form class="account-row-form" id="account-delete-form" hidden>
-                <p class="account-danger-warning">Bu işlem geri alınamaz. Hesabınız kalıcı olarak silinir; oluşturduğunuz base/kayıt/görünümler silinmez ama artık sizinle ilişkilendirilmez.</p>
+            <form class="account-row-form" id="account-deactivate-form" hidden>
+                <p class="account-danger-warning">Hesabınız pasife alınır ve oturumunuz kapatılır. Bundan sonra giriş yapamazsınız — tekrar erişim için bir platform yöneticisinin hesabınızı aktifleştirmesi gerekir. Base'leriniz, kayıtlarınız ve görünümleriniz silinmez.</p>
                 <label class="account-field-label">Mevcut şifre
                     <div class="input-with-toggle">
                         <input type="password" name="current_password" class="account-input" autocomplete="current-password" required>
@@ -334,10 +340,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     </div>
                 </label>
                 <div class="account-row-actions">
-                    <button type="submit" class="account-btn-danger">Hesabımı kalıcı olarak sil</button>
-                    <button type="button" class="account-btn-secondary" id="account-delete-cancel">İptal</button>
+                    <button type="submit" class="account-btn-danger">Hesabımı pasife al</button>
+                    <button type="button" class="account-btn-secondary" id="account-deactivate-cancel">İptal</button>
                 </div>
-                <div class="account-row-error" id="account-delete-error" hidden></div>
+                <div class="account-row-error" id="account-deactivate-error" hidden></div>
             </form>
         </div>
         </div><!-- /.ac-main -->

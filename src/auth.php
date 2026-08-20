@@ -157,19 +157,23 @@ function bcc_assignable_roles($myRank)
 //
 // Rol rütbeleri: viewer(1) < commenter(2) < editor(3) < owner(4).
 //
-// OpsFlow eşlemesi (docs/GEREKSINIMLER.md — çalışma alanı yetkileri):
-//   Owner + Creator -> bizde 'owner'   (ayrı bir 'creator' rolü YOK; bkz.
-//                                       src/demo_accounts.php'deki uzun not)
-//   Editor          -> 'editor'
-//   Commenter       -> 'commenter'
-//   Read-only       -> 'viewer'
+// SİSTEMDEKİ ROLLER BU DÖRTTÜR — başka rol yoktur ve bir rol adı yalnızca
+// $BCC_ROLE_RANK'te varsa geçerlidir (bcc_assignable_roles() atanabilir listeyi
+// oradan türetir, bcc_team_member_assign() gelen değeri o listeye karşı
+// doğrular). Whitelist dışı bir rol — ör. istemcinin uydurduğu bir ad — hiçbir
+// kapıyı açmaz ve atanamaz.
+//
+// KALDIRILDI — "Creator": bu uygulamada 'creator' diye bir rol HİÇBİR ZAMAN
+// olmadı (ENUM'a eklenmedi). Yalnızca OpsFlow'un izin matrisindeki Creator
+// satırının bizde 'owner'a denk düştüğünü anlatan bir eşleme notu vardı; o
+// eşleme artık anlamsız olduğu için not da kaldırıldı.
 
-// Base EKLEME/SİLME. OpsFlow izin matrisi:
-//   "Add and delete bases in the shared workspace" → Owner ✅ Creator ✅
-//                                                    Editor ✗ Commenter ✗ Read-only ✗
-//   "Access all bases ... at your assigned permission level" → BEŞ rolde de ✅
+// Base EKLEME/SİLME:
+//   "Add and delete bases in the shared workspace" → Owner ✅
+//                                                    Editor ✗ Commenter ✗ Viewer ✗
+//   "Access all bases ... at your assigned permission level" → DÖRT rolde de ✅
 // Yani base'i GÖRMEK üyelikle gelir (require_team_access + dashboard.php'nin
-// team_id IN (...) süzgeci), OLUŞTURMAK/SİLMEK en üst iki role aittir.
+// team_id IN (...) süzgeci), OLUŞTURMAK/SİLMEK yalnızca Owner'a aittir.
 // Çağıranlar: dashboard.php, bases.php, api/base_create.php, api/base_delete.php.
 function bcc_can_manage_bases($role)
 {

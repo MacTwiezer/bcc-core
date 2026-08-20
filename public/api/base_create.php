@@ -4,8 +4,8 @@
 // bcc_create_base()'i çağırır (doğrulama/INSERT/audit tek yerde), burada yalnızca
 // istek biçimi (JSON) ve yetki reddi farklıdır.
 //
-// Yetki: OpsFlow'da bir çalışma alanına base EKLEMEK yalnızca Owner ve Creator'a
-// açıktır (Editor kayıt düzenler ama base ekleyemez) — eşik src/auth.php'deki
+// Yetki: bir çalışma alanına base EKLEMEK yalnızca Owner'a açıktır (Editor
+// kayıt düzenler ama base ekleyemez) — eşik src/auth.php'deki
 // bcc_can_manage_bases()'te TEK yerde tanımlı, dashboard.php'nin kutucuğu
 // gizleme kararı da aynı fonksiyondan gelir. Buradaki kontrol asıl kapıdır:
 // kutucuğu görmeyen bir kullanıcı bu uçnoktaya elle istek atsa da reddedilir.

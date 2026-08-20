@@ -295,7 +295,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 // "Katılımcıları yönet": hedef sayfa (team_members.php)
                                 //   artık Owner olmayana zaten salt-okunur açılıyor; butonu
                                 //   da göstermemek "yönet" vaadini boşa çıkarmamak için.
-                                // "Base oluştur": OpsFlow'da Owner+Creator satırı
+                                // "Base oluştur": Owner eşiği
                                 //   (bcc_can_manage_bases), bases.php'nin formu ve
                                 //   api/base_create.php ile AYNI eşik.
                                 // "Ayarlar": çalışma alanı ayarları diye bir ÖZELLİK YOK

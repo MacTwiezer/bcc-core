@@ -129,7 +129,7 @@ check('temsilci kumesi != yorum-yazan kumesi (bcc_can_comment ile karistirilmami
 
 check('izlenen taraf kendi verisini GORMEZ', bcc_can_view_record_audits('commenter') === false);
 
-foreach (array('creator', '', 'admin', 'COMMENTER') as $bad) {
+foreach (array('uydurma_rol', '', 'admin', 'COMMENTER') as $bad) {
     check("gecersiz rol '" . $bad . "' hicbir kapiyi acmiyor",
         !bcc_is_representative($bad) && !bcc_can_view_record_audits($bad));
 }

@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = isset($_POST['description']) ? trim($_POST['description']) : '';
 
     // require_role hem üyeliği (KVKK izolasyonu) hem de rolü doğrular. Eşik
-    // 'editor' DEĞİL 'owner': OpsFlow'un izin matrisinde "Add and delete bases
-    // in the shared workspace" satırı yalnızca Owner ve Creator'a açık, Editor'a
+    // 'editor' DEĞİL 'owner': "Add and delete bases in the shared workspace"
+    // yalnızca Owner'a açık, Editor'a
     // kapalıdır (bkz. src/auth.php bcc_can_manage_bases()). Aynı eşik Home'daki
     // "+ Yeni Base Oluştur" kutucuğunu ve api/base_create.php'yi de yönetir —
     // üç giriş noktası tek kaynaktan beslenir.

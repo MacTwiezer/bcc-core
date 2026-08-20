@@ -60,7 +60,7 @@ check('editor base EKLEYEMEZ (OpsFlow: Editor bu satirda yok)', bcc_can_manage_b
 check('commenter base ekleyemez', bcc_can_manage_bases('commenter') === false);
 check('viewer base ekleyemez', bcc_can_manage_bases('viewer') === false);
 check('rolsuz (null) base ekleyemez', bcc_can_manage_bases(null) === false);
-check('bilinmeyen rol base ekleyemez', bcc_can_manage_bases('creator') === false);
+check('bilinmeyen rol base ekleyemez', bcc_can_manage_bases('uydurma_rol') === false);
 
 // ---------------------------------------------------------------------------
 // D) Ikon sistemi — saf fonksiyon

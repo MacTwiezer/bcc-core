@@ -7,18 +7,18 @@
 // değişince diğeri sessizce yanlış kimlik bilgisi doldurmaya devam ederdi.
 //
 // ---------------------------------------------------------------------------
-// "Creator" hakkında (bilinçli karar, kullanıcı onayladı)
-// ---------------------------------------------------------------------------
-// team_members.role sabit bir ENUM'dur: ('owner','editor','commenter','viewer')
-// — 'creator' DİYE BİR ROL YOK ve eklenmedi (DDL yok). OpsFlow'un izin
-// matrisinde Owner ve Creator, "Add and delete bases in the shared workspace"
-// satırında AYNI hücreyi paylaşır (ikisi de ✅); bu uygulamada o ikilinin
-// karşılığı tek 'owner' rolüdür (bkz. src/auth.php bcc_can_manage_bases()).
-// Bu yüzden creator@bcc.local rolü de 'owner'dır ve owner@bcc.local ile
-// DAVRANIŞ OLARAK BİREBİR AYNIDIR — ayrı bir yetki seviyesi test etmez,
-// yalnızca "OpsFlow'daki Creator bizde Owner'a denk düşüyor" eşlemesini
-// ekranda görünür kılar. Gerçekten FARKLI davranan dördüncü bir seviye test
-// etmek istenirse 'commenter' rolü kullanılmalıdır.
+// Liste, team_members.role ENUM'undaki DÖRT ROLÜ birebir karşılar:
+// ('owner','editor','commenter','viewer'). Her demo hesabı GERÇEKTEN farklı
+// davranan bir yetki seviyesini temsil eder — aynı davranışı iki kez gösteren
+// hesap YOKTUR.
+//
+// KALDIRILDI — "Creator": listede bir zamanlar creator@bcc.local vardı ama
+// GERÇEK ROLÜ 'owner' idi (OpsFlow'un izin matrisinde Owner ve Creator "Add
+// and delete bases in the shared workspace" satırında aynı hücreyi paylaşır,
+// bu uygulamada ikisinin karşılığı tek 'owner' rolü). Yani owner@bcc.local
+// ile DAVRANIŞ OLARAK BİREBİR AYNIYDI, ayrı bir seviye test etmiyordu ve
+// ekranda var olmayan bir rol varmış izlenimi bırakıyordu. 'creator' DİYE BİR
+// ROL HİÇBİR ZAMAN OLMADI (ENUM'a eklenmedi, DDL yok).
 // ---------------------------------------------------------------------------
 
 // Demo butonları YALNIZCA bu bayrak açıkken basılır. Varsayılan KAPALI
@@ -75,15 +75,6 @@ function bcc_demo_accounts()
             'hint' => 'Base oluşturur/siler, rol atar',
         ),
         array(
-            'email' => 'creator@bcc.local',
-            'password' => $password,
-            'full_name' => 'Demo Creator',
-            // OpsFlow Creator -> bu uygulamada 'owner' (yukarıdaki nota bakın).
-            'role' => 'owner',
-            'label' => 'Creator',
-            'hint' => "OpsFlow'da Creator = bizde Owner",
-        ),
-        array(
             'email' => 'editor@bcc.local',
             'password' => $password,
             'full_name' => 'Demo Editor',
@@ -92,11 +83,13 @@ function bcc_demo_accounts()
             'hint' => 'Kayıt/alan düzenler, base OLUŞTURAMAZ',
         ),
         array(
-            // Yukarıdaki "Creator" notunun işaret ettiği DÖRDÜNCÜ seviye: owner/
-            // editor/viewer'dan gerçekten AYRI davranan tek rol bu (yorum yazar
-            // ama kayıt/alan düzenleyemez, bkz. src/auth.php bcc_can_comment()
-            // ile bcc_can_edit_records() farkı). Liste rol rütbesine göre azalan
-            // sırada olduğu için editor(3) ile viewer(1) ARASINA konuldu.
+            // owner/editor/viewer'dan gerçekten AYRI davranan seviye: yorum
+            // yazar ama kayıt/alan düzenleyemez (bkz. src/auth.php
+            // bcc_can_comment() ile bcc_can_edit_records() farkı). Ayrıca
+            // "temsilci" tanımıdır — not inceleme takibi YALNIZCA bu rol için
+            // kaydedilir (bkz. bcc_is_representative()). Liste rol rütbesine
+            // göre azalan sırada olduğu için editor(3) ile viewer(1) ARASINA
+            // konuldu.
             'email' => 'commenter@bcc.local',
             'password' => $password,
             'full_name' => 'Demo Commenter',

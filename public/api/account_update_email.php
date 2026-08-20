@@ -6,7 +6,7 @@
 // kontrolü (kullanıcı dostu mesaj için), ayrıca DB'de zaten uq_users_email
 // UNIQUE kısıtı var (son savunma hattı).
 //
-// E-posta giriş kimliğidir — account_update_password.php/account_delete.php
+// E-posta giriş kimliğidir — account_update_password.php/account_deactivate.php
 // ile AYNI gerekçeyle mevcut şifre password_verify() ile doğrulanmadan
 // değiştirilmez (bulunan gerçek bug: bu kontrol yoktu, ele geçirilmiş bir
 // oturum şifre bilinmeden hesabın giriş e-postasını sessizce değiştirebilirdi).

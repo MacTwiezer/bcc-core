@@ -151,12 +151,18 @@
             });
         }
 
-        // ---- Hesabı sil — şifre güncelleme bloğuyla AYNI aç/kapa deseni,
+        // ---- Hesabı PASİFE AL — şifre güncelleme bloğuyla AYNI aç/kapa deseni,
         // başarıda ise form sıfırlanmaz (sayfa zaten redirect ile terk edilir).
-        var delTrigger = document.getElementById('account-delete-trigger');
-        var delForm = document.getElementById('account-delete-form');
-        var delCancel = document.getElementById('account-delete-cancel');
-        var delError = document.getElementById('account-delete-error');
+        //
+        // ⚠️ Eskiden burası "Hesabı sil" idi ve /api/account_delete.php'ye POST
+        // atıyordu. Hesap silme TAMAMEN kaldırıldı (bkz. api/account_deactivate.php
+        // baş yorumu): hiçbir kullanıcı, rolü ne olursa olsun, kendi hesabını
+        // silemez. Bu blok yalnızca UX; asıl kural sunucuda — silme uçnoktası
+        // artık YOK, yani bu dosya değiştirilse bile silinecek bir yol kalmadı.
+        var delTrigger = document.getElementById('account-deactivate-trigger');
+        var delForm = document.getElementById('account-deactivate-form');
+        var delCancel = document.getElementById('account-deactivate-cancel');
+        var delError = document.getElementById('account-deactivate-error');
 
         if (delTrigger && delForm) {
             var delDisplay = delTrigger.closest('[data-account-display]');
@@ -184,7 +190,7 @@
                 submitBtn.disabled = true;
                 delError.hidden = true;
 
-                post('/api/account_delete.php', {
+                post('/api/account_deactivate.php', {
                     csrf_token: CSRF,
                     current_password: delForm.querySelector('input[name="current_password"]').value,
                 }).then(function (result) {
@@ -193,11 +199,11 @@
                         return;
                     }
                     submitBtn.disabled = false;
-                    delError.textContent = (result.data && result.data.error) || 'Hesap silinemedi.';
+                    delError.textContent = (result.data && result.data.error) || 'Hesap pasife alınamadı.';
                     delError.hidden = false;
                 }).catch(function () {
                     submitBtn.disabled = false;
-                    delError.textContent = 'Hesap silinemedi (bağlantı hatası).';
+                    delError.textContent = 'Hesap pasife alınamadı (bağlantı hatası).';
                     delError.hidden = false;
                 });
             });

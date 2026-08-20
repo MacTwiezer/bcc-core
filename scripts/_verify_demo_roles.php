@@ -43,6 +43,15 @@ function render_as($userId, $page, $query = '')
 
 $accounts = bcc_demo_accounts();
 
+// Beklenen rol e-postadan TAHMIN EDILMEZ, demo listesinden turetilir. Onceki
+// hali "editor ise editor, viewer ise viewer, DIGERI owner" seklinde bir
+// ucluydu ve listeye dorduncu bir rol (commenter) eklendiginde sessizce yanlis
+// beklenti uretiyordu.
+$roleByEmail = array();
+foreach ($accounts as $acc) {
+    $roleByEmail[$acc['email']] = $acc['role'];
+}
+
 // ---------------------------------------------------------------------------
 // A) Hesaplar ve kimlik bilgileri
 // ---------------------------------------------------------------------------
@@ -101,10 +110,12 @@ check('yanlis sifre reddediliyor', trim((string) shell_exec($cmd . ' 2>&1')) ===
 // ---------------------------------------------------------------------------
 echo "\n--- C) dashboard.php yetki sinirlari ---\n";
 
+// creator@bcc.local KALDIRILDI: rolu zaten 'owner'di, owner@bcc.local ile AYNI
+// seyi test ediyordu. Yerine commenter@bcc.local — gercekten farkli bir seviye.
 $expectCreate = array(
     'owner@bcc.local' => true,
-    'creator@bcc.local' => true,   // rolu 'owner' (OpsFlow Creator eslemesi)
     'editor@bcc.local' => false,
+    'commenter@bcc.local' => false,
     'viewer@bcc.local' => false,
 );
 
@@ -128,7 +139,7 @@ foreach ($expectCreate as $email => $shouldSee) {
         strpos($html, 'Demo CRM') !== false);
 
     // Rol rozeti kartta dogru yaziyor mu?
-    $role = ($email === 'editor@bcc.local') ? 'editor' : (($email === 'viewer@bcc.local') ? 'viewer' : 'owner');
+    $role = $roleByEmail[$email];
     check($email . ': kart rozeti home-base-role--' . $role,
         strpos($html, 'home-base-role--' . $role) !== false);
 }
@@ -148,10 +159,12 @@ $tableId = $tableRow ? (int) $tableRow['id'] : 0;
 check('demo tablosu var', $tableId > 0);
 
 if ($tableId > 0) {
+    // Duzenleme editor+ (bkz. bcc_can_edit_records) — commenter YORUM yazar
+    // ama hucre duzenleyemez, o yuzden false.
     $expectEdit = array(
         'owner@bcc.local' => true,
-        'creator@bcc.local' => true,
         'editor@bcc.local' => true,
+        'commenter@bcc.local' => false,
         'viewer@bcc.local' => false,
     );
 
@@ -190,7 +203,7 @@ foreach (array('owner@bcc.local', 'editor@bcc.local', 'viewer@bcc.local') as $em
     check($email . ': workspaces.php acildi', strpos($ws, 'Demo Calisma Alani') !== false);
 
     // Rol hapi herkeste kendi rolunu gostermeli.
-    $role = ($email === 'editor@bcc.local') ? 'editor' : (($email === 'viewer@bcc.local') ? 'viewer' : 'owner');
+    $role = $roleByEmail[$email];
     check($email . ': workspaces rol hapi sp-role--' . $role,
         strpos($ws, 'sp-role--' . $role) !== false);
 

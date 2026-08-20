@@ -159,7 +159,11 @@
         if (createPanel) {
             createPanel.addEventListener('click', function (e) {
                 var option = e.target.closest('.gs-view-create-option');
-                if (!option) {
+                // data-view-type ŞART: bu panelde artık görünüm türü OLMAYAN
+                // bir seçenek de var ("Boş tablo oluştur"). Yalnızca sınıfa
+                // bakmak onu da yakalıyor ve view_create.php'ye boş tür
+                // göndererek "Geçersiz görünüm türü" hatası veriyordu.
+                if (!option || !option.hasAttribute('data-view-type')) {
                     return;
                 }
 
@@ -191,6 +195,82 @@
                 }).catch(function () {
                     option.disabled = false;
                     window.alert('Görünüm oluşturulamadı (bağlantı hatası).');
+                });
+            });
+        }
+
+        // ---- "Boş tablo oluştur" modalı ---------------------------------
+        // Menüdeki tetikleyici ve modal YALNIZCA owner'a basılır; ikisi de
+        // yoksa bu blok sessizce no-op olur (projedeki null-check deseni).
+        // Asıl yetki kapısı sunucuda: api/table_create.php.
+        var createTableBtn = document.getElementById('gs-create-table-btn');
+        var createTableModal = document.getElementById('gs-create-table-modal');
+
+        if (createTableBtn && createTableModal) {
+            var ctForm = document.getElementById('gs-create-table-form');
+            var ctError = document.getElementById('gs-create-table-error');
+            var ctNameInput = ctForm.querySelector('input[name="name"]');
+
+            var closeCreateTable = function () {
+                createTableModal.hidden = true;
+                ctForm.reset();
+                ctError.hidden = true;
+            };
+
+            createTableBtn.addEventListener('click', function () {
+                // Menü kapanır — görünüm seçenekleriyle AYNI davranış.
+                if (createMenu) {
+                    createMenu.removeAttribute('open');
+                }
+                ctError.hidden = true;
+                createTableModal.hidden = false;
+                ctNameInput.focus();
+            });
+
+            document.getElementById('gs-create-table-close').addEventListener('click', closeCreateTable);
+            document.getElementById('gs-create-table-cancel').addEventListener('click', closeCreateTable);
+
+            // Arka plana tıklayınca kapan — modalın İÇİNE tıklamak kapatmamalı,
+            // o yüzden hedefin backdrop'ın KENDİSİ olması aranıyor.
+            createTableModal.addEventListener('click', function (e) {
+                if (e.target === createTableModal) {
+                    closeCreateTable();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !createTableModal.hidden) {
+                    closeCreateTable();
+                }
+            });
+
+            ctForm.addEventListener('submit', function (e) {
+                // Sayfa terk edilmesin: gönderim AJAX.
+                e.preventDefault();
+
+                var submitBtn = ctForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                ctError.hidden = true;
+
+                post('/api/table_create.php', {
+                    csrf_token: CSRF,
+                    base_id: createTableModal.getAttribute('data-base-id'),
+                    name: ctNameInput.value,
+                    description: ctForm.querySelector('input[name="description"]').value,
+                }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok) {
+                        // Yeni tabloya geç — kullanıcı oluşturduğu boş tabloyu
+                        // hemen görsün. Hedefi SUNUCU veriyor.
+                        window.location.href = result.data.redirect_url;
+                        return;
+                    }
+                    submitBtn.disabled = false;
+                    ctError.textContent = (result.data && result.data.error) || 'Tablo oluşturulamadı.';
+                    ctError.hidden = false;
+                }).catch(function () {
+                    submitBtn.disabled = false;
+                    ctError.textContent = 'Tablo oluşturulamadı (bağlantı hatası).';
+                    ctError.hidden = false;
                 });
             });
         }

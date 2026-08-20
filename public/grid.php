@@ -570,7 +570,7 @@ $gridUser = current_user();
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <title><?php echo htmlspecialchars(bcc_page_title($table['base_name'], $table['name']), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name']), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
@@ -720,8 +720,42 @@ $gridUser = current_user();
                         </summary>
                         <div class="gs-table-tab-menu-panel gs-table-tab-import-menu-panel">
                             <button type="button" class="gs-table-tab-menu-item" data-table-import="<?php echo (int) $st['id']; ?>">Veri içe aktar</button>
+
+                            <?php /* "Ad veya açıklama değiştir" ve "Sil" OWNER'a
+                                     özel — menünün kendisi $canEdit (editor+) ile
+                                     açık ama bu ikisi ŞEMA işidir (base_tables.php
+                                     require_role('owner')). Editor'a gösterip
+                                     sunucuda 403 vermek, bu projede tablo "+" ve
+                                     alan "+" düğmelerinde ZATEN iki kez yaşanmış
+                                     hataydı.
+
+                                     "Verileri temizle" BİLEREK KALDI ve editor'a
+                                     açık: o VERİYİ siler, tabloyu değil
+                                     (table_clear_data.php, require_role('editor')).
+                                     "Sil" ile karışmasın diye ikisi ayrı bölümde
+                                     ve farklı yetki seviyesinde. */ ?>
+                            <?php if ($isOwner): ?>
+                                <div class="gs-table-tab-menu-divider"></div>
+                                <button
+                                    type="button"
+                                    class="gs-table-tab-menu-item"
+                                    data-table-rename="<?php echo (int) $st['id']; ?>"
+                                    data-table-name="<?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-table-desc="<?php echo htmlspecialchars((string) $st['description'], ENT_QUOTES, 'UTF-8'); ?>"
+                                >Ad veya açıklama değiştir</button>
+                            <?php endif; ?>
+
                             <div class="gs-table-tab-menu-divider"></div>
                             <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" data-table-clear="<?php echo (int) $st['id']; ?>">Verileri temizle</button>
+
+                            <?php if ($isOwner): ?>
+                                <button
+                                    type="button"
+                                    class="gs-table-tab-menu-item gs-table-tab-menu-item-danger"
+                                    data-table-delete="<?php echo (int) $st['id']; ?>"
+                                    data-table-name="<?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                >Sil</button>
+                            <?php endif; ?>
                         </div>
                     </details>
                     <?php endif; ?>
@@ -1524,11 +1558,45 @@ $gridUser = current_user();
             <details class="gs-view-create-menu" name="gs-table-tab-menu">
                 <summary class="gs-view-drawer-create">+ Yeni oluştur...</summary>
                 <div class="gs-view-create-panel">
-                    <?php /* Başlık, menünün NE yarattığını söyler: bu seçenekler
-                             AYNI tablonun yeni görünümleridir, yeni tablo değil.
-                             Yeni tablo için tablo sekmelerindeki "+" var. */ ?>
-                    <p class="gs-view-create-hint">Bu tablonun yeni görünümü</p>
+                    <?php /* SIRA BİLİNÇLİ: "Boş tablo oluştur" EN ÜSTTE.
+                             Kullanıcıların bu menüde en sık aradığı iş oydu ve
+                             eskiden buradan hiç erişilemiyordu (yalnızca tablo
+                             sekmelerindeki "+"). Ayrı bir bölüm başlığı YOK —
+                             etiketlerin kendisi ayrımı taşıyor: "Boş tablo
+                             oluştur" yeni bir TABLO, "Form"/"Kanban" ise AYNI
+                             tablonun yeni GÖRÜNÜMÜ açar. */ ?>
+                    <?php if ($isOwner): ?>
+                        <?php /* <button>, <a> DEĞİL: tıklama aynı sayfadaki
+                                 modalı açar, base_tables.php'ye YÖNLENDİRMEZ.
+                                 data-view-type ÖZNİTELİĞİ YOK ve bu ŞART:
+                                 grid-view-manage.js'in delege dinleyicisi
+                                 .gs-view-create-option sınıfına bakıyor, önceki
+                                 <a> sürümü o sınıfı taşıdığı için dinleyici onu
+                                 da yakalıyor ve view_create.php'ye BOŞ tür
+                                 gönderip "Geçersiz görünüm türü" hatası
+                                 veriyordu — bağlantı hiç açılmıyordu. Dinleyici
+                                 artık yalnızca data-view-type TAŞIYAN
+                                 seçenekleri işliyor. */ ?>
+                        <button
+                            type="button"
+                            class="gs-view-create-option gs-view-create-option--table"
+                            id="gs-create-table-btn"
+                        >
+                            <span class="gs-view-create-plus" aria-hidden="true">+</span>
+                            <span class="view-type-label">Boş tablo oluştur</span>
+                        </button>
+                    <?php endif; ?>
+                    <?php /* 'grid' ATLANIR — "Tablo görünümü" seçeneği menüden
+                             kaldırıldı (ürün kararı): aynı tablonun ikinci bir
+                             grid görünümü artık buradan açılmaz.
+                             ⚠️ BCC_VIEW_TYPES'tan SİLİNMEDİ, yalnızca menü
+                             atlıyor. Silinseydi MEVCUT grid görünümleri kırılırdı:
+                             o dizi hem view_create.php'nin tür whitelist'i hem de
+                             ad üreticisi ("Tablo görünümü 2"); varsayılan görünüm
+                             de 'grid' türündedir. Kopyalama/çoğaltma
+                             (view_duplicate.php) de etkilenmez. */ ?>
                     <?php foreach ($GLOBALS['BCC_VIEW_TYPES'] as $viewTypeKey => $viewTypeLabel): ?>
+                        <?php if ($viewTypeKey === 'grid') { continue; } ?>
                         <button
                             type="button"
                             class="gs-view-create-option"
@@ -1783,6 +1851,11 @@ $gridUser = current_user();
         }
         echo json_encode($typesById, JSON_UNESCAPED_UNICODE);
     ?>;
+    <?php // Pano yapıştırması (grid-paste.js) hangi sütunlara YAZAMAYACAĞINI
+          // bilmeli. Tabloda hiç satır yokken .editable sınıfına bakılamaz
+          // (veri hücresi yok), o yüzden tip listesi buradan geliyor.
+          // Liste JS'te YİNELENMEZ — tek kaynak BCC_READONLY_FIELD_TYPES. ?>
+    var BCC_READONLY_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_READONLY_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_FILTER_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_FILTER_NO_VALUE_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_NO_VALUE_OPS'], JSON_UNESCAPED_UNICODE); ?>;
     <?php // Azami kural sayısı SUNUCUDAN — "+ Filtre ekle" bu sınırda kapanıyor.
@@ -1995,9 +2068,141 @@ $gridUser = current_user();
 </div>
 <script src="<?php echo bcc_asset_url('grid-row-detail.js'); ?>" defer></script>
 <?php endif; ?>
+<?php /* Yeni tablo modalı — YALNIZCA owner'a basılır (menüdeki tetikleyiciyle
+         AYNI kapı; sunucu tarafında api/table_create.php ayrıca kontrol eder).
+         dashboard.php'deki "Yeni Base Oluştur" modalıyla AYNI .home-modal-*
+         sınıfları: grid.php home.css'i zaten yüklüyor (bkz. <head>), ikinci bir
+         modal stili YAZILMADI.
+         base_id data-* ile taşınıyor — JS'in URL'den base'i çıkarmasına gerek
+         kalmasın (URL yalnızca table_id taşıyor). */ ?>
+<?php /* Tablo adı/açıklama değiştirme + silme onayı — sayfa İÇİNDE küçük
+         pencere, native confirm() DEĞİL ("localhost diyor ki…"). Yeni tablo
+         penceresiyle AYNI .home-modal-* sınıfları (grid.php home.css'i zaten
+         yüklüyor), ikinci bir modal stili YAZILMADI. */ ?>
+<?php if ($isOwner): ?>
+<div class="home-modal-backdrop" id="gs-table-rename-modal" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-table-rename-title">
+        <div class="home-modal-head">
+            <h2 id="gs-table-rename-title">Ad veya Açıklama Değiştir</h2>
+            <button type="button" class="home-modal-close" id="gs-table-rename-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <?php // method/action YOK: gönderim AJAX, sayfa terk edilmesin. ?>
+        <form class="home-modal-form" id="gs-table-rename-form">
+            <label class="home-modal-field">
+                <span class="home-modal-label">Tablo adı</span>
+                <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off">
+            </label>
+            <label class="home-modal-field">
+                <span class="home-modal-label">Açıklama <span class="home-modal-optional">(opsiyonel)</span></span>
+                <input type="text" name="description" class="home-modal-input" maxlength="500" autocomplete="off">
+            </label>
+            <p class="home-modal-error" id="gs-table-rename-error" hidden></p>
+            <div class="home-modal-actions">
+                <button type="button" class="home-modal-btn" id="gs-table-rename-cancel">Vazgeç</button>
+                <button type="submit" class="home-modal-btn home-modal-btn-primary">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="home-modal-backdrop" id="gs-table-delete-modal" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-table-delete-title">
+        <div class="home-modal-head">
+            <h2 id="gs-table-delete-title">Tabloyu sil</h2>
+            <button type="button" class="home-modal-close" id="gs-table-delete-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <div class="home-modal-form">
+            <?php // Özet JS tarafından doldurulur (tablo adı + ne kaybedileceği). ?>
+            <p class="home-modal-label" id="gs-table-delete-summary"></p>
+            <p class="home-modal-error" id="gs-table-delete-error" hidden></p>
+            <div class="home-modal-actions">
+                <button type="button" class="home-modal-btn" id="gs-table-delete-cancel">Vazgeç</button>
+                <button type="button" class="home-modal-btn home-modal-btn-primary" id="gs-table-delete-confirm">Kalıcı olarak sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+<?php /* Yapıştırma onayı — sayfa İÇİNDE, native confirm() DEĞİL. window.confirm
+         tarayıcının kendi kutusunu açar ("localhost diyor ki…") ve sayfanın
+         görsel diliyle hiç ilgisi yoktur; ayrıca arkadaki kesik çizgili hedef
+         alanı göstermeye izin vermez. Aynı .home-modal-* sınıfları
+         (grid.php home.css'i zaten yüklüyor), ikinci bir modal stili YAZILMADI. */ ?>
+<?php if ($canEdit): ?>
+<div class="home-modal-backdrop" id="gs-paste-modal" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-paste-title">
+        <div class="home-modal-head">
+            <h2 id="gs-paste-title">Yapıştırmayı onaylayın</h2>
+            <button type="button" class="home-modal-close" id="gs-paste-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="home-modal-form">
+            <?php // Özet JS tarafından doldurulur; hedef alan arkada kesik
+                  // çizgiyle boyalı durur, kullanıcı NEREYE yazılacağını görür. ?>
+            <p class="home-modal-label" id="gs-paste-summary"></p>
+
+            <p class="home-modal-error" id="gs-paste-error" hidden></p>
+
+            <div class="home-modal-actions">
+                <button type="button" class="home-modal-btn" id="gs-paste-cancel">Vazgeç</button>
+                <button type="button" class="home-modal-btn home-modal-btn-primary" id="gs-paste-confirm">Yapıştır</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+<?php if ($isOwner): ?>
+<div class="home-modal-backdrop" id="gs-create-table-modal" data-base-id="<?php echo (int) $table['base_id']; ?>" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-create-table-title">
+        <div class="home-modal-head">
+            <h2 id="gs-create-table-title">Yeni Tablo Oluştur</h2>
+            <button type="button" class="home-modal-close" id="gs-create-table-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+
+        <?php /* method/action YOK: gönderim JS ile AJAX (submit olayı
+                 preventDefault ediliyor). Sayfa terk edilmesin diye. */ ?>
+        <form class="home-modal-form" id="gs-create-table-form">
+            <label class="home-modal-field">
+                <span class="home-modal-label">Tablo adı</span>
+                <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off" placeholder="Örn. Müşteriler">
+            </label>
+
+            <label class="home-modal-field">
+                <span class="home-modal-label">Açıklama <span class="home-modal-optional">(opsiyonel)</span></span>
+                <input type="text" name="description" class="home-modal-input" maxlength="500" autocomplete="off">
+            </label>
+
+            <p class="home-modal-error" id="gs-create-table-error" hidden></p>
+
+            <div class="home-modal-actions">
+                <button type="button" class="home-modal-btn" id="gs-create-table-cancel">Vazgeç</button>
+                <button type="submit" class="home-modal-btn home-modal-btn-primary">Oluştur</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-tabs.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-view-manage.js'); ?>" defer></script>
+<?php // Hücre seçimi — yapıştırma çapasını belirler. grid.js'ten SONRA
+      // yüklenmeli (defer sırayı korur): window.BCC_GRID'in hazır olmasına
+      // bağlı değil ama yapıştırma modülü ikisine de bağlı. ?>
+<script src="<?php echo bcc_asset_url('grid-cell-select.js'); ?>" defer></script>
+<?php // Pano yapıştırması — grid-cell-select.js'ten SONRA (window.BCC_GRID_SELECT
+      // ona bağlı). YALNIZCA düzenleme yetkisi olanda yüklenir; sunucu tarafı
+      // kapı ayrıca api/cells_bulk_update.php'de (require_role('editor')). ?>
+<?php if ($canEdit): ?>
+<script src="<?php echo bcc_asset_url('grid-paste.js'); ?>" defer></script>
+<?php endif; ?>
 <script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>

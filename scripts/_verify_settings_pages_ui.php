@@ -95,14 +95,17 @@ $feRules = css_rules($feCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
-function unscoped_selectors($rules)
+// $allowed: .sp-page ile BASLAMASI mumkun OLMAYAN, gerekcesi dosyada yazili
+// selector'lar. Liste BILEREK dar tutuluyor — kural "sayfaya ozel CSS global
+// sizmasin"i korumaya devam etsin diye her istisna tek tek yazilir.
+function unscoped_selectors($rules, $allowed = array())
 {
     preg_match_all('/(^|\})\s*([^{}@]+)\{/m', $rules, $m);
     $bad = array();
     foreach ($m[2] as $selectorList) {
         foreach (explode(',', $selectorList) as $sel) {
             $sel = trim($sel);
-            if ($sel === '' || strpos($sel, '.sp-page') === 0) {
+            if ($sel === '' || strpos($sel, '.sp-page') === 0 || in_array($sel, $allowed, true)) {
                 continue;
             }
             $bad[] = $sel;
@@ -111,8 +114,15 @@ function unscoped_selectors($rules)
     return $bad;
 }
 
+// table-fields.css'in IKI mesru istisnasi (bkz. o dosyadaki yorumlar):
+//   .tf-modal-backdrop  — perde <body>'ye ekleniyor (table-fields.js), yani
+//                         .sp-page'in ALTINDA degil; kapsanirsa hic eslesmez.
+//   body.tf-modal-open  — <body> zaten .sp-page'in (bir <div>) ustunde.
+// Ikisi de yalnizca bu sayfanin JS'i tarafindan uretilen sinif adlari, cakisma yok.
+$tfAllowedUnscoped = array('.tf-modal-backdrop', 'body.tf-modal-open');
+
 foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules, 'form-edit.css' => $feRules) as $name => $rules) {
-    $bad = unscoped_selectors($rules);
+    $bad = unscoped_selectors($rules, $name === 'table-fields.css' ? $tfAllowedUnscoped : array());
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
 }

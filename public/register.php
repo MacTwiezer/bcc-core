@@ -122,11 +122,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Düz metin parçası ELLE yazılıyor (HTML'den strip_tags ile
             // türetilmiyor) — multipart'ın text/plain tarafı da okunaklı olsun.
             // Sadece-HTML mail spam puanını yükseltiyor, bu yüzden ikisi de var.
+            // Marka adı bcc_brand_name()'den (config/app.php) — eskiden burada
+            // ALAN ADI literal yazılıydı ("opsflow.bcccrm.com"). Kullanıcıya
+            // gösterilecek olan ÜRÜN ADIDIR; alan adı hem teknik hem de posta
+            // istemcilerinde otomatik bağlantıya dönüşüp yanlış yere
+            // götürüyordu (bkz. telif satırındaki aynı sorun).
             $bodyText = "Merhaba {$fullName},\n\n"
-                . "opsflow.bcccrm.com hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
+                . bcc_brand_name() . " hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
                 . $verifyLink . "\n\n"
-                . "Bu bağlantı 24 saat geçerlidir.\n\n"
-                . "Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
+                . "Bu bağlantı 24 saat geçerlidir."
                 . bcc_mail_text_footer();
 
             // $verifyLink'in kaçırılmış hâli ARTIK burada gerekmiyor: şablon
@@ -134,13 +138,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
 
             $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
-                . '<p style="margin: 0 0 14px;">opsflow.bcccrm.com hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
+                . '<p style="margin: 0 0 14px;">' . htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8')
+                . ' hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
                 . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
 
-            // Ham bağlantı ARTIK burada biçimlenmiyor: şablona $fallbackUrl
-            // olarak veriliyor ve kopyalanabilir kutu içinde basılıyor (bkz.
-            // bcc_mail_html_shell). Not satırında yalnızca uyarı kaldı.
-            $noteHtml = 'Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.';
+            // Not satırı KALDIRILDI (ürün kararı): "Bu kaydı siz yapmadıysanız
+            // bu e-postayı yok sayabilirsiniz." cümlesi çıkarıldı. null
+            // geçilince bcc_mail_html_shell() o satırı hiç basmaz.
+            $noteHtml = null;
 
             $bodyHtml = bcc_mail_html_shell(
                 'Hesabınızı etkinleştirin',
@@ -161,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // yeniden göndermesini de engelliyor — iki koruma birbirini
             // tamamlıyor, birbirinin yerine geçmiyor.
             if (!$skipVerificationMail) {
-                bcc_send_mail($email, 'opsflow.bcccrm.com hesabınızı etkinleştirin', $bodyText, $bodyHtml);
+                bcc_send_mail($email, bcc_brand_name() . ' hesabınızı etkinleştirin', $bodyText, $bodyHtml);
             }
 
             header('Location: /login.php?registered=1');
@@ -174,8 +179,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Kayıt ol', ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<title><?php echo htmlspecialchars(bcc_brand_name() . ' — Kayıt ol', ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
@@ -183,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title">Kayıt ol</h1>
@@ -215,7 +220,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </p>
 
         <div class="login-legal">
-            <p class="login-tagline">opsflow.bcccrm.com — ekiplerin verilerini güvenle yönettiği iç platform.</p>
+            <?php // login.php'deki AYNI satır bcc_brand_full() kullanıyordu, burası
+                  // elle yazılmış literal marka taşıyordu — ad değişince ikisi
+                  // ayrışırdı. Tek kaynağa bağlandı (config/app.php). ?>
+            <p class="login-tagline"><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, 'UTF-8'); ?> — ekiplerin verilerini güvenle yönettiği iç platform.</p>
         </div>
     </div>
 </div>

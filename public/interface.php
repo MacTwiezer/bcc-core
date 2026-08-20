@@ -129,7 +129,7 @@ if (!empty($shareExistingIds)) {
 <meta charset="utf-8">
 <title><?php echo htmlspecialchars(bcc_page_title($base['name'], $activeTableName), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <?php echo bcc_page_identity_meta($base['id'], $base['name'], $activeTableName), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">

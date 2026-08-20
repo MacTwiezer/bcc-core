@@ -983,8 +983,13 @@ function bcc_sanitize_column_widths($raw, $fieldsById)
 // sorguyu paylaşır — iki yerde ayrı ayrı yazılmaz.
 function bcc_list_base_tables($baseId)
 {
+    // description EKLENDİ: grid.php'nin sekme menüsündeki "Ad veya açıklama
+    // değiştir" penceresi mevcut açıklamayı DOLU açmalı, yoksa kullanıcı adı
+    // düzeltirken açıklamayı farkında olmadan siler. Diğer iki çağıran
+    // (base.php, interface.php) bu kolonu kullanmıyor — fazladan bir kolon
+    // onları etkilemez, ikinci bir sorgu yazmaktan iyidir.
     return bcc_fetch_all(
-        'SELECT id, name FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
+        'SELECT id, name, description FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
         array('base_id' => $baseId)
     );
 }

@@ -143,8 +143,8 @@ if (!$done && $user && $_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Yeni şifre belirle', ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<title><?php echo htmlspecialchars(bcc_brand_name() . ' — Yeni şifre belirle', ENT_QUOTES, 'UTF-8'); ?></title>
+<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
@@ -152,7 +152,7 @@ if (!$done && $user && $_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
 <div class="login-card">
     <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 34; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
+        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
     </div>
     <div class="login-card-body">
         <h1 class="login-title"><?php echo $done ? 'Şifreniz güncellendi' : 'Yeni şifre belirle'; ?></h1>

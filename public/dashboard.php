@@ -9,14 +9,10 @@ $user = current_user();
 // KVKK izolasyonu: kullanıcının üye olduğu ekipler -> yalnızca o ekiplerin base'leri.
 // Sorgu deseni bases.php / eski dashboard.php ile aynıdır, sadece görünüm için
 // tek düz bir listeye indirgenir.
-$teams = bcc_fetch_all(
-    'SELECT t.id, t.name, m.role
-     FROM team_members m
-     INNER JOIN teams t ON t.id = m.team_id
-     WHERE m.user_id = :uid
-     ORDER BY t.name',
-    array('uid' => $user['id'])
-);
+// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
+// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
+// ayrisma riski kalmasin diye tek yere alindi.
+$teams = bcc_teams_for_current_user();
 
 // Trash: yalnızca 'owner' rolündeki kullanıcı bir base'i silebilir/geri
 // yükleyebilir (OpsFlow davranışı) — kart "⋯" menüsündeki "Sil" öğesi bu
@@ -177,9 +173,22 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             : 'Henüz erişebileceğiniz bir base yok.';
         ?>
 
-        <?php if (!empty($bases)): ?>
+        <?php
+        // Birden çok çalışma alanı varsa kartlar ALANA GÖRE gruplanır ve her
+        // grubun başlığında alan adı durur. Tek alanı olan kullanıcıda gruplama
+        // yalnızca gereksiz bir başlık eklerdi — o yüzden eşik "> 1".
+        //
+        // Bu, platform yöneticisi TÜM ekipleri görmeye başlayınca ortaya çıktı:
+        // onlarca base tek düz listede karışıyor ve hangisinin hangi alana ait
+        // olduğu okunamıyordu.
+        $groupByWorkspace = (count($teams) > 1);
+        ?>
+
+        <?php if (!empty($bases) && !$groupByWorkspace): ?>
         <?php // Bölüm başlığı (Framer'daki "Featured Picks" satırının karşılığı):
-              // küçük etiket solda, sayaç sağda, üstünde saç teli çizgi. ?>
+              // küçük etiket solda, sayaç sağda, üstünde saç teli çizgi.
+              // Gruplu modda BASILMAZ — orada başlığı her çalışma alanı kendi
+              // bölümünde taşır, tepede ikinci bir "Base'leriniz" fazlalık olurdu. ?>
         <div class="home-section-head">
             <h2 class="home-section-title">Base'leriniz</h2>
             <span class="home-section-meta"><?php echo count($bases); ?> base</span>
@@ -198,7 +207,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         // ile basılan "Yeni Base Oluştur" kutucuğu — tek tip, eşit ölçüde.
         // Kart bileşeni ($variant='standard') ve "N tablo" rozeti iki sayfada da
         // aynı; ayrı bir stil dalı kalmadı.
-        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, false, $baseTableCounts);
+        bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, false, $baseTableCounts, $groupByWorkspace);
         ?>
 
         <?php if ($canCreateBase): ?>

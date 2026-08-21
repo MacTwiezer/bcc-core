@@ -88,9 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'form_title' => mb_substr(trim((string) (isset($_POST['form_title']) ? $_POST['form_title'] : '')), 0, 150, 'UTF-8'),
             'form_description' => mb_substr(trim((string) (isset($_POST['form_description']) ? $_POST['form_description'] : '')), 0, 1000, 'UTF-8'),
             'form_success_message' => mb_substr(trim((string) (isset($_POST['form_success_message']) ? $_POST['form_success_message'] : '')), 0, 500, 'UTF-8'),
-            // Slack bildirimi form gönderimlerinde VARSAYILAN KAPALI (güvenlik
-            // tasarımı): anonim spam doğrudan ekibin Slack kanalına taşmasın diye
-            // tasarımcı bunu AÇIKÇA açmalı.
+            // Slack bildirimi VARSAYILAN AÇIK (bkz. bcc_form_config_from_view).
+            // Burada varsayılan YOK, kullanıcının anahtarı ne diyorsa o yazılır —
+            // kapatma tercihi böylece kalıcı olur.
             'form_slack_notify' => !empty($_POST['form_slack_notify']) ? 1 : 0,
         );
 
@@ -131,59 +131,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Herkese açık form linki. $_SERVER['HTTP_HOST'] YERİNE bcc_app_base_url()
-// (config/app.php) — register.php'nin doğrulama linkinde yapılan AYNI düzeltme.
-// Gerekçe orada ayrıntılı: bu link DIŞARIYA paylaşılmak için üretiliyor, yani
-// istekten gelen host'a dayanması hem yanlış adres üretebilir hem host-header
-// enjeksiyonuna açık kapı bırakır. $APP_BASE_URL boşsa eski davranışa düşer,
-// dolayısıyla yerel kurulumda çıktı DEĞİŞMEZ.
-$publicFormUrl = bcc_app_base_url() . '/form.php?t=' . rawurlencode((string) $view['form_token']);
-
 $formIsOpen = ((int) $view['form_enabled'] === 1);
 
-// Paylaşım kutusu iki yerde gösteriliyor (editör: sol sütun, salt-okunur:
-// tek kart) — HTML iki kez yazılmasın diye küçük bir yardımcı.
-function bcc_render_form_share_card($publicFormUrl, $formIsOpen)
-{
-    ?>
-    <div class="settings-card">
-        <div class="fe-share-head">
-            <h2 style="margin:0;">Form bağlantısı</h2>
-            <span class="sp-status <?php echo $formIsOpen ? 'sp-status-on' : ''; ?>"><?php echo $formIsOpen ? 'AÇIK' : 'KAPALI'; ?></span>
-        </div>
-
-        <?php // .share-popover-form sınıfı ŞART: paylaşılan share-popover.js
-              // kopyalama butonundan yukarı doğru bu sınıfı arıyor (btn.closest).
-              // Sınıf KORUNDU, görünüm kendi .fe-* sınıflarından geliyor. ?>
-        <div class="share-popover-form">
-            <div class="fe-share-row">
-                <input type="text" class="fe-share-input" data-share-url-input readonly
-                       value="<?php echo htmlspecialchars($publicFormUrl, ENT_QUOTES, 'UTF-8'); ?>"
-                       aria-label="Herkese açık form bağlantısı">
-                <?php // Buton İÇİNDE <svg> YOK — bilerek. share-popover.js kopyalamada
-                      // btn.textContent'i "Kopyalandı" ile değiştiriyor; bir svg çocuk
-                      // o anda silinirdi. İkon CSS ::before maskesiyle veriliyor
-                      // (bkz. assets/form-edit.css), textContent'ten etkilenmiyor. ?>
-                <button type="button" class="fe-copy-btn" data-share-copy-btn>Kopyala</button>
-            </div>
-        </div>
-
-        <?php // ⚠️ Bu uyarı, projenin bugüne kadarki tek güvenlik sözünü TERSİNE
-              // çeviren yer (grid.php'deki "yalnızca oturum açmış takım üyeleri"
-              // notunun tam tersi) — kullanıcı bunu görmeden link paylaşmamalı.
-              // Bu yüzden düz metin değil, amber uyarı kutusu. ?>
-        <div class="sp-note sp-note--warn" style="margin: 0.85rem 0 0;">
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
-            <span><strong>Bu bağlantıya sahip HERKES giriş yapmadan bu tabloya kayıt ekleyebilir.</strong> Yalnızca paylaşmak istediğiniz kişilere gönderin.</span>
-        </div>
-
-        <div class="sp-note" style="margin: 0.5rem 0 0;">
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
-            <span>Formu kapatmak bağlantıyı <strong>iptal etmez</strong> — tekrar açtığınızda aynı bağlantı çalışmaya devam eder.</span>
-        </div>
-    </div>
-    <?php
-}
+// "Form bağlantısı" kartı KALDIRILDI (link kutusu + Kopyala + iki uyarı).
+// Onunla birlikte $publicFormUrl ve bcc_render_form_share_card() de gitti —
+// başka kullanıcıları yoktu. $formIsOpen KALIYOR: aşağıdaki "Form açık"
+// anahtarı (form_enabled) hâlâ onu okuyor.
+// ⚠️ form.php?t=... adresi ARTIK HİÇBİR EKRANDA GÖSTERİLMİYOR. Form ve
+// form_submit.php çalışmaya devam eder; yalnızca adresi arayüzden okumanın
+// yolu yok. Geri istenirse: git geçmişinde bu satırın olduğu commit.
 
 // Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
 // (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
@@ -217,7 +173,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
     <?php if (!$canEdit): ?>
-        <?php bcc_render_form_share_card($publicFormUrl, $formIsOpen); ?>
         <div class="sp-note">
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
             <span>Bu formu düzenlemek için <strong>editör</strong> yetkisi gerekir. Sayfayı salt-okunur görüyorsunuz.</span>
@@ -236,8 +191,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
         <?php // ---- SOL: ayarlar --------------------------------------------- ?>
         <div class="fe-col fe-col-left">
-            <?php bcc_render_form_share_card($publicFormUrl, $formIsOpen); ?>
-
             <div class="settings-card">
                 <h2>Form ayarları</h2>
 
@@ -279,7 +232,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     </label>
                     <div class="sp-note sp-note--warn" style="margin: 0.75rem 0 0;">
                         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
-                        <span>Varsayılan <strong>kapalı</strong>: form herkese açık olduğu için istenmeyen gönderimler doğrudan Slack kanalınıza düşebilir.</span>
+                        <span>Varsayılan <strong>açık</strong>: form herkese açık olduğu için istenmeyen gönderimler de doğrudan Slack kanalınıza düşebilir. Gerekirse buradan kapatın.</span>
                     </div>
                 </div>
 
@@ -333,8 +286,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
     </form>
     <?php endif; ?>
 </div>
-<script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
-<?php // Yalnızca GÖRSEL: kopyalandı parlaması + seçili alan sayacı. Panoya
-      // yazma işi paylaşılan share-popover.js'te KALDI, kopyalanmadı. ?>
+<?php // share-popover.js BU SAYFADAN KALDIRILDI: form bağlantısı kartıyla
+      // birlikte sayfadaki tek [data-share-url-input] / [data-share-copy-btn]
+      // çifti de gitti, yükleyecek bir şey kalmadı. Dosyanın KENDİSİ duruyor —
+      // grid.php, interface.php ve src/partials/share_link_popover.php kullanıyor.
+      //
+      // form-edit.js KALIYOR: içindeki "seçili alan sayacı" hâlâ gerekli. ?>
 <script src="<?php echo bcc_asset_url('form-edit.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

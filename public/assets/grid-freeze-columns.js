@@ -68,7 +68,30 @@
 
             heads.forEach(styleCell);
             bodyRows().forEach(function (tr) {
-                Array.prototype.forEach.call(tr.children, styleCell);
+                // ⚠️ styleCell hücreyi DOM INDEX'İNE göre sütuna eşler; bu eşleme
+                // yalnızca satırdaki her hücre TEK sütun kaplarken doğrudur.
+                // colspan'lı bir hücreden SONRA index↔sütun bağı kopar.
+                //
+                // Bulunan gerçek bug: bodyRows() "tr.grid-add-row"u da kapsıyor
+                // ve o satır [satır no][colspan'lı ipucu][boşluk] şeklinde. İpucu
+                // hücresi index 1 olduğu için "1. veri sütunu" sanılıp
+                // .grid-frozen-cell + left:44px alıyordu; .grid-frozen-cell
+                // position:sticky verdiğinden bant sağa kayıp tablonun kendi
+                // genişliğini aşıyordu (ölçüm: left=88 olması gerekirken 44,
+                // 88+676=764 > tablo 760 → yatay kaydırma çubuğu).
+                // Grup başlığı satırları bodyRows()'ta zaten hariç; bu koruma
+                // colspan kullanan HER satır için genel çözüm.
+                var cells = tr.children;
+                for (var i = 0; i < cells.length; i++) {
+                    if (cells[i].colSpan > 1) {
+                        // Eski bir çalıştırmadan kalmış olabilecek durumu temizle
+                        // ve satırın geri kalanına DOKUNMA — index artık güvenilmez.
+                        cells[i].style.left = '';
+                        cells[i].classList.remove('grid-frozen-cell', 'grid-frozen-edge');
+                        break;
+                    }
+                    styleCell(cells[i], i);
+                }
             });
 
             // Satır no sütununun sağ gölgesi (style.css) donuk grubun SONUNU

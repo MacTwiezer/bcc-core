@@ -327,8 +327,16 @@
                 // görüntü alanının soluna sabitlenmiş grubun içindedir.
                 var x = frozen ? (scrollLeft + acc) : acc;
 
-                if (th.classList.contains('grid-frozen-edge')) {
-                    x -= FREEZE_CLEARANCE; // dondurma tutamacıyla çakışmasın
+                // Donmuş kenarda ŞERİDİN KENDİSİ (tıklama alanı) sola kaçırılıyor
+                // ki dondurma tutamacıyla çakışmasın. Ama şeridin GÖRÜNEN çizgisi
+                // (::after) de birlikte kayınca kullanıcıya "genişlik çubuğu
+                // sütun sınırının üstünde değil" gibi görünüyordu. Sınıf, CSS'in
+                // ::after'ı aynı miktarda SAĞA alıp çizgiyi gerçek sınıra
+                // oturtması için — tıklama alanı yerinde kalır.
+                var isFrozenEdge = th.classList.contains('grid-frozen-edge');
+                strip.classList.toggle('is-frozen-edge', isFrozenEdge);
+                if (isFrozenEdge) {
+                    x -= FREEZE_CLEARANCE;
                 }
 
                 if (!frozen && x <= scrollLeft + frozenW) {

@@ -32,6 +32,10 @@
 .gs-table-tabs,
 .gs-view-toolbar,
 .gs-view-drawer,
+/* ⚠️ Panelin genişlik tutamacı da: .gs-view-drawer'ın KARDEŞİ (akışta duran
+   ayrı bir flex öğesi), yani paneli gizlemek onu gizlemiyor — 5px'lik boş bir
+   şerit kâğıda/PNG'ye düşerdi. */
+.gs-view-drawer-resizer,
 .gs-grid-footer,
 .gs-fields-link,
 .gs-view-desc-overlay,

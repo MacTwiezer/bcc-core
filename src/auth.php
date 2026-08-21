@@ -100,7 +100,30 @@ function current_user_team_ids()
         return $cache;
     }
 
-    $rows = bcc_fetch_all('SELECT team_id FROM team_members WHERE user_id = :uid', array('uid' => $user['id']));
+    // ⚠️ PLATFORM ADMİNİ TÜM EKİPLERİ GÖRÜR — bilinçli bir ürün kararı.
+    //
+    // Ekip izolasyonu (KVKK) bu projenin temel güvencesi ve normal kullanıcı
+    // için AYNEN duruyor: aşağıdaki üyelik sorgusu değişmedi. Değişen tek şey,
+    // is_admin=1 olan kullanıcının kapsamının TÜM ekipler olması.
+    //
+    // Gerekçe: admin ekip oluşturabiliyor ama oluşturduğu ekibin üyesi
+    // olmadığı için ona ERİŞEMİYORDU (require_team_access yalnızca üyeliğe
+    // bakıyor). Çözüm olarak admini her ekibe üye YAPMAK yapay bir üyelik
+    // kaydı üretirdi; kapsamı burada, TEK yerde genişletmek daha dürüst.
+    //
+    // Bu fonksiyon require_team_access() ve require_role()'un beslendiği yer
+    // olduğu için genişletme tüm veri kapılarında otomatik geçerli olur —
+    // sayfalara tek tek "ya da admin" koşulu SERPİLMEZ (projenin "rol eşiği
+    // tek kaynakta" kuralı).
+    //
+    // ⚠️ İZ BIRAKIR: admin'in başka bir ekibin verisine dokunduğu her işlem
+    // log_audit()'e o ekibin team_id'siyle düşmeye devam eder — erişim
+    // genişledi, denetlenebilirlik azalmadı.
+    if (is_platform_admin()) {
+        $rows = bcc_fetch_all('SELECT id AS team_id FROM teams');
+    } else {
+        $rows = bcc_fetch_all('SELECT team_id FROM team_members WHERE user_id = :uid', array('uid' => $user['id']));
+    }
 
     $ids = array();
     foreach ($rows as $row) {
@@ -117,6 +140,19 @@ function current_user_role_in_team($teamId)
     $user = current_user();
     if ($user === null) {
         return null;
+    }
+
+    // Platform admini HER ekipte 'owner' sayılır — bkz. current_user_team_ids()
+    // içindeki ayrıntılı gerekçe. Üyelik kaydı OKUNMAZ bile: admin bir ekipte
+    // 'viewer' olarak kayıtlıysa bile platform yetkisi kısılmamalı, aksi hâlde
+    // "admin ama bu ekipte bir şey yapamıyor" gibi tutarsız bir durum çıkardı.
+    //
+    // ⚠️ Bu SANAL bir roldür, team_members'ta satır YOKTUR. Üye listeleri,
+    // "son owner silinemez" sayımı ve rol atama ekranları gerçek satırlara
+    // bakmaya devam eder — admin oralarda üye olarak GÖRÜNMEZ (kullanıcının
+    // "admin nasıl bir ekibe üye oluyor" itirazının karşılığı).
+    if (is_platform_admin()) {
+        return 'owner';
     }
 
     $row = bcc_fetch_one(

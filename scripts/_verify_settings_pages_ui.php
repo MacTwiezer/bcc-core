@@ -361,10 +361,24 @@ check('J) davet kutusu $canManageMembers kosulunun ICINDE',
     preg_match('/if\s*\(\$canManageMembers\s*&&\s*!empty\(\$wsInviteRoles\)\)\s*:\s*\?>/', $wsCode) === 1);
 // Iki ayri kontrol: tek bir regex'te birlestirmek kirilgandi ([^)]* acgozlu
 // davranip "=== 1"i yutuyordu, dogru markup'ta bile KALDI veriyordu).
-check('J) "Yeni calisma alani" karti is_admin kosulunun ICINDE',
-    preg_match("/is_admin'\]\s*===\s*1\)\s*:\s*\?>\s*<a href=\"\/admin\/create_team\.php\"/s", $wsPage) === 1);
-check('J) kart gercek hedefe gidiyor ve markup\'ta TEK yerde',
-    substr_count($wsPage, 'href="/admin/create_team.php"') === 1);
+// ⚠️ BU IKI KONTROL DEGISTI. Eskiden (a) is_admin kapisi ile <a> arasinda
+// HICBIR SEY olmamasini ve (b) baglantinin dosyada TEK KEZ gecmesini sart
+// kosuyorlardi. Ikisi de artik yanlis: "Yeni Calisma Alani" tetikleyicisi
+// simdi IKI dalda birden var (hic calisma alani olmayan admin icin bos dalda
+// da, dolu dalda sol panel alt bilgisinde de) ve aralarinda aciklama yorumu
+// bulunuyor. Konum/adet sayan metin kontrolu yerine ASIL guvence olculuyor:
+// her baglanti bir modal tetikleyicisi olmali ve JS'siz yedegini korumali.
+//
+// "Admin olmayan bunu GORMEMELI" guvencesi burada DEGIL, CANLI olarak
+// scripts/_verify_team_create.php (D bolumu) icinde dogrulaniyor — gercek
+// oturumla render edilen sayfaya bakmak, kaynak metninde kapi aramaktan
+// daha guclu bir kanit.
+$wsTriggerCount = substr_count($wsPage, 'href="/admin/create_team.php"');
+check('J) "Yeni calisma alani" tetikleyicisi var',
+    $wsTriggerCount > 0, 'adet: ' . $wsTriggerCount);
+check('J) her tetikleyici modal tetikleyicisi (data-create-team-btn) ve href yedegini koruyor',
+    substr_count($wsPage, 'data-create-team-btn') === $wsTriggerCount,
+    'href=' . $wsTriggerCount . ' data-attr=' . substr_count($wsPage, 'data-create-team-btn'));
 check('J) admin/create_team.php GERCEKTEN var', is_file($root . '/public/admin/create_team.php'));
 check('J) "Base olustur" gercek sayfaya gidiyor (olu buton degil)',
     strpos($wsPage, 'href="/bases.php" class="wsx-btn"') !== false && is_file($root . '/public/bases.php'));
@@ -394,22 +408,29 @@ check('K) ortak + sayfaya ozel CSS bagliyor',
 check('K) .sp-page sarmalayicisi aciyor',
     substr_count($fePage, '<div class="sp-page fe-page">') === 1);
 
-// PAYLASILAN share-popover.js'e DOKUNULMADI ve sozlesmesi korundu.
+// PAYLASILAN share-popover.js'e DOKUNULMADI (baska sayfalar kullaniyor).
 check('K) share-popover.js DEGISMEDI (fe-*/sp-* bilmiyor)',
     strpos($shareJs, 'fe-') === false && strpos($shareJs, 'sp-') === false);
+
+// ⚠️ TERSINE CEVRILDI: "Form baglantisi" karti form_edit.php'den KALDIRILDI.
+// Testler silinmedi, kaldirmanin KALICI oldugunu dogruluyor. Kancalarin
+// kendisi hala paylasilan dosyalarda yasiyor; burada YALNIZCA form_edit.php'de
+// olmadiklari kontrol ediliyor.
 foreach (array('share-popover-form', 'data-share-url-input', 'data-share-copy-btn') as $hook) {
-    check("K) paylasilan kopyalama kancasi korundu: {$hook}", strpos($feCode, $hook) !== false);
+    check("K) paylasim karti KALDIRILDI: {$hook} form_edit.php'de YOK", strpos($feCode, $hook) === false);
 }
-// Kopyala butonunun ICINDE <svg> OLMAMALI: share-popover.js kopyalamada
-// btn.textContent'i degistiriyor, bir svg cocuk O ANDA SILINIRDI. Ikon CSS
-// ::before maskesiyle veriliyor.
-check('K) kopyala butonunun icinde <svg> YOK (textContent tuzagi)',
-    preg_match('/<button type="button" class="fe-copy-btn" data-share-copy-btn>[^<]*<\/button>/', $fePage) === 1);
-check('K) kopyala ikonu ::before maskesiyle veriliyor',
-    preg_match('/\.sp-page \.fe-copy-btn::before \{[^}]*mask: var\(--fe-copy-icon\)/s', $feRules) === 1);
-check('K) form-edit.js kopyalama mantigini KOPYALAMIYOR (yalnizca gorsel)',
-    strpos($feJs, 'clipboard') === false && strpos($feJs, 'execCommand') === false
-    && strpos($feJs, "classList.add('is-copied')") !== false);
+check('K) paylasim karti KALDIRILDI: .fe-copy-btn markup YOK',
+    strpos($fePage, 'fe-copy-btn') === false);
+check('K) paylasim karti KALDIRILDI: olu .fe-copy-btn/.fe-share-* CSS temizlendi',
+    preg_match('/^\s*\.sp-page \.fe-(copy-btn|share-[a-z]+)/m', $feRules) === 0);
+check('K) form-edit.js: olu kopyalandi-parlamasi temizlendi',
+    strpos($feJs, "classList.add('is-copied')") === false
+    && strpos($feJs, 'clipboard') === false && strpos($feJs, 'execCommand') === false);
+check('K) form-edit.js: secili alan sayaci KORUNDU',
+    strpos($feJs, 'fe-field-count') !== false);
+// share-popover.js bu sayfada artik yuklenmemeli: yukleyecek kancasi kalmadi.
+check('K) form_edit.php share-popover.js YUKLEMIYOR',
+    preg_match('/bcc_asset_url\(\s*[\'"]share-popover\.js[\'"]\s*\)/', $feCode) === 0);
 
 // SECILI DURUM :has() ILE DEGIL kardes seciciyle. Gerekce: /browse'da olculdu —
 // :has() eslesiyor ve onceligi yeterli ama `checked` degisiminde stil
@@ -444,9 +465,13 @@ check('K) form_fields[] korundu', strpos($fePage, 'name="form_fields[]"') !== fa
 check('K) TEK <form> (iki sutun onun icinde)',
     substr_count($fePage, '<form method="post"') === 1);
 
-// Herkese acik link artik HTTP_HOST'tan DEGIL yapilandirmadan.
-check('K) form linki bcc_app_base_url() kullaniyor',
-    strpos($feCode, 'bcc_app_base_url()') !== false && strpos($feCode, 'HTTP_HOST') === false);
+// ⚠️ TERSINE CEVRILDI: form linki uretimi ($publicFormUrl) kartla birlikte
+// KALDIRILDI. Korunan asil guvence, HTTP_HOST'a GERI DONULMEMESI — link geri
+// eklenirse bcc_app_base_url() ile eklenmeli (host-header enjeksiyonu).
+check('K) form_edit.php HTTP_HOST kullanMIYOR',
+    strpos($feCode, 'HTTP_HOST') === false);
+check('K) form linki uretimi KALDIRILDI (kartla birlikte)',
+    strpos($feCode, '/form.php?t=') === false);
 
 // theme.css'e EKLENEN uyari (amber) tonu: uc blokta da tanimli.
 check('K) --bcc-warning uc tema blogunda da tanimli',

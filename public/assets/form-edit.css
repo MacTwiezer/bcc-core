@@ -1,15 +1,15 @@
-/* form_edit.php'ye ÖZGÜ kurallar: iki sütunlu form oluşturucu yerleşimi,
- * paylaşım kutusu ve alan seçim kartları.
+/* form_edit.php'ye ÖZGÜ kurallar: iki sütunlu form oluşturucu yerleşimi ve
+ * alan seçim kartları.
  *
  * ORTAK iskelet (sayfa kabı, breadcrumb, kart, form alanları, birincil buton,
  * boş durum) VE ortak bileşenler (.sp-status durum hapı, .sp-toggle anahtarı,
  * .sp-note bilgi/uyarı kutusu, .sp-code) assets/settings-page.css'te —
  * burada KOPYASI YOK.
  *
- * ⚠️ Kapsam `.sp-page`. Bu sayfanın `.share-popover-form` sınıfı PAYLAŞILIYOR
- * (grid.php, interface.php, share-popover.js `btn.closest` ile onu ARIYOR) —
- * bu yüzden sınıf markup'ta KORUNDU ama yeniden TANIMLANMADI; görünüm kendi
- * `.fe-*` sınıflarından geliyor.
+ * Kapsam `.sp-page`.
+ *
+ * NOT: Bu dosyada eskiden bir "paylaşım kutusu" bölümü vardı (form bağlantısı
+ * kartı). Kart sayfadan kaldırıldı; ayrıntı aşağıdaki ilgili notta.
  */
 
 /* ---------- İki sütunlu oluşturucu ---------- */
@@ -105,98 +105,13 @@
     max-width: 480px;
 }
 
-/* ---------- Paylaşım kutusu ---------- */
-
-.sp-page .fe-share-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.85rem;
-}
-
-.sp-page .fe-share-row {
-    display: flex;
-    align-items: stretch;
-    gap: 0.5rem;
-}
-
-.sp-page .fe-share-input {
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 0.55rem 0.7rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 0.8rem;
-    color: var(--bcc-text-muted);
-    background: var(--bcc-surface-sunken);
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 8px;
-    transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-
-.sp-page .fe-share-input:focus {
-    outline: none;
-    border-color: var(--bcc-accent);
-    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
-    color: var(--bcc-text);
-}
-
-/* KOPYALA BUTONU — ikon CSS ::before MASKESİ ile veriliyor, <svg> ile DEĞİL.
-   Gerekçe: paylaşılan share-popover.js kopyalamada `btn.textContent`'i
-   "Kopyalandı" ile DEĞİŞTİRİYOR; bir <svg> çocuk olsaydı o anda SİLİNİRDİ.
-   Pseudo-element textContent'ten etkilenmez, ikon ayakta kalır ve o dosyaya
-   hiç dokunmak gerekmez. */
-.sp-page .fe-copy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex: none;
-    padding: 0.55rem 0.9rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 8px;
-    background: var(--bcc-surface);
-    color: var(--bcc-text);
-    font: inherit;
-    font-size: 0.84rem;
-    font-weight: 550;
-    cursor: pointer;
-    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.sp-page .fe-copy-btn::before {
-    content: '';
-    width: 15px;
-    height: 15px;
-    flex: none;
-    background-color: currentColor;
-    -webkit-mask: var(--fe-copy-icon) no-repeat center / 15px 15px;
-    mask: var(--fe-copy-icon) no-repeat center / 15px 15px;
-}
-
-/* İkonlar data-URI SVG (currentColor mask ile boyanıyor, sabit renk YOK). */
-.sp-page .fe-copy-btn {
-    --fe-copy-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect x='7' y='7' width='9' height='9' rx='2'/><path d='M13 5.5A1.5 1.5 0 0011.5 4h-6A1.5 1.5 0 004 5.5v6A1.5 1.5 0 005.5 13'/></svg>");
-}
-
-.sp-page .fe-copy-btn:hover {
-    background: var(--bcc-surface-hover);
-    border-color: var(--bcc-text-muted);
-}
-
-/* Kopyalandı geri bildirimi: paylaşılan JS yalnızca ETİKETİ değiştiriyor.
-   Yeşil parlama için form-edit.js AYNI butona ikinci (görsel-only) bir
-   dinleyici bağlıyor — kopyalama mantığı KOPYALANMADI. */
-.sp-page .fe-copy-btn.is-copied {
-    border-color: var(--bcc-success);
-    background: var(--bcc-success-soft);
-    color: var(--bcc-success);
-}
-
-.sp-page .fe-copy-btn.is-copied::before {
-    --fe-copy-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 10.5l3.5 3.5 7.5-8'/></svg>");
-}
+/* ---------- Paylaşım kutusu: KALDIRILDI ----------
+   .fe-share-head / .fe-share-row / .fe-share-input / .fe-copy-btn kuralları
+   silindi: form bağlantısı kartı form_edit.php'den çıkarıldı ve bu sınıflar
+   BAŞKA HİÇBİR YERDE kullanılmıyordu (grep ile doğrulandı).
+   Paylaşılan .share-popover-form / .share-popover-input kuralları style.css'te
+   ve DOKUNULMADI — grid.php, interface.php ve share_link_popover.php onları
+   kullanmaya devam ediyor. */
 
 /* ---------- Alan seçim kartları ---------- */
 

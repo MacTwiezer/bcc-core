@@ -7,14 +7,10 @@ require_login();
 $user = current_user();
 
 // KVKK izolasyonu: dashboard.php ile AYNI desen (bkz. orada).
-$teams = bcc_fetch_all(
-    'SELECT t.id, t.name, m.role
-     FROM team_members m
-     INNER JOIN teams t ON t.id = m.team_id
-     WHERE m.user_id = :uid
-     ORDER BY t.name',
-    array('uid' => $user['id'])
-);
+// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
+// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
+// ayrisma riski kalmasin diye tek yere alindi.
+$teams = bcc_teams_for_current_user();
 
 $teamIds = array();
 foreach ($teams as $t) {

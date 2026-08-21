@@ -574,6 +574,11 @@ $gridUser = current_user();
 <?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name']), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
+<?php // ⚠️ SENKRON (defer YOK) — theme-init.js ile AYNI gerekçe: kayıtlı panel
+      // genişliği sayfa boyanmadan ÖNCE uygulanmalı, yoksa panel önce 260px
+      // çizilip sonra kayıtlı değere sıçrar (görünür titreme). Dosyanın geri
+      // kalanı DOMContentLoaded'i bekler. ?>
+<script src="<?php echo bcc_asset_url('grid-drawer-resize.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
@@ -771,7 +776,12 @@ $gridUser = current_user();
                  aynısıydı (bkz. bu dosyanın başındaki $isOwner tanımı ve
                  gerekçesi) — tablo "+"sı o düzeltmeden pay almamıştı. */ ?>
         <?php if ($isOwner): ?>
-        <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-table-tab-add" title="Yeni tablo">+</a>
+        <?php /* href KORUNDU ama artık YALNIZCA JS'siz yedek: grid-view-manage.js
+                 tıklamayı yakalayıp AYNI SAYFADAKI #gs-create-table-modal'ı açar
+                 (menüdeki "Boş tablo oluştur" ile BİREBİR aynı modal ve aynı
+                 uçnokta — ikinci bir akış yazılmadı). JS yüklenmezse bağlantı
+                 eskisi gibi base_tables.php'ye gider, yani akış kopmaz. */ ?>
+        <a href="/base_tables.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-table-tab-add" title="Yeni tablo" data-create-table-btn>+</a>
         <?php endif; ?>
         <details class="gs-table-tab-menu gs-all-tables-menu" name="gs-table-tab-menu">
             <summary class="gs-table-tab-caret gs-all-tables-caret" aria-label="Tüm tablolar (Ctrl+J)">
@@ -1577,10 +1587,17 @@ $gridUser = current_user();
                                  veriyordu — bağlantı hiç açılmıyordu. Dinleyici
                                  artık yalnızca data-view-type TAŞIYAN
                                  seçenekleri işliyor. */ ?>
+                        <?php /* data-create-table-btn ŞART: grid-view-manage.js
+                                 artık tetikleyicileri TEK id ile değil, bu
+                                 öznitelikle topluyor (sekme çubuğundaki "+" da
+                                 aynı modalı açıyor). Öznitelik olmazsa bu
+                                 seçenek sessizce çalışmaz. id KORUNDU —
+                                 başka yerlerde referans verilebiliyor. */ ?>
                         <button
                             type="button"
                             class="gs-view-create-option gs-view-create-option--table"
                             id="gs-create-table-btn"
+                            data-create-table-btn
                         >
                             <span class="gs-view-create-plus" aria-hidden="true">+</span>
                             <span class="view-type-label">Boş tablo oluştur</span>
@@ -1665,6 +1682,16 @@ $gridUser = current_user();
                 <div class="gs-view-drawer-empty" id="gs-view-drawer-empty" hidden>Sonuç yok</div>
             </div>
         </div>
+        <?php /* Görünüm paneliyle grid arasındaki genişlik tutamacı. .gs-body-row
+                 bir flex satırı olduğu için tutamaç AKIŞTA duran gerçek bir öğe —
+                 panelin sağ kenarıyla her zaman hizalı kalır. Davranışı
+                 assets/grid-drawer-resize.js'te; genişlik --gs-drawer-w CSS
+                 değişkeniyle taşınır (satır içi width daraltmayı bozardı,
+                 gerekçe grid-shell.css'te). */ ?>
+        <div class="gs-view-drawer-resizer" id="gs-view-drawer-resizer"
+             role="separator" aria-orientation="vertical"
+             aria-label="Görünüm panelinin genişliğini ayarla"
+             tabindex="0"></div>
 
     <main class="gs-main">
         <p class="gs-fields-link">
@@ -1674,9 +1701,36 @@ $gridUser = current_user();
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
         <?php if (empty($fields)): ?>
-            <div class="card">
-                <p>Bu tabloda henüz alan yok. Önce <a href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>">alan ekleyin</a>.</p>
-            </div>
+            <?php /* Boş tablo: alan ekleme "+"sı <thead>'de yaşıyor ve tablo hiç
+                     basılmadığı için burada YOK. Eskiden tek çıkış yolu
+                     table_fields.php'ye giden bir bağlantıydı — kullanıcı
+                     çalıştığı ekrandan çıkıyordu. Artık kartın TAMAMI tıklanabilir
+                     ve aynı sayfada alan ekleme penceresini açıyor.
+
+                     $isOwner: alan oluşturma owner işi (api/field_create.php).
+                     Editor'a tıklanabilir kart göstermek onu sunucudaki 403'e
+                     götürürdü — bu projede tablo "+" ve alan "+" düğmelerinde
+                     ZATEN iki kez yaşanmış hata. Yetkisiz kullanıcı düz bir
+                     bilgi kartı görür. */ ?>
+            <?php if ($isOwner): ?>
+                <button type="button" class="card gs-empty-fields-card" id="gs-empty-fields-trigger">
+                    <?php // Metin "+" DEĞİL SVG: yazı tipinin artı glifi kendi
+                          // kutusunda dikey ortalı DEĞİL, rozetin içinde hep
+                          // yukarı kaçıyordu. SVG'nin viewBox'ı ortalamayı
+                          // garanti eder. ?>
+                    <span class="gs-empty-fields-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    </span>
+                    <span class="gs-empty-fields-text">
+                        <strong>Bu tabloda henüz alan yok.</strong>
+                        <span>Alan eklemek için buraya tıklayın.</span>
+                    </span>
+                </button>
+            <?php else: ?>
+                <div class="card">
+                    <p>Bu tabloda henüz alan yok. Alan eklemek için Owner yetkisi gerekir.</p>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="grid-wrap">
                 <?php
@@ -1809,9 +1863,21 @@ $gridUser = current_user();
                                  sütun hizasında. Boş tabloda ve grup açıkken de görünür. -->
                             <tr class="grid-add-row" data-grid-add-row data-tooltip-host>
                                 <td class="grid-rownum grid-add-row-plus">+</td>
-                                <td colspan="<?php echo count($visibleFields) + 1; ?>" class="grid-add-row-hint">
+                                <?php /* ⚠️ colspan ESKİDEN count($visibleFields) + 1 idi ve o "+1"
+                                         SÜTUN EKLEME ("+") başlığını da kapsıyordu: ipucu bandı veri
+                                         sütunlarının bittiği yerden DAHA İLERİ uzuyordu.
+                                         Ayrıca owner OLMAYAN kullanıcıda başlık satırında "+" th'si
+                                         hiç basılmadığı için satır tablodan BİR HÜCRE FAZLA oluyordu.
+                                         Artık ipucu yalnızca veri sütunlarını kapsıyor, "+" sütunu
+                                         için ayrı boş bir hücre var — toplam, başlık satırıyla
+                                         BİREBİR eşleşiyor (owner: 1+N+1, diğerleri: 1+N).
+                                         max(1,...): tüm alanlar gizlenmişse colspan="0" geçersiz olurdu. */ ?>
+                                <td colspan="<?php echo max(1, count($visibleFields)); ?>" class="grid-add-row-hint">
                                     <span class="gs-kbd-tooltip gs-kbd-tooltip-light">Shift-Enter'a basarak herhangi bir yere yeni kayıt da ekleyebilirsiniz</span>
                                 </td>
+                                <?php if ($isOwner): ?>
+                                    <td class="grid-add-row-spacer"></td>
+                                <?php endif; ?>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -1914,7 +1980,14 @@ $gridUser = current_user();
 <?php if ($canEdit && !empty($fields)): ?>
 <script src="<?php echo bcc_asset_url('grid.js'); ?>" defer></script>
 <?php endif; ?>
-<?php if ($isOwner && !empty($fields)): ?>
+<?php /* ⚠️ Koşul eskiden "$isOwner && !empty($fields)" idi: alan sihirbazı
+         yalnızca <thead>'deki "+" popup'ında yaşadığı için tablo boşken
+         scriptlere gerek yoktu. Artık BOŞ tabloda da bir alan ekleme penceresi
+         var (gs-empty-fields-modal) ve o da AYNI scriptlere bağlı — koşul
+         !empty($fields) taşıdığı sürece pencere açılmıyordu, çünkü
+         grid-add-field.js hiç yüklenmiyordu. Ölçüt artık yalnızca $isOwner:
+         iki yüzeyden hangisi basılırsa basılsın script hazır. */ ?>
+<?php if ($isOwner): ?>
 <script>
     var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
 </script>
@@ -2075,6 +2148,42 @@ $gridUser = current_user();
          modal stili YAZILMADI.
          base_id data-* ile taşınıyor — JS'in URL'den base'i çıkarmasına gerek
          kalmasın (URL yalnızca table_id taşıyor). */ ?>
+<?php /* Boş tablo için alan ekleme penceresi — YALNIZCA hiç alan yokken ve
+         yalnızca owner'a basılır. İçindeki form, <thead>'deki "+" popup'ının
+         formuyla BİREBİR AYNI: aynı paylaşılan sihirbaz partial'ı, aynı
+         data-grid-add-field kancası (assets/grid-add-field.js gönderimi zaten
+         ona bağlı), aynı api/field_create.php. İkinci bir gönderim mantığı
+         YAZILMADI.
+         ⚠️ İkisi AYNI ANDA basılmaz — sihirbazın id'leri (new-field-type-step
+         vb.) benzersiz kalsın diye: alan varsa "+" render edilir, yoksa bu. */ ?>
+<?php if (empty($fields) && $isOwner): ?>
+<div class="home-modal-backdrop" id="gs-empty-fields-modal" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-empty-fields-title">
+        <div class="home-modal-head">
+            <h2 id="gs-empty-fields-title">Yeni Alan</h2>
+            <button type="button" class="home-modal-close" id="gs-empty-fields-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <?php // class="stacked": style.css'teki form.stacked kuralları çıplak
+              // <label>/<input>'ları biçimlendiriyor (paylaşılan partial
+              // .settings-field sınıfı BASMAZ) — "+" popup'ı da bu yüzden
+              // düzgün görünüyor. ?>
+        <?php // home-modal-form ŞART: iç boşluğu (padding) o veriyor. Yalnızca
+              // "stacked" verilmişti ve içerik pencerenin kenarına yapışıyordu. ?>
+        <form class="stacked home-modal-form" data-grid-add-field>
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+            <input type="hidden" name="field_type" id="new-field-type-input" required>
+            <?php
+            $fieldTypeLabels = $typeLabels;
+            $fieldWizardShowRequired = false;
+            require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
+            ?>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 <?php /* Tablo adı/açıklama değiştirme + silme onayı — sayfa İÇİNDE küçük
          pencere, native confirm() DEĞİL ("localhost diyor ki…"). Yeni tablo
          penceresiyle AYNI .home-modal-* sınıfları (grid.php home.css'i zaten
@@ -2203,6 +2312,12 @@ $gridUser = current_user();
 <?php if ($canEdit): ?>
 <script src="<?php echo bcc_asset_url('grid-paste.js'); ?>" defer></script>
 <?php endif; ?>
+<?php // Kopyalama/kesme/temizleme — grid-cell-select.js (seçim) ve grid.js
+      // (showToast) SONRASI. $canEdit KAPISININ DIŞINDA, bilerek: KOPYALAMA
+      // okuma yetkisiyle yapılabilmeli (viewer da gördüğünü Excel'e
+      // alabilmeli). Kes/temizle modülün İÇİNDE ayrıca kapatılıyor ve asıl
+      // kapı yine sunucuda (api/cells_bulk_update.php require_role('editor')). ?>
+<script src="<?php echo bcc_asset_url('grid-copy.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>

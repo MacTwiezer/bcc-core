@@ -70,6 +70,36 @@ body.home-page .home-main {
     color: var(--bcc-text-muted);
 }
 
+/* ---------- Çalışma alanı grup başlığı ----------
+   Home'da kartlar çalışma alanına göre gruplandığında her bölümün üstünde
+   duran başlık: [alan adı] [rol rozeti] ............ [N base]
+
+   Taban .home-section-head'in İKİ varsayımını düzeltir:
+   1) "space-between" İKİ çocuğa göre yazılmış; burada ÜÇ çocuk var ve ortadaki
+      (rozet) adın hemen yanında durmalı, ortaya savrulmamalı. Hizalama
+      flex-start'a alınıp sayaç margin-left:auto ile sağa itiliyor.
+   2) "align-items: baseline" metin için doğru ama yuvarlak bir rozetle
+      birlikte rozeti satırdan aşağı kaydırıyor — bu satırda center. */
+.home-ws-head {
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.home-ws-head .home-section-meta { margin-left: auto; }
+
+/* Rozetin kart içindeki "margin-left: auto"su (kartın sağ kenarına yaslama)
+   burada YANLIŞ olurdu: adı ile sayacın arasına savrulurdu. */
+.home-ws-head .home-base-role {
+    margin-left: 0;
+    align-self: center;
+}
+
+/* "Yeni Base Oluştur" kutucuğunu taşıyan kuyruk ızgarası: hiçbir çalışma
+   alanına ait olmadığı için grupların ALTINDA, kendi kabında duruyor
+   (modalin kendi çalışma alanı seçicisi var). Grup başlıklarının üst
+   boşluğuyla aynı ritim. */
+.home-base-grid--tail { margin-top: 1.35rem; }
+
 /* ---------- Bento ızgarası ----------
    Taban ızgara (home.css) auto-fill/260px. Bento'da satır yüksekliği SABİT
    bir birime bağlanıyor ki feature kart tam iki satırı kaplasın. */

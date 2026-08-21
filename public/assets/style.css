@@ -1343,6 +1343,13 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
     opacity: 0;
 }
 
+/* Donmuş kenar sütunu: şerit (tıklama alanı) dondurma tutamacına yer açmak
+   için 12px sola kaçırılıyor (grid-column-resize.js FREEZE_CLEARANCE). Çizgi de
+   onunla kayınca genişlik çubuğu sütun sınırının üstünde DEĞİL gibi duruyordu.
+   Yalnızca görsel çizgi aynı miktarda geri alınıyor: 3px + 12px = 15px.
+   ⚠️ 15 SABİT DEĞİL, TÜRETİLMİŞ: FREEZE_CLEARANCE değişirse burası da değişmeli. */
+.grid-col-resize-handle.is-frozen-edge::after { left: 15px; }
+
 .grid-col-resize-handle:hover::after,
 .grid-col-resize-handle.is-dragging::after {
     opacity: 1;
@@ -1482,7 +1489,16 @@ td.editable .cell-view:hover {
 
 td.editable.editing {
     padding: 0;
-    box-shadow: inset 0 0 0 2px var(--bcc-accent-strong);
+    /* ⚠️ ESKİDEN "box-shadow: inset 0 0 0 2px" idi ve YALNIZCA ÜST/ALT
+       kenarları görünüyordu: iç gölge hücrenin kendi katmanına çizilir, içindeki
+       .cell-input ise ÜSTÜNE boyanır. Girdi yatayda hücreyi tam doldurduğu için
+       sol/sağ şeritleri kapatıyor, dikeyde daha kısa olduğu için üst/alt
+       şeritler görünmeye devam ediyordu.
+       outline BOYAMA SIRASINDA EN SONDA, torunların da ÜSTÜNDE çizilir — dört
+       kenar da görünür. offset -2px ile içeride kalır, hücre genişliğini
+       değiştirmez (.is-paste-anchor'da AYNI teknik). */
+    outline: 2px solid var(--bcc-accent-strong);
+    outline-offset: -2px;
 }
 
 /* Zengin metin (long_text — F6, "ilk aşama") düzenleme popover'ı. Mevcut
@@ -1490,7 +1506,11 @@ td.editable.editing {
 
 td.editable.richtext-editing {
     position: relative;
+    /* Gösterge popover'ın kendisi — hücrenin ayrıca çerçevelenmesi istenmiyor.
+       ⚠️ "box-shadow: none" TEK BAŞINA YETMEZ: td.editable.editing göstergesi
+       artık outline (eskiden inset box-shadow). İkisi de bastırılmalı. */
     box-shadow: none;
+    outline: none;
 }
 
 .richtext-popover {
@@ -1738,7 +1758,10 @@ td.editable.richtext-editing {
 
 td.editable.attachment-editing {
     position: relative;
+    /* Bkz. td.editable.richtext-editing: gösterge popover, hücre çerçevesiz.
+       outline da bastırılmalı (gösterge box-shadow'dan outline'a taşındı). */
     box-shadow: none;
+    outline: none;
 }
 
 /* Beyaz arka plan + zayıf kenarlık/gölge grid zeminiyle neredeyse ayırt
@@ -1860,11 +1883,32 @@ td.editable.attachment-editing {
     font-size: 0.85rem;
 }
 
-.cell-input {
+/* ⚠️ SEÇİCİLER BİLEREK ELEMAN ADIYLA: theme.css'te kapsamsız bir
+   "input[type='text'], input[type='number'], … , textarea" tabanı var ve onun
+   özgüllüğü (0,1,1) düz ".cell-input"i (0,1,0) EZİYORDU. O dosyadaki yorum
+   "daha spesifik bir sınıf varsa ezmez" diyor ama hesap tersine: öznitelik
+   seçicisi + eleman, tek sınıftan YÜKSEK.
+   Sonuç: grid hücre düzenleyicisi theme.css'ten 1px kenarlık, 6px köşe
+   yarıçapı ve odakta 3px halka alıyordu — hücrenin içinde yuvarlak mavi bir
+   kutu beliriyor ve kutu hücreden taşıyordu.
+   "input.cell-input" (0,1,1) ile berabere kalınıp style.css theme.css'ten
+   SONRA yüklendiği için burası kazanıyor. */
+input.cell-input,
+textarea.cell-input,
+select.cell-input {
     width: 100%;
-    min-width: 140px;
+    /* ⚠️ ESKİDEN "min-width: 140px" idi ve DÜZENLEYİCİYİ HÜCREDEN TAŞIRIYORDU.
+       Grid'de kayıtlı sütun genişliği varsa tablo "table-layout: fixed"e geçer;
+       o modda sütun içeriğe göre BÜYÜMEZ, dolayısıyla 140px'ten dar bir sütunda
+       (ör. "Sayı") girdi hücrenin dışına taşıyordu — width:100% + border-box
+       hesabını min-width eziyor. Genişliği sütun belirlesin. */
+    min-width: 0;
     box-sizing: border-box;
+    /* Hücre düzenleyicisi çerçevesiz olmalı: görsel odak göstergesi HÜCRENİN
+       kendisinde (td.editable.editing { outline: 2px solid }) ve KÖŞESİZ.
+       İçeride ikinci bir yuvarlak kutu istenmiyor. */
     border: none;
+    border-radius: 0;
     padding: 0.35rem 0.7rem;
     font: inherit;
     background: var(--bcc-surface);
@@ -1875,8 +1919,18 @@ td.editable.attachment-editing {
     color: var(--bcc-text);
 }
 
-.cell-input:focus {
+/* Odak halkası da AYNI özgüllük sorunundaydı: theme.css'in
+   "input[type='…']:focus" kuralı (0,2,1) düz ".cell-input:focus"u (0,2,0)
+   eziyor ve hücrenin içine 3px'lik yuvarlak mavi halka çiziyordu.
+   Odak göstergesi hücrenin KENDİSİNDE (td.editable.editing) — burada hepsi
+   açıkça sıfırlanıyor. */
+input.cell-input:focus,
+textarea.cell-input:focus,
+select.cell-input:focus {
     outline: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 textarea.cell-input {
@@ -1958,9 +2012,39 @@ td.grid-cell.is-paste-anchor {
     z-index: 1;
 }
 
-/* Düzenleme açıkken çapa çizgisi girişin kenarlığıyla çakışıyordu. */
+/* ⚠️ DONMUŞ SÜTUNDA "position: relative" HÜCREYİ KAYDIRIYOR.
+   Donmuş hücreler .grid-frozen-cell ile position:sticky ve
+   grid-freeze-columns.js'ten satır içi "left: <ofset>px" alır. Yukarıdaki
+   kural (0,3,1) .grid-frozen-cell'i (0,1,0) ezip position'ı relative yapınca
+   o left artık STICKY OFSETİ değil GÖRELİ KAYDIRMA anlamına geliyor ve hücre
+   tam ofset kadar SAĞA kayıyordu (ölçüm: 44px — satır no sütununun genişliği).
+   Çapa tıklamayla kurulduğu için düzenlenen hücre de aynı kaymayı alıyordu.
+   sticky zaten konumlandırılmış bir öğedir; z-index yığını çalışmaya devam eder. */
+td.grid-cell.is-paste-anchor.grid-frozen-cell {
+    position: sticky;
+}
+
+/* AYNI TUZAK, AYNI ÇÖZÜM: bu iki kural da hücreye position:relative veriyor
+   (popover'ları konumlandırmak için) ve donmuş sütunda satır içi left'i göreli
+   kaydırmaya çevirip hücreyi sağa itiyordu. Bu kural DOSYADA SONRA gelmeli —
+   özgüllükleri eşit (0,2,1), kazanan sıraya göre belirleniyor. */
+td.grid-frozen-cell.richtext-editing,
+td.grid-frozen-cell.attachment-editing {
+    position: sticky;
+}
+
+/* Düzenleme açıkken çapa çizgisi (kesikli + yürüyen karınca) düzenleme
+   göstergesiyle çakışıyor — biri kazanmalı, düzenleme kazanır.
+   ⚠️ ESKİDEN BURASI "outline: none" İDİ. O dönemde düzenleme göstergesi
+   box-shadow olduğu için outline'ı silmek zararsızdı. Gösterge de outline'a
+   taşınınca bu kural (0,3,1) düzenleme kuralını (0,2,1) EZİP TEK göstergeyi
+   de siliyordu; tıklamak hem düzenlemeyi açıp hem çapayı kurduğu için bu
+   neredeyse HER düzenlenen hücrede olurdu. Silmek yerine düzenleme çizgisi
+   açıkça tekrar yazılıyor. */
 td.grid-cell.is-paste-anchor.editing {
-    outline: none;
+    outline: 2px solid var(--bcc-accent-strong);
+    outline-offset: -2px;
+    animation: none;
 }
 
 /* "Yürüyen karınca": kopyalanan alanın canlı olduğunu belli eder. Hareketi
@@ -3629,4 +3713,95 @@ a.sort-btn:hover {
     color: var(--bcc-text-muted);
     cursor: default;
     opacity: 0.7;
+}
+
+/* ---- Boş tablo: "alan yok" kartı tıklanabilir --------------------------- */
+/* Kartın TAMAMI bir <button> (grid.php) — kullanıcı metnin herhangi bir yerine
+   tıklayınca alan ekleme penceresi açılıyor. Eskiden yalnızca cümlenin
+   içindeki küçük bir bağlantı tıklanabilirdi ve başka sayfaya götürüyordu. */
+.gs-empty-fields-card {
+    /* display:flex ZATEN blok seviyesi yapar ve kalan genişliği doldurur —
+       width:100% VERİLMEZ. Verildiğinde kart, üstündeki "Alanları yönet"
+       satırının yatay boşluğunu (.gs-fields-link padding'i) hesaba katmadan
+       kapsayıcıyı doldurup SAĞDAN taşıyordu. İç boşluk artık margin ile ve
+       o satırla AYNI ölçüde (1rem). */
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    box-sizing: border-box;
+    margin: 0 1rem 1.5rem;
+    text-align: left;
+    font: inherit;
+    color: var(--bcc-text);
+    cursor: pointer;
+    /* .card zaten zemin/kenarlık/yarıçap veriyor; burada yalnızca <button>'ın
+       tarayıcı varsayılanları eziliyor ve etkileşim işaretleri ekleniyor. */
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bcc-surface);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.gs-empty-fields-card:hover {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-surface-hover);
+}
+
+.gs-empty-fields-card:focus-visible {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
+}
+
+.gs-empty-fields-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.gs-empty-fields-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.gs-empty-fields-text strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.gs-empty-fields-text > span {
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+}
+
+/* Boş tablo "Yeni Alan" penceresi: varsayılan .home-modal 420px — alan tipi
+   ızgarası (18 tip, minmax(150px,1fr)) orada iki dar sütuna sıkışıyor ve liste
+   ekranın altından taşıyordu. Bu pencereye ÖZEL genişletiliyor; diğer
+   modallar (tablo oluştur/sil/yapıştır) 420px'te kalır. */
+#gs-empty-fields-modal .home-modal {
+    max-width: 680px;
+    /* Uzun listede pencere ekranı aşmasın: kaydırma İÇERİDE olsun, sayfada
+       değil. Başlık sabit kalır, yalnızca form gövdesi kayar. */
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+#gs-empty-fields-modal .home-modal-head {
+    flex: 0 0 auto;
+}
+
+#gs-empty-fields-modal .home-modal-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }

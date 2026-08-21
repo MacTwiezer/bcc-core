@@ -203,10 +203,19 @@
         // Menüdeki tetikleyici ve modal YALNIZCA owner'a basılır; ikisi de
         // yoksa bu blok sessizce no-op olur (projedeki null-check deseni).
         // Asıl yetki kapısı sunucuda: api/table_create.php.
-        var createTableBtn = document.getElementById('gs-create-table-btn');
+        // ⚠️ TEK id DEĞİL, TÜM tetikleyiciler: modalı iki yer açıyor —
+        // menüdeki "Boş tablo oluştur" (#gs-create-table-btn) ve tablo
+        // sekmeleri çubuğundaki "+" (.gs-table-tab-add). "+" eskiden
+        // base_tables.php'ye YÖNLENDİREN düz bir bağlantıydı; artık o da bu
+        // modalı açıyor. İkisi de [data-create-table-btn] taşıyor, böylece
+        // ileride üçüncü bir tetikleyici eklemek için burayı değiştirmek
+        // gerekmez.
+        var createTableTriggers = Array.prototype.slice.call(
+            document.querySelectorAll('[data-create-table-btn]')
+        );
         var createTableModal = document.getElementById('gs-create-table-modal');
 
-        if (createTableBtn && createTableModal) {
+        if (createTableTriggers.length && createTableModal) {
             var ctForm = document.getElementById('gs-create-table-form');
             var ctError = document.getElementById('gs-create-table-error');
             var ctNameInput = ctForm.querySelector('input[name="name"]');
@@ -217,14 +226,22 @@
                 ctError.hidden = true;
             };
 
-            createTableBtn.addEventListener('click', function () {
-                // Menü kapanır — görünüm seçenekleriyle AYNI davranış.
-                if (createMenu) {
-                    createMenu.removeAttribute('open');
-                }
-                ctError.hidden = true;
-                createTableModal.hidden = false;
-                ctNameInput.focus();
+            createTableTriggers.forEach(function (trigger) {
+                trigger.addEventListener('click', function (e) {
+                    // Sekme çubuğundaki tetikleyici gerçek bir <a href> —
+                    // varsayılan gezinme durdurulmazsa modal açılır AÇILMAZ
+                    // sayfa base_tables.php'ye giderdi. (Menüdeki tetikleyici
+                    // zaten <button>, ona zararsız.)
+                    e.preventDefault();
+
+                    // Menü kapanır — görünüm seçenekleriyle AYNI davranış.
+                    if (createMenu) {
+                        createMenu.removeAttribute('open');
+                    }
+                    ctError.hidden = true;
+                    createTableModal.hidden = false;
+                    ctNameInput.focus();
+                });
             });
 
             document.getElementById('gs-create-table-close').addEventListener('click', closeCreateTable);

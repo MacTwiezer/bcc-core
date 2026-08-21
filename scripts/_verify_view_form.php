@@ -207,9 +207,14 @@ try {
     echo "\n--- D) form_edit.php tasarimcisi ---\n";
     $ed = http_request('GET', "/form_edit.php?table_id={$tableId}&view_id={$formViewId}", $cookie);
     check('D) form_edit.php acildi', $ed['status'] === 200, 'durum: ' . $ed['status']);
-    check('D) Uyari metni var ("HERKES ... kayit ekleyebilir")',
-        strpos($ed['body'], 'HERKES giriş yapmadan') !== false);
-    check('D) Form linki token ile basildi', strpos($ed['body'], '/form.php?t=' . $token) !== false);
+    // ⚠️ TERSINE CEVRILDI: "Form baglantisi" karti (link kutusu + Kopyala + iki
+    // uyari) form_edit.php'den KALDIRILDI. Testler silinmedi, kaldirmanin kalici
+    // oldugunu dogrulayacak sekilde ters yone cevrildi — biri kazara geri
+    // eklerse burasi haber verir.
+    check('D) Paylasim karti KALDIRILDI: uyari metni YOK',
+        strpos($ed['body'], 'HERKES giriş yapmadan') === false);
+    check('D) Paylasim karti KALDIRILDI: form linki basilmiyor',
+        strpos($ed['body'], '/form.php?t=' . $token) === false);
     foreach (array($fUzun => 'long_text', $fEk => 'attachment', $fUser => 'user', $fCt => 'created_time', $fCb => 'created_by') as $fid => $ftype) {
         check("D) '{$ftype}' alani secim listesinde YOK",
             strpos($ed['body'], 'value="' . $fid . '"') === false, "field_id {$fid} listede");

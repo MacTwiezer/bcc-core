@@ -12,19 +12,13 @@ require_login();
 
 $user = current_user();
 
-// dashboard.php ile AYNI desen.
-// m.role EKLENDİ: sağdaki aksiyon butonlarının (Katılımcıları yönet / Base
-// oluştur / Ayarlar) görünürlüğü seçili alandaki role bağlı ve bu bilgi zaten
-// bu JOIN'de mevcut — current_user_role_in_team() ile AYRI bir sorgu açmak
-// gereksiz olurdu (dashboard.php'de de aynı desen).
-$teams = bcc_fetch_all(
-    'SELECT t.id, t.name, m.role
-     FROM team_members m
-     INNER JOIN teams t ON t.id = m.team_id
-     WHERE m.user_id = :uid
-     ORDER BY t.name',
-    array('uid' => $user['id'])
-);
+// Liste ROLÜ de taşır: sağdaki aksiyon butonlarının (Katılımcıları yönet /
+// Base oluştur / Ayarlar) görünürlüğü seçili alandaki role bağlı ve bilgi
+// zaten burada — current_user_role_in_team() ile AYRI bir sorgu açılmaz.
+// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
+// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
+// ayrisma riski kalmasin diye tek yere alindi.
+$teams = bcc_teams_for_current_user();
 
 $teamIds = array();
 foreach ($teams as $t) {
@@ -40,8 +34,10 @@ if (!empty($teamIds)) {
     }
 }
 
-// Seçili takım: ?team_id= yalnızca kullanıcının ZATEN üyesi olduğu bir takımsa
-// kabul edilir (yukarıdaki $teams listesiyle doğrulanır) — yoksa ilk takıma düşer.
+// Seçili takım: ?team_id= yalnızca kullanıcının ERİŞEBİLDİĞİ bir takımsa kabul
+// edilir (yukarıdaki $teams listesiyle doğrulanır) — yoksa ilk takıma düşer.
+// "Erişebildiği" = normal kullanıcı için ÜYESİ OLDUĞU, platform yöneticisi
+// için TÜM ekipler (bkz. bcc_teams_for_current_user).
 $requestedTeamId = isset($_GET['team_id']) ? (int) $_GET['team_id'] : 0;
 $selectedTeamId = 0;
 $selectedTeamName = '';
@@ -67,13 +63,13 @@ $canCreateBase = false;
 
 $collaborators = array();
 if ($selectedTeamId) {
-    // KVKK: $teams zaten kullanıcının üyeliğiyle filtrelenmişti ama savunma
+    // KVKK: $teams zaten kullanıcının kapsamıyla filtrelenmişti ama savunma
     // amaçlı ikinci bir doğrulama — projedeki her veri erişiminin ÖNÜNDE olan
-    // aynı fonksiyon.
+    // aynı fonksiyon (o da admin kapsamını AYNI kaynaktan okur).
     require_team_access($selectedTeamId);
 
-    // $teams zaten m.role'ü içeriyor (yukarıdaki sorgu) — rolü ORADAN okuruz,
-    // current_user_role_in_team() ile ikinci bir sorgu AÇILMAZ.
+    // $teams zaten rolü içeriyor — ORADAN okunur, current_user_role_in_team()
+    // ile ikinci bir sorgu AÇILMAZ (ikisi de AYNI admin kuralını uygular).
     foreach ($teams as $t) {
         if ((int) $t['id'] === $selectedTeamId) {
             $selectedRole = $t['role'];
@@ -144,14 +140,35 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 <div class="sp-page wsx-page">
         <div class="home-main-header">
             <h1>Çalışma Alanları</h1>
-            <p class="settings-hint">Üyesi olduğunuz çalışma alanlarını, katılımcılarını ve rollerini görün.</p>
+            <p class="settings-hint"><?php echo ((int) $user['is_admin'] === 1) ? 'Platform yöneticisi olarak TÜM çalışma alanlarını görüyorsunuz.' : 'Üyesi olduğunuz çalışma alanlarını, katılımcılarını ve rollerini görün.'; ?></p>
         </div>
 
         <?php if (empty($teams)): ?>
-            <p class="settings-empty">
-                <strong>Henüz üyesi olduğunuz bir ekip yok.</strong>
-                <span class="sp-muted">Bir çalışma alanına eklenmek için yöneticinizle iletişime geçin.</span>
-            </p>
+            <?php // ⚠️ ADMİN İÇİN AYRI METİN: bu dal eskiden herkese "yöneticinizle
+                  // iletişime geçin" diyordu — platform yöneticisinin KENDİSİ bu
+                  // ekranda hiçbir şey göremediğinde bu çıkmaz sokaktı (oluşturma
+                  // butonu yalnızca aşağıdaki $teams dolu dalında basılıyor).
+                  // Aynı modal tetikleyicisi buraya da konuyor.
+                  //
+                  // Admin TÜM ekipleri gördüğü için bu dal onun açısından
+                  // "sistemde hiç çalışma alanı yok" demektir — metin buna göre. ?>
+            <?php if ((int) $user['is_admin'] === 1): ?>
+                <p class="settings-empty">
+                    <strong>Sistemde henüz hiç çalışma alanı yok.</strong>
+                    <span class="sp-muted">Platform yöneticisi olarak ilkini siz oluşturabilirsiniz.</span>
+                </p>
+                <p>
+                    <a href="/admin/create_team.php" class="wsx-newbtn" data-create-team-btn>
+                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        Yeni Çalışma Alanı
+                    </a>
+                </p>
+            <?php else: ?>
+                <p class="settings-empty">
+                    <strong>Henüz üyesi olduğunuz bir ekip yok.</strong>
+                    <span class="sp-muted">Bir çalışma alanına eklenmek için yöneticinizle iletişime geçin.</span>
+                </p>
+            <?php endif; ?>
         <?php else: ?>
             <div class="wsx-layout">
 
@@ -220,7 +237,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                   // BUTON DEĞİL, nedenini söyleyen tek satır basılıyor
                                   // (alt bilgi yine de dolu kalır). ?>
                             <?php if ((int) $user['is_admin'] === 1): ?>
-                                <a href="/admin/create_team.php" class="wsx-newbtn">
+                                <?php // href KORUNDU: create-team-modal.js tıklamayı yakalayıp
+                                      // aynı sayfada modal açıyor. JS yüklenmezse bağlantı yine
+                                      // /admin/create_team.php sayfasına gider — akış JS'siz de
+                                      // tamamlanır (ilerici zenginleştirme). ?>
+                                <a href="/admin/create_team.php" class="wsx-newbtn" data-create-team-btn>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                                     Yeni Çalışma Alanı
                                 </a>
@@ -608,6 +629,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
             </div>
             <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
+        <?php endif; ?>
+
+        <?php // Modal ve davranışı if/else'in DIŞINDA: tetikleyici HER İKİ dalda
+              // da olabiliyor (boş dalda admin için, dolu dalda sol panel alt
+              // bilgisinde). Yalnızca admine basılıyor — asıl kapı yine
+              // api/team_create.php'nin is_admin kontrolü. ?>
+        <?php if ((int) $user['is_admin'] === 1): ?>
+            <?php require __DIR__ . '/../src/partials/create_team_modal.php'; ?>
+            <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
         <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

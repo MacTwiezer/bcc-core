@@ -66,3 +66,54 @@
         });
     });
 })();
+
+(function () {
+    'use strict';
+
+    // Boş tablo kartı -> alan ekleme penceresi.
+    //
+    // Tabloda hiç alan yokken grid tablosu (dolayısıyla <thead>'deki "+"
+    // popup'ı) HİÇ basılmıyor; eskiden tek çıkış yolu table_fields.php'ye giden
+    // bir bağlantıydı. Artık kartın tamamı bu penceyi açıyor.
+    //
+    // Gönderim mantığı BURADA YOK: pencere içindeki form da
+    // [data-grid-add-field] taşıyor, yani bu dosyanın yukarıdaki mevcut submit
+    // dinleyicisi onu da işliyor. Burada yalnızca aç/kapat var.
+    document.addEventListener('DOMContentLoaded', function () {
+        var trigger = document.getElementById('gs-empty-fields-trigger');
+        var modal = document.getElementById('gs-empty-fields-modal');
+
+        // İkisi de yalnızca "alan yok + owner" durumunda basılır; aksi hâlde
+        // bu blok sessizce no-op olur (projedeki null-check deseni).
+        if (!trigger || !modal) {
+            return;
+        }
+
+        function close() {
+            modal.hidden = true;
+        }
+
+        trigger.addEventListener('click', function () {
+            modal.hidden = false;
+            // İlk tip düğmesine odaklan — klavyeyle de ilerlenebilsin.
+            var firstType = modal.querySelector('.field-type-option');
+            if (firstType) {
+                firstType.focus();
+            }
+        });
+
+        document.getElementById('gs-empty-fields-close').addEventListener('click', close);
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                close();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.hidden) {
+                close();
+            }
+        });
+    });
+})();

@@ -2870,6 +2870,16 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 
 .home-modal-error[hidden] { display: none; }
 
+/* Modal içi bilgilendirme satırı (hata DEĞİL): şu an yalnızca çalışma alanı
+   oluşturma modalı kullanıyor ("Owner olarak eklenirsiniz").
+   ⚠️ .home-modal-error'ın kopyası DEĞİL: o kırmızı/danger tonlu bir uyarı
+   kutusu, bu ise nötr, kutusuz bir alt açıklama. */
+.home-modal-hint {
+    margin: 0 0 0.9rem;
+    color: var(--bcc-text-muted);
+    font-size: 0.82rem;
+}
+
 .home-modal-actions {
     display: flex;
     justify-content: flex-end;

@@ -13,26 +13,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
 
-    if ($name === '') {
-        $error = 'Ekip adı boş olamaz.';
-    } elseif (mb_strlen($name, 'UTF-8') > 150) {
-        // teams.name VARCHAR(150) — bu kontrol olmadan uzun bir ekip adı hatasız
-        // sessizce kırpılıyordu (create_user.php'deki email/full_name kontrolüyle
-        // AYNI gerekçe, bkz. o dosyadaki yorum).
-        $error = 'Ekip adı en fazla 150 karakter olabilir.';
-    } else {
-        $existing = bcc_fetch_one('SELECT id FROM teams WHERE name = :name', array('name' => $name));
+    // Doğrulama + INSERT + oluşturanı 'owner' üye yapma TEK YERDE:
+    // bcc_create_team() (bkz. src/schema.php). api/team_create.php de AYNI
+    // fonksiyonu çağırıyor — bases.php / api/base_create.php ile aynı desen.
+    try {
+        $result = bcc_create_team($name, $user['id']);
+    } catch (Throwable $e) {
+        $result = array('ok' => false, 'error' => 'Kaydedilemedi (veritabanı hatası).', 'id' => null);
+    }
 
-        if ($existing) {
-            $error = 'Bu isimde bir ekip zaten var.';
-        } else {
-            bcc_execute('INSERT INTO teams (name) VALUES (:name)', array('name' => $name));
-            $newId = bcc_last_insert_id();
-            log_audit('team.create', 'team', $newId, array('name' => $name));
-            $success = 'Ekip oluşturuldu: ' . $name;
-            // Bir sonraki ekip için formu temizle.
-            $name = '';
-        }
+    if ($result['ok']) {
+        $success = 'Ekip oluşturuldu: ' . $name;
+        // Bir sonraki ekip için formu temizle.
+        $name = '';
+    } else {
+        $error = $result['error'];
     }
 }
 // Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk

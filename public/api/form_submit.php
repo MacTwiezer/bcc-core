@@ -193,9 +193,9 @@ try {
 
 // Slack bildirimi commit'TEN SONRA (DB mutasyonu değil, kendi try/catch'i var) —
 // record_add.php ile AYNI sıra.
-// ⚠️ VARSAYILAN KAPALI: form herkese açık olduğu için istenmeyen gönderimler
-// doğrudan ekibin Slack kanalına taşabilir. Tasarımcı form_edit.php'den AÇIKÇA
-// açmalı (bkz. form_slack_notify).
+// ⚠️ VARSAYILAN AÇIK (bkz. bcc_form_config_from_view). Form herkese açık
+// olduğu için istenmeyen gönderimler de ekibin Slack kanalına taşabilir;
+// kapatma anahtarı form_edit.php'de.
 if (!empty($formConfig['form_slack_notify'])) {
     bcc_notify_slack_new_record($view['table_id'], $recordId, null);
 }

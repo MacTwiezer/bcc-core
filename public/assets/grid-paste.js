@@ -11,10 +11,24 @@
 // olay HİÇ ele alınmaz: açık bir düzenleyiciye normal metin yapıştırmak eskisi
 // gibi çalışır. Yalnızca TABLO şeklindeki içerik grid tarafından yakalanır.
 //
-// Neden text/plain: Excel panoya hem text/plain (TSV) hem text/html koyar.
-// HTML'i ayrıştırmak birleşik hücreleri (colspan/rowspan) ve biçimlendirmeyi de
-// getirir; TSV hem yeterli hem çok daha öngörülebilir — Airtable de düz
-// yapıştırmada TSV'yi baz alır.
+// KAYNAK SEÇİMİ — üç kademe, sırayla denenir:
+//
+//   1. KENDİ HTML'imiz (<table data-bcc-grid="1">, grid-copy.js üretir)
+//      -> her hücrenin data-bcc-raw'ındaki HAM değer kullanılır. Grid'den
+//         grid'e kopyalama böylece KUSURSUZ gidiş-dönüş yapar. Bu şart:
+//         görünen metin ile sunucunun kabul ettiği biçim aynı değil
+//         (date "12.03.2000" vs "2000-03-12", percent "%45" vs 45).
+//   2. YABANCI text/html (Excel, Sheets, Airtable, web sayfasındaki <table>)
+//      -> gerçek tablo yapısı okunur. TSV'den ÜSTÜN: hücre içindeki satır
+//         sonları ve sekmeler tabloyu kaydırmaz, birleşik hücreler
+//         (colspan/rowspan) doğru yayılır.
+//   3. text/plain (TSV) -> en son çare; hâlâ tam desteklenir.
+//
+// Kademe 2 ve 3'te değerler HEDEF ALAN TİPİNE göre dönüştürülür
+// (coerceForField): Excel'den gelen "12.03.2000", "1.234,56", "%45", "Evet"
+// gibi insan biçimleri sunucunun beklediği kanonik biçime çevrilir. Bu
+// olmadan Türkçe biçimli bir tarih/sayı sütunu yapıştırıldığında sunucu
+// hücreleri sessizce ATLIYORDU.
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('.grid');
@@ -83,6 +97,177 @@
             return rows;
         }
 
+        // ---- HTML tablo ayrıştırma -------------------------------------------
+        // DOMParser kullanılır, innerHTML DEĞİL: ayrıştırılan belge ayrı bir
+        // bağlamda kalır, içindeki <script>/<img onerror> ÇALIŞMAZ. Pano
+        // içeriği güvenilmez veridir (kullanıcı herhangi bir siteden
+        // kopyalayabilir) — sayfaya hiç enjekte edilmez, yalnızca metni okunur.
+        function parseHtmlTable(html) {
+            var doc;
+            try {
+                doc = new DOMParser().parseFromString(html, 'text/html');
+            } catch (err) {
+                return null;
+            }
+            var table = doc.querySelector('table');
+            if (!table) {
+                return null;
+            }
+
+            var isOurs = table.hasAttribute('data-bcc-grid');
+            var trs = Array.prototype.slice.call(table.querySelectorAll('tr'));
+            if (!trs.length) {
+                return null;
+            }
+
+            // colspan/rowspan yayılımı: birleşik hücreler ızgarada gerçekten
+            // kapladıkları yere yazılır, yoksa o satırdan sonrası KAYARDI.
+            var gridOut = [];
+            var pending = {}; // "r:c" -> değer (rowspan'dan taşan hücreler)
+
+            trs.forEach(function (tr, r) {
+                var cells = Array.prototype.slice.call(tr.querySelectorAll('td, th'));
+                var row = gridOut[r] || (gridOut[r] = []);
+                var c = 0;
+
+                cells.forEach(function (cell) {
+                    while (pending[r + ':' + c] !== undefined) {
+                        row[c] = pending[r + ':' + c];
+                        c++;
+                    }
+
+                    var display = String(cell.textContent || '').replace(/\s+/g, ' ').trim();
+                    // Kendi kopyalamamızda hücre bir NESNE olarak taşınır:
+                    // ham değer + görünen metin + KAYNAK alan tipi. Hedef
+                    // sütunun tipi kaynakla aynıysa ham değer kullanılır
+                    // (kusursuz gidiş-dönüş); FARKLIYSA görünen metin
+                    // dönüştürülür — bkz. buildPlan. Bu ayrım olmadan bir
+                    // checkbox sütununu metin sütununa yapıştırmak "Evet"
+                    // yerine "1" yazardı.
+                    var value = (isOurs && cell.hasAttribute('data-bcc-raw'))
+                        ? {
+                            raw: cell.getAttribute('data-bcc-raw'),
+                            display: display,
+                            type: cell.getAttribute('data-bcc-type') || ''
+                        }
+                        : display;
+
+                    var cs = parseInt(cell.getAttribute('colspan'), 10) || 1;
+                    var rs = parseInt(cell.getAttribute('rowspan'), 10) || 1;
+
+                    for (var dr = 0; dr < rs; dr++) {
+                        for (var dc = 0; dc < cs; dc++) {
+                            if (dr === 0) {
+                                row[c + dc] = value;
+                            } else {
+                                pending[(r + dr) + ':' + (c + dc)] = value;
+                            }
+                        }
+                    }
+                    c += cs;
+                });
+
+                while (pending[r + ':' + c] !== undefined) {
+                    row[c] = pending[r + ':' + c];
+                    c++;
+                }
+            });
+
+            // Delikleri boş string yap: undefined sunucuya "atla" değil, boş
+            // değer olarak gitmeli ki hizalama korunsun.
+            var width = 0;
+            gridOut.forEach(function (row) { if (row.length > width) { width = row.length; } });
+            gridOut = gridOut.map(function (row) {
+                var out = [];
+                for (var i = 0; i < width; i++) { out.push(row[i] === undefined ? '' : row[i]); }
+                return out;
+            }).filter(function (row) {
+                // Tamamen boş satırlar (ör. HTML'deki ayraç <tr>'leri) atılır.
+                return row.some(function (v) { return v !== ''; });
+            });
+
+            if (!gridOut.length) {
+                return null;
+            }
+
+            return { rows: gridOut, raw: isOurs };
+        }
+
+        // ---- Değer dönüşümü (hedef alan tipine göre) --------------------------
+        // ⚠️ YALNIZCA YABANCI KAYNAKTA çalışır. Kendi HTML'imizden gelen değer
+        // zaten kanonik biçimdedir; ona dokunmak "0.45" yüzdesini tekrar
+        // bölmek gibi hatalara yol açardı.
+        //
+        // Amaç: Excel'den yapıştırırken kullanıcının hiçbir şeyi elle
+        // düzeltmek zorunda kalmaması. Tanınmayan bir biçim OLDUĞU GİBİ
+        // bırakılır — sunucu son sözü söyler, burada veri UYDURULMAZ.
+        function coerceForField(value, type) {
+            var s = String(value === null || value === undefined ? '' : value).trim();
+            if (s === '') {
+                return '';
+            }
+
+            if (type === 'date') {
+                // Zaten kanonik.
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { return s; }
+                // gg.aa.yyyy / gg/aa/yyyy / gg-aa-yyyy — Türkçe Excel'in
+                // varsayılanı. AY/GÜN sırası BİLEREK gün-önce kabul edilir:
+                // uygulama Türkçe ve tarih sütunları gg.aa.yyyy gösteriyor.
+                var m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+                if (m) {
+                    return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+                }
+                // yyyy/aa/gg
+                m = s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})$/);
+                if (m) {
+                    return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+                }
+                // Saat kısmı varsa at ("2000-03-12 00:00:00" / ISO).
+                m = s.match(/^(\d{4}-\d{2}-\d{2})[T ]/);
+                if (m) { return m[1]; }
+                return s;
+            }
+
+            if (type === 'checkbox') {
+                var low = s.toLocaleLowerCase('tr');
+                if (['1', 'evet', 'e', 'true', 'doğru', 'dogru', 'x', 'var', '✓', '✔', 'yes'].indexOf(low) !== -1) {
+                    return '1';
+                }
+                return '0';
+            }
+
+            if (type === 'number' || type === 'currency' || type === 'percent' || type === 'rating') {
+                // Para birimi simgeleri, yüzde işareti ve boşluklar atılır.
+                var n = s.replace(/[%\s ₺$€£]/g, '');
+                // Binlik/ondalık ayracı: Türkçe "1.234,56" ile İngilizce
+                // "1,234.56" ayırt edilir — SON görülen ayraç ondalıktır.
+                var lastComma = n.lastIndexOf(',');
+                var lastDot = n.lastIndexOf('.');
+                if (lastComma !== -1 && lastDot !== -1) {
+                    if (lastComma > lastDot) {
+                        n = n.replace(/\./g, '').replace(',', '.');   // 1.234,56
+                    } else {
+                        n = n.replace(/,/g, '');                      // 1,234.56
+                    }
+                } else if (lastComma !== -1) {
+                    // Tek ayraç virgül: "1,5" ondalık; "1,234" belirsiz —
+                    // ondalık kabul edilir (Türkçe bağlam), çünkü binlik
+                    // ayracının tek başına kullanılması nadirdir.
+                    n = n.replace(',', '.');
+                }
+                return /^-?\d*\.?\d+$/.test(n) ? n : s;
+            }
+
+            if (type === 'multiple_select') {
+                // Zaten JSON ise dokunma.
+                if (/^\s*\[/.test(s)) { return s; }
+                var parts = s.split(/\s*[,;]\s*/).filter(function (p) { return p !== ''; });
+                return JSON.stringify(parts);
+            }
+
+            return s;
+        }
+
         // ---- Sütun haritası -------------------------------------------------
         // Sütun sırası <thead>'deki data-col-key="fN" sırasıdır — tabloda HİÇ
         // satır olmasa bile çalışır (boş tabloya yapıştırma senaryosu).
@@ -97,6 +282,10 @@
                     var type = types[fieldId];
                     return {
                         fieldId: fieldId,
+                        // Tip, yabancı kaynaktan gelen değeri dönüştürmek için
+                        // gerekli (coerceForField) — sütun haritası zaten
+                        // kuruluyor, ikinci bir tip aramasına gerek yok.
+                        type: type,
                         // Salt-okunur alanlara (autonumber, oluşturulma zamanı…)
                         // yazılmaz; sunucu da ayrıca reddeder (iki katman).
                         writable: readonly.indexOf(type) === -1
@@ -107,7 +296,9 @@
 
         // ---- Plan -----------------------------------------------------------
         // Ne nereye yazılacak, kaç yeni satır açılacak, kaç hücre atlanacak.
-        function buildPlan(data) {
+        // $isRaw: kaynak KENDİ kopyalamamız mı (data-bcc-raw taşıyan HTML).
+        // Öyleyse değerler kanonik biçimdedir ve dönüştürülmez.
+        function buildPlan(data, isRaw) {
             var anchor = SELECT.getAnchor();
             if (!anchor) {
                 return { error: 'Önce yapıştırmak istediğiniz hücreye tıklayın.' };
@@ -127,20 +318,44 @@
             // ("seçilen alan kadar"); çizmediyse panonun tamamı yazılır ve
             // taşan satırlar yeni kayıt olur ("tüm hepsi").
             var range = SELECT.hasRange() ? SELECT.getRange() : null;
+
+            // ---- "Tek değeri seçili alana yay" (Excel'in klasik davranışı) --
+            // Panoda TEK hücre varsa ve kullanıcı bir ALAN seçtiyse, o değer
+            // alanın tamamına yazılır. Bu olmadan tek bir değeri 40 satıra
+            // yazmak 40 ayrı düzenleme demekti.
+            var isSingle = (data.length === 1 && data[0].length === 1);
+            var fillRange = isSingle && !!range;
+
             var maxRows = range ? (range.row2 - range.row1 + 1) : data.length;
             var maxCols = range ? (range.col2 - range.col1 + 1) : Infinity;
+
+            var rowCount = fillRange ? maxRows : Math.min(data.length, maxRows);
+            var srcWidth = 0;
+            data.forEach(function (row) { if (row.length > srcWidth) { srcWidth = row.length; } });
+            var colCount = fillRange ? maxCols : Math.min(srcWidth, maxCols === Infinity ? srcWidth : maxCols);
+
+            function valueAt(r, c) {
+                if (fillRange) {
+                    return data[0][0];
+                }
+                var row = data[r];
+                if (!row || row[c] === undefined) {
+                    return null; // kaynak satırı bu sütuna kadar uzanmıyor
+                }
+                return row[c];
+            }
 
             var updates = [];
             var creates = [];
             var skippedReadonly = 0;
             var clippedCols = 0;
 
-            for (var r = 0; r < data.length && r < maxRows; r++) {
+            for (var r = 0; r < rowCount; r++) {
                 var targetRow = anchorRow + r;
                 var isNew = targetRow >= rows.length;
                 var newRowCells = [];
 
-                for (var c = 0; c < data[r].length && c < maxCols; c++) {
+                for (var c = 0; c < colCount; c++) {
                     var targetCol = anchorCol + c;
 
                     // Tablonun sağ kenarını aşan sütunlar SESSİZCE kırpılır —
@@ -149,7 +364,25 @@
                     if (targetCol >= cols.length) { clippedCols++; continue; }
                     if (!cols[targetCol].writable) { skippedReadonly++; continue; }
 
-                    var value = data[r][c];
+                    var value = valueAt(r, c);
+                    if (value === null) { continue; }
+
+                    var targetType = cols[targetCol].type;
+
+                    if (value && typeof value === 'object') {
+                        // Kendi kopyalamamız. Tip AYNIYSA ham değer kanoniktir,
+                        // dokunulmaz (percent'in "45"i tekrar bölünmesin,
+                        // date'in "2000-03-12"si bozulmasın).
+                        // Tip FARKLIYSA ham değer hedefte anlamsız olabilir —
+                        // insanın gördüğü metin alınıp hedef tipe dönüştürülür.
+                        // (Örn. checkbox -> metin sütunu: "1" değil "Evet".)
+                        value = (value.type === targetType)
+                            ? value.raw
+                            : coerceForField(value.display, targetType);
+                    } else if (!isRaw) {
+                        // Yabancı kaynak (Excel/Sheets/web tablosu).
+                        value = coerceForField(value, targetType);
+                    }
 
                     if (isNew) {
                         newRowCells.push({ f: cols[targetCol].fieldId, v: value });
@@ -174,8 +407,12 @@
                 clippedCols: clippedCols,
                 anchorRow: anchorRow,
                 anchorCol: anchorCol,
-                rowsUsed: Math.min(data.length, maxRows),
-                colsUsed: Math.min(data[0] ? data[0].length : 0, maxCols === Infinity ? data[0].length : maxCols)
+                // Hedef boyamasının ölçüleri: yayma modunda seçilen ALANIN
+                // ölçüsü, normalde kaynağın kırpılmış ölçüsü. (Eskiden
+                // doğrudan data[0].length okunuyordu — kaynağın ilk satırı
+                // diğerlerinden kısaysa boyama eksik kalırdı.)
+                rowsUsed: rowCount,
+                colsUsed: colCount
             };
         }
 
@@ -233,11 +470,29 @@
             var cd = e.clipboardData || window.clipboardData;
             if (!cd) { return; }
 
-            var text = cd.getData('text/plain');
-            if (!text) { return; }
+            var text = cd.getData('text/plain') || '';
+            var htmlSrc = '';
+            try {
+                htmlSrc = cd.getData('text/html') || '';
+            } catch (err) {
+                htmlSrc = ''; // bazı tarayıcılar text/html okumayı reddedebilir
+            }
 
-            // TABLO değilse karışma — açık düzenleyiciye normal yapıştırma.
-            if (text.indexOf('\t') === -1 && text.indexOf('\n') === -1) { return; }
+            // ⚠️ ÖNCE HTML AYRIŞTIRILIR, sonra "tablo mu" kararı verilir.
+            // Eskiden yalnızca text/plain'e bakılıyor ve içinde sekme/satır
+            // sonu yoksa olay hiç ele alınmıyordu. Bir web sayfasındaki TEK
+            // SATIRLIK, TEK SÜTUNLU tablo ya da hücreleri boşlukla ayrılmış
+            // kopyalar bu yüzden hiç yakalanmıyordu — oysa HTML'de gerçek bir
+            // <table> vardı.
+            var parsedHtml = htmlSrc ? parseHtmlTable(htmlSrc) : null;
+            var isTable = !!parsedHtml
+                || text.indexOf('\t') !== -1
+                || text.indexOf('\n') !== -1;
+
+            // Ne HTML tablo ne TSV — karışma, açık düzenleyiciye normal
+            // yapıştırma yapılsın.
+            if (!isTable) { return; }
+            if (!parsedHtml && !text) { return; }
 
             // Onay penceresi zaten açıksa ikinci yapıştırmayı yok say.
             if (!modal.hidden) { e.preventDefault(); return; }
@@ -257,7 +512,18 @@
                 active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
             }
 
-            var data = parseTsv(text);
+            // Kaynak seçimi (dosya başındaki üç kademe). HTML tablo varsa o
+            // kazanır: hücre içi satır sonları ve birleşik hücreler TSV'de
+            // tabloyu kaydırır, HTML'de kaydırmaz.
+            var data, isRaw;
+            if (parsedHtml) {
+                data = parsedHtml.rows;
+                isRaw = parsedHtml.raw;   // kendi kopyalamamız mı
+            } else {
+                data = parseTsv(text);
+                isRaw = false;
+            }
+
             var cellCount = 0;
             var widest = 0;
             data.forEach(function (r) {
@@ -278,7 +544,7 @@
                 return;
             }
 
-            var plan = buildPlan(data);
+            var plan = buildPlan(data, isRaw);
             if (plan.error) {
                 openModal(plan.error, null);
                 return;

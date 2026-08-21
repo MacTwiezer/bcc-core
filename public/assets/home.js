@@ -99,8 +99,11 @@
                     // yeniden inşa etmek yerine (sunucudaki tek doğruluk kaynağını
                     // tekrar etmemek için) sayfa yeniden yüklenir.
                     if (!data.starred && window.location.pathname.indexOf('/starred.php') !== -1) {
-                        var grid = document.getElementById('home-base-grid');
-                        if (grid && grid.querySelectorAll('.home-base-card').length <= 1) {
+                        // Sayfada birden çok ızgara olabildiği için (bkz. görünüm
+                        // değiştiricideki not) kart sayısı TÜM ızgaralarda sayılır.
+                        // starred.php bugün gruplamıyor ama sayım yine de tek bir
+                        // kaba bağlı kalmasın.
+                        if (document.querySelectorAll('.home-base-grid .home-base-card').length <= 1) {
                             window.location.reload();
                             return;
                         }
@@ -473,10 +476,14 @@
         }
 
         var STORAGE_KEY = 'bcc_home_view_mode';
-        var grid = document.getElementById('home-base-grid');
+        // ⚠️ getElementById DEĞİL: Home artık çalışma alanına göre gruplanınca
+        // sayfada BİRDEN ÇOK .home-base-grid oluyor (her grup bir ızgara, bir de
+        // "Yeni Base Oluştur" kutucuğunu taşıyan kuyruk ızgarası). Tek id ile
+        // yalnızca ilk grup mod değiştirirdi, kalanlar kart modunda kalırdı.
+        var grids = Array.prototype.slice.call(document.querySelectorAll('.home-base-grid'));
         var buttons = document.querySelectorAll('[data-view-mode-btn]');
 
-        if (!grid || !buttons.length) {
+        if (!grids.length || !buttons.length) {
             return;
         }
 
@@ -488,8 +495,10 @@
 
         function applyMode(newMode) {
             mode = newMode;
-            grid.classList.toggle('view-mode-list', mode === 'list');
-            grid.classList.toggle('view-mode-card', mode === 'card');
+            grids.forEach(function (g) {
+                g.classList.toggle('view-mode-list', mode === 'list');
+                g.classList.toggle('view-mode-card', mode === 'card');
+            });
             document.documentElement.classList.toggle('home-view-list', mode === 'list');
 
             buttons.forEach(function (btn) {

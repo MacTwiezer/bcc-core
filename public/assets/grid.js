@@ -343,6 +343,18 @@
                 return;
             }
 
+            // "Bu tabloda henüz kayıt yok." satırı sunucu tarafında basılıyor
+            // (grid.php, empty($records)). Kayıt AJAX ile eklenince sayfa
+            // yenilenmediği için o satır olduğu yerde kalıyordu ve yeni kaydın
+            // ÜSTÜNDE "henüz kayıt yok" yazıyordu (yeni satır, ekleme satırının
+            // hemen öncesine — yani boş-durum satırının ALTINA — giriyor).
+            // Ters yön için ek koda gerek yok: satır silme sayfayı yeniliyor,
+            // boş-durum satırını sunucu tekrar basıyor.
+            var emptyCell = document.querySelector('table.grid tbody td.grid-empty');
+            if (emptyCell && emptyCell.parentNode && emptyCell.parentNode.parentNode) {
+                emptyCell.parentNode.parentNode.removeChild(emptyCell.parentNode);
+            }
+
             if (targetRow && targetRow.parentNode) {
                 targetRow.insertAdjacentElement('afterend', newRow);
             } else {
@@ -1372,5 +1384,9 @@
         renderAttachmentChips: renderAttachmentChips,
         buildAttachmentManager: buildAttachmentManager,
         renumberRows: renumberRows,
+        // grid-copy.js (kopyala/kes/temizle) geri bildirimi BU fonksiyonla
+        // veriyor — ikinci bir toast markup'ı/CSS'i yazılmasın diye dışa
+        // açıldı. Uygulaması değişmedi.
+        showToast: showToast,
     };
 })();

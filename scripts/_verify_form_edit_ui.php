@@ -319,8 +319,10 @@ try {
     check('E) salt-okunur dal 200', $roPage['status'] === 200, 'HTTP ' . $roPage['status']);
     check('E) salt-okunur dalda duzenleme formu YOK',
         strpos($roPage['body'], 'class="fe-grid"') === false);
-    check('E) salt-okunur dalda paylasim karti VAR',
-        strpos($roPage['body'], 'share-popover-form') !== false);
+    // ⚠️ TERSINE CEVRILDI: paylasim karti IKI daldan da (editor + salt-okunur)
+    // KALDIRILDI. Test silinmedi, kaldirmanin kalici oldugunu dogruluyor.
+    check('E) salt-okunur dalda paylasim karti YOK (kaldirildi)',
+        strpos($roPage['body'], 'share-popover-form') === false);
     check('E) salt-okunur dalda da sol panel yildizlilari calisiyor (kabuk ortak)',
         strpos($roPage['body'], 'home-starred-list') !== false);
 

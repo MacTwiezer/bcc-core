@@ -336,9 +336,15 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
             </div>
         <?php endforeach; ?>
         <div class="admin-actions-row">
-            <a href="/admin/create_team.php" class="admin-add-link">+ Yeni ekip oluştur</a>
+            <?php // href KORUNDU: create-team-modal.js tıklamayı yakalayıp aynı
+                  // sayfada modal açıyor; JS yoksa bağlantı kendi sayfasına gider.
+                  // workspaces.php'deki butonla AYNI modal/partial/JS. ?>
+            <a href="/admin/create_team.php" class="admin-add-link" data-create-team-btn>+ Yeni ekip oluştur</a>
             <a href="/admin/assign_team.php" class="admin-add-link">Kullanıcıyı ekibe ata</a>
         </div>
         </div>
+<?php // Bu sayfaya zaten yalnızca admin girebiliyor (require_admin, dosya başı). ?>
+<?php require __DIR__ . '/../../src/partials/create_team_modal.php'; ?>
+<script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('admin.js'); ?>"></script>
 <?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

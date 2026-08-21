@@ -476,7 +476,37 @@ html.is-mac .gs-kbd-other { display: none; }
 
 .grid-add-row-hint .gs-kbd-tooltip { left: 0; right: auto; }
 
+/* İpucu balonunun AĞIR gölgesi (0 6px 16px rgba(0,0,0,.2)) burada fazlaydı:
+   açık varyantın zaten kenarlığı var ve balon grid satırlarının üstüne
+   düştüğü için "tuhaf gölgelenme" olarak görünüyordu. Yalnızca BU balonda
+   hafifletiliyor — aynı sınıfı kullanan diğer ipuçları (üst bardaki
+   "Tüm tablolar" vb.) kendi gölgesini korur. */
+.grid-add-row-hint .gs-kbd-tooltip { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
+
 .grid-add-row:hover { background: var(--bcc-surface-sunken); cursor: pointer; }
+
+/* Satır numarası sütunu YAPIŞKAN ve kendi arka planı var
+   (table.grid .grid-rownum { position: sticky; background: var(--bcc-surface) })
+   — bu, satırın hover rengini eziyordu ve solda "beyaz şerit" gibi duruyordu.
+   Hover'da o hücre de aynı rengi alır. */
+.grid-add-row:hover .grid-rownum { background: var(--bcc-surface-sunken); }
+
+/* "+" sütununun (sütun ekleme başlığı) altındaki boş hücre: ipucu bandı oraya
+   UZAMASIN diye ayrı duruyor, görsel olarak TAMAMEN boş kalmalı.
+   ⚠️ "background: transparent" TEK BAŞINA YETMİYORDU: "table.grid td" her
+   hücreye border-right + border-bottom veriyor ve tablo "border-collapse:
+   separate" olduğu için bu hücre KENDİ kenarlıklarını çiziyordu. Sonuç: satır
+   ekleme bandının alt çizgisi veri sütunlarının bittiği yerden sonra "+"
+   sütunu kadar daha uzuyordu — kullanıcının gördüğü "sağdaki artıyı da dahil
+   ediyor" hatası. Kenarlıkları da sıfırlanıyor; bandın sağ ucunu ipucu
+   hücresinin kendi border-right'ı kapatır. */
+.grid-add-row-spacer {
+    background: transparent;
+    border: none;
+}
+
+/* Hover'da da boş kalsın: satır vurgusu "+" sütununun altına taşmasın. */
+.grid-add-row:hover .grid-add-row-spacer { background: transparent; }
 
 .gs-all-tables-panel {
     left: auto;
@@ -821,8 +851,14 @@ html.is-mac .gs-kbd-other { display: none; }
    şimdi .gs-body-row'un normal-akış bir sütunu (bkz. grid.php). Daraltma,
    Home sayfasının #home-sidebar-toggle'ıyla AYNI desen: width sıfırlanır,
    dropdown gibi display:none/is-open YOK. */
+/* ⚠️ GENİŞLİK SATIR İÇİ STİLLE DEĞİL, CSS DEĞİŞKENİYLE veriliyor
+   (grid-drawer-resize.js --gs-drawer-w'yi <html> üzerinde günceller).
+   Gerekçe: satır içi bir width, aşağıdaki ".is-collapsed { width: 0 }"
+   kuralını EZERDİ ve panel bir kez sürüklendikten sonra HİÇ daralmazdı.
+   Değişken kullanınca daraltma kuralı normal özgüllük yarışını kazanmaya
+   devam eder. */
 .gs-view-drawer {
-    width: 260px;
+    width: var(--gs-drawer-w, 260px);
     flex-shrink: 0;
     background: var(--bcc-surface-sunken);
     border-right: 1px solid var(--bcc-border);
@@ -830,6 +866,37 @@ html.is-mac .gs-kbd-other { display: none; }
     overflow-y: auto;
     transition: width 0.15s ease;
 }
+
+/* ---------- Görünüm panelinin genişlik tutamacı ---------- */
+/* Panelle grid arasındaki ince dikey şerit. Kendi genişliği olan gerçek bir
+   flex öğesi (position:absolute DEĞİL): akışta durduğu için panelin sağ
+   kenarıyla hep hizalı kalır — daraltma/açma sırasında bile kaymaz. */
+.gs-view-drawer-resizer {
+    flex: 0 0 5px;
+    cursor: col-resize;
+    background: transparent;
+    /* Dokunmatik/kalemde tarayıcının kaydırma jestini devralmasını engeller. */
+    touch-action: none;
+    /* Sürükleme sırasında metin seçimi başlamasın. */
+    user-select: none;
+}
+
+.gs-view-drawer-resizer:hover,
+.gs-view-drawer-resizer.is-dragging {
+    background: var(--bcc-accent);
+}
+
+/* Panel daraltılmışken tutamacın anlamı yok — sürüklenecek bir kenar da. */
+.gs-view-drawer.is-collapsed + .gs-view-drawer-resizer {
+    display: none;
+}
+
+/* Sürükleme sırasında: (1) width geçişi KAPANIR, yoksa panel imleci 0.15s
+   gecikmeyle takip edip "lastikli" hissettirirdi; (2) imleç tüm sayfada
+   col-resize kalır, kullanıcı şeritten dışarı çıksa bile.
+   Sınıf <body>'ye grid-drawer-resize.js tarafından eklenir. */
+body.gs-drawer-resizing { cursor: col-resize; user-select: none; }
+body.gs-drawer-resizing .gs-view-drawer { transition: none; }
 
 .gs-view-drawer.is-collapsed {
     width: 0;

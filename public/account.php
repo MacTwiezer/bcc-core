@@ -14,16 +14,15 @@ require_login();
 
 $user = current_user();
 
-// Salt-okunur ekip/rol listesi — workspaces.php'nin takım sorgusuyla AYNI
-// desen, yalnızca role de eklendi.
-$teams = bcc_fetch_all(
-    'SELECT t.id, t.name, tm.role
-     FROM team_members tm
-     INNER JOIN teams t ON t.id = tm.team_id
-     WHERE tm.user_id = :uid
-     ORDER BY t.name',
-    array('uid' => $user['id'])
-);
+// Salt-okunur ekip/rol listesi. Tek kaynak: src/schema.php.
+//
+// ⚠️ BİLEREK bcc_teams_for_current_user() DEĞİL. O fonksiyon ERİŞİM KAPSAMINI
+// döndürür ve platform admini için TÜM ekipleri kapsar. Burası ise kişinin
+// KENDİ hesabı: "Ekipler" başlığı gerçek ÜYELİKLERİ göstermeli ve aşağıdaki
+// kullanım sayaçları yalnızca o ekipleri saymalı — aksi hâlde admin kendi
+// hesap sayfasında her ekibin üyesiymiş gibi görünür ve depolama/kayıt
+// sayaçları tüm sistemi toplardı.
+$teams = bcc_team_memberships_for_current_user();
 
 // Sol panelin Starred alt-listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
 // (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı

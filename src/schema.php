@@ -187,9 +187,19 @@ function bcc_form_config_from_view($view)
         'form_title' => $str('form_title', ''),
         'form_description' => $str('form_description', ''),
         'form_success_message' => $str('form_success_message', 'Teşekkürler, kaydınız alındı.'),
-        // Slack bildirimi VARSAYILAN KAPALI — anonim spam ekibin kanalına
-        // taşmasın diye tasarımcı açıkça açmalı (güvenlik kararı).
-        'form_slack_notify' => !empty($config['form_slack_notify']) ? 1 : 0,
+        // Slack bildirimi VARSAYILAN AÇIK (ürün kararı: bildirim kaçırmamak
+        // spam riskinden önce geliyor). Kapatmak kullanıcıda.
+        //
+        // ⚠️ "!empty($config[...]) ? 1 : 0" YAZILAMAZ, array_key_exists ŞART:
+        // anahtar YOKSA (form hiç kaydedilmemiş) varsayılan açık; anahtar VARSA
+        // kullanıcının açık tercihi aynen korunur. Düz bir varsayılan, daha önce
+        // bildirimi BİLEREK kapatmış her formu sessizce yeniden açardı — form
+        // anonim olduğu için bu, spam'i doğrudan ekibin Slack kanalına salmak
+        // demekti. save_form bu anahtarı HER kaydetmede yazdığı için (0 ya da 1)
+        // "anahtar yok" gerçekten yalnızca "hiç yapılandırılmadı" anlamına gelir.
+        'form_slack_notify' => array_key_exists('form_slack_notify', $config)
+            ? (!empty($config['form_slack_notify']) ? 1 : 0)
+            : 1,
     );
 }
 
@@ -3586,6 +3596,113 @@ function bcc_create_base($teamId, $name, $description, $userId)
     return array('ok' => true, 'error' => null, 'id' => $newId);
 }
 
+// ⚠️ İKİ AYRI SORU, İKİ AYRI FONKSİYON — karıştırılmamalı:
+//
+//   bcc_team_memberships_for_current_user()  "GERÇEKTEN hangi ekiplerin
+//                                             ÜYESİYİM?"  (team_members satırı)
+//   bcc_teams_for_current_user()             "hangi ekiplere ERİŞEBİLİYORUM?"
+//                                             (admin için TÜM ekipler)
+//
+// Platform admini ayrımı görünür kılıyor: hiçbir ekibin üyesi değilken bile
+// hepsine erişebilir. Hesap sayfası (account.php) BİRİNCİSİNİ kullanmalı —
+// orası kişinin KENDİ üyeliklerini ve kullanımını gösterir, admin kapsamını
+// değil; aksi hâlde admin kendi hesabında her ekibin üyesiymiş gibi görünür
+// ve kullanım sayaçları tüm sistemi sayardı. Gezinme/liste ekranları
+// (dashboard, starred, workspaces, bases) İKİNCİSİNİ kullanır.
+
+// GERÇEK üyelikler. Tek kaynak: aynı sorgu beş sayfaya kopyalanmıştı.
+function bcc_team_memberships_for_current_user()
+{
+    $user = current_user();
+    if ($user === null) {
+        return array();
+    }
+
+    return bcc_fetch_all(
+        'SELECT t.id, t.name, m.role
+         FROM team_members m
+         INNER JOIN teams t ON t.id = m.team_id
+         WHERE m.user_id = :uid
+         ORDER BY t.name',
+        array('uid' => $user['id'])
+    );
+}
+
+// ERİŞİM KAPSAMI. Admin dalı teams'ten okur ve rolü sanal 'owner' verir —
+// current_user_role_in_team() ne döndürüyorsa BURASI DA onu döndürmeli, yoksa
+// liste ile yetki ayrışırdı (bkz. src/auth.php'deki gerekçe).
+function bcc_teams_for_current_user()
+{
+    if (current_user() === null) {
+        return array();
+    }
+
+    if (is_platform_admin()) {
+        return bcc_fetch_all("SELECT t.id, t.name, 'owner' AS role FROM teams t ORDER BY t.name");
+    }
+
+    return bcc_team_memberships_for_current_user();
+}
+
+// Ekip (= çalışma alanı) oluşturma TEK KAYNAK. admin/create_team.php'nin klasik
+// form POST'u ve api/team_create.php'nin AJAX'ı ikisi de burayı çağırır —
+// bcc_create_base() / bases.php / api/base_create.php üçlüsüyle AYNI desen.
+//
+// ⚠️ OLUŞTURAN ÜYE YAPILMAZ — ve bu, "yeni çalışma alanı görünmüyor" bugunun
+// çözümüne AYKIRI DEĞİL. Kısa geçmişi, biri yanlış yöne düzeltmesin diye:
+//
+//   1) Başlangıçta yalnızca "INSERT INTO teams" vardı. Ekibin hiç üyesi
+//      olmadığı için workspaces.php listesinde GÖRÜNMÜYOR ve
+//      require_team_access() üyeliğe baktığı için ERİŞİLEMİYORDU.
+//   2) İlk çözüm oluşturanı 'owner' üye yapmaktı. Çalıştı ama yapay bir
+//      üyelik kaydı üretiyordu: platform yöneticisi, yönettiği HER ekibin
+//      katılımcı listesinde bir "üye" olarak görünüyordu.
+//   3) Nihai karar: kapsam sorunu kapsam katmanında çözülür. Admin artık TÜM
+//      ekipleri görüyor (src/auth.php — current_user_team_ids() ve
+//      current_user_role_in_team()). Üyelik kaydına gerek KALMADI ve
+//      eklenmiyor; admin katılımcı listelerinde GÖRÜNMEZ.
+//
+// ⚠️ SONUÇ: ekip oluşturma YALNIZCA platform yöneticisine açık olduğu sürece
+// doğru (iki giriş noktası da bunu şart koşuyor: admin/create_team.php'nin
+// require_admin()'i ve api/team_create.php'nin is_admin kontrolü). Ekip
+// oluşturma bir gün admin OLMAYANA açılırsa, o kullanıcı kendi oluşturduğu
+// ekibi göremez — o zaman burada oluşturana üyelik verilmesi gerekir.
+function bcc_create_team($name, $creatorUserId)
+{
+    $name = trim((string) $name);
+
+    if ($name === '') {
+        return array('ok' => false, 'error' => 'Ekip adı boş olamaz.', 'id' => null);
+    }
+
+    // teams.name VARCHAR(150) — kontrol olmadan uzun ad, STRICT_TRANS_TABLES
+    // kapalı olduğu için hatasız SESSİZCE kırpılıyordu (create_user.php'deki
+    // email/full_name kontrolüyle aynı gerekçe).
+    if (mb_strlen($name, 'UTF-8') > 150) {
+        return array('ok' => false, 'error' => 'Ekip adı en fazla 150 karakter olabilir.', 'id' => null);
+    }
+
+    // ⚠️ bcc_name_taken() BİLEREK KULLANILMADI: o yardımcı bir ÜST KAPSAM id'si
+    // (team_id/base_id/table_id) ister, ekip adı ise GLOBAL benzersiz — teams'in
+    // üstünde bir yapı yok. BCC_NAME_SCOPES'a uydurma bir kapsam eklemek yerine
+    // doğrudan sorgu (create_team.php'nin eski davranışıyla birebir aynı).
+    $existing = bcc_fetch_one('SELECT id FROM teams WHERE name = :name', array('name' => $name));
+    if ($existing) {
+        return array('ok' => false, 'error' => 'Bu isimde bir ekip zaten var.', 'id' => null);
+    }
+
+    // TEK INSERT — transaction gerekmiyor (yukarıdaki nota bakınız: üyelik
+    // satırı bilerek yazılmıyor, yani sarmalanacak ikinci bir yazma yok).
+    bcc_execute('INSERT INTO teams (name) VALUES (:name)', array('name' => $name));
+    $newId = (int) bcc_last_insert_id();
+
+    // $creatorUserId üyelik için DEĞİL, denetim izi için tutuluyor: "bu ekibi
+    // kim açtı" sorusunun cevabı audit_log'da kalmalı.
+    log_audit('team.create', 'team', $newId, array('name' => $name, 'created_by_user_id' => (int) $creatorUserId), $newId);
+
+    return array('ok' => true, 'error' => null, 'id' => $newId);
+}
+
 // dashboard.php (Home) ve starred.php (Starred) ortak kullanır — "kod tekrarı
 // yok" kuralı gereği iki ayrı sayfada aynı satır/kart döngüsü YAZILMAZ.
 function bcc_home_relative_date($datetimeStr)
@@ -3928,15 +4045,21 @@ function bcc_base_table_counts($baseIds)
 // hiç basılmaz (uydurma sayı YOK).
 function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName, $canDelete = false, $role = null, $variant = 'standard', $tableCount = null)
 {
-    // $workspaceName artık BASILMIYOR (kasıtlı) — OpsFlow davranışı Workspace
-    // kolonunun başlığını korur ama hücreyi hep boş bırakıyor, bizde de aynı;
-    // parametre imzası geriye dönük uyumluluk için duruyor (çağıranlar hâlâ
-    // $teamNamesById hesaplayıp geçiriyor), yalnızca çıktı kaldırıldı.
-    // $iconColor de artık DOĞRUDAN basılmıyor: zemin/mürekkep çifti (koyu tema
-    // dahil) bcc_base_icon_style_attr()'dan CSS değişkeni olarak gelir, çünkü
-    // inline bir `background` koyu tema kuralını yenerdi. Parametre yine imzada
-    // duruyor — çağıranlar değişmesin diye.
-    unset($workspaceName, $iconColor);
+    // ⚠️ $workspaceName ARTIK BASILIYOR. Eskiden bilerek boş bırakılıyordu
+    // ("OpsFlow Workspace kolonunun başlığını korur ama hücreyi boş bırakıyor")
+    // — sonuç, liste görünümünde başlığı olan ama HER SATIRDA BOŞ bir "Çalışma
+    // alanı" kolonuydu. Platform yöneticisi tüm ekipleri görmeye başlayınca bu
+    // gerçek bir sorun oldu: aynı listede farklı çalışma alanlarından base'ler
+    // yan yana duruyor ve hangisinin nereye ait olduğu HİÇBİR yerden
+    // okunamıyordu. Kart görünümünde ayrıca grup başlıkları var
+    // (bcc_render_home_base_grid $groupByWorkspace), bu hücre liste görünümünün
+    // karşılığı.
+    //
+    // $iconColor DOĞRUDAN basılmaz: zemin/mürekkep çifti (koyu tema dahil)
+    // bcc_base_icon_style_attr()'dan CSS değişkeni olarak gelir, çünkü inline
+    // bir `background` koyu tema kuralını yenerdi. Parametre imzada duruyor —
+    // çağıranlar değişmesin diye.
+    unset($iconColor);
     $isFeature = ($variant === 'feature');
     $description = isset($base['description']) ? trim((string) $base['description']) : '';
     ?>
@@ -3981,7 +4104,7 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
                 Açıldı: <?php echo htmlspecialchars(bcc_home_relative_date($lastOpenedDisplay), ENT_QUOTES, 'UTF-8'); ?>
             </div>
         </div>
-        <div class="home-base-workspace"></div>
+        <div class="home-base-workspace"><?php echo htmlspecialchars($workspaceName, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php if ($role !== null && isset($GLOBALS['BCC_ROLE_LABELS'][$role])): ?>
             <?php
             // Rol rozeti — kullanıcının BU base'in çalışma alanındaki yetkisi.
@@ -4065,8 +4188,63 @@ function bcc_render_home_create_base_tile()
 // Kural TABANLI, sabit 3 karta göre DEĞİL: tek base'de feature + oluştur yan
 // yana, 2-3'te 1 feature + kalanlar 1x1, 4+'ta yalnızca ilki feature ve geri
 // kalanı auto-fill ile akar. Böylece 0/1/2/12 base'te de bozulmaz.
-function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array(), $canCreateBase = false, $bento = false, $tableCounts = array())
+// $groupByWorkspace: true ise kartlar ÇALIŞMA ALANINA göre bölünür ve her
+// bölümün üstünde alan adı + rol + base sayısı basılır. Varsayılan false —
+// starred.php gibi çağıranlar imzalarını değiştirmeden düz ızgarada kalır.
+//
+// ⚠️ NEDEN GEREKLİ: platform yöneticisi TÜM ekipleri gördüğü için Home'da
+// onlarca base tek düz listede karışıyordu; hangisinin hangi alana ait olduğu
+// hiçbir yerden okunamıyordu (kartta çalışma alanı hücresi de boş basılıyordu).
+function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId = array(), $canCreateBase = false, $bento = false, $tableCounts = array(), $groupByWorkspace = false)
 {
+    if (!empty($bases) && $groupByWorkspace) {
+        $byTeam = array();
+        foreach ($bases as $b) {
+            $byTeam[(int) $b['team_id']][] = $b;
+        }
+
+        // ⚠️ SIRALAMA $teamNamesById'DEN GELİR, PHP'de yeniden sıralanmaz:
+        // o dizi bcc_teams_for_current_user()'ın "ORDER BY t.name" sonucundan
+        // kuruluyor, yani veritabanının Türkçe harmanlamasına uyuyor. Burada
+        // strcasecmp/sort ile yeniden sıralamak "Ç/İ/Ş" gibi harflerde farklı
+        // bir sıra üretirdi.
+        foreach ($teamNamesById as $tid => $tname) {
+            $tid = (int) $tid;
+            if (empty($byTeam[$tid])) {
+                continue;
+            }
+
+            $groupRole = isset($roleByTeamId[$tid]) ? $roleByTeamId[$tid] : null;
+            ?>
+            <div class="home-section-head home-ws-head">
+                <h2 class="home-section-title"><?php echo htmlspecialchars($tname, ENT_QUOTES, 'UTF-8'); ?></h2>
+                <?php if ($groupRole !== null && isset($GLOBALS['BCC_ROLE_LABELS'][$groupRole])): ?>
+                    <?php // Rol BURADA, kartlarda DEĞİL: rol ekip başına sabit
+                          // olduğu için her kartta tekrarlamak hem gürültüydü hem de
+                          // rozet (margin-left:auto) .home-base-info'yu daraltıp
+                          // uzun base adlarını erkenden kırpıyordu. ?>
+                    <span class="home-base-role home-base-role--<?php echo htmlspecialchars($groupRole, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$groupRole], ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php endif; ?>
+                <span class="home-section-meta"><?php echo count($byTeam[$tid]); ?> base</span>
+            </div>
+            <?php
+            // Gruplarken rol NULL geçilir — rozet zaten yukarıdaki başlıkta.
+            // $canCreateBase de false: "Yeni Base Oluştur" kutucuğu tek bir
+            // çalışma alanına ait değil (modalin kendi seçicisi var), bu yüzden
+            // grupların İÇİNE değil, hepsinin ALTINA basılır.
+            bcc_render_home_base_grid_block($byTeam[$tid], $starredBaseIds, $teamNamesById, $roleByTeamId, false, false, $tableCounts, true);
+        }
+
+        if ($canCreateBase) {
+            ?>
+            <div class="home-base-grid home-base-grid--tail" id="home-base-grid-tail">
+                <?php bcc_render_home_create_base_tile(); ?>
+            </div>
+            <?php
+        }
+        return;
+    }
+
     if (empty($bases)) {
         ?>
         <div class="home-empty">
@@ -4086,8 +4264,21 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
         <?php
         return;
     }
+
+    bcc_render_home_base_grid_block($bases, $starredBaseIds, $teamNamesById, $roleByTeamId, $canCreateBase, $bento, $tableCounts, false);
+}
+
+// TEK bir ızgara kabı + kartları. bcc_render_home_base_grid()'in HEM düz HEM
+// gruplu dalı burayı çağırır — kart döngüsü iki kez YAZILMAZ.
+//
+// $hideRole: gruplu modda rol rozeti grup BAŞLIĞINDA gösterildiği için kartta
+// bastırılır (bkz. çağıran taraftaki gerekçe). Silme yetkisi bundan
+// ETKİLENMEZ: $canDelete gerçek rolden hesaplanmaya devam eder, yalnızca
+// rozetin çıktısı kapanır — görsel bir tercih yetki kararını değiştirmemeli.
+function bcc_render_home_base_grid_block($bases, $starredBaseIds, $teamNamesById, $roleByTeamId, $canCreateBase, $bento, $tableCounts, $hideRole)
+{
     ?>
-    <div class="home-base-grid<?php echo $bento ? ' home-base-grid--bento' : ''; ?>" id="home-base-grid">
+    <div class="home-base-grid<?php echo $bento ? ' home-base-grid--bento' : ''; ?>">
         <div class="home-list-header" aria-hidden="true">
             <div class="home-list-header-icon"></div>
             <div class="home-list-header-info">
@@ -4106,7 +4297,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $canDelete = $role !== null && bcc_can_manage_bases($role);
             $variant = ($bento && $bIdx === 0) ? 'feature' : 'standard';
             $tc = isset($tableCounts[(int) $b['id']]) ? (int) $tableCounts[(int) $b['id']] : null;
-            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete, $role, $variant, $tc);
+            bcc_render_home_base_card($b, $iconColor, $isStarred, $workspaceName, $canDelete, $hideRole ? null : $role, $variant, $tc);
         endforeach; ?>
         <?php if ($canCreateBase) { bcc_render_home_create_base_tile(); } ?>
     </div>

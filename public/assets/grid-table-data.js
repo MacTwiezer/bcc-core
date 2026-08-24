@@ -161,6 +161,97 @@
             });
         }
 
+        // ---- Tabloyu çoğalt -------------------------------------------------
+        // ⚠️ "Görünümü çoğalt" (grid-view-manage.js -> api/view_duplicate.php)
+        // İLE KARIŞTIRILMAMALI: o, görünüm satırını kopyalar ve table_id AYNI
+        // kalır — iki görünüm AYNI kayıtlara bakar, birinde hücre değiştirmek
+        // diğerini de değiştirir (görünüm bir MERCEK, veri tabloya ait).
+        // GERÇEKTEN bağımsız kopya budur: alanlar + görünümler (+ isteğe bağlı
+        // kayıtlar/hücreler/dosya ekleri) yeni bir tabloya kopyalanır.
+        // Menü öğesi ve pencere YALNIZCA owner'a basılır; asıl kapı sunucuda.
+        var dupModal = document.getElementById('gs-table-duplicate-modal');
+
+        if (dupModal) {
+            var dupForm = document.getElementById('gs-table-duplicate-form');
+            var dupError = document.getElementById('gs-table-duplicate-error');
+            var dupNameInput = dupForm.querySelector('input[name="name"]');
+            var dupRecordsInput = document.getElementById('gs-table-duplicate-records');
+            var dupTargetId = null;
+
+            var closeDup = function () {
+                dupModal.hidden = true;
+                dupError.hidden = true;
+                dupTargetId = null;
+            };
+
+            Array.prototype.forEach.call(document.querySelectorAll('[data-table-duplicate]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    closeTabMenu(btn);
+                    dupTargetId = btn.getAttribute('data-table-duplicate');
+                    // Ad ÖNERİLİR ama düzenlenebilir. Sunucu ayrıca aynı base'te
+                    // çakışma olursa sonuna sayı ekler (api/table_duplicate.php).
+                    dupNameInput.value = (btn.getAttribute('data-table-name') || 'Tablo') + ' kopyası';
+                    dupRecordsInput.checked = true;
+                    dupError.hidden = true;
+                    dupModal.hidden = false;
+                    dupNameInput.focus();
+                    dupNameInput.select();
+                });
+            });
+
+            document.getElementById('gs-table-duplicate-close').addEventListener('click', closeDup);
+            document.getElementById('gs-table-duplicate-cancel').addEventListener('click', closeDup);
+            dupModal.addEventListener('click', function (e) {
+                if (e.target === dupModal) { closeDup(); }
+            });
+
+            dupForm.addEventListener('submit', function (e) {
+                e.preventDefault(); // sayfa terk edilmesin, gönderim AJAX
+                if (!dupTargetId) { return; }
+
+                var dupSubmit = dupForm.querySelector('button[type="submit"]');
+                dupSubmit.disabled = true;
+                dupError.hidden = true;
+                // Büyük tablolarda kopyalama sürebilir — düğme metni "donmuş"
+                // hissini engeller (ikinci bir yükleniyor bileşeni yazılmadı).
+                var dupLabel = dupSubmit.textContent;
+                dupSubmit.textContent = 'Çoğaltılıyor…';
+
+                var dupFail = function (msg) {
+                    dupSubmit.disabled = false;
+                    dupSubmit.textContent = dupLabel;
+                    dupError.textContent = msg;
+                    dupError.hidden = false;
+                };
+
+                fetch('/api/table_duplicate.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        csrf_token: CSRF,
+                        table_id: dupTargetId,
+                        name: dupNameInput.value,
+                        with_records: dupRecordsInput.checked ? '1' : ''
+                    }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () {
+                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                    });
+                }).then(function (data) {
+                    if (data && data.ok && data.redirect_url) {
+                        // Hedef SUNUCUDAN geliyor (istemci id'den URL uydurmuyor).
+                        // Yeni tabloya geçilir: kullanıcı kopyanın gerçekten
+                        // oluştuğunu ve neyi içerdiğini hemen görsün.
+                        window.location.href = data.redirect_url;
+                        return;
+                    }
+                    dupFail((data && data.error) || 'Tablo çoğaltılamadı.');
+                }).catch(function () {
+                    dupFail('Tablo çoğaltılamadı (bağlantı hatası).');
+                });
+            });
+        }
+
         // ---- Tabloyu sil ----------------------------------------------------
         // "Verileri temizle"den AYRI bir iş: o veriyi siler ve tabloyu bırakır
         // (editor yetkisi), bu tablonun KENDİSİNİ siler (owner yetkisi).

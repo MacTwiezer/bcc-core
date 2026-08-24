@@ -3644,6 +3644,316 @@ function bcc_teams_for_current_user()
     return bcc_team_memberships_for_current_user();
 }
 
+// views.config içindeki ALAN-ID referanslarını eski->yeni haritasına göre
+// yeniden yazar. bcc_duplicate_table() için kritik.
+//
+// ⚠️ BU FONKSİYON OLMADAN ÇOĞALTMA SESSİZCE BOZUK ÜRETİR: config, kopyalanan
+// görünümle birlikte olduğu gibi taşınsaydı yeni tablonun görünümleri ESKİ
+// tablonun alan id'lerini işaret ederdi — sütun genişlikleri tutmaz,
+// filtre/sıralama/gruplama hiçbir şey eşleştirmez, Kanban ve Form alanları
+// bambaşka bir tabloya bakar. Hata mesajı da vermezdi.
+//
+// Alan-id taşıyan TÜM anahtarlar (canlı veriden ve koddan çıkarıldı):
+//   column_widths            -> "f<id>" ANAHTARLARI ("row" anahtarı sabittir)
+//   grid_state.sort_field_N   / group_field_N / filter_field_N
+//   grid_state.hidden_fields  -> virgülle ayrılmış id listesi
+//   kanban_field_id, kanban_card_fields, form_fields
+// Haritada karşılığı olmayan bir id (olmamalı) DÜŞÜRÜLÜR — yabancı bir alana
+// işaret eden bir kural bırakmaktansa o kuralı hiç taşımamak doğru.
+function bcc_remap_view_config_fields($configJson, $fieldMap)
+{
+    if ($configJson === null || $configJson === '') {
+        return $configJson;
+    }
+
+    $config = json_decode((string) $configJson, true);
+    if (!is_array($config)) {
+        return $configJson;
+    }
+
+    $mapId = function ($old) use ($fieldMap) {
+        $old = (int) $old;
+        return isset($fieldMap[$old]) ? $fieldMap[$old] : null;
+    };
+
+    if (isset($config['column_widths']) && is_array($config['column_widths'])) {
+        $out = array();
+        foreach ($config['column_widths'] as $key => $width) {
+            if ($key === 'row') {
+                $out['row'] = $width;   // satır no sütunu — alan değil
+                continue;
+            }
+            if (preg_match('/^f(\d+)$/', (string) $key, $m)) {
+                $new = $mapId($m[1]);
+                if ($new !== null) {
+                    $out['f' . $new] = $width;
+                }
+            }
+        }
+        $config['column_widths'] = $out;
+    }
+
+    if (isset($config['grid_state']) && is_array($config['grid_state'])) {
+        $gs = $config['grid_state'];
+        foreach (array_keys($gs) as $key) {
+            if (preg_match('/^(sort|group|filter)_field_\d+$/', (string) $key)) {
+                $new = $mapId($gs[$key]);
+                if ($new === null) {
+                    unset($gs[$key]);
+                } else {
+                    $gs[$key] = $new;
+                }
+            }
+        }
+        if (isset($gs['hidden_fields'])) {
+            $ids = array();
+            foreach (explode(',', (string) $gs['hidden_fields']) as $old) {
+                $new = $mapId($old);
+                if ($new !== null) { $ids[] = $new; }
+            }
+            if ($ids) {
+                $gs['hidden_fields'] = implode(',', $ids);
+            } else {
+                unset($gs['hidden_fields']);
+            }
+        }
+        $config['grid_state'] = $gs;
+    }
+
+    if (isset($config['kanban_field_id'])) {
+        $new = $mapId($config['kanban_field_id']);
+        if ($new === null) { unset($config['kanban_field_id']); } else { $config['kanban_field_id'] = $new; }
+    }
+
+    foreach (array('kanban_card_fields', 'form_fields') as $listKey) {
+        if (isset($config[$listKey]) && is_array($config[$listKey])) {
+            $ids = array();
+            foreach ($config[$listKey] as $old) {
+                $new = $mapId($old);
+                if ($new !== null) { $ids[] = $new; }
+            }
+            $config[$listKey] = $ids;
+        }
+    }
+
+    return json_encode($config, JSON_UNESCAPED_UNICODE);
+}
+
+// Tabloyu BAĞIMSIZ bir kopya olarak çoğaltır: alanlar + görünümler (+ isteğe
+// bağlı olarak kayıtlar, hücre değerleri ve dosya ekleri).
+//
+// ⚠️ NEDEN GEREKLİ — "görünümü çoğalt" BUNU YAPMAZ: görünüm, tablonun
+// verisine bakan bir MERCEKtir (api/view_duplicate.php yalnızca views
+// satırını kopyalar, table_id AYNI kalır). Kayıtlar records.table_id'ye
+// bağlıdır, görünüme değil; bu yüzden aynı tablonun iki görünümünde bir
+// hücreyi değiştirmek ikisinde de değişir — bu bir hata değil, görünümün
+// tanımıdır. Gerçekten bağımsız bir kopya TABLO düzeyinde olur, işte burası.
+//
+// $withRecords=false ise yalnızca ŞEMA kopyalanır (boş tablo, aynı alanlar).
+function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
+{
+    $src = bcc_fetch_one(
+        'SELECT id, base_id, name, description FROM tables_meta WHERE id = :id',
+        array('id' => (int) $tableId)
+    );
+    if (!$src) {
+        return array('ok' => false, 'error' => 'Tablo bulunamadı.', 'id' => null);
+    }
+
+    $newName = trim((string) $newName);
+    if ($newName === '') {
+        return array('ok' => false, 'error' => 'Tablo adı boş olamaz.', 'id' => null);
+    }
+    if (mb_strlen($newName, 'UTF-8') > 150) {
+        return array('ok' => false, 'error' => 'Tablo adı en fazla 150 karakter olabilir.', 'id' => null);
+    }
+    if (bcc_name_taken('tables_meta', $src['base_id'], $newName)) {
+        return array('ok' => false, 'error' => bcc_name_taken_error('tables_meta', 'tablo'), 'id' => null);
+    }
+
+    bcc_begin_transaction();
+    try {
+        $nextPos = (int) bcc_fetch_column(
+            'SELECT COALESCE(MAX(position), -1) + 1 FROM tables_meta WHERE base_id = :b',
+            array('b' => $src['base_id'])
+        );
+        bcc_execute(
+            'INSERT INTO tables_meta (base_id, name, description, position) VALUES (:b, :n, :d, :p)',
+            array('b' => $src['base_id'], 'n' => $newName, 'd' => $src['description'], 'p' => $nextPos)
+        );
+        $newTableId = (int) bcc_last_insert_id();
+
+        // ---- Alanlar (eski->yeni haritası kuruluyor) --------------------
+        // autonumber_next TAŞINIR: kayıtlar da kopyalanıyorsa kopyadaki
+        // otomatik numaralar kaldığı yerden devam etmeli, 1'e dönüp mevcut
+        // değerlerle ÇAKIŞMAMALI.
+        $fieldMap = array();
+        foreach (bcc_fetch_all(
+            'SELECT id, name, field_type, options, position, is_required, autonumber_next
+             FROM fields WHERE table_id = :t ORDER BY position, id',
+            array('t' => $src['id'])
+        ) as $f) {
+            bcc_execute(
+                'INSERT INTO fields (table_id, name, field_type, options, position, is_required, autonumber_next)
+                 VALUES (:t, :n, :ft, :o, :p, :r, :a)',
+                array(
+                    't' => $newTableId, 'n' => $f['name'], 'ft' => $f['field_type'],
+                    'o' => $f['options'], 'p' => $f['position'],
+                    'r' => (int) $f['is_required'],
+                    'a' => $withRecords ? (int) $f['autonumber_next'] : 1,
+                )
+            );
+            $fieldMap[(int) $f['id']] = (int) bcc_last_insert_id();
+        }
+
+        // ---- Görünümler (config'teki alan id'leri YENİDEN EŞLENİR) ------
+        foreach (bcc_fetch_all(
+            'SELECT name, description, view_type, position, config, form_enabled
+             FROM views WHERE table_id = :t ORDER BY position, id',
+            array('t' => $src['id'])
+        ) as $v) {
+            // ⚠️ FORM GÖRÜNÜMÜ İKİ AYRI TUZAK TAŞIYOR:
+            //
+            // 1) form_token KOPYALANAMAZ. Kopyalansaydı iki görünüm AYNI
+            //    herkese açık adrese cevap verirdi ve kopya, asıl forma
+            //    gönderilen kayıtları toplardı. Kolon UNIQUE olduğu için
+            //    zaten ikinci INSERT patlardı. Yeni bir sır üretiliyor —
+            //    view_create.php ile AYNI kaynak (random_bytes/CSPRNG).
+            // 2) Token'ı NULL bırakmak da olmaz: form_enabled sonradan
+            //    açıldığında link asla eşleşmez, sessiz bir çıkmaz sokak olur.
+            //
+            // form_enabled ise KOPYALANMAZ, her zaman KAPALI başlar: formu
+            // kopyayla birlikte otomatik açmak, kullanıcının haberi olmadan
+            // ikinci bir herkese açık kayıt toplama adresi yayınlamak olurdu
+            // (fail-closed, kolonun DEFAULT'uyla aynı yön).
+            $isForm = ($v['view_type'] === 'form');
+
+            bcc_execute(
+                'INSERT INTO views (table_id, name, description, view_type, position, config, form_token, form_enabled, created_by)
+                 VALUES (:t, :n, :d, :vt, :p, :c, :tok, 0, :u)',
+                array(
+                    't' => $newTableId, 'n' => $v['name'], 'd' => $v['description'],
+                    'vt' => $v['view_type'], 'p' => $v['position'],
+                    'c' => bcc_remap_view_config_fields($v['config'], $fieldMap),
+                    'tok' => $isForm ? bin2hex(random_bytes(16)) : null,
+                    'u' => $userId ? (int) $userId : null,
+                )
+            );
+        }
+
+        $recordCount = 0;
+        $attachmentCount = 0;
+
+        if ($withRecords) {
+            // ---- Kayıtlar + hücre değerleri ------------------------------
+            // Kayıt kayıt ilerleniyor: cell_values'ı tek bir INSERT..SELECT ile
+            // kopyalamak record_id eşlemesini yapamaz (yeni id'ler sırayla
+            // üretiliyor), o yüzden harita gerekiyor.
+            $recordMap = array();
+            foreach (bcc_fetch_all(
+                'SELECT id, position, created_by FROM records
+                 WHERE table_id = :t AND deleted_at IS NULL ORDER BY position, id',
+                array('t' => $src['id'])
+            ) as $rec) {
+                bcc_execute(
+                    'INSERT INTO records (table_id, position, created_by) VALUES (:t, :p, :u)',
+                    array('t' => $newTableId, 'p' => $rec['position'], 'u' => $rec['created_by'])
+                );
+                $recordMap[(int) $rec['id']] = (int) bcc_last_insert_id();
+                $recordCount++;
+            }
+
+            if ($recordMap) {
+                $oldIds = array_keys($recordMap);
+                $ph = implode(',', array_fill(0, count($oldIds), '?'));
+                foreach (bcc_fetch_all(
+                    "SELECT record_id, field_id, value_text, value_number, value_date, value_json
+                     FROM cell_values WHERE record_id IN ($ph)",
+                    $oldIds
+                ) as $cv) {
+                    $newRid = isset($recordMap[(int) $cv['record_id']]) ? $recordMap[(int) $cv['record_id']] : null;
+                    $newFid = isset($fieldMap[(int) $cv['field_id']]) ? $fieldMap[(int) $cv['field_id']] : null;
+                    if ($newRid === null || $newFid === null) {
+                        continue; // kaynak silinmiş/eşleşmeyen hücre
+                    }
+                    bcc_execute(
+                        'INSERT INTO cell_values (record_id, field_id, value_text, value_number, value_date, value_json)
+                         VALUES (:r, :f, :t, :n, :d, :j)',
+                        array(
+                            'r' => $newRid, 'f' => $newFid,
+                            't' => $cv['value_text'], 'n' => $cv['value_number'],
+                            'd' => $cv['value_date'], 'j' => $cv['value_json'],
+                        )
+                    );
+                }
+
+                // ---- Dosya ekleri: DOSYA DA KOPYALANIR ------------------
+                // ⚠️ SATIRI KOPYALAYIP stored_name'i PAYLAŞMAK CİDDİ BİR HATA
+                // OLURDU: iki tablo aynı fiziksel dosyayı gösterirdi ve
+                // birindeki kaydı silmek (bcc_delete_attachment_files_by_*)
+                // dosyayı diskten silip DİĞER tablonun ekini bozardı.
+                // "Bağımsız kopya" sözü diski de kapsıyor.
+                $attDir = bcc_attachment_storage_dir();
+                foreach (bcc_fetch_all(
+                    "SELECT record_id, field_id, original_name, stored_name, mime_type, file_size, uploaded_by
+                     FROM attachments WHERE record_id IN ($ph)",
+                    $oldIds
+                ) as $att) {
+                    $newRid = isset($recordMap[(int) $att['record_id']]) ? $recordMap[(int) $att['record_id']] : null;
+                    $newFid = isset($fieldMap[(int) $att['field_id']]) ? $fieldMap[(int) $att['field_id']] : null;
+                    if ($newRid === null || $newFid === null) {
+                        continue;
+                    }
+
+                    $srcPath = bcc_attachment_storage_path($att['stored_name']);
+                    // Kaynak dosya diskte yoksa (eski bir temizlikten kalmış
+                    // sahipsiz satır) SATIR DA KOPYALANMAZ — kopyada kırık bir
+                    // ek üretmenin anlamı yok.
+                    if (!is_file($srcPath)) {
+                        continue;
+                    }
+
+                    $ext = pathinfo($att['stored_name'], PATHINFO_EXTENSION);
+                    $newStored = bin2hex(random_bytes(16)) . ($ext !== '' ? '.' . $ext : '');
+                    if (!@copy($srcPath, $attDir . '/' . $newStored)) {
+                        continue; // disk hatası: ek atlanır, çoğaltma iptal EDİLMEZ
+                    }
+
+                    bcc_execute(
+                        'INSERT INTO attachments (field_id, record_id, original_name, stored_name, mime_type, file_size, uploaded_by)
+                         VALUES (:f, :r, :on, :sn, :mt, :fs, :u)',
+                        array(
+                            'f' => $newFid, 'r' => $newRid,
+                            'on' => $att['original_name'], 'sn' => $newStored,
+                            'mt' => $att['mime_type'], 'fs' => $att['file_size'],
+                            'u' => $att['uploaded_by'],
+                        )
+                    );
+                    $attachmentCount++;
+                }
+            }
+        }
+
+        log_audit('table.duplicate', 'table', $newTableId, array(
+            'source_table_id' => (int) $src['id'],
+            'name' => $newName,
+            'with_records' => $withRecords ? 1 : 0,
+            'record_count' => $recordCount,
+            'attachment_count' => $attachmentCount,
+        ));
+
+        bcc_commit();
+    } catch (Throwable $e) {
+        bcc_rollback();
+        throw $e;
+    }
+
+    return array(
+        'ok' => true, 'error' => null, 'id' => $newTableId,
+        'record_count' => $recordCount, 'attachment_count' => $attachmentCount,
+    );
+}
+
 // Ekip (= çalışma alanı) oluşturma TEK KAYNAK. admin/create_team.php'nin klasik
 // form POST'u ve api/team_create.php'nin AJAX'ı ikisi de burayı çağırır —
 // bcc_create_base() / bases.php / api/base_create.php üçlüsüyle AYNI desen.

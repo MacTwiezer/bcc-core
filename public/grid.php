@@ -748,6 +748,17 @@ $gridUser = current_user();
                                     data-table-name="<?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-table-desc="<?php echo htmlspecialchars((string) $st['description'], ENT_QUOTES, 'UTF-8'); ?>"
                                 >Ad veya açıklama değiştir</button>
+                                <?php /* ⚠️ "Görünümü çoğalt" (view_duplicate.php) ile
+                                         KARIŞTIRILMAMALI ve bu yüzden ayrı yerde duruyor:
+                                         görünüm çoğaltmak veriyi kopyalamaz (table_id aynı
+                                         kalır, iki görünüm AYNI kayıtlara bakar). GERÇEKTEN
+                                         bağımsız kopya budur. */ ?>
+                                <button
+                                    type="button"
+                                    class="gs-table-tab-menu-item"
+                                    data-table-duplicate="<?php echo (int) $st['id']; ?>"
+                                    data-table-name="<?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                >Tabloyu çoğalt</button>
                             <?php endif; ?>
 
                             <div class="gs-table-tab-menu-divider"></div>
@@ -2211,6 +2222,43 @@ $gridUser = current_user();
             <div class="home-modal-actions">
                 <button type="button" class="home-modal-btn" id="gs-table-rename-cancel">Vazgeç</button>
                 <button type="submit" class="home-modal-btn home-modal-btn-primary">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="home-modal-backdrop" id="gs-table-duplicate-modal" hidden>
+    <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="gs-table-duplicate-title">
+        <div class="home-modal-head">
+            <h2 id="gs-table-duplicate-title">Tabloyu çoğalt</h2>
+            <button type="button" class="home-modal-close" id="gs-table-duplicate-close" aria-label="Kapat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <?php // method/action YOK: gönderim AJAX, sayfa terk edilmesin. ?>
+        <form class="home-modal-form" id="gs-table-duplicate-form">
+            <label class="home-modal-field">
+                <span class="home-modal-label">Yeni tablo adı</span>
+                <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off">
+            </label>
+            <?php /* Varsayılan İŞARETLİ: "çoğalt" denince beklenen şey verinin de
+                     gelmesidir. Kapatılırsa yalnızca şema (alanlar + görünümler)
+                     kopyalanır, tablo boş gelir. */ ?>
+            <label class="home-modal-field home-modal-check">
+                <input type="checkbox" name="with_records" id="gs-table-duplicate-records" value="1" checked>
+                <span>Kayıtları da kopyala</span>
+            </label>
+            <?php /* Bu not ÜRÜN KARARININ kendisi: kullanıcı "görünümü çoğalt"ın
+                     neden bağımsız kopya üretmediğini burada öğrensin. */ ?>
+            <p class="home-modal-hint">
+                Kopya <strong>tamamen bağımsızdır</strong> — sonrasında birinde yaptığınız
+                değişiklik diğerini etkilemez. (Görünüm çoğaltmak veriyi kopyalamaz:
+                görünümler aynı tablonun verisine bakar.)
+            </p>
+            <p class="home-modal-error" id="gs-table-duplicate-error" hidden></p>
+            <div class="home-modal-actions">
+                <button type="button" class="home-modal-btn" id="gs-table-duplicate-cancel">Vazgeç</button>
+                <button type="submit" class="home-modal-btn home-modal-btn-primary">Çoğalt</button>
             </div>
         </form>
     </div>

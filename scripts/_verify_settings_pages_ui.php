@@ -341,24 +341,36 @@ foreach (array('.sp-role', '.sp-avatar') as $shared) {
 check('J) hover kisayolu SAHTE dropdown degil, GERCEK sayfaya link',
     preg_match('/class="wsx-member-manage" href="\/team_members\.php\?team_id=/', $wsPage) === 1);
 
-// Sayfadaki TEK <select> hizli davet kutusunun ROL secicisidir.
-//
-// Bu kontrol eskiden "sayfada hic <select> yok" diyordu; hizli davet kutusu
-// eklenince premis degisti. Korunan sey AYNI: burada "calisiyormus gibi duran"
-// bir kontrol olmamali. Bu yuzden select'in (a) tek oldugunu, (b) davet
-// kutusunun icinde oldugunu ve (c) GERCEK bir uc noktaya baglandigini
-// dogruluyoruz -- katilimci satirlarinda hala satir ici rol dropdown'u YOK.
-check('J) sayfadaki tek <select> davet kutusunun rol secicisi',
-    substr_count($wsCode, '<select') === 1
-    && strpos($wsCode, 'data-ws-invite-role') !== false);
-check('J) davet kutusu GERCEK uc noktaya bagli (kendi mantigini yazmiyor)',
-    strpos(file_get_contents($root . '/public/assets/workspaces.js'), '/api/team_member_assign.php') !== false
-    && is_file($root . '/public/api/team_member_assign.php'));
+// ⚠️ BU KONTROLLER TERSINE CEVRILDI: "hizli davet" kutusu (e-posta + rol +
+// "Davet Et") workspaces.php'den KALDIRILDI. Bu kart artik yalnizca kimin
+// hangi rolle bulundugunu GOSTERIR; ekleme/cikarma ve rol degistirmenin
+// gercek yeri team_members.php ("Katilimcilari yonet" butonu oraya gider).
+// Eskiden bu bolum kutunun VARLIGINI ve dogru bagli oldugunu dogruluyordu;
+// simdi geri gelmedigini (olu markup/JS/CSS kalmadigini) dogruluyor.
+check('J) sayfada HIC <select> yok (davet kutusu kalkti, satir ici dropdown da yok)',
+    substr_count($wsCode, '<select') === 0,
+    'adet: ' . substr_count($wsCode, '<select'));
+check('J) davet kutusu markupi KALDIRILDI (data-ws-invite* yok)',
+    strpos($wsCode, 'data-ws-invite') === false
+    && strpos($wsCode, 'wsx-invite') === false);
+check('J) $wsInviteRoles degiskeni tamamen kalkti (olu hesap yok)',
+    strpos($wsCode, 'wsInviteRoles') === false);
+check('J) workspaces.js te davet mantigi KALMADI',
+    strpos(file_get_contents($root . '/public/assets/workspaces.js'), 'ws-invite') === false
+    && strpos(file_get_contents($root . '/public/assets/workspaces.js'), '/api/team_member_assign.php') === false);
+check('J) workspaces.css te olu .wsx-invite* kurallari KALMADI',
+    strpos(file_get_contents($root . '/public/assets/workspaces.css'), '.wsx-invite') === false);
 check('J) katilimci SATIRLARINDA satir ici rol dropdown\'u YOK',
     preg_match('/wsx-member-badges.*?<select/s', $wsCode) === 0);
-// Davet kutusu yalnizca yetkiliye basiliyor (CSS ile gizlenmiyor).
-check('J) davet kutusu $canManageMembers kosulunun ICINDE',
-    preg_match('/if\s*\(\$canManageMembers\s*&&\s*!empty\(\$wsInviteRoles\)\)\s*:\s*\?>/', $wsCode) === 1);
+// ⚠️ UC NOKTA SILINMEDI: "Paylas" modali ve team_members.php onu kullanmaya
+// devam ediyor. Yalnizca BU sayfanin tetikleyicisi kalkti.
+check('J) api/team_member_assign.php DURUYOR (Paylas modali + team_members kullaniyor)',
+    is_file($root . '/public/api/team_member_assign.php')
+    && strpos(file_get_contents($root . '/src/share_modal_payload.php'), 'bcc_assignable_roles') !== false);
+// Katilimci ekleme icin GERCEK bir cikis yolu hala var (cikmaz sokak birakilmadi).
+check('J) "Katilimcilari yonet" baglantisi duruyor (ekleme icin gercek yol)',
+    strpos($wsCode, 'team_members.php') !== false
+    && strpos($wsCode, 'Katılımcıları yönet') !== false);
 // Iki ayri kontrol: tek bir regex'te birlestirmek kirilgandi ([^)]* acgozlu
 // davranip "=== 1"i yutuyordu, dogru markup'ta bile KALDI veriyordu).
 // ⚠️ BU IKI KONTROL DEGISTI. Eskiden (a) is_admin kapisi ile <a> arasinda

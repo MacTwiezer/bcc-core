@@ -104,7 +104,6 @@ $wsBases = array();
 $wsStarredBases = array();
 $wsUsage = array('base_count' => 0, 'table_count' => 0, 'record_count' => 0, 'storage_bytes' => 0, 'slack_webhook_count' => 0);
 $wsActivity = array();
-$wsInviteRoles = array();
 
 if ($selectedTeamId) {
     $wsBases = bcc_workspace_bases($selectedTeamId, (int) $user['id']);
@@ -115,13 +114,11 @@ if ($selectedTeamId) {
     }
     $wsUsage = bcc_workspace_usage($selectedTeamId);
     $wsActivity = bcc_workspace_activity($selectedTeamId, 12);
-
-    // Hızlı davet kutusunun rol listesi — team_members.php ve "Paylaş"
-    // modalıyla AYNI kaynak (bcc_assignable_roles): kendi rütben ve altı.
-    // Yetkisi olmayan için BOŞ dizi; kutu zaten basılmaz, bu ikinci katman.
-    if ($canManageMembers) {
-        $wsInviteRoles = bcc_assignable_roles($GLOBALS['BCC_ROLE_RANK'][$selectedRole]);
-    }
+    // NOT: burada bir zamanlar kaldırılan hızlı davet kutusunun rol listesi
+    // bcc_assignable_roles() ile hesaplanıyordu; kutu gidince bu çağrı da ölü
+    // kaldığı için silindi. Fonksiyonun KENDİSİ duruyor — team_members.php,
+    // "Paylaş" modalı (src/share_modal_payload.php) ve
+    // api/team_member_assign.php kullanmaya devam ediyor.
 }
 
 // Sol panelin Starred alt-listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
@@ -461,30 +458,19 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <h3 class="wsx-collab-title">Katılımcılar <span class="sp-count"><?php echo count($collaborators); ?></span></h3>
                         </div>
 
-                        <?php if ($canManageMembers && !empty($wsInviteRoles)): ?>
-                            <?php // ---- Hızlı davet ----
-                                  // Kendi uç noktasını AÇMIYOR: api/team_member_assign.php'ye
-                                  // POST ediyor — "Paylaş" modalının kullandığı AYNI uç nokta,
-                                  // dolayısıyla AYNI hiyerarşi kapısı, aynı whitelist, aynı
-                                  // audit kaydı. Yetkisiz kullanıcıya kutu HİÇ basılmaz. ?>
-                            <div class="wsx-invite" data-ws-invite data-team-id="<?php echo $selectedTeamId; ?>">
-                                <input
-                                    type="email"
-                                    class="wsx-invite-mail"
-                                    data-ws-invite-email
-                                    placeholder="E-posta ile katılımcı davet edin"
-                                    aria-label="Davet edilecek e-posta"
-                                    autocomplete="off"
-                                >
-                                <select class="wsx-invite-role" data-ws-invite-role aria-label="Rol">
-                                    <?php foreach ($wsInviteRoles as $r): ?>
-                                        <option value="<?php echo htmlspecialchars($r, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$r], ENT_QUOTES, 'UTF-8'); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="button" class="wsx-btn wsx-btn--primary" data-ws-invite-btn>Davet Et</button>
-                            </div>
-                            <p class="wsx-invite-note" data-ws-invite-note>Yalnızca sistemde hesabı olan kullanıcılar eklenebilir.</p>
-                        <?php endif; ?>
+                        <?php // ---- "Hızlı davet" kutusu KALDIRILDI ----
+                              // E-posta + rol + "Davet Et" satırı buradaydı. Katılımcı
+                              // EKLEME artık bu sayfada yok; bu kart yalnızca kimin
+                              // hangi rolle bulunduğunu GÖSTERİR. Ekleme/çıkarma ve rol
+                              // değiştirme işinin gerçek yeri team_members.php (üstteki
+                              // "Katılımcıları yönet" butonu oraya gider) — o sayfa arama,
+                              // rol filtresi, CSV export ve toplu çıkarma da sunuyor.
+                              // İki ekranda iki ayrı ekleme yolu tutmak, aynı işin iki
+                              // yerde bakımı demekti.
+                              //
+                              // Uç nokta (api/team_member_assign.php) SİLİNMEDİ: "Paylaş"
+                              // modalı ve team_members.php onu kullanmaya devam ediyor —
+                              // burada yalnızca BU sayfanın tetikleyicisi kalktı. ?>
 
                         <?php if (empty($collaborators)): ?>
                             <p class="settings-empty"><strong>Bu çalışma alanında katılımcı yok.</strong></p>

@@ -926,47 +926,10 @@
 
 .sp-page .wsx-base-card:hover .wsx-base-open { opacity: 1; }
 
-/* ---------- Hızlı davet ---------- */
-
-.sp-page .wsx-invite {
-    display: flex;
-    gap: 0.45rem;
-    margin-bottom: 0.35rem;
-}
-
-.sp-page .wsx-invite-mail,
-.sp-page .wsx-invite-role {
-    font: inherit;
-    font-size: 0.85rem;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 6px;
-    background: var(--bcc-surface-sunken);
-    color: var(--bcc-text);
-}
-
-.sp-page .wsx-invite-mail { flex: 1; min-width: 0; }
-.sp-page .wsx-invite-role { flex: 0 0 auto; }
-
-.sp-page .wsx-invite-mail:focus,
-.sp-page .wsx-invite-role:focus {
-    outline: none;
-    border-color: var(--bcc-accent);
-    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
-}
-
-.sp-page .wsx-invite-note {
-    margin: 0 0 1rem;
-    font-size: 0.76rem;
-    line-height: 1.4;
-    color: var(--bcc-text-muted);
-}
-
-/* Sonuç durumları — JS yalnızca sınıf değiştirir, metni sunucudan alır. */
-.sp-page .wsx-invite-note.is-error { color: var(--bcc-danger); font-weight: 500; }
-.sp-page .wsx-invite-note.is-ok { color: var(--bcc-success); font-weight: 500; }
-
-.sp-page .wsx-invite.is-busy { opacity: 0.55; pointer-events: none; }
+/* NOT: burada kaldırılan "Hızlı davet" kutusunun (e-posta alanı, rol seçici,
+   sonuç satırı ve meşgul durumu) kuralları vardı. Kutu workspaces.php'den
+   çıkınca hepsi ölü kaldığı için silindi — katılımcı ekleme artık yalnızca
+   team_members.php'de. */
 
 /* ---------- Sağ ray kartları ---------- */
 

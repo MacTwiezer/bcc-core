@@ -114,6 +114,35 @@ if ($selectedTeamId) {
     }
     $wsUsage = bcc_workspace_usage($selectedTeamId);
     $wsActivity = bcc_workspace_activity($selectedTeamId, 12);
+
+    // "Katılımcıları yönet" ARTIK SAYFA DEĞİŞTİRMİYOR: aynı sayfada "Paylaş"
+    // modalını açıyor. Modal grid.php ve interface.php'nin kullandığı bileşenin
+    // TA KENDİSİ (bcc_share_modal_payload + src/partials/share_modal.php +
+    // assets/share-modal.js) — üçüncü bir katılımcı yönetimi arayüzü
+    // YAZILMADI. Yetki kararları (kim rol değiştirebilir/çıkarabilir) payload
+    // içinde sunucuda hesaplanıyor; asıl kapı yine uçnoktalarda.
+    //
+    // team_members.php SİLİNMEDİ: modalın kapsamadığı işler (arama, rol
+    // filtresi, CSV export, toplu çıkarma) orada duruyor ve modalın içindeki
+    // "Tüm üye ayarları" bağlantısı oraya gidiyor.
+    require_once __DIR__ . '/../src/share_modal_payload.php';
+
+    $shareModalPayload = bcc_share_modal_payload($selectedTeamId, $selectedRole);
+    $shareModalTeamId = $selectedTeamId;
+    $shareModalTeamName = $selectedTeamName;
+
+    // Davet kutusunun <datalist> önerileri — interface.php/grid.php'deki AYNI
+    // süzgeç: takımın (bekleyenler dahil) henüz üyesi OLMAYAN aktif kullanıcılar.
+    $shareExistingIds = array_map('intval', array_column(
+        array_merge($shareModalPayload['collaborators'], $shareModalPayload['pending']),
+        'id'
+    ));
+    $shareModalCandidates = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY full_name');
+    if (!empty($shareExistingIds)) {
+        $shareModalCandidates = array_values(array_filter($shareModalCandidates, function ($candidate) use ($shareExistingIds) {
+            return !in_array((int) $candidate['id'], $shareExistingIds, true);
+        }));
+    }
     // NOT: burada bir zamanlar kaldırılan hızlı davet kutusunun rol listesi
     // bcc_assignable_roles() ile hesaplanıyordu; kutu gidince bu çağrı da ölü
     // kaldığı için silindi. Fonksiyonun KENDİSİ duruyor — team_members.php,
@@ -131,7 +160,10 @@ $homePageTitle = bcc_brand_domain() . ' — Çalışma Alanları';
 // Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu yerleşim.
 // Rol hapı (.sp-role), avatar (.sp-avatar) ve bilgi kutusu (.sp-note) ORTAK
 // dosyada — burada kopyası yok.
-$homeExtraCss = array('settings-page.css', 'workspaces.css');
+// grid-shell.css: "Paylaş" modalı .gs-* sınıflarını kullanıyor ve o kurallar
+// orada tanımlı (interface.php'nin AYNI gerekçeyle onu yüklemesi gibi) —
+// modalın stilleri ikinci kez YAZILMADI.
+$homeExtraCss = array('settings-page.css', 'workspaces.css', 'grid-shell.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
 <div class="sp-page wsx-page">
@@ -310,9 +342,13 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 // (bkz. $canManageMembers / $canCreateBase yukarıda) —
                                 // CSS ile gizlenmiyor, yetkisi olmayanın kaynağında hiç yok.
                                 //
-                                // "Katılımcıları yönet": hedef sayfa (team_members.php)
-                                //   artık Owner olmayana zaten salt-okunur açılıyor; butonu
-                                //   da göstermemek "yönet" vaadini boşa çıkarmamak için.
+                                // "Katılımcıları yönet": ARTIK SAYFA DEĞİŞTİRMİYOR —
+                                //   aynı sayfada "Paylaş" modalını açıyor
+                                //   (data-share-modal-open, share-modal.js). Bu yüzden
+                                //   <a href> DEĞİL <button>: yönlendirme kalkınca href'i
+                                //   olmayan bir bağlantı bırakmak yanlış olurdu
+                                //   (interface.php'deki AYNI karar). Owner olmayana hiç
+                                //   basılmıyor, "yönet" vaadi boşa çıkmasın diye.
                                 // "Base oluştur": Owner eşiği
                                 //   (bcc_can_manage_bases), bases.php'nin formu ve
                                 //   api/base_create.php ile AYNI eşik.
@@ -322,10 +358,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 //   role gösteriliyor.
                                 ?>
                                 <?php if ($canManageMembers): ?>
-                                <a href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" class="wsx-btn wsx-btn--primary">
+                                <button type="button" class="wsx-btn wsx-btn--primary" data-share-modal-open>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                                     Katılımcıları yönet
-                                </a>
+                                </button>
                                 <?php endif; ?>
                                 <?php if ($canCreateBase): ?>
                                 <a href="/bases.php" class="wsx-btn">
@@ -614,7 +650,25 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </div>
 
             </div>
+
+            <?php
+            // "Paylaş" modalı — grid.php ve interface.php ile AYNI partial, AYNI
+            // JS, AYNI uçnoktalar. Yalnızca SEÇİLİ bir çalışma alanı varken
+            // basılır ($shareModalPayload o dalda hesaplanıyor); tetikleyicisi
+            // yukarıdaki "Katılımcıları yönet" butonu.
+            //
+            // Salt-okunur roller için de basılıyor: modal yetkisizde davet
+            // kutusunu göstermez, yerine gerekçeli bir not koyar (bkz. partial)
+            // — buton zaten yalnızca Owner'a basıldığı için pratikte açılmaz,
+            // bu ikinci savunma katmanı.
+            require __DIR__ . '/../src/partials/share_modal.php';
+            ?>
             <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
+            <?php // share-modal.js dismissable-panel.js'e bağımlı (bcc_bindDismissable)
+                  // — o kabuğun altında (home_shell_bottom.php) yükleniyor ve ikisi de
+                  // defer olduğu için DOM sırası korunuyor: bu etiket kabuktan ÖNCE
+                  // geldiğinden share-modal.js daha erken çalışırdı. Bu yüzden modal
+                  // scripti kabuğun ARDINA, sayfanın en sonuna konuldu (aşağıya bkz.). ?>
         <?php endif; ?>
 
         <?php // Modal ve davranışı if/else'in DIŞINDA: tetikleyici HER İKİ dalda
@@ -627,3 +681,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>
+<?php if ($selectedTeamId): ?>
+    <?php
+    // ⚠️ SIRA ÖNEMLİ, kabuktan SONRA: share-modal.js açılışta
+    // window.bcc_bindDismissable'ı çağırıyor ve o fonksiyon
+    // dismissable-panel.js'te tanımlı — o da home_shell_bottom.php içinde
+    // yükleniyor. İkisi de `defer` olduğundan çalışma sırası DOM sırasıdır;
+    // bu etiket kabuktan önce dursaydı share-modal.js tanımsız bir
+    // fonksiyona çarpardı (grid.php/interface.php'de de bağımlılık aynı
+    // yönde yükleniyor).
+    ?>
+    <script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
+<?php endif; ?>

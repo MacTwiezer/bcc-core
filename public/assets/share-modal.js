@@ -318,6 +318,7 @@
                 }
 
                 state = result.data;
+                mutated = true;
                 renderAll();
                 setStatus(result.data.message || 'Kaydedildi.', false);
             }).catch(function () {
@@ -372,8 +373,14 @@
         });
 
         // ---- Açma / kapama ----------------------------------------------------
+        // mutated: bu açılış sırasında GERÇEKTEN bir yazma oldu mu (davet / rol
+        // değişikliği / çıkarma). Yalnızca başarılı bir yanıttan sonra true
+        // olur — reddedilen istek sayfayı bayatlatmaz, bu yüzden onu saymaz.
+        var mutated = false;
+
         function open() {
             setStatus(null);
+            mutated = false;
             renderAll();
             overlay.hidden = false;
             if (state.can_manage && inviteEmail) {
@@ -383,6 +390,24 @@
 
         function close() {
             overlay.hidden = true;
+
+            // ⚠️ MODAL KENDİ LİSTESİNİ TAZELER AMA SAYFANIN GERİ KALANINI
+            // TAZELEYEMEZ. grid.php/interface.php için bu sorun değildi: oradaki
+            // tek özet etiketi renderLists() zaten güncelliyor. workspaces.php
+            // ise katılımcı kartını, "N katılımcı" başlığını ve sayaç şeridini
+            // SUNUCUDA basıyor — modalda biri eklenip çıkarıldığında arkadaki
+            // sayfa bayatlar.
+            //
+            // Bu yüzden modal ne yapılacağına KARAR VERMİYOR, yalnızca haber
+            // veriyor: dinleyen sayfa kendi tazeleme yolunu seçer (workspaces.js
+            // sayfayı yeniden yüklüyor — sunucu render'ının tek doğruluk
+            // kaynağı olduğu yerde JS'te üç ayrı bölümü elle güncellemek üç
+            // ayrışma riski demekti). Dinleyicisi olmayan sayfalarda olay
+            // sessizce düşer, davranışları DEĞİŞMEZ.
+            if (mutated) {
+                document.dispatchEvent(new CustomEvent('bcc:share-modal-changed'));
+                mutated = false;
+            }
         }
 
         if (closeBtn) {

@@ -138,3 +138,27 @@
         });
     });
 })();
+
+(function () {
+    'use strict';
+
+    // "Katılımcıları yönet" modalı kapandıktan SONRA sayfayı tazele.
+    //
+    // ⚠️ NEDEN GEREKLİ: modal (share-modal.js) yalnızca KENDİ listesini
+    // güncelliyor. Bu sayfada katılımcı bilgisi ÜÇ yerde daha var ve üçü de
+    // SUNUCUDA basılıyor: "Katılımcılar" kartındaki ızgara, başlıktaki
+    // "N katılımcı" özeti ve sol paneldeki alan satırları. Modalda biri
+    // eklenip çıkarıldığında bunlar bayatlardı.
+    //
+    // Üçünü JS'te tek tek güncellemek, sunucudaki render'ı istemcide İKİNCİ
+    // kez yazmak (ve üç ayrı ayrışma riski) demekti — kaldırılan "Hızlı davet"
+    // kutusu da tam bu yüzden başarıdan sonra reload ediyordu. Tek doğruluk
+    // kaynağı sunucu render'ı olarak kalıyor.
+    //
+    // Olay YALNIZCA gerçek bir yazma olduğunda geliyor (share-modal.js'teki
+    // `mutated`) — modal açılıp hiçbir şey yapılmadan kapatılırsa sayfa
+    // yeniden yüklenmez.
+    document.addEventListener('bcc:share-modal-changed', function () {
+        window.location.reload();
+    });
+})();

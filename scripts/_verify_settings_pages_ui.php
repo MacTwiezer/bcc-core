@@ -314,8 +314,15 @@ foreach (array('--bcc-accent: #2d7ff9', '--bcc-danger: #c62828', '--bcc-danger-s
 echo "\n--- J) workspaces.php ---\n";
 $wsCode = php_code_only($root . '/public/workspaces.php');
 
+// ⚠️ UCUNCU DOSYA EKLENDI: grid-shell.css. "Katilimcilari yonet" artik sayfa
+// degistirmiyor, ayni sayfada "Paylas" modalini aciyor ve o modal .gs-*
+// siniflarini kullaniyor (kurallar grid-shell.css'te). interface.php de AYNI
+// gerekcheyle yukluyor -- modalin stilleri ikinci kez YAZILMADI.
 check('J) ortak + sayfaya ozel CSS bagliyor',
-    strpos($wsPage, "array('settings-page.css', 'workspaces.css')") !== false);
+    strpos($wsPage, "array('settings-page.css', 'workspaces.css', 'grid-shell.css')") !== false);
+check('J) grid-shell.css modal ICIN yukleniyor (paylasilan bilesen, kopya CSS yok)',
+    strpos($wsPage, 'grid-shell.css') !== false
+    && strpos($wsCode, 'partials/share_modal.php') !== false);
 check('J) .sp-page sarmalayicisi aciyor',
     substr_count($wsPage, '<div class="sp-page wsx-page">') === 1);
 

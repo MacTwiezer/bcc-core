@@ -292,9 +292,17 @@ try {
     $tmPage = http_request('GET', '/team_members.php?team_id=' . $teamId, $cookie);
     check('E) sayfa hala 200 doner', $tmPage['status'] === 200, 'HTTP ' . $tmPage['status']);
     $wsCode = php_code_only(file_get_contents(__DIR__ . '/../public/workspaces.php'));
-    check('E) workspaces.php hala oraya bagliyor (iki yerden)',
-        substr_count($wsCode, 'href="/team_members.php') === 2,
+    // ⚠️ SAYIM 2 -> 1 OLDU, KASITLI: "Katilimcilari yonet" butonu artik
+    // team_members.php'ye YONLENDIRMIYOR, ayni sayfada "Paylas" modalini
+    // aciyor (<button data-share-modal-open>). Kalan tek bag katilimci
+    // satirlarinin uzerinde beliren kisayol. Bu kontrolun ASIL guvencesi
+    // "team_members.php hala ERISILEBILIR" -- o korunuyor: bu bag + modalin
+    // alt bilgisindeki "Tum uye ayarlari" (asagidaki kontrol).
+    check('E) workspaces.php hala oraya bagliyor (satir kisayolu)',
+        substr_count($wsCode, 'href="/team_members.php') === 1,
         'sayim=' . substr_count($wsCode, 'href="/team_members.php'));
+    check('E) "Katilimcilari yonet" ARTIK yonlendirme degil, modal tetikleyicisi',
+        preg_match('#<button[^>]*data-share-modal-open[^>]*>.*?Katılımcıları yönet#s', $wsCode) === 1);
     check('E) modal alt bilgisi "Tum uye ayarlari" bagliyor',
         strpos(file_get_contents(__DIR__ . '/../src/partials/share_modal.php'), 'href="/team_members.php') !== false);
     check('E) iki sayfada da alt bilgi bagi render ediliyor',

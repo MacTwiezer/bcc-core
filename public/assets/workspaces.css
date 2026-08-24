@@ -19,7 +19,50 @@
 /* Sağdaki ölü alanın kök nedeni: sayfa tek dar sütundu (kartlar üstte, detay
    altta) ve .home-main'in genişliğini dolduramıyordu. Sol: çalışma alanı
    seçici. Sağ: seçili alanın başlığı, aksiyonları ve katılımcıları. */
-.sp-page.wsx-page { max-width: 1240px; }
+.sp-page.wsx-page {
+    max-width: 1240px;
+    /* ---------- ÜÇ LİSTENİN ORTAK YÜKSEKLİK BANDI ----------
+       Sayfanın üç listesi (soldaki çalışma alanı seçici, ortadaki katılımcılar,
+       sağdaki son hareketler) içerik uzunluğuna göre serbestçe uzayıp
+       kısalıyordu; sütunlar birbirini tutmuyordu ve "Hızlı davet" kutusu
+       kaldırılınca fark daha da görünür oldu.
+
+       Üçü de artık AYNI sabit bandı kullanıyor: içerik banttan uzunsa liste
+       kendi içinde kayar, kısaysa kart yine de bant boyu yer kaplar (zemin
+       kısalmaz). Tek sayı tek yerde — üçünü ayrı ayrı ayarlamak, birini
+       değiştirip diğerlerini unutmaya açık bir kurulumdu.
+
+       scrollbar-gutter: stable — kaydırma çubuğu yalnızca taşan listede
+       belirse iç genişlikler sütundan sütuna oynardı; boşluk her zaman
+       ayrılıyor ki üç kart aynı hizada dursun. */
+    --wsx-list-h: 420px;
+}
+
+/* Üç listenin de yükseklik/kaydırma davranışı TEK kuralda. Bu üç seçici
+   BİLEREK birlikte yazıldı: ayrı ayrı yazılsaydı bant değerinin üçünde de
+   güncellenmesi gerekirdi. */
+.sp-page .wsx-panel-list,
+.sp-page .wsx-collab-grid,
+.sp-page .wsx-act-list {
+    height: var(--wsx-list-h);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    /* İçerik banttan kısayken satırlar dikeyde esneyip bandı doldurmasın —
+       yukarıdan başlayıp altta boşluk bıraksınlar. */
+    align-content: start;
+}
+
+/* Liste HİÇ basılmadığında (boş durum) kart çökmesin: aynı bant burada da
+   geçerli, yoksa "içerik azsa zemin yine de uzasın" kuralı boş kartta
+   bozulurdu. */
+.sp-page .wsx-collab-empty,
+.sp-page .wsx-act-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: var(--wsx-list-h);
+}
 
 .sp-page .wsx-layout {
     display: grid;
@@ -30,6 +73,9 @@
 
 @media (max-width: 980px) {
     .sp-page .wsx-layout { grid-template-columns: minmax(0, 1fr); }
+    /* Dar ekranda sol liste yatay sarmalı bir şeride dönüyor (aşağıya bkz.) —
+       orada sabit bant anlamsız, içeriğe bırakılıyor. */
+    .sp-page .wsx-panel-list { height: auto; overflow: visible; }
 }
 
 /* ---------- Sol: çalışma alanı seçici ----------
@@ -151,8 +197,18 @@
 /* Panelin İÇİNDE artık "havada duran kart" değil, liste satırı: gölge yok,
    daha ince kenarlık, daha sıkı yarıçap. Panel zemini (sunken) ile satır
    zemini (surface) arasındaki kontrast öğeleri kendiliğinden ayırıyor. */
+/* ⚠️ flex: none ZORUNLU, kozmetik değil. Liste bir flex column ve artık SABİT
+   yükseklikli (--wsx-list-h). Flex çocuklarının varsayılanı `flex-shrink: 1`
+   olduğu için kaba sığmayan satırlar TAŞMAK yerine EZİLİYORDU: kartlar
+   birbirine yapışıp okunmaz hâle geliyor, kaydırma çubuğu da hiç çıkmıyordu
+   (taşma yoksa kaydırılacak bir şey de yok). `flex: none` satırların doğal
+   yüksekliğini koruyor; fazlası taşıyor ve overflow-y devreye giriyor.
+   (`align-content: start` burada İŞE YARAMAZ: tek satırlı — wrap'siz — bir
+   flex kabında o özellik hiç uygulanmaz; ızgara olan .wsx-collab-grid'de
+   uygulanır.) */
 .sp-page .wsx-panel-list .wsx-card {
     position: relative;
+    flex: none;
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -1020,14 +1076,13 @@
 
 /* ---------- Son hareketler ---------- */
 
+/* Yükseklik/kaydırma BURADA DEĞİL: üç listenin ortak bandında (--wsx-list-h,
+   dosyanın başı). Eskiden buraya özel `max-height: 420px` vardı — o yüzden bu
+   liste kısayken kart çöküyor, diğer iki sütunla hizası kaçıyordu. */
 .sp-page .wsx-act-list {
     list-style: none;
     margin: 0;
     padding: 0;
-    /* Uzun akış rayı sonsuz uzatmasın: kart kendi içinde kayar. */
-    max-height: 420px;
-    overflow-y: auto;
-    scrollbar-width: thin;
 }
 
 .sp-page .wsx-act {

@@ -200,7 +200,14 @@ if (!$view) {
                 </div>
             <?php endforeach; ?>
 
-            <button type="submit" class="login-btn" id="form-submit-btn">Gönder</button>
+            <?php /* ⚠️ SINIF `login-btn` DEĞİL `login-submit`. `login-btn` HİÇBİR
+                     CSS dosyasında tanımlı değildi (login.php'nin kendi butonu da
+                     `login-submit` kullanıyor, public-form.css ise butona hiç kural
+                     yazmıyor) — sonuç: bu buton tarayıcı varsayılanına düşüyordu
+                     (outset 2px kenarlık, köşe yarıçapı 0, gri zemin), üstelik
+                     ürünün DIŞARIYA bakan tek sayfasında, özenli girdilerin
+                     altında. QA'da ölçülerek bulundu. */ ?>
+            <button type="submit" class="login-submit" id="form-submit-btn">Gönder</button>
         </form>
         <?php endif; ?>
     <?php endif; ?>

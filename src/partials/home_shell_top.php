@@ -162,12 +162,26 @@ if (!isset($starredBases) || !is_array($starredBases)) {
                 <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
                 <span>Yıldızlılar</span>
             </a>
+            <?php
+            // Yıldızlar ÇALIŞMA ALANINA göre gruplanır: ekip adı üstte, o ekibin
+            // yıldızlı base'leri altında. Birden çok takımda üye olan (ve tüm
+            // takımları gören platform yöneticisi) için düz liste hangi base'in
+            // nereye ait olduğunu söylemiyordu — kart ızgarası bunu zaten
+            // grup başlıklarıyla yapıyor, sol panel artık onunla tutarlı.
+            // Grup kabı ve #home-starred-list id'si KORUNDU: home.js yıldız
+            // toggle'ında bu id'yi arıyor (ve grubu kendisi kuruyor).
+            ?>
             <div class="home-starred-list" id="home-starred-list">
-                <?php foreach ($starredBases as $sb): ?>
-                    <a href="/base.php?base_id=<?php echo (int) $sb['id']; ?>" class="home-sidenav-item home-starred-item" data-starred-base-id="<?php echo (int) $sb['id']; ?>">
-                        <span class="home-starred-item-dot"></span>
-                        <span class="home-starred-item-name"><?php echo htmlspecialchars($sb['name'], ENT_QUOTES, 'UTF-8'); ?></span>
-                    </a>
+                <?php foreach (bcc_group_starred_bases_by_team($starredBases) as $sg): ?>
+                    <div class="home-starred-group" data-starred-team-id="<?php echo (int) $sg['team_id']; ?>">
+                        <div class="home-starred-team" title="<?php echo htmlspecialchars($sg['team_name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($sg['team_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php foreach ($sg['bases'] as $sb): ?>
+                            <a href="/base.php?base_id=<?php echo (int) $sb['id']; ?>" class="home-sidenav-item home-starred-item" data-starred-base-id="<?php echo (int) $sb['id']; ?>">
+                                <span class="home-starred-item-dot"></span>
+                                <span class="home-starred-item-name"><?php echo htmlspecialchars($sb['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endforeach; ?>
             </div>
             <a href="/workspaces.php" class="home-sidenav-item<?php echo $homeActiveNav === 'workspaces' ? ' is-active' : ''; ?>">

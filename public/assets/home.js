@@ -88,9 +88,45 @@
                         nameSpan.textContent = name;
                         item.appendChild(nameSpan);
 
-                        starredList.appendChild(item);
+                        // Liste artık ÇALIŞMA ALANINA göre gruplu (bkz.
+                        // home_shell_top.php + bcc_group_starred_bases_by_team):
+                        // öğe düz listenin sonuna DEĞİL, kendi ekibinin grubuna
+                        // eklenir. O ekibin ilk yıldızıysa grup burada kurulur —
+                        // aksi hâlde base, yeniden yükleyene kadar yanlış ekibin
+                        // altında görünürdü.
+                        var teamId = card.getAttribute('data-team-id');
+                        var group = teamId
+                            ? starredList.querySelector('.home-starred-group[data-starred-team-id="' + teamId + '"]')
+                            : null;
+
+                        if (!group && teamId) {
+                            var wsEl = card.querySelector('.home-base-workspace');
+
+                            group = document.createElement('div');
+                            group.className = 'home-starred-group';
+                            group.setAttribute('data-starred-team-id', teamId);
+
+                            var teamLabel = document.createElement('div');
+                            teamLabel.className = 'home-starred-team';
+                            teamLabel.textContent = wsEl ? wsEl.textContent.trim() : '';
+                            teamLabel.title = teamLabel.textContent;
+                            group.appendChild(teamLabel);
+
+                            starredList.appendChild(group);
+                        }
+
+                        // teamId yoksa (kart team_id basmamış) eski davranış:
+                        // listenin sonuna. Sıralama yeniden yüklemede sunucudan
+                        // gelir — kabul edilebilir küçük fark (eski notla aynı).
+                        (group || starredList).appendChild(item);
                     } else if (!data.starred && existingItem) {
+                        // Grubun SON yıldızıysa başlık da gitmeli, yoksa altı boş
+                        // bir ekip adı kalırdı.
+                        var oldGroup = existingItem.closest('.home-starred-group');
                         existingItem.remove();
+                        if (oldGroup && !oldGroup.querySelector('.home-starred-item')) {
+                            oldGroup.remove();
+                        }
                     }
 
                     // starred.php'de ana grid'in KENDİSİ "yıldızlı base'ler"

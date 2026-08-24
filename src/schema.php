@@ -3980,17 +3980,68 @@ function bcc_starred_bases_for_current_user($forceReload = false)
         return $cache;
     }
 
+    // team_id + team_name BURADAN gelir (ayrı bir sorgu AÇILMAZ): sol panel
+    // yıldızları çalışma alanına göre gruplar, bkz.
+    // bcc_group_starred_bases_by_team(). Ad için bcc_teams_for_current_user()
+    // çağırmak cazipti ama o fonksiyon ÖNBELLEKSİZ — kabuk her sayfada bir kez
+    // çağırdığı için istek başına fazladan bir sorgu olurdu; teams JOIN'i
+    // zaten var olan bases JOIN'inin üstüne bedavaya biniyor.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
     $cache = bcc_fetch_all(
-        "SELECT b.id, b.name
+        "SELECT b.id, b.name, b.team_id, t.name AS team_name
          FROM user_starred_bases usb
          INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
+         INNER JOIN teams t ON t.id = b.team_id
          WHERE usb.user_id = ?
-         ORDER BY b.name",
+         ORDER BY t.name, b.name",
         array_merge($teamIds, array((int) $user['id']))
     );
 
     return $cache;
+}
+
+// Yıldızlı base listesini ÇALIŞMA ALANINA (takıma) göre gruplar — sol paneldeki
+// "Yıldızlılar" alt listesi için. Dönen yapı:
+//   array(array('team_id' => int, 'team_name' => string, 'bases' => array(satır)))
+//
+// ⚠️ NEDEN GEREKLİ: platform yöneticisi (ve birden çok takımda üye olan herkes)
+// farklı çalışma alanlarından base'leri AYNI düz listede yan yana görüyordu ve
+// hangisinin nereye ait olduğu hiçbir yerden okunamıyordu — kart ızgarasında
+// (bcc_render_home_base_grid $groupByWorkspace) ve liste modunda (kartın
+// "Çalışma alanı" hücresi) bu zaten çözülmüştü, sol panel geride kalmıştı.
+//
+// Satırlar 'team_id' ve 'team_name' TAŞIMAK ZORUNDA. İki besleyicinin ikisi de
+// taşıyor: bcc_starred_bases_for_current_user() (kabuğun kendi sorgusu) ve
+// starred.php'nin kendi grid sorgusu (kabuğa $starredBases olarak elle verilir).
+// team_name'i olmayan bir satır DÜŞÜRÜLMEZ, adsız bir gruba düşmesin diye
+// team_id'siyle etiketlenir — sessizce kaybolmaktansa görünür olması yeğdir.
+function bcc_group_starred_bases_by_team($starredBases)
+{
+    $groups = array();
+
+    foreach ($starredBases as $row) {
+        $teamId = isset($row['team_id']) ? (int) $row['team_id'] : 0;
+
+        if (!isset($groups[$teamId])) {
+            $name = isset($row['team_name']) ? trim((string) $row['team_name']) : '';
+            $groups[$teamId] = array(
+                'team_id' => $teamId,
+                'team_name' => $name !== '' ? $name : ('Çalışma alanı #' . $teamId),
+                'bases' => array(),
+            );
+        }
+
+        $groups[$teamId]['bases'][] = $row;
+    }
+
+    // Takım adına göre sırala: iki besleyici de ORDER BY'ında takım adını
+    // kullanıyor ama starred.php'ninki yalnızca b.name'e göre sıralıyor —
+    // gruplama sırası sorgudan BAĞIMSIZ olarak burada garantiye alınıyor.
+    usort($groups, function ($a, $b) {
+        return strcasecmp($a['team_name'], $b['team_name']);
+    });
+
+    return $groups;
 }
 
 // bcc_starred_bases_for_current_user()'ın id => true haritası hâli — kart
@@ -4063,7 +4114,15 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
     $isFeature = ($variant === 'feature');
     $description = isset($base['description']) ? trim((string) $base['description']) : '';
     ?>
-    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?><?php echo $isFeature ? ' home-base-card--feature' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>" style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
+    <?php
+    // data-team-id: yıldız toggle'ında home.js sol paneldeki DOĞRU çalışma alanı
+    // grubuna eklemek için kartın hangi takıma ait olduğunu bilmek zorunda
+    // (grup adı ayrıca .home-base-workspace'ten okunur, ikinci bir data-* YOK).
+    // isset(): imza $base'in team_id taşımasını ŞART koşmuyor — dashboard.php ve
+    // starred.php taşıyor, taşımayan bir çağıran çıkarsa öznitelik hiç basılmaz
+    // ve JS o kartı yalnızca yeniden yüklemede gruplar (bozulmaz).
+    ?>
+    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?><?php echo $isFeature ? ' home-base-card--feature' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>"<?php echo isset($base['team_id']) ? ' data-team-id="' . (int) $base['team_id'] . '"' : ''; ?> style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
         <?php
         // "Kapak": base'lerde görsel YOK (DB'de böyle bir kolon hiç olmadı), bu
         // yüzden Framer'ın önizleme görselinin karşılığı kartın KENDİ deterministik

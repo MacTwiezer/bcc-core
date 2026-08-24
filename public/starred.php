@@ -33,10 +33,16 @@ $bases = array();
 $starredBaseIds = array();
 if (!empty($teamIds)) {
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
+    // t.name AS team_name: bu liste kabuğa $starredBases olarak da veriliyor ve
+    // sol panel yıldızları çalışma alanına göre grupluyor
+    // (bcc_group_starred_bases_by_team) — satır team_name taşımazsa o grup
+    // "Çalışma alanı #N" diye adsız görünürdü. $teamNamesById zaten burada var
+    // ama kabuk o değişkeni GÖRMEZ, veri satırın kendisiyle gitmeli.
     $bases = bcc_fetch_all(
-        "SELECT b.id, b.team_id, b.name, b.created_at, al.last_opened
+        "SELECT b.id, b.team_id, b.name, b.created_at, al.last_opened, t.name AS team_name
          FROM user_starred_bases usb
          INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
+         INNER JOIN teams t ON t.id = b.team_id
          LEFT JOIN (
              SELECT entity_id, MAX(created_at) AS last_opened
              FROM audit_log

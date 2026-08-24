@@ -658,6 +658,23 @@ button.home-search-result {
     gap: 0.05rem;
 }
 
+/* Çalışma alanı grubu: ekip adı üstte, o ekibin yıldızlı base'leri altında.
+   Girinti kademesi hiyerarşiyi taşıyor — "Yıldızlılar" 0.7rem, ekip adı
+   1.4rem, base 2.1rem. */
+.home-starred-group + .home-starred-group { margin-top: 0.4rem; }
+
+.home-starred-team {
+    padding: 0.3rem 0.7rem 0.15rem 1.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bcc-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .home-starred-item {
     padding-left: 2.1rem;
     font-size: 0.85rem;
@@ -2880,6 +2897,19 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     font-size: 0.82rem;
 }
 
+/* Modal içi onay kutusu satırı. .home-modal-field'in taban kuralı dikey akış
+   (etiket üstte, girdi altta); onay kutusunda kutu ile metin YAN YANA olmalı,
+   bu yüzden yalnızca bu varyantta yatay flex. */
+.home-modal-field.home-modal-check {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.home-modal-field.home-modal-check input { margin: 0; flex: none; }
+
 .home-modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -2921,15 +2951,16 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
    (canlı/aktif anlamı iki temada da aynı yeşille taşınıyor).
    --------------------------------------------------------------------------- */
 
+/* Çerçevesiz: rozet tıklanabilir bir öge DEĞİL, salt durum bilgisi — kenarlık +
+   hap zemini onu yanındaki gerçek butonlarla (zil, hesap) aynı görsel ağırlığa
+   çıkarıyordu. Nokta + kalın sayı ayrımı zaten yeterli; padding KALIYOR
+   (zil ikonuyla arasındaki nefes payı kenarlıktan değil ondan geliyordu). */
 .home-online-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
     padding: 0.25rem 0.6rem;
     margin-right: 0.35rem;
-    border: 1px solid var(--bcc-border);
-    border-radius: 999px;
-    background: var(--bcc-surface);
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
     white-space: nowrap;

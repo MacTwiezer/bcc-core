@@ -748,11 +748,9 @@ $gridUser = current_user();
                                     data-table-name="<?php echo htmlspecialchars($st['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-table-desc="<?php echo htmlspecialchars((string) $st['description'], ENT_QUOTES, 'UTF-8'); ?>"
                                 >Ad veya açıklama değiştir</button>
-                                <?php /* ⚠️ "Görünümü çoğalt" (view_duplicate.php) ile
-                                         KARIŞTIRILMAMALI ve bu yüzden ayrı yerde duruyor:
-                                         görünüm çoğaltmak veriyi kopyalamaz (table_id aynı
-                                         kalır, iki görünüm AYNI kayıtlara bakar). GERÇEKTEN
-                                         bağımsız kopya budur. */ ?>
+                                <?php /* Bağımsız kopya (kayıtlar dahil). Görünüm
+                                         menüsündeki "Bağımsız kopya oluştur" da AYNI
+                                         uçnoktayı çağırıyor — iki giriş, tek davranış. */ ?>
                                 <button
                                     type="button"
                                     class="gs-table-tab-menu-item"
@@ -883,12 +881,34 @@ $gridUser = current_user();
                         Görünüm açıklamasını düzenle
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
+                    <?php endif; ?>
+                    <?php if ($isOwner): ?>
+                    <?php /* ⚠️ ARTIK GÖRÜNÜMÜ DEĞİL TABLOYU ÇOĞALTIYOR — kullanıcı
+                             ÜÇ kez "kopyadan yaptığım değişiklik orijinali etkiliyor"
+                             diye bildirdi ve HAKLIYDI: kayıtlar görünüme değil TABLOYA
+                             bağlıdır (records.table_id), yani görünüm çoğaltmak yeni bir
+                             MERCEK üretir, yeni VERİ üretmez. Ölçüldü: iki görünüm de
+                             aynı table_id'yi paylaşıyordu ve bir hücreyi değiştirmek
+                             ikisinde de değişiyordu. Görünüm ayarları (sıralama/filtre)
+                             ise ZATEN bağımsızdı — sızıntı orada değildi.
+                             Gerçekten bağımsız kopya yalnızca TABLO düzeyinde mümkün,
+                             o yüzden bu kalem api/table_duplicate.php'ye bağlandı.
+
+                             YETKİ EŞİĞİ $canEdit -> $isOwner OLDU: tablo oluşturmak/
+                             silmekle aynı kapı. Bilinçli sonuç (kullanıcıya soruldu,
+                             onaylandı): editor artık bu kalemi görmüyor.
+
+                             Aynı veriye bakan İKİNCİ BİR GÖRÜNÜM isteyen sol paneldeki
+                             "+ Yeni oluştur..."u kullanır — o yol duruyor. */ ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-duplicate-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="7" y="7" width="9" height="9" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><path d="M4 13V5.5A1.5 1.5 0 015.5 4H13" stroke="#5f6368" stroke-width="1.3"/></svg>
-                        Görünümü çoğalt
+                        Bağımsız kopya oluştur
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <?php endif; ?>
+                    <?php // Buradan sonrası (Excel/Yazdır/PNG/PDF) HERKESE açık —
+                          // okuyabilen dışa aktarabilir. Yukarıdaki $isOwner bloğu
+                          // kapandı, yeni bir koşul AÇILMIYOR. ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-xlsx-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                         Excel indir
@@ -1631,8 +1651,8 @@ $gridUser = current_user();
                              atlıyor. Silinseydi MEVCUT grid görünümleri kırılırdı:
                              o dizi hem view_create.php'nin tür whitelist'i hem de
                              ad üreticisi ("Tablo görünümü 2"); varsayılan görünüm
-                             de 'grid' türündedir. Kopyalama/çoğaltma
-                             (view_duplicate.php) de etkilenmez. */ ?>
+                             de 'grid' türündedir. Tablo çoğaltma
+                             (table_duplicate.php) de etkilenmez. */ ?>
                     <?php foreach ($GLOBALS['BCC_VIEW_TYPES'] as $viewTypeKey => $viewTypeLabel): ?>
                         <?php if ($viewTypeKey === 'grid') { continue; } ?>
                         <button
@@ -1702,6 +1722,7 @@ $gridUser = current_user();
                 <?php endforeach; ?>
                 <div class="gs-view-drawer-empty" id="gs-view-drawer-empty" hidden>Sonuç yok</div>
             </div>
+
         </div>
         <?php /* Görünüm paneliyle grid arasındaki genişlik tutamacı. .gs-body-row
                  bir flex satırı olduğu için tutamaç AKIŞTA duran gerçek bir öğe —

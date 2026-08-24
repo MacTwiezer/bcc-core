@@ -1,11 +1,17 @@
 <?php
 // TABLO COGALTMA — "kopya ile asil BIRBIRINDEN BAGIMSIZ olsun" istegi.
 //
-// ⚠️ ONEMLI AYRIM: "gorunumu cogalt" (api/view_duplicate.php) BUNU YAPMAZ.
-// Gorunum, tablonun verisine bakan bir MERCEKtir: cogaltilinca table_id ayni
-// kalir, iki gorunum AYNI kayitlari gosterir ve birinde hucre degistirmek
-// digerinde de gorunur. Bu bir hata degil, gorunumun tanimi. Gercekten
-// bagimsiz kopya TABLO duzeyinde olur — bu test onu dogrular.
+// ⚠️ ONEMLI AYRIM: GORUNUM cogaltmak BUNU YAPAMAZ. Gorunum, tablonun verisine
+// bakan bir MERCEKtir: bir views satirini kopyalamak table_id'yi AYNI birakir,
+// iki gorunum AYNI kayitlari gosterir ve birinde hucre degistirmek digerinde
+// de gorunur. Bu bir hata degil, gorunumun tanimi. Gercekten bagimsiz kopya
+// TABLO duzeyinde olur — bu test onu dogrular.
+//
+// Kullanici UC kez "kopyadan yaptigim degisiklik orijinali etkiliyor" diye
+// bildirdi; olculdu ve dogru cikti. Bu yuzden gorunum menusundeki
+// "Gorunumu cogalt" -> "Bagimsiz kopya olustur" oldu ve BU ucnoktayi
+// (api/table_duplicate.php) cagiriyor; eski api/view_duplicate.php
+// KALDIRILDI (bkz. bolum I).
 //
 // Kapsam:
 //   A) Sema kopyalaniyor (alanlar, siralari, tipleri, zorunluluk)
@@ -372,21 +378,40 @@ try {
     eq('H) kayit sayisi bildirildi', isset($d['record_count']) ? (int) $d['record_count'] : -1, 2);
 
     // =====================================================================
-    echo "\n--- I) KONTRAST: gorunum cogaltma veriyi PAYLASIR ---\n";
+    echo "\n--- I) KONTRAST: YENI GORUNUM veriyi PAYLASIR (tablo cogaltma paylasmaz) ---\n";
     // =====================================================================
-    // Bu, kullanicinin bildirdigi davranisin ta kendisi ve DOGRU olan bu.
-    // Buraya konmasinin sebebi: biri "duzeltmeye" calisirsa bu test
-    // gorunumun bir MERCEK oldugunu hatirlatsin.
-    $r = http_request('POST', '/api/view_duplicate.php', $ownerCookie,
-        array('view_id' => $srcGridView, 'csrf_token' => $csrf));
+    // ⚠️ BU BOLUM DEGISTI. Eskiden api/view_duplicate.php'yi cagiriyordu;
+    // o ucnokta KALDIRILDI (bkz. asagisi) ve kontrast artik ayni kavrami
+    // gosteren KALAN yol uzerinden olculuyor: "+ Yeni olustur..."
+    // (api/view_create.php) ayni tablonun yeni bir gorunumunu yaratir.
+    //
+    // Kontrastin amaci degismedi: gorunum bir MERCEKtir -- ayni table_id'ye
+    // baglidir, kendi kayitlarini TASIMAZ. Gercekten bagimsiz kopya yalnizca
+    // TABLO duzeyinde olur (yukaridaki A-H bolumleri).
+    //
+    // NEDEN view_duplicate.php KALDIRILDI: kullanici UC kez "kopyadan
+    // yaptigim degisiklik orijinali etkiliyor" diye bildirdi. Menudeki
+    // "Gorunumu cogalt" artik api/table_duplicate.php'yi cagiriyor
+    // ("Bagimsiz kopya olustur"), yani o ucnoktanin UI cagirani kalmadi --
+    // birakilsaydi istenmeyen davranis API uzerinden erisilebilir kalirdi.
+    $viewsBefore = (int) bcc_fetch_column('SELECT COUNT(*) FROM views WHERE table_id = :t', array('t' => $srcTable));
+    $r = http_request('POST', '/api/view_create.php', $ownerCookie,
+        array('table_id' => $srcTable, 'view_type' => 'grid', 'csrf_token' => $csrf));
     $vd = json_decode($r['body'], true);
-    check('I) gorunum cogaltildi', !empty($vd['ok']) || $r['status'] === 200, $r['body']);
+    check('I) yeni gorunum olusturuldu', !empty($vd['ok']) || $r['status'] === 200, $r['body']);
+    eq('I) gorunum sayisi bir artti',
+        (int) bcc_fetch_column('SELECT COUNT(*) FROM views WHERE table_id = :t', array('t' => $srcTable)),
+        $viewsBefore + 1);
     $newViewTableId = (int) bcc_fetch_column(
         'SELECT table_id FROM views WHERE table_id = :t AND id <> :v ORDER BY id DESC LIMIT 1',
         array('t' => $srcTable, 'v' => $srcGridView));
-    eq('I) cogaltilan gorunum AYNI tabloya bagli (veri PAYLASILIR)', $newViewTableId, $srcTable);
-    eq('I) gorunum cogaltmak YENI kayit uretmedi',
+    eq('I) yeni gorunum AYNI tabloya bagli (veri PAYLASILIR)', $newViewTableId, $srcTable);
+    eq('I) yeni gorunum YENI kayit uretmedi',
         (int) bcc_fetch_column('SELECT COUNT(*) FROM records WHERE table_id = :t', array('t' => $srcTable)), 2);
+    // Kaldirilan ucnokta GERI GELMESIN: geri gelirse "bagimsiz kopya"
+    // beklentisi yeniden sessizce bozulurdu.
+    check('I) api/view_duplicate.php KALDIRILDI (UI cagirani kalmadi)',
+        !is_file(__DIR__ . '/../public/api/view_duplicate.php'));
 
     $cleanup();
 } catch (Throwable $e) {

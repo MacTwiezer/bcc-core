@@ -1,10 +1,16 @@
 <?php
 // AJAX uçnoktası: tablo sekmesi menüsündeki "Tabloyu çoğalt".
 //
-// ⚠️ "GÖRÜNÜMÜ ÇOĞALT" İLE KARIŞTIRILMAMALI (api/view_duplicate.php):
+// ⚠️ GÖRÜNÜM PANELİNDEKİ "Bağımsız kopya oluştur" DA BURAYI ÇAĞIRIYOR.
+// O kalem eskiden "Görünümü çoğalt" idi ve api/view_duplicate.php'yi
+// çağırıyordu; kullanıcı ÜÇ kez "kopyadan yaptığım değişiklik orijinali
+// etkiliyor" diye bildirdi. Sebep bir hata değil, çoğaltmanın SEVİYESİydi:
 // görünüm, tablonun verisine bakan bir MERCEKtir — çoğaltılınca table_id aynı
-// kalır, yani iki görünüm AYNI kayıtları gösterir ve birinde yapılan hücre
-// düzenlemesi diğerinde de görünür. Bu bir hata değil, görünümün tanımıdır.
+// kalır, yani iki görünüm AYNI kayıtları gösterir. O uçnokta KALDIRILDI
+// (UI çağıranı kalmayınca bırakmak, istenmeyen davranışı API'den erişilebilir
+// bırakmak olurdu). Aynı veriye bakan ikinci bir görünüm isteyen
+// api/view_create.php ("+ Yeni oluştur...") yolunu kullanır.
+//
 // GERÇEKTEN bağımsız bir kopya tablo düzeyinde olur ve bu uçnokta onu yapar:
 // alanlar + görünümler (+ isteğe bağlı kayıtlar, hücreler ve dosya ekleri)
 // yeni bir tabloya kopyalanır; iki taraf bundan sonra birbirini ETKİLEMEZ.
@@ -49,7 +55,7 @@ if (!bcc_can_manage_schema(current_user_role_in_team((int) $table['team_id']))) 
 
 if (trim($name) === '') {
     // Ad verilmediyse "X kopyası" — aynı base'te çakışırsa sonuna sayı eklenir
-    // (view_duplicate.php'deki AYNI desen).
+    // (view_create.php'deki AYNI cakisma-dongusu deseni).
     $base = $table['name'] . ' kopyası';
     $name = $base;
     $suffix = 2;

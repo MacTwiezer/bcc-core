@@ -1,8 +1,15 @@
 <?php
 // AJAX uçnoktası: "+ Yeni oluştur..." — sol Görünüm panelinde boş (config=NULL)
-// yeni bir view oluşturur. view_duplicate.php ile AYNI ekleme deseni (tablonun
-// EN SONUNA, position = mevcut MAX + 1) — yalnızca config'i kopyalamak yerine
-// boş bırakır. Güvenlik deseni diğer view_*.php uçnoktalarıyla AYNI.
+// yeni bir view oluşturur. Ekleme deseni: tablonun EN SONUNA
+// (position = mevcut MAX + 1), config BOŞ bırakılır.
+// Güvenlik deseni diğer view_*.php uçnoktalarıyla AYNI.
+//
+// ⚠️ AYNI VERİYE BAKAN İKİNCİ BİR GÖRÜNÜM İSTEYENİN TEK YOLU ARTIK BURASI:
+// "Görünümü çoğalt" (api/view_duplicate.php) KALDIRILDI — kullanıcı üç kez
+// "kopyadan yaptığım değişiklik orijinali etkiliyor" diye bildirdi ve o
+// kalem artık api/table_duplicate.php'yi çağırıyor ("Bağımsız kopya
+// oluştur"). Buradan üretilen görünüm AYNI table_id'ye bağlıdır, yani veri
+// PAYLAŞILIR — bu bir hata değil, görünümün tanımıdır.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -38,7 +45,7 @@ try {
     // COUNT tabanlı numara TEK BAŞINA benzersiz DEĞİL: "Tablo 1" ve "Tablo 2"
     // varken "Tablo 1" silinirse sayaç 1'e döner ve üretilen ad yine "Tablo 2"
     // olur — mevcut görünümle çakışır. Aynı tabloda benzersiz ad bulunana kadar
-    // ilerlenir (view_duplicate.php'deki AYNI döngü deseni). Kullanıcı adı
+    // ilerlenir (table_duplicate.php'deki AYNI döngü deseni). Kullanıcı adı
     // değiştirdikten sonra da çakışabileceği için sayı değil, ÇAKIŞMA sorulur.
     $nameSuffix = $sameTypeCount + 1;
     while (bcc_name_taken('views', $table['id'], $newName)) {

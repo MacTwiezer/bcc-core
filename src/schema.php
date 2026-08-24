@@ -3742,9 +3742,9 @@ function bcc_remap_view_config_fields($configJson, $fieldMap)
 // Tabloyu BAĞIMSIZ bir kopya olarak çoğaltır: alanlar + görünümler (+ isteğe
 // bağlı olarak kayıtlar, hücre değerleri ve dosya ekleri).
 //
-// ⚠️ NEDEN GEREKLİ — "görünümü çoğalt" BUNU YAPMAZ: görünüm, tablonun
-// verisine bakan bir MERCEKtir (api/view_duplicate.php yalnızca views
-// satırını kopyalar, table_id AYNI kalır). Kayıtlar records.table_id'ye
+// ⚠️ NEDEN GEREKLİ — GÖRÜNÜM ÇOĞALTMAK BUNU YAPAMAZ: görünüm, tablonun
+// verisine bakan bir MERCEKtir (bir views satırını kopyalamak table_id'yi
+// AYNI bırakır). Kayıtlar records.table_id'ye
 // bağlıdır, görünüme değil; bu yüzden aynı tablonun iki görünümünde bir
 // hücreyi değiştirmek ikisinde de değişir — bu bir hata değil, görünümün
 // tanımıdır. Gerçekten bağımsız bir kopya TABLO düzeyinde olur, işte burası.
@@ -3752,8 +3752,11 @@ function bcc_remap_view_config_fields($configJson, $fieldMap)
 // $withRecords=false ise yalnızca ŞEMA kopyalanır (boş tablo, aynı alanlar).
 function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
 {
+    // team_id de çekiliyor: log_audit'e GEÇİLMESİ için (bkz. aşağıdaki çağrı).
     $src = bcc_fetch_one(
-        'SELECT id, base_id, name, description FROM tables_meta WHERE id = :id',
+        'SELECT t.id, t.base_id, t.name, t.description, b.team_id
+         FROM tables_meta t INNER JOIN bases b ON b.id = t.base_id
+         WHERE t.id = :id',
         array('id' => (int) $tableId)
     );
     if (!$src) {
@@ -3934,13 +3937,20 @@ function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
             }
         }
 
+        // ⚠️ team_id ARTIK GEÇİLİYOR — eskiden atlanmıştı ve satırlar NULL
+        // team_id ile yazılıyordu. İki gerçek sonucu vardı: (1) çalışma alanı
+        // hareket akışı (bcc_workspace_activity, team_id'ye göre süzüyor)
+        // tablo çoğaltmayı HİÇ göstermiyordu; (2) audit'i takıma göre süzen
+        // her sorgu bu satırları kaçırıyordu — kopya bağları (
+        // bcc_table_copy_links) tam da buna takıldı. Eski satırlar NULL
+        // kalmaya devam eder, o yüzden okuyan taraf team_id'ye BAĞLI DEĞİL.
         log_audit('table.duplicate', 'table', $newTableId, array(
             'source_table_id' => (int) $src['id'],
             'name' => $newName,
             'with_records' => $withRecords ? 1 : 0,
             'record_count' => $recordCount,
             'attachment_count' => $attachmentCount,
-        ));
+        ), (int) $src['team_id']);
 
         bcc_commit();
     } catch (Throwable $e) {

@@ -162,10 +162,11 @@
         }
 
         // ---- Tabloyu çoğalt -------------------------------------------------
-        // ⚠️ "Görünümü çoğalt" (grid-view-manage.js -> api/view_duplicate.php)
-        // İLE KARIŞTIRILMAMALI: o, görünüm satırını kopyalar ve table_id AYNI
-        // kalır — iki görünüm AYNI kayıtlara bakar, birinde hücre değiştirmek
-        // diğerini de değiştirir (görünüm bir MERCEK, veri tabloya ait).
+        // ⚠️ GÖRÜNÜM MENÜSÜNDEKİ "Bağımsız kopya oluştur" ARTIK AYNI UÇNOKTAYI
+        // çağırıyor (api/table_duplicate.php) — eskiden orası "Görünümü çoğalt"
+        // idi ve view_duplicate.php'yi çağırıyordu, o da yalnızca views satırını
+        // kopyaladığı için iki görünüm AYNI kayıtlara bakıyordu (kullanıcı üç
+        // kez bildirdi). O uçnokta kaldırıldı; iki giriş de buraya bakıyor.
         // GERÇEKTEN bağımsız kopya budur: alanlar + görünümler (+ isteğe bağlı
         // kayıtlar/hücreler/dosya ekleri) yeni bir tabloya kopyalanır.
         // Menü öğesi ve pencere YALNIZCA owner'a basılır; asıl kapı sunucuda.

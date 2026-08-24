@@ -134,9 +134,11 @@
             });
         }
 
-        // ---- Sol panel: "+ Yeni oluştur..." — view_duplicate.php ile AYNI
-        // ekleme/yönlendirme deseni, yalnızca kaynak view'ı kopyalamak yerine
-        // view_create.php boş bir view oluşturuyor.
+        // ---- Sol panel: "+ Yeni oluştur..." — view_create.php boş bir view
+        // oluşturuyor (tablonun sonuna ekle + yeni view'a yönlendir).
+        // ⚠️ AYNI VERİYE bakan ikinci bir görünüm isteyenin TEK yolu artık
+        // burasıdır: "Görünümü çoğalt" kaldırıldı, yerine tabloyu çoğaltan
+        // "Bağımsız kopya oluştur" geldi (bkz. aşağıdaki blok).
         // Tek buton yerine artık TİP SEÇİCİ var (grid.php, BCC_VIEW_TYPES'tan
         // dinamik üretiliyor) — her seçenek kendi data-view-type'ını gönderir.
         // Tek dinleyici, panele delegasyonla: yeni bir görünüm türü eklendiğinde
@@ -292,20 +294,44 @@
             });
         }
 
-        // ---- Duplicate view ----
+        // ---- "Bağımsız kopya oluştur" ----
+        //
+        // ⚠️ ESKİDEN "Görünümü çoğalt" İDİ VE api/view_duplicate.php'yi
+        // çağırıyordu. Kullanıcı ÜÇ kez "kopyadan yaptığım değişiklik orijinali
+        // etkiliyor" diye bildirdi ve HAKLIYDI — ama sebep bir hata değil,
+        // çoğaltmanın SEVİYESİydi: kayıtlar görünüme değil TABLOYA bağlı
+        // (records.table_id), yani görünüm çoğaltmak yeni bir MERCEK üretir,
+        // yeni VERİ üretmez. Ölçüldü: iki görünüm de aynı table_id'yi
+        // paylaşıyor, bir hücreyi değiştirmek ikisinde de değişiyordu.
+        // (Görünüm AYARLARI — sıralama/filtre/gizli alan — zaten bağımsızdı;
+        // sızıntı orada değildi, o yüzden önceki denemeler sonuç vermedi.)
+        //
+        // Artık api/table_duplicate.php çağrılıyor: kayıtları, hücreleri ve
+        // dosya ekleriyle GERÇEKTEN bağımsız bir kopya. Ad ve hedef adres
+        // SUNUCUDAN geliyor (istemci "X kopyası" adını ya da URL'yi kendi
+        // uydurmuyor) — table_duplicate.php çakışmada sonuna sayı ekliyor.
         var duplicateItem = document.getElementById('gs-view-duplicate-item');
         if (duplicateItem) {
             duplicateItem.addEventListener('click', function () {
                 closeOptionsMenu();
                 var tableId = new URLSearchParams(window.location.search).get('table_id');
-                post('/api/view_duplicate.php', { csrf_token: CSRF, view_id: activeViewId() }).then(function (result) {
-                    if (result.httpOk && result.data && result.data.ok) {
-                        window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.view_id);
+
+                post('/api/table_duplicate.php', {
+                    csrf_token: CSRF,
+                    table_id: tableId,
+                    // name boş: sunucu "<tablo adı> kopyası" üretir.
+                    name: '',
+                    // Bağımsızlığın ASIL noktası bu: kayıtlar da kopyalanmazsa
+                    // kullanıcı yine "kopyam boş" derdi.
+                    with_records: '1',
+                }).then(function (result) {
+                    if (result.httpOk && result.data && result.data.ok && result.data.redirect_url) {
+                        window.location.href = result.data.redirect_url;
                     } else {
-                        window.alert((result.data && result.data.error) || 'Görünüm kopyalanamadı.');
+                        window.alert((result.data && result.data.error) || 'Bağımsız kopya oluşturulamadı.');
                     }
                 }).catch(function () {
-                    window.alert('Görünüm kopyalanamadı (bağlantı hatası).');
+                    window.alert('Bağımsız kopya oluşturulamadı (bağlantı hatası).');
                 });
             });
         }

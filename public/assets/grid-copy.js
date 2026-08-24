@@ -93,13 +93,35 @@
                 .replace(/"/g, '&quot;');
         }
 
+        // Kenarlık/biçim bilgisi — pano HTML'ine satır içi (inline) yazılır.
+        //
+        // ⚠️ ÖLÇÜLEN SONUÇ, ABARTMA YOK: kullanıcı Excel'e yapıştırdı ve
+        // KENARLIKLAR GELMEDİ. Veri doğru yapışıyor, biçim yapışmıyor —
+        // Excel bu parçayı büyük olasılıkla text/html yerine text/plain (TSV)
+        // dalından alıyor. Yani bu stiller Excel için ÇALIŞTIĞI DOĞRULANMIŞ
+        // DEĞİLDİR; burada durmalarının sebebi zararsız olmaları ve HTML
+        // dalını gerçekten kullanan hedeflerde (Word, LibreOffice Writer,
+        // tarayıcı tabanlı tablolar) biçimi taşımalarıdır.
+        //
+        // DENENMEMİŞ SONRAKİ ADIM (istenirse): Excel'in HTML ayrıştırıcısı
+        // çıplak bir <table> parçasında stilleri yok sayabiliyor; parçayı
+        // <html><body> ile sarmalamak bilinen bir çözüm. Bu makinede tarayıcı
+        // olmadığı için körlemesine denenmedi.
+        //
+        // Renk/dolgu SABİT yazıldı, tasarım token'ı KULLANILMADI: --bcc-*
+        // değişkenleri hedef programda tanımsızdır.
+        var CLIP_TABLE_ATTRS = ' border="1" style="border-collapse:collapse"';
+        var CLIP_CELL_STYLE = 'border:1px solid #9aa0a6;padding:2px 6px';
+        var CLIP_HEAD_STYLE = CLIP_CELL_STYLE + ';font-weight:bold;background:#f1f3f4';
+
         function buildHtml(matrix) {
-            var out = '<table data-bcc-grid="1"><tbody>';
+            var out = '<table data-bcc-grid="1"' + CLIP_TABLE_ATTRS + '><tbody>';
             matrix.forEach(function (row) {
                 out += '<tr>';
                 row.forEach(function (td) {
                     out += '<td data-bcc-raw="' + esc(cellRaw(td)) + '"'
-                        + ' data-bcc-type="' + esc(td.getAttribute('data-field-type') || '') + '">'
+                        + ' data-bcc-type="' + esc(td.getAttribute('data-field-type') || '') + '"'
+                        + ' style="' + CLIP_CELL_STYLE + '">'
                         + esc(cellDisplay(td)) + '</td>';
                 });
                 out += '</tr>';
@@ -285,5 +307,78 @@
                 clearCells(m);
             }
         });
+
+        // ---- TÜM TABLOYU KOPYALA (paylaşılan yüzey) --------------------------
+        // "Görünümü kaydet" (grid.js) kaydettikten sonra bunu çağırıyor: tablo
+        // panoya da yazılsın ki Excel / Airtable / LibreOffice'e Ctrl+V VEYA
+        // sağ tık → Yapıştır ile doğrudan geçsin.
+        //
+        // ⚠️ İKİNCİ BİR PANO MANTIĞI YAZILMADI: buradaki buildTsv/buildHtml/
+        // writeClipboard AYNEN kullanılıyor — yani Ctrl+C ile bu yolun ürettiği
+        // pano içeriği BİREBİR aynı sözleşmeye uyuyor (text/plain okunaklı,
+        // text/html'de data-bcc-raw ham değer). Ayrı bir uygulama yazsaydım
+        // tarih/yüzde/checkbox dönüşümleri iki yerde ayrışmaya açık olurdu.
+        //
+        // SEÇİMDEN FARKI — BAŞLIK SATIRI: Ctrl+C seçili dikdörtgeni kopyalar ve
+        // başlık İSTENMEZ (kullanıcı veri hücrelerini seçmiştir). "Tabloyu
+        // kopyala" ise Excel'de kullanılabilir bir TABLO üretmeli, o yüzden
+        // sütun adları ilk satır olarak eklenir.
+        //
+        // Sağ tık → Yapıştır'ın çalışmasının sebebi: writeClipboard GERÇEK
+        // sistem panosuna yazıyor (execCommand('copy') + clipboardData), uygulama
+        // içi bir tampona değil. Hedef program neyi desteklerse onu alır.
+        function copyWholeTable() {
+            // Başlıklar: yalnızca VERİ sütunları. data-col-key satır no, "+"
+            // (alan ekle) ve diğer arayüz sütunlarını dışarıda bırakır —
+            // gövdedeki td.grid-cell kümesiyle birebir eşleşen tek işaret bu.
+            var headThs = Array.prototype.slice.call(
+                grid.querySelectorAll('thead th[data-col-key]')
+            );
+            var headers = headThs.map(function (th) {
+                var label = th.querySelector('.grid-th-label');
+                return String((label ? label.textContent : th.textContent) || '').replace(/\s+/g, ' ').trim();
+            });
+
+            // Gövde: DOM'da ne varsa o. Gizli alanlar ve filtrelenmiş satırlar
+            // sunucuda zaten basılmıyor, yani "ekranda görünen tablo" ile
+            // kopyalanan tablo AYNI olur (kullanıcının beklentisi bu).
+            var rows = Array.prototype.slice.call(grid.querySelectorAll('tbody tr[data-record-id]'));
+            var matrix = rows.map(function (tr) {
+                return Array.prototype.slice.call(tr.querySelectorAll('td.grid-cell'));
+            }).filter(function (line) { return line.length > 0; });
+
+            if (!headers.length && !matrix.length) {
+                return { ok: false, rows: 0, cols: 0, empty: true };
+            }
+
+            // TSV: başlık satırı + buildTsv'nin ürettiği gövde.
+            var tsvBody = buildTsv(matrix);
+            var tsv = headers.map(tsvCell).join('\t');
+            if (tsvBody !== '') { tsv += '\n' + tsvBody; }
+
+            // HTML: buildHtml'in <tbody>'sinin ÖNÜNE <thead> eklenir. Dizgi
+            // birleştirme yerine işaretli yere yazmak, buildHtml değişirse
+            // burasının sessizce bozulmasını önler.
+            // data-bcc-head="1": başlık satırı KENDİ grid'imize geri
+            // yapıştırılırken VERİ sanılmasın diye işaretleniyor (grid-paste.js
+            // bunu atlıyor). İşaretlemeseydik "Görünümü kaydet" ile kopyalanan
+            // tabloyu bir grid'e yapıştırmak sütun ADLARINI ilk kayıt olarak
+            // yazardı. Excel/LibreOffice bu özniteliği görmezden gelir.
+            var htmlBody = buildHtml(matrix);
+            var thead = '<thead><tr data-bcc-head="1">' + headers.map(function (h) {
+                return '<th style="' + CLIP_HEAD_STYLE + '">' + esc(h) + '</th>';
+            }).join('') + '</tr></thead>';
+            var html = htmlBody.replace('<tbody>', thead + '<tbody>');
+
+            return {
+                ok: writeClipboard(tsv, html),
+                rows: matrix.length,
+                cols: headers.length,
+                empty: false,
+            };
+        }
+
+        // window.BCC_GRID / BCC_GRID_SELECT ile AYNI desen.
+        window.BCC_GRID_COPY = { copyWholeTable: copyWholeTable };
     });
 })();

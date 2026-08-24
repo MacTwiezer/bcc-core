@@ -1372,7 +1372,36 @@
                     state_query_string: window.location.search.replace(/^\?/, ''),
                 }).then(function (result) {
                     if (result.httpOk && result.data && result.data.ok) {
-                        showToast('Görünüm kaydedildi.');
+                        // KAYDETME KORUNUYOR — kopyalama ONUN ÜSTÜNE eklendi.
+                        //
+                        // Neden ikisi birden: kaydetmenin görünür bir sonucu yok
+                        // (etkisi ancak sayfa yeniden açılınca ortaya çıkıyor),
+                        // bu yüzden buton "hiçbir şey yapmıyor" gibi okunuyordu.
+                        // Artık aynı tıklama tabloyu panoya da yazıyor: Excel /
+                        // Airtable / LibreOffice'e Ctrl+V VEYA sağ tık →
+                        // Yapıştır ile doğrudan geçiyor (gerçek sistem panosuna
+                        // yazılıyor, uygulama içi bir tampona değil).
+                        //
+                        // Pano mantığı BURADA DEĞİL: grid-copy.js'in
+                        // BCC_GRID_COPY yüzeyinden geliyor — Ctrl+C ile AYNI
+                        // biçim sözleşmesi (text/plain okunaklı, text/html'de
+                        // ham değer), ikinci bir uygulama yok.
+                        //
+                        // Kopyalama BAŞARISIZ olursa kaydetme yine BAŞARILIDIR;
+                        // mesaj bunu ayırt ediyor, yoksa kullanıcı kaydın da
+                        // gitmediğini sanardı.
+                        var copy = window.BCC_GRID_COPY
+                            ? window.BCC_GRID_COPY.copyWholeTable()
+                            : null;
+
+                        if (copy && copy.ok) {
+                            showToast('Görünüm kaydedildi · tablo panoya kopyalandı ('
+                                + copy.rows + ' satır). Ctrl+V ile yapıştırabilirsiniz.');
+                        } else if (copy && copy.empty) {
+                            showToast('Görünüm kaydedildi. (Kopyalanacak satır yok.)');
+                        } else {
+                            showToast('Görünüm kaydedildi. (Tablo panoya kopyalanamadı.)');
+                        }
                     } else {
                         var message = (result.data && result.data.error) ? result.data.error : 'Görünüm kaydedilemedi.';
                         window.alert(message);

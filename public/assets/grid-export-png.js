@@ -10,6 +10,13 @@
     //
     // Kapsam: YALNIZCA Grid görünümü. Kanban/Form dışa aktarma ayrı bir tur.
 
+    // ⚠️ YAKALAMA MANTIĞI ARTIK PAYLAŞILIYOR: "PDF olarak indir"
+    // (grid-export-pdf.js) AYNI canvas'ı kullanıyor. Aşağıdaki ölçüm/klon
+    // düzeltmeleri (sütun genişliklerinin klona sabitlenmesi, "+" sütun/satır
+    // payının düşülmesi, canvas kenar sınırı) tek yerde kaldı — PDF'e ikinci
+    // bir kopya çıkarılsaydı bu düzeltmelerden biri unutulunca yalnızca PDF
+    // sessizce bozuk çıkardı. Yüzey window.BCC_GRID_EXPORT olarak açılıyor
+    // (BCC_GRID / BCC_GRID_SELECT / BCC_GRID_COPY ile AYNI desen).
     document.addEventListener('DOMContentLoaded', function () {
         var item = document.getElementById('gs-view-download-png-item');
         if (!item) {
@@ -71,11 +78,13 @@
             return name !== '' ? name : 'grid';
         }
 
-        function download(blob) {
+        // uzanti: '.png' | '.pdf' — PDF de AYNI ad kuralını kullansın diye
+        // parametreleştirildi (dosyalar yan yana indiğinde adlar tutarlı).
+        function download(blob, ext) {
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = fileNameBase() + '.png';
+            a.download = fileNameBase() + (ext || '.png');
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -83,16 +92,16 @@
             setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
         }
 
-        item.addEventListener('click', function () {
-            var menu = document.querySelector('.gs-view-options-menu');
-            if (menu) {
-                menu.removeAttribute('open');
-            }
-
+        // Tabloyu canvas'a çizer. PNG ve PDF akışlarının ORTAK adımı.
+        // label: kullanıcıya gösterilecek biçim adı ("PNG"/"PDF") — uyarı ve
+        // hata metinleri doğru biçimi söylesin diye.
+        // Söz (Promise) canvas ile çözülür; kullanıcı büyük-tablo onayını
+        // reddederse null ile çözülür (hata DEĞİL).
+        function captureCanvas(label) {
             var table = document.querySelector('table.grid');
             if (!table) {
-                window.alert('Bu tabloda henüz alan yok, PNG oluşturulamıyor.');
-                return;
+                window.alert('Bu tabloda henüz alan yok, ' + label + ' oluşturulamıyor.');
+                return Promise.resolve(null);
             }
 
             var rowCount = table.querySelectorAll('tbody tr[data-record-id]').length;
@@ -128,8 +137,8 @@
             var height = Math.ceil(table.scrollHeight - (addRow ? addRow.getBoundingClientRect().height : 0));
 
             if (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD) {
-                if (!window.confirm('Bu görünüm büyük, PNG yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?')) {
-                    return;
+                if (!window.confirm('Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?')) {
+                    return Promise.resolve(null);
                 }
             }
 
@@ -141,15 +150,7 @@
                 scale = Math.max(1, Math.floor(MAX_CANVAS_EDGE / longestEdge));
             }
 
-            item.disabled = true;
-            document.body.style.cursor = 'progress';
-
-            function done() {
-                item.disabled = false;
-                document.body.style.cursor = '';
-            }
-
-            loadHtml2Canvas().then(function (html2canvas) {
+            return loadHtml2Canvas().then(function (html2canvas) {
                 return html2canvas(table, {
                     backgroundColor: '#ffffff',
                     scale: scale,
@@ -197,24 +198,53 @@
                         });
                     },
                 });
-            }).then(function (canvas) {
-                if (!canvas || !canvas.width || !canvas.height) {
-                    done();
+            });
+        }
+
+        // Ortak meşgul durumu: hangi menü öğesi tetiklediyse o devre dışı kalır.
+        function busy(el, on) {
+            if (el) { el.disabled = !!on; }
+            document.body.style.cursor = on ? 'progress' : '';
+        }
+
+        item.addEventListener('click', function () {
+            var menu = document.querySelector('.gs-view-options-menu');
+            if (menu) {
+                menu.removeAttribute('open');
+            }
+
+            busy(item, true);
+            captureCanvas('PNG').then(function (canvas) {
+                if (canvas === null) {
+                    // Tablo yok ya da kullanıcı onayı reddetti — mesaj zaten
+                    // verildi/gerekmiyor.
+                    busy(item, false);
+                    return;
+                }
+                if (!canvas.width || !canvas.height) {
+                    busy(item, false);
                     window.alert('PNG oluşturulamadı: görünüm bir görüntüye sığmayacak kadar büyük. Excel indirmeyi deneyin.');
                     return;
                 }
                 canvas.toBlob(function (blob) {
-                    done();
+                    busy(item, false);
                     if (!blob) {
                         window.alert('PNG oluşturulamadı: görünüm bir görüntüye sığmayacak kadar büyük. Excel indirmeyi deneyin.');
                         return;
                     }
-                    download(blob);
+                    download(blob, '.png');
                 }, 'image/png');
             }).catch(function () {
-                done();
+                busy(item, false);
                 window.alert('PNG oluşturulamadı.');
             });
         });
+
+        // PDF akışı bunları kullanıyor (grid-export-pdf.js).
+        window.BCC_GRID_EXPORT = {
+            captureCanvas: captureCanvas,
+            download: download,
+            busy: busy,
+        };
     });
 })();

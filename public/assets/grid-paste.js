@@ -116,6 +116,20 @@
 
             var isOurs = table.hasAttribute('data-bcc-grid');
             var trs = Array.prototype.slice.call(table.querySelectorAll('tr'));
+
+            // ⚠️ KENDİ BAŞLIK SATIRIMIZ ATLANIR: "Görünümü kaydet" tabloyu
+            // panoya sütun ADLARIYLA birlikte yazıyor (Excel'de kullanılabilir
+            // bir tablo çıksın diye, bkz. grid-copy.js copyWholeTable). O
+            // satır grid'e geri yapıştırılırsa "Şehir"/"Bütçe" gibi ADLAR ilk
+            // KAYIT olarak yazılırdı. Yalnızca KENDİ işaretimiz atlanır —
+            // dışarıdan gelen tablolarda başlık olup olmadığını bilemeyiz,
+            // orada davranış DEĞİŞMEZ (kullanıcı ne seçtiyse o yapışır).
+            if (isOurs) {
+                trs = trs.filter(function (tr) {
+                    return !tr.hasAttribute('data-bcc-head');
+                });
+            }
+
             if (!trs.length) {
                 return null;
             }

@@ -911,6 +911,16 @@ $gridUser = current_user();
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><circle cx="7.5" cy="8.5" r="1.3" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 14l4-4 3.5 3.5L13.5 11l3 3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         PNG olarak indir
                     </button>
+<?php // "PDF olarak indir" — PNG'nin HEMEN ALTINDA (istenen sıra). "Yazdır"dan
+                          // AYRI bir kalem: o tarayıcının yazdırma diyaloğunu açar, bu
+                          // doğrudan .pdf indirir (PNG ile aynı tek tıklama sözleşmesi).
+                          // html2canvas yolu BURADA DA veriliyor: PNG hiç tıklanmadan
+                          // PDF tıklanabilir, o durumda kütüphaneyi bu öğe yükletir. ?>
+                    <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-pdf-item"
+                            data-html2canvas-src="<?php echo htmlspecialchars(bcc_asset_url('vendor/html2canvas.min.js'), ENT_QUOTES, 'UTF-8'); ?>">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M6 2.5h5l3.5 3.5v11a1 1 0 01-1 1h-7.5a1 1 0 01-1-1v-13a1 1 0 011-1z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M11 2.5V6h3.5" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M7.5 11.5h5M7.5 14h3.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
+                        PDF olarak indir
+                    </button>
                     <?php if ($canEdit): ?>
                     <button type="button" class="gs-table-tab-menu-item gs-table-tab-menu-item-danger" id="gs-view-delete-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="#c62828" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2367,6 +2377,10 @@ $gridUser = current_user();
       // kapı yine sunucuda (api/cells_bulk_update.php require_role('editor')). ?>
 <script src="<?php echo bcc_asset_url('grid-copy.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>
+<?php // PDF — grid-export-png.js'ten SONRA yüklenmeli (defer sırayı korur):
+      // yakalama/indirme yüzeyi (window.BCC_GRID_EXPORT) orada kuruluyor,
+      // PDF ikinci bir html2canvas sarmalayıcısı YAZMIYOR. ?>
+<script src="<?php echo bcc_asset_url('grid-export-pdf.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
 <?php // "Paylaş" modalı — dismissable-panel.js'ten SONRA yükleniyor (defer sırayı

@@ -98,7 +98,11 @@ body.home-page .home-main {
    alanına ait olmadığı için grupların ALTINDA, kendi kabında duruyor
    (modalin kendi çalışma alanı seçicisi var). Grup başlıklarının üst
    boşluğuyla aynı ritim. */
-.home-base-grid--tail { margin-top: 1.35rem; }
+/* "Yeni Base Oluştur" kutucuğu gruplu modda grupların ÜSTÜNDE duruyor (bkz.
+   bcc_render_home_base_grid), bu yüzden boşluk ALTA verilir — ilk çalışma alanı
+   başlığına yapışmasın. Eskiden `--tail` idi ve margin-top taşıyordu; kutucuk
+   grupların altındayken son grubun ızgarasına ait gibi okunuyordu. */
+.home-base-grid--lead { margin-bottom: 1.6rem; }
 
 /* ---------- Bento ızgarası ----------
    Taban ızgara (home.css) auto-fill/260px. Bento'da satır yüksekliği SABİT

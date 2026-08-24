@@ -251,6 +251,41 @@ try {
         substr_count($page['body'], 'class="home-base-grid') >= 2,
         'adet: ' . substr_count($page['body'], 'class="home-base-grid'));
 
+    // =====================================================================
+    // H) "Yeni Base Olustur" kutucugunun YERI
+    //
+    // ⚠️ GERCEK BIR YANLIS OKUMA: kutucuk eskiden TUM gruplarin ALTINDA
+    // basiliyordu ve son grubun kart izgarasinin hemen altina dustugu icin
+    // "yeni base O calisma alanina olusturulacak" gibi gorunuyordu. Kutucuk
+    // hicbir alana ait degil -- actigi modalin KENDI team_id secicisi var.
+    // Artik gruplu modda gruplarin USTUNDE; tek alanli kullanicida ise
+    // (secilecek alan yok, belirsizlik de yok) izgaranin SON hucresi olarak
+    // kaliyor.
+    // =====================================================================
+    echo "\n--- H) 'Yeni Base Olustur' kutucugunun yeri ---\n";
+    $leadPos = strpos($page['body'], 'home-base-grid--lead');
+    $firstHeadPos = strpos($page['body'], 'home-section-head home-ws-head');
+    check('H) gruplu modda lead izgarasi basiliyor', $leadPos !== false);
+    check('H) kutucuk ILK grup basligindan ONCE geliyor (tepede)',
+        $leadPos !== false && $firstHeadPos !== false && $leadPos < $firstHeadPos,
+        'lead@' . var_export($leadPos, true) . ' ilkBaslik@' . var_export($firstHeadPos, true));
+    check('H) eski "--tail" yerlesimi KALMADI',
+        strpos($page['body'], 'home-base-grid--tail') === false);
+    check('H) kutucuk TEK KEZ basiliyor (gruplarin icine tekrarlanmiyor)',
+        substr_count($page['body'], 'id="home-create-base-btn"') === 1,
+        'adet: ' . substr_count($page['body'], 'id="home-create-base-btn"'));
+    check('H) kutucuk hicbir grup izgarasinin ICINDE degil',
+        strpos($page['body'], 'home-base-create') !== false
+        && $leadPos !== false
+        && strpos($page['body'], 'home-base-create') > $leadPos
+        && strpos($page['body'], 'home-base-create') < $firstHeadPos);
+    // Tek alanli kullanicida yerlesim DEGISMEDI: lead izgarasi yok, kutucuk
+    // normal izgaranin son hucresi. (Bu dal bilerek disarida birakildi.)
+    check('H) tek alanli kullanicida lead izgarasi YOK (eski yerlesim korundu)',
+        strpos($soloPage['body'], 'home-base-grid--lead') === false);
+    check('H) tek alanli kullanicida kutucuk yine de VAR',
+        strpos($soloPage['body'], 'id="home-create-base-btn"') !== false);
+
     $wipe();
 } catch (Throwable $e) {
     echo "\nISTISNA: " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . "\n";

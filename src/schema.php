@@ -4572,6 +4572,30 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $byTeam[(int) $b['team_id']][] = $b;
         }
 
+        if ($canCreateBase) {
+            ?>
+            <?php
+            // ⚠️ KUTUCUK GRUPLARIN ÜSTÜNDE, ALTINDA DEĞİL. Eskiden hepsinin
+            // ALTINA basılıyordu ve bu YANLIŞ OKUNUYORDU: son grubun kart
+            // ızgarasının hemen altına düştüğü için "yeni base O çalışma alanına
+            // oluşturulacak" gibi görünüyordu (kullanıcı bildirdi: ekranda
+            // yalnızca TY'nin altında duruyordu). Oysa kutucuk hiçbir alana ait
+            // değil — açtığı modalın KENDİ çalışma alanı seçicisi var (bkz.
+            // dashboard.php'deki team_id <select>'i). Tepede, hiçbir grup
+            // başlığının altında değilken sayfa düzeyinde bir eylem olduğu
+            // okunuyor.
+            //
+            // Yalnızca GRUPLU dal değişti: tek çalışma alanı olan kullanıcıda
+            // (aşağıdaki düz dal) ortada seçilecek bir alan yok, dolayısıyla
+            // belirsizlik de yok — orada kutucuk ızgaranın son hücresi olarak
+            // kalıyor ("bir tane daha ekle" yerleşimi).
+            ?>
+            <div class="home-base-grid home-base-grid--lead" id="home-base-grid-lead">
+                <?php bcc_render_home_create_base_tile(); ?>
+            </div>
+            <?php
+        }
+
         // ⚠️ SIRALAMA $teamNamesById'DEN GELİR, PHP'de yeniden sıralanmaz:
         // o dizi bcc_teams_for_current_user()'ın "ORDER BY t.name" sonucundan
         // kuruluyor, yani veritabanının Türkçe harmanlamasına uyuyor. Burada
@@ -4600,17 +4624,10 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             // Gruplarken rol NULL geçilir — rozet zaten yukarıdaki başlıkta.
             // $canCreateBase de false: "Yeni Base Oluştur" kutucuğu tek bir
             // çalışma alanına ait değil (modalin kendi seçicisi var), bu yüzden
-            // grupların İÇİNE değil, hepsinin ALTINA basılır.
+            // grupların İÇİNE hiç basılmaz — yukarıda, hepsinin ÜSTÜNDE bir kez.
             bcc_render_home_base_grid_block($byTeam[$tid], $starredBaseIds, $teamNamesById, $roleByTeamId, false, false, $tableCounts, true);
         }
 
-        if ($canCreateBase) {
-            ?>
-            <div class="home-base-grid home-base-grid--tail" id="home-base-grid-tail">
-                <?php bcc_render_home_create_base_tile(); ?>
-            </div>
-            <?php
-        }
         return;
     }
 

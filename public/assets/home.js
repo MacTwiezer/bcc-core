@@ -335,15 +335,28 @@
             });
         });
 
-        // "+ Yeni Base Oluştur" modalı. Tetikleyici (#home-create-base-btn) ve
-        // modalın KENDİSİ sunucuda koşullu basılır (bkz. dashboard.php
+        // "+ Yeni Base Oluştur" modalı. Tetikleyiciler ve modalın KENDİSİ
+        // sunucuda koşullu basılır (bkz. dashboard.php/workspaces.php
         // $canCreateBase / src/auth.php bcc_can_manage_bases) — yetkisi olmayan
-        // kullanıcıda ikisi de DOM'da yoktur, bu blok sessizce atlanır. Buradaki
+        // kullanıcıda hiçbiri DOM'da yoktur, bu blok sessizce atlanır. Buradaki
         // hiçbir kontrol yetki kontrolü DEĞİLDİR; asıl kapı api/base_create.php.
+        //
+        // ⚠️ TETİKLEYİCİ SEÇİMİ id DEĞİL data-* : eskiden
+        // getElementById('home-create-base-btn') ile TEK öğe bağlanıyordu.
+        // Artık aynı sayfada BİRDEN ÇOK tetikleyici olabiliyor (workspaces.php
+        // hem çalışma alanı başlığındaki "Base oluştur" hem "Base'ler"
+        // kartındaki "+ Yeni base" ile açıyor) — id ile yalnızca ilki çalışırdı.
+        // Zaten dashboard.php'de de ızgara kutucuğu ve boş durum butonu AYNI
+        // id'yi paylaşıyordu (yalnızca biri render edildiği için sorun
+        // çıkmıyordu, ama gizli bir kopya-id sorunuydu). id'ler GERİYE DÖNÜK
+        // UYUMLULUK için duruyor — mevcut testler onlara bakıyor.
+        // ([data-share-modal-open] ile AYNI desen.)
         var createModal = document.getElementById('home-create-base-modal');
-        var createBtn = document.getElementById('home-create-base-btn');
+        var createTriggers = Array.prototype.slice.call(
+            document.querySelectorAll('[data-create-base-open]')
+        );
 
-        if (createModal && createBtn) {
+        if (createModal && createTriggers.length) {
             var createForm = document.getElementById('home-create-base-form');
             var createError = document.getElementById('home-create-base-error');
             var createNameInput = createForm.querySelector('input[name="name"]');
@@ -354,10 +367,17 @@
                 createError.hidden = false;
             };
 
+            // Odak, modalı AÇAN tetikleyiciye geri döner (hep aynı sabit
+            // butona değil) — birden çok tetikleyici olduğunda kullanıcı
+            // kaldığı yere dönmeli.
+            var lastCreateTrigger = null;
+
             var closeCreateModal = function () {
                 createModal.hidden = true;
                 createError.hidden = true;
-                createBtn.focus();
+                if (lastCreateTrigger) {
+                    lastCreateTrigger.focus();
+                }
             };
 
             var openCreateModal = function () {
@@ -366,7 +386,13 @@
                 createNameInput.focus();
             };
 
-            createBtn.addEventListener('click', openCreateModal);
+            createTriggers.forEach(function (trigger) {
+                trigger.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    lastCreateTrigger = trigger;
+                    openCreateModal();
+                });
+            });
             document.getElementById('home-create-base-close').addEventListener('click', closeCreateModal);
             document.getElementById('home-create-base-cancel').addEventListener('click', closeCreateModal);
 

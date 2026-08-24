@@ -777,10 +777,21 @@
 
 /* ---------- Kart başlığındaki ikincil bağlantı ---------- */
 
+/* ⚠️ ARTIK BİR <button>: "+ Yeni base" bases.php'ye giden bir bağlantıydı,
+   şimdi aynı sayfada base oluşturma modalını açıyor. Bu kural bir <a> için
+   yazılmıştı; <button>'ın tarayıcı varsayılanları (gri zemin, kenarlık, farklı
+   font ailesi, metin ortalama) açıkça sıfırlanmazsa bağlantı gibi görünmezdi.
+   `.wsx-btn`de bu sıfırlamalar zaten vardı (font: inherit / cursor), burada
+   yoktu — çünkü hiç <button> ile kullanılmamıştı. */
 .sp-page .wsx-linkbtn {
+    font: inherit;
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--bcc-accent-strong);
+    background: none;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
     text-decoration: none;
     padding: 0.25rem 0.5rem;
     border-radius: 6px;

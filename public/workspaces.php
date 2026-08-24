@@ -61,6 +61,20 @@ $selectedRole = null;
 $canManageMembers = false;
 $canCreateBase = false;
 
+// Base oluşturma modalının çalışma alanı listesi — dashboard.php'deki AYNI
+// süzgeç (bcc_can_manage_bases). Modal SEÇİLİ alanı ön seçili getirir ama
+// listeyi KİLİTLEMEZ: kullanıcı buradan başka bir alanda da base açabilir.
+//
+// ⚠️ $canCreateBase'ten AYRI bir soru: o "SEÇİLİ alanda base açabilir miyim?",
+// bu "hangi alanlarda açabilirim?". Tetikleyici butonlar yalnızca
+// $canCreateBase ile basılıyor; bu liste modalın İÇERİĞİNİ belirliyor.
+$creatableTeams = array();
+foreach ($teams as $t) {
+    if (bcc_can_manage_bases($t['role'])) {
+        $creatableTeams[] = $t;
+    }
+}
+
 $collaborators = array();
 if ($selectedTeamId) {
     // KVKK: $teams zaten kullanıcının kapsamıyla filtrelenmişti ama savunma
@@ -364,10 +378,16 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </button>
                                 <?php endif; ?>
                                 <?php if ($canCreateBase): ?>
-                                <a href="/bases.php" class="wsx-btn">
+                                <?php // "Base oluştur" ARTIK bases.php'ye GİTMİYOR: aynı
+                                      // sayfada ortak base oluşturma modalını açıyor
+                                      // (dashboard.php ile AYNI partial + AYNI home.js
+                                      // davranışı). Bu yüzden <a href> değil <button>.
+                                      // Modal çalışma alanı seçicisinde BU alanı ön
+                                      // seçili getiriyor (bkz. aşağıdaki require). ?>
+                                <button type="button" class="wsx-btn" data-create-base-open>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                                     Base oluştur
-                                </a>
+                                </button>
                                 <?php endif; ?>
                                 <?php if ($canManageMembers): ?>
                                 <button type="button" class="wsx-btn" disabled title="Çalışma alanı ayarları henüz kullanılamıyor">
@@ -418,7 +438,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <div class="wsx-collab-head">
                             <h3 class="wsx-collab-title">Base'ler <span class="sp-count"><?php echo count($wsBases); ?></span></h3>
                             <?php if ($canCreateBase): ?>
-                                <a href="/bases.php" class="wsx-linkbtn">+ Yeni base</a>
+                                <?php // Üstteki "Base oluştur" ile AYNI modalı açar —
+                                      // home.js tetikleyicileri data-* ile buluyor, bu
+                                      // yüzden aynı sayfada ikisi birden çalışıyor. ?>
+                                <button type="button" class="wsx-linkbtn" data-create-base-open>+ Yeni base</button>
                             <?php endif; ?>
                         </div>
 
@@ -678,6 +701,22 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php if ((int) $user['is_admin'] === 1): ?>
             <?php require __DIR__ . '/../src/partials/create_team_modal.php'; ?>
             <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
+        <?php endif; ?>
+
+        <?php if ($canCreateBase && !empty($creatableTeams)): ?>
+            <?php
+            // Base oluşturma modalı — dashboard.php ile AYNI partial, AYNI
+            // davranış (home.js, kabuk her sayfaya yüklüyor: ayrı bir script
+            // etiketi GEREKMEZ). Ayrı bir modal/JS YAZILMADI.
+            //
+            // Sunucuda koşullu basılır: yetkisi olmayanın kaynağında form ve
+            // uçnokta adı hiç görünmez. Asıl kapı yine api/base_create.php.
+            //
+            // Seçili çalışma alanı ön seçili gelir — kullanıcı zaten O alanın
+            // sayfasında, varsayılanın başka bir alan olması şaşırtıcı olurdu.
+            $createBaseSelectedTeamId = $selectedTeamId;
+            require __DIR__ . '/../src/partials/create_base_modal.php';
+            ?>
         <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

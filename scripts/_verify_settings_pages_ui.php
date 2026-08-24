@@ -399,8 +399,25 @@ check('J) her tetikleyici modal tetikleyicisi (data-create-team-btn) ve href yed
     substr_count($wsPage, 'data-create-team-btn') === $wsTriggerCount,
     'href=' . $wsTriggerCount . ' data-attr=' . substr_count($wsPage, 'data-create-team-btn'));
 check('J) admin/create_team.php GERCEKTEN var', is_file($root . '/public/admin/create_team.php'));
-check('J) "Base olustur" gercek sayfaya gidiyor (olu buton degil)',
-    strpos($wsPage, 'href="/bases.php" class="wsx-btn"') !== false && is_file($root . '/public/bases.php'));
+// ⚠️ BU KONTROL DEGISTI. Eskiden "Base olustur" bases.php'ye giden bir <a> idi
+// ve kontrol o href'i ariyordu. Artik sayfa DEGISTIRMIYOR: ayni sayfada ortak
+// base olusturma modalini aciyor (dashboard.php ile AYNI partial + AYNI
+// home.js davranisi). Kontrolun ASIL guvencesi degismedi -- "bu buton OLU
+// DEGIL, gercekten bir sey yapiyor": simdi bunu modalin sayfada basildigini ve
+// tetikleyicinin ona bagli oldugunu olcerek dogruluyor.
+check('J) "Base olustur" OLU DEGIL: modal tetikleyicisi',
+    preg_match('#<button[^>]*data-create-base-open[^>]*>.*?Base oluştur#s', $wsPage) === 1);
+// ⚠️ $wsPage RENDER EDILMIS HTML DEGIL, workspaces.php'nin PHP KAYNAGI --
+// modal markup'i ortak partial'da oldugu icin burada aranmaz. Olculen sey
+// zincirin kendisi: sayfa partial'i require ediyor VE partial modali tasiyor.
+check('J) tetikleyicinin actigi modal GERCEKTEN var (ortak partial uzerinden)',
+    strpos($wsPage, "partials/create_base_modal.php") !== false
+    && is_file($root . '/src/partials/create_base_modal.php')
+    && strpos(file_get_contents($root . '/src/partials/create_base_modal.php'), 'id="home-create-base-modal"') !== false);
+// bases.php SILINMEDI: modal formunun JS'siz yedegi hala oraya POST ediyor.
+check('J) bases.php duruyor (modalin JS siz yedegi oraya POST ediyor)',
+    is_file($root . '/public/bases.php')
+    && strpos(file_get_contents($root . '/src/partials/create_base_modal.php'), 'action="/bases.php"') !== false);
 // "Ayarlar" ozelligi YOK -> calisiyormus gibi gosterilmemeli.
 check('J) "Ayarlar" hala disabled (olmayan ozellik aktif gibi gosterilmiyor)',
     preg_match('/<button type="button" class="wsx-btn" disabled title="[^"]*"/', $wsPage) === 1);

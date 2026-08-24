@@ -4530,7 +4530,10 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
 function bcc_render_home_create_base_tile()
 {
     ?>
-    <button type="button" class="home-base-card home-base-create" id="home-create-base-btn">
+    <?php // data-create-base-open: home.js tetikleyicileri ARTIK bu öznitelikle
+          // buluyor (aynı sayfada birden çok olabildiği için, bkz. oradaki not).
+          // id GERİYE DÖNÜK UYUMLULUK için duruyor — mevcut testler ona bakıyor. ?>
+    <button type="button" class="home-base-card home-base-create" id="home-create-base-btn" data-create-base-open>
         <span class="home-base-icon home-base-create-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         </span>
@@ -4641,7 +4644,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
                 // olmasın: boş durumun İÇİNDE de aynı tetikleyici (aynı id, aynı
                 // modal) — grid hiç basılmadığı için oradaki kutucuk görünmezdi.
                 ?>
-                <button type="button" class="home-empty-create-btn" id="home-create-base-btn">
+                <button type="button" class="home-empty-create-btn" id="home-create-base-btn" data-create-base-open>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                     Yeni Base Oluştur
                 </button>

@@ -117,7 +117,22 @@ $cleanup = function () use (&$createdFiles) {
             'SELECT b.id FROM bases b INNER JOIN users u ON u.id = b.created_by WHERE u.email = :e',
             array(':e' => $mail)
         ), 'id');
-        foreach ($baseIds as $bid) { bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $bid)); }
+        foreach ($baseIds as $bid) {
+            // ⚠️ DOSYALAR, base SILINMEDEN ONCE temizlenir. Bu betik tabloyu
+            // birden cok kez cogaltiyor (H bolumundeki ucnokta testleri dahil)
+            // ve her cogaltma ekin FIZIKSEL kopyasini uretiyor; yalnizca elle
+            // kaydedilen $createdFiles silinince o kopyalar diskte KALIYORDU.
+            // Ölçüldü: her tam kosuda storage/attachments'a bir dosya birikiyordu
+            // (birikmis 28 oksuz dosyanin bir kismi buradan geldi).
+            // 'DELETE FROM bases' cascade ile attachments satirlarini goturur,
+            // o yuzden okuma SIRASI onemli.
+            foreach (bcc_fetch_all(
+                'SELECT id FROM tables_meta WHERE base_id = :b', array(':b' => $bid)
+            ) as $t) {
+                bcc_delete_attachment_files_by_table((int) $t['id']);
+            }
+            bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $bid));
+        }
         bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => $mail));
     }
     foreach ($createdFiles as $p) { if (is_file($p)) { @unlink($p); } }

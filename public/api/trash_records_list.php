@@ -57,6 +57,18 @@ if (!empty($teamIds)) {
 
     if (!empty($expiredRows)) {
         $expiredIds = array_map(function ($r) { return (int) $r['id']; }, $expiredRows);
+
+        // ⚠️ SIRA KRİTİK — DOSYALAR SİLME SORGUSUNDAN ÖNCE TEMİZLENİR.
+        // attachments satırları ON DELETE CASCADE ile gider; DELETE'ten SONRA
+        // çağırsaydık okuyacak satır kalmaz, dosyalar diskte öksüz kalırdı.
+        //
+        // BULUNAN GERÇEK SIZINTI: bu çağrı EKSİKTİ. Kayıt kalıcı siliniyor,
+        // DB satırı gidiyor ama fiziksel dosya sonsuza dek diskte kalıyordu —
+        // projede öksüz dosyaları süpüren başka bir mekanizma da yok. Yani
+        // kullanıcıya "kalıcı silindi" denen kaydın eki sunucuda duruyordu
+        // (depolama sınırsız büyür + "silindi" sözü tam tutulmaz).
+        bcc_delete_attachment_files_by_records($expiredIds);
+
         $expPlaceholders = implode(',', array_fill(0, count($expiredIds), '?'));
         bcc_execute("DELETE FROM records WHERE id IN ($expPlaceholders)", $expiredIds);
         foreach ($expiredRows as $eRow) {

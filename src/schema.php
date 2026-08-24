@@ -1654,6 +1654,38 @@ function bcc_delete_attachment_files_by_record($recordId)
     }
 }
 
+// ÇOK KAYITLIK sürüm — çöp kutusunun 7 günlük otomatik kalıcı silmesi için
+// (api/trash_records_list.php). Tek sorguda toplar:
+// bcc_delete_attachment_files_by_record()'ı kayıt sayısı kadar çağırmak yerine
+// (bcc_delete_attachment_files_by_table ile AYNI gerekçe).
+//
+// ⚠️ NEDEN EKLENDİ — BULUNAN GERÇEK SIZINTI: otomatik silme
+// `DELETE FROM records WHERE id IN (...)` yapıyordu ve hiçbir dosya temizliği
+// ÇAĞIRMIYORDU. attachments satırları ON DELETE CASCADE ile gidiyor ama
+// FİZİKSEL DOSYALAR diskte kalıyordu — üstelik projede öksüz dosyaları
+// süpüren başka hiçbir mekanizma yok, yani dosyalar sonsuza dek birikiyordu.
+// Kullanıcıya "kalıcı silindi" denen kaydın eki sunucuda duruyordu.
+// (Diğer silme yolları — record_delete / table_delete / table_clear_data /
+// alan silme — bu temizliği zaten yapıyordu; yalnızca bu yol atlanmıştı.)
+//
+// Kardeşleri gibi DB satırını SİLMEZ (cascade zaten yapıyor) ve silme
+// sorgusundan ÖNCE çağrılmalıdır.
+function bcc_delete_attachment_files_by_records(array $recordIds)
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $recordIds))));
+    if (!$ids) {
+        return;
+    }
+
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    foreach (bcc_fetch_all("SELECT stored_name FROM attachments WHERE record_id IN ($ph)", $ids) as $row) {
+        $path = bcc_attachment_storage_path($row['stored_name']);
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
 function bcc_delete_attachment_files_by_field($fieldId)
 {
     $rows = bcc_fetch_all('SELECT stored_name FROM attachments WHERE field_id = :id', array('id' => $fieldId));

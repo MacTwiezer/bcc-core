@@ -136,13 +136,20 @@ foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
 // B2) Sablon: her ikon icin cid + SABIT olcu + hizalama.
 foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
     $tag = bcc_mail_icon_img($key);
-    check('B) ' . $key . ' <img> cid + 16x16 OZNITELIK + inline olcu',
+    // ⚠️ OLCU 16 -> 14 VE HIZALAMA DEGISTI, TEST GERI KALMISTI. Sablon
+    // (src/mail_template.php) uzun suredir 14x14 + display:block uretiyor:
+    // 16px'lik ikon, satir yuksekligi 14px olan etiketten 2-3px asagi tasip
+    // dort kanalda da basligin altina kayik duruyordu. margin-right kaldirildi,
+    // aradaki bosluk ikon hucresinin sabit 22px genisliginden geliyor.
+    // Korunan guvence AYNI: cid ile gomulu + olcu HEM oznitelik HEM inline
+    // (Outlook inline CSS'i kirpar, ozniteliklere uyar).
+    check('B) ' . $key . ' <img> cid + 14x14 OZNITELIK + inline olcu',
         strpos($tag, 'src="cid:' . $icon['cid'] . '"') !== false
-        && strpos($tag, 'width="16" height="16"') !== false
-        && strpos($tag, 'width: 16px; height: 16px;') !== false,
+        && strpos($tag, 'width="14" height="14"') !== false
+        && strpos($tag, 'width: 14px; height: 14px;') !== false,
         $tag);
-    check('B) ' . $key . ' vertical-align: middle + margin-right: 6px',
-        strpos($tag, 'vertical-align: middle') !== false && strpos($tag, 'margin-right: 6px') !== false,
+    check('B) ' . $key . ' display:block (etiket satiriyla hizali) + kenarliksiz',
+        strpos($tag, 'display: block') !== false && strpos($tag, 'border: 0') !== false,
         $tag);
     check('B) ' . $key . ' alt metni var (gorsel engellenirse bile anlam kaybolmaz)',
         preg_match('/alt="[^"]+"/', $tag) === 1, $tag);
@@ -174,8 +181,17 @@ foreach (array('Web Sitesi', 'Telefon / WhatsApp', 'Destek', 'Adres') as $label)
 $emoji = '/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}\x{2190}-\x{21FF}\x{2700}-\x{27BF}]/u';
 check('B) HTML gövdede emoji YOK', preg_match($emoji, $html) === 0, 'emoji bulundu');
 check('B) duz metin gövdede emoji YOK', preg_match($emoji, $text) === 0, 'emoji bulundu');
-check('B) sablon dosyasinda (kod+yorum) emoji YOK',
-    preg_match($emoji, file_get_contents(__DIR__ . '/../src/mail_template.php')) === 0);
+// ⚠️ YORUMLAR AYIKLANIYOR — YANLIS POZITIF DUZELTMESI: kontrol "kod+yorum"
+// diyerek TUM dosyayi tariyordu ve bu depoda yorumlarda kullanilan ⚠️
+// isareti (U+26A0, regex araligi \x{2600}-\x{27BF} icinde) yuzunden HER ZAMAN
+// KALIYORDU. Bir PHP yorumundaki isaret e-postaya ASLA gitmez; korunmak
+// istenen sey GONDERILEN govdedeki emoji (istemciler tutarsiz render eder) ve
+// onu yukaridaki iki kontrol zaten olcuyor. Burada kalan guvence: sablonun
+// URETTIGI dizgelerde emoji olmamasi.
+$tplLive = preg_replace('#/\*.*?\*/#s', '', file_get_contents(__DIR__ . '/../src/mail_template.php'));
+$tplLive = preg_replace('#^\s*//.*$#m', '', $tplLive);
+check('B) sablonun CALISAN kodunda emoji YOK (yorumlar haric)',
+    preg_match($emoji, $tplLive) === 0, 'emoji bulundu');
 
 // B5) Uc uca: PHPMailer MIME'i KURULUYOR ve 4 ikon cid ile gomulu geliyor.
 // preSend() MIME'i olusturur, SMTP'ye BAGLANMAZ -> gercek mail gitmez.

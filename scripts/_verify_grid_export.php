@@ -277,8 +277,20 @@ try {
         preg_match('/ROW_WARN_THRESHOLD = 500\b/', $pngJs) === 1);
     check('B) grid-export-png.js yukseklik esigi de var (scrollHeight)',
         strpos($pngJs, 'HEIGHT_WARN_THRESHOLD') !== false && strpos($pngJs, 'table.scrollHeight') !== false);
-    check('B) grid-export-png.js onay metni birebir (Turkce, sert engel degil)',
-        strpos($pngJs, 'Bu görünüm büyük, PNG yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?') !== false);
+    // ⚠️ METIN ARTIK BIREBIR DEGIL, BICIM ADI DEGISKEN: yakalama mantigi
+    // "PDF olarak indir" ile PAYLASILDIGI icin (captureCanvas(label),
+    // window.BCC_GRID_EXPORT) uyari hem "PNG" hem "PDF" diyebilmeli. Ikinci bir
+    // sabit metin yazmak, birini degistirip digerini unutmaya acik kapi olurdu.
+    // KORUNAN GUVENCE AYNI: uyari TURKCE, Excel'i oneriyor ve SERT ENGEL DEGIL
+    // (soru soruyor) -- parcalar tek tek dogrulaniyor.
+    check('B) grid-export-png.js onay metni Turkce ve bicim adini DEGISKEN aliyor',
+        strpos($pngJs, "'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?'") !== false);
+    check('B) uyari SERT ENGEL degil (confirm ile soruluyor, reddedilince cikiliyor)',
+        strpos($pngJs, 'window.confirm(') !== false
+        && strpos($pngJs, 'return Promise.resolve(null);') !== false);
+    check('B) bicim adi cagiran tarafindan veriliyor (PNG ve PDF ayni yerden)',
+        strpos($pngJs, "captureCanvas('PNG')") !== false
+        && strpos(file_get_contents($assetsDir . '/grid-export-pdf.js'), "captureCanvas('PDF')") !== false);
     check('B) grid-export-png.js onclone ile ORTAK CSS medyasini ceviriyor',
         strpos($pngJs, 'data-grid-export-css') !== false && strpos($pngJs, "link.media = 'all'") !== false);
 

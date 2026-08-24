@@ -439,7 +439,15 @@ try {
         'aday listesi');
 
     // Payload'in HTML icine dogru gomuldugu (owner)
-    preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\n/s', $html, $pm);
+    //
+    // ⚠️ \r? ZORUNLU — BU DORT KONTROLU DUSUREN HATA BUYDU: dosyalar diskte
+    // CRLF (git autocrlf) ve sunucu ciktisi da CRLF. Desen yalnizca "};\n"
+    // arayinca DOGRU eslesmeyi ATLIYOR (cunku orada "};\r\n" var) ve
+    // ilerideki BASKA bir "};\n" ile eslesip 3400+ karakterlik cop yakaliyordu;
+    // json_decode da haklı olarak basarisiz oluyordu. Yani payload sapasaglamdi,
+    // OLCEN taraf bozuktu. (Ayni CRLF tuzagi _verify_slack_integration.php'de
+    // zaten notlu — orada LF'e normalize ediliyor.)
+    preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\r?\n/s', $html, $pm);
     $embedded = isset($pm[1]) ? json_decode($pm[1], true) : null;
     check('D) gomulu payload cozulebiliyor', is_array($embedded), isset($pm[1]) ? substr($pm[1], 0, 120) : 'YOK');
     check('D) gomulu payload owner icin can_manage=true', $embedded && $embedded['can_manage'] === true);
@@ -450,7 +458,8 @@ try {
     $vhtml = $vg['body'];
     check('D) viewer: modal YINE basiliyor (liste gormek yetki gerektirmez)',
         strpos($vhtml, 'id="gs-share-overlay"') !== false);
-    preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\n/s', $vhtml, $vpm);
+    // \r? — yukaridaki AYNI CRLF gerekcesi (bkz. owner dalindaki not).
+    preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\r?\n/s', $vhtml, $vpm);
     $vEmbedded = isset($vpm[1]) ? json_decode($vpm[1], true) : null;
     check('D) viewer: gomulu payload can_manage=false + assignable_roles bos',
         $vEmbedded && $vEmbedded['can_manage'] === false && $vEmbedded['assignable_roles'] === array(),

@@ -78,6 +78,18 @@ if (!$result['ok']) {
     json_fail(422, $result['error']);
 }
 
+// ⚠️ EKSİKTİ — BULUNAN GERÇEK TUTARSIZLIK: yeni bir tablo oluşturan ÜÇ yol var
+// (base_tables.php formu, api/table_create.php'nin "+" butonu ve burası) ama
+// Slack bildirimini yalnızca ilk ikisi gönderiyordu. Çoğaltmayla açılan tablo
+// ekipte SESSİZCE beliriyordu — "yeni tablo" aynı olaydır, hangi yoldan
+// geldiğine bakılmaksızın duyurulmalı.
+//
+// COMMIT'TEN SONRA (bcc_duplicate_table kendi transaction'ını çoktan kapattı),
+// yani base_tables.php / api/table_create.php / bcc_create_field() ile AYNI
+// gerekçe: geri alınmış bir tablo için bildirim gitmesin, Slack yavaşsa
+// transaction açık kalmasın, gönderim hatası çoğaltmayı başarısız saymasın.
+bcc_notify_slack_new_table((int) $result['id'], $user['full_name']);
+
 // redirect_url SUNUCUDA kuruluyor — istemci id'den URL uydurmasın
 // (table_create.php / team_create.php ile AYNI karar).
 echo json_encode(array(

@@ -151,32 +151,50 @@ $recordId = (int) bcc_last_insert_id();
 bcc_execute("INSERT INTO records (table_id, position) VALUES (:t, 1)", array('t' => $tableId));
 $otherRecordId = (int) bcc_last_insert_id();
 
-// Dort rolu de temsil eden gercek kullanicilar. Var olan aktif kullanicilardan
-// secilir (yeni hesap acilmaz), gecici olarak bu test ekibine baglanir.
-$pool = bcc_fetch_all('SELECT id FROM users WHERE is_active = 1 ORDER BY id LIMIT 4');
-check('testte kullanilacak 4 aktif kullanici bulundu', count($pool) === 4);
-if (count($pool) < 4) {
-    echo "\nKurulum tamamlanamadi, cikiliyor.\n";
-    bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-    exit(1);
-}
-
-$uid = array(
-    'owner' => (int) $pool[0]['id'],
-    'editor' => (int) $pool[1]['id'],
-    'commenter' => (int) $pool[2]['id'],
-    'viewer' => (int) $pool[3]['id'],
-);
-foreach ($uid as $role => $id) {
+// Dort rolu de temsil eden KENDI test kullanicilarimiz.
+//
+// ⚠️ ESKIDEN GERCEK HESAPLAR ODUNC ALINIYORDU ve bu testi SESSIZCE BOZUYORDU:
+//   $pool = SELECT id FROM users WHERE is_active = 1 ORDER BY id LIMIT 4
+// "editor" olarak atanan pool[1], veritabanindaki id sirasina gore gelen
+// GERCEK bir hesapti ve o hesap is_admin = 1 idi. Platform admini her ekipte
+// SANAL 'owner' sayildigi icin (current_user_role_in_team, src/auth.php)
+// "editor: gecmisi goremiyor -> 403" kontrolu KALIYORDU -- uc nokta dogru
+// calisirken test yanlis alarm veriyordu (yetki acigi SANILABILIRDI).
+//
+// Ayrica gercek hesaplara gecici team_members satiri yazmak projenin kendi
+// kuralina aykiri. Test artik kendi hesaplarini kurar ve siler; roller
+// GERCEKTEN test edilen roldur, is_admin hepsinde 0.
+$uid = array();
+foreach (array('owner', 'editor', 'commenter', 'viewer') as $role) {
+    $mail = 'nvl.' . $role . '@bcc-test.local';
+    bcc_execute('DELETE FROM users WHERE email = :e', array('e' => $mail));
+    bcc_execute(
+        'INSERT INTO users (email, password_hash, full_name, is_admin, is_active)
+         VALUES (:e, :h, :n, 0, 1)',
+        array(
+            'e' => $mail,
+            'h' => password_hash('NvlTest!2026', PASSWORD_DEFAULT),
+            'n' => 'NVL ' . ucfirst($role),
+        )
+    );
+    $uid[$role] = (int) bcc_last_insert_id();
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t, :u, :r)',
-        array('t' => $teamId, 'u' => $id, 'r' => $role));
+        array('t' => $teamId, 'u' => $uid[$role], 'r' => $role));
 }
+check('dort test kullanicisi kuruldu (hicbiri is_admin degil)',
+    count($uid) === 4
+    && (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id IN (' . implode(',', $uid) . ') AND is_admin = 1') === 0);
 echo "  ekip=$teamId base=$baseId tablo=$tableId kayit=$recordId\n";
 
 // Betik yarida kalsa bile kurban veri kalmasin.
-register_shutdown_function(function () use ($teamId) {
+register_shutdown_function(function () use ($teamId, $uid) {
     // records/tables_meta/bases CASCADE ile, record_view_log da oyle gider.
     bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
+    // Test hesaplari da gitmeli: artik GERCEK hesap odunc alinmiyor, bu dort
+    // kullanici bu betige ait (bkz. yukaridaki kurulum notu).
+    if ($uid) {
+        bcc_execute('DELETE FROM users WHERE id IN (' . implode(',', array_map('intval', $uid)) . ')');
+    }
 });
 
 echo "\n=== D) note_view_start.php ===\n";

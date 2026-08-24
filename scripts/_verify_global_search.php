@@ -172,7 +172,12 @@ echo "\n--- C) Collector secicileri gercek DOM ile eslesiyor mu ---\n";
 // Her satir: [sayfa, aciklama, global-search.js'in aradigi secici parcasi,
 //             o sayfanin ciktisinda bulunmasi gereken metin]
 $selectorChecks = array(
-    array('dashboard.php', 'base kart kabi', "getElementById('home-base-grid')", 'id="home-base-grid"'),
+    // ⚠️ TEK-ID DAN COKLU IZGARAYA: base'ler CALISMA ALANINA gore gruplanınca
+    // sayfada BIRDEN COK .home-base-grid olustu ve id="home-base-grid" hic
+    // basilmaz oldu. global-search.js hala getElementById kullaniyordu, yani
+    // collectBases() HER ZAMAN null donuyor ve dashboard'daki base'ler genel
+    // aramaya HIC girmiyordu (sessiz bug -- bu kontrol onu yakaladi).
+    array('dashboard.php', 'base kart kabi', "querySelectorAll('.home-base-grid')", 'class="home-base-grid'),
     array('dashboard.php', 'base kart sinifi', ".home-base-card", 'home-base-card'),
     array('dashboard.php', 'base adi', ".home-base-name", 'home-base-name'),
     array('dashboard.php', 'base meta', ".home-base-meta", 'home-base-meta'),

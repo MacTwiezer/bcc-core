@@ -84,15 +84,18 @@ define('BCC_MAIL_C_PANEL', '#f8fafc');
 define('BCC_MAIL_C_PAGE', '#f1f5f9');
 
 /**
- * Footer ızgarasındaki 16x16 ikonun <img> etiketi.
+ * Footer ızgarasındaki 14x14 ikonun <img> etiketi.
  *
  * width/height ÖZNİTELİK olarak da veriliyor (yalnızca style değil): Outlook
  * inline CSS'in bir kısmını kırpar ama HTML özniteliklerine her zaman uyar —
  * öznitelik olmadan ikon doğal 36px'ine büyüyüp satırı bozardı.
- * vertical-align: middle + margin-right: 6px, metinle aynı optik hizada
- * durması için.
  *
- * 36x36 üretilip 16x16 gösteriliyor (2.25x): retina/HiDPI istemcilerde net kalır.
+ * ⚠️ BU BAŞLIK BAYATLAMIŞTI: "16x16 + vertical-align: middle + margin-right"
+ * yazıyordu ama gövde uzun süredir 14x14 + display:block üretiyor (gerekçe
+ * aşağıdaki satır içi notta). Başlık ile kod ayrışınca testler de eski hâli
+ * doğrulamaya devam etmişti — düzeltildi.
+ *
+ * 36x36 üretilip 14x14 gösteriliyor (~2.6x): retina/HiDPI istemcilerde net kalır.
  */
 function bcc_mail_icon_img($key)
 {

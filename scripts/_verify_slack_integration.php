@@ -96,16 +96,41 @@ check('table_fields.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/table_fields.php'), 'bcc_create_field(') !== false);
 check('api/field_create.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/api/field_create.php'), 'bcc_create_field(') !== false);
-// Tablo olusturmanin TEK yolu base_tables.php olmali — baska bir dosya da
-// tables_meta'ya INSERT etseydi oradaki olay bildirimsiz kalirdi.
+// ⚠️ BU KONTROL DEGISTI — ESKI HALI YANLIS SEYI OLCUYORDU. "tables_meta INSERT
+// yalnizca base_tables.php'de olsun" diyordu; oysa zamanla IKI mesru yol daha
+// eklendi (api/table_create.php -> tablo sekmelerindeki "+", ve
+// bcc_duplicate_table() -> "Bagimsiz kopya olustur"). Kontrol bu yuzden HER
+// ZAMAN kaliyordu ve asil onemli soruyu SORMUYORDU.
+//
+// ASIL GUVENCE: tablo olusturan HER yol Slack bildirimini gondermeli --
+// "yeni tablo" ayni olaydir, hangi yoldan geldigi kullaniciyi ilgilendirmez.
+// Bu kontrol yazilinca GERCEK BIR EKSIK bulundu: bcc_duplicate_table()
+// bildirimi GONDERMIYORDU, cogaltmayla acilan tablo ekipte sessizce
+// beliriyordu. Duzeltildi.
 $tableInsertFiles = array();
 foreach (array_merge(glob($root . '/public/*.php'), glob($root . '/public/api/*.php'), glob($root . '/src/*.php')) as $f) {
     if (strpos(file_get_contents($f), 'INSERT INTO tables_meta') !== false) {
         $tableInsertFiles[] = basename($f);
     }
 }
-check('tables_meta INSERT yalnizca base_tables.php\'de (tek tablo olusturma yolu)',
-    $tableInsertFiles === array('base_tables.php'), implode(', ', $tableInsertFiles));
+sort($tableInsertFiles);
+check('tablo olusturan yollar BILINEN kumeye esit (yenisi eklenirse bu test uyarir)',
+    $tableInsertFiles === array('base_tables.php', 'schema.php', 'table_create.php'),
+    implode(', ', $tableInsertFiles));
+
+// Ve UCU DE bildirimi gondermeli.
+foreach (array(
+    'public/base_tables.php' => 'form ile tablo olusturma',
+    'public/api/table_create.php' => 'tablo sekmelerindeki "+"',
+    // ⚠️ src/schema.php DEGIL: bildirim, tablo olusturan diger iki yolda oldugu
+    // gibi GIRIS NOKTASINDA duruyor. bcc_duplicate_table()'in icine konmasi
+    // denendi ve schema.php'yi slack.php'ye BAGIMLI hale getirdigi icin
+    // testleri kirdi (CLI betikleri slack.php yuklemiyor).
+    'public/api/table_duplicate.php' => 'bagimsiz kopya olustur',
+) as $file => $desc) {
+    check('tablo olusturan yol bildirim gonderiyor -> ' . $desc,
+        strpos(file_get_contents($root . '/' . $file), 'bcc_notify_slack_new_table(') !== false, $file);
+}
 
 // Bildirim COMMIT'ten SONRA olmali (geri alinmis bir islem icin mesaj gitmesin,
 // Slack yavassa transaction acik kalmasin).

@@ -245,8 +245,17 @@ try {
 
     check('E) menude "Tablo görünümü" yaziyor',
         strpos($html, '>Tablo görünümü<') !== false);
-    check('E) menu basligi ne yaratildigini soyluyor',
-        strpos($html, 'Bu tablonun yeni görünümü') !== false);
+    // ⚠️ AYRI BOLUM BASLIGI BILEREK KALDIRILDI, kontrol ona gore guncellendi.
+    // Eskiden menude "Bu tablonun yeni görünümü" diye bir baslik vardi; menuye
+    // "Boş tablo oluştur" eklenince o baslik YANLIS oldu (o kalem yeni bir
+    // TABLO aciyor, gorunum degil) ve kaldirildi. Ayrimi artik ETIKETLERIN
+    // KENDISI tasiyor (gerekce grid.php'de yazili).
+    // Korunan guvence AYNI: kullanici neyin yaratilacagini menuden okuyabilmeli.
+    check('E) menu etiketleri ne yaratildigini KENDILERI soyluyor',
+        strpos($html, 'Boş tablo oluştur') !== false
+        && strpos($html, '>Tablo görünümü<') !== false);
+    check('E) yaniltici eski baslik geri GELMEMIS',
+        strpos($html, 'Bu tablonun yeni görünümü') === false);
     check('E) GERCEK yeni tablo yolu duruyor (tablo sekmelerindeki "+")',
         strpos($html, 'class="gs-table-tab-add"') !== false
         && strpos($html, '/base_tables.php?base_id=') !== false);

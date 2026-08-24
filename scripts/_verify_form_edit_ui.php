@@ -189,10 +189,22 @@ try {
     // Bulunan gercek bug: bu sayfa $starredBases'i HIC ayarlamiyordu; kabuk
     // tanimsiz degiskenle foreach calistiriyor, yildizli base listesi
     // YALNIZCA bu sayfada bos kaliyordu (display_errors kapali, uyari yok).
-    check('A) form_edit.php $starredBases i dolduruyor',
-        strpos($formEditPhp, '$starredBases = bcc_fetch_all(') !== false);
-    check('A) kabuk $starredBases i de varsayilana dusuruyor (diger ikisi gibi)',
-        preg_match('#if \(!isset\(\$starredBases\) \|\| !is_array\(\$starredBases\)\) \{\s*\$starredBases = array\(\);#s', $shellPhp) === 1);
+    // ⚠️ BU IKI KONTROL BAYATTI VE DEGISTIRILDI. Eskiden HER SAYFANIN
+    // $starredBases'i kendisinin doldurmasini ve kabugun bos diziye dusmesini
+    // sart kosuyorlardi -- o, hatanin ILK (yarim) cozumuydu.
+    //
+    // ASIL cozum sonradan geldi: kabuk listeyi KENDISI cekiyor
+    // (bcc_starred_bases_for_current_user), yani bir sayfanin "unutmasi" artik
+    // MUMKUN DEGIL. Sayfaya ozel doldurma yalnizca listeyi BILEREK degistiren
+    // sayfalarda kaldi (starred.php). Eski kontroller korunsaydi, DAHA IYI olan
+    // cozumu "hata" diye raporlamaya devam ederdi.
+    //
+    // Korunan guvence AYNI ve asagidaki CANLI kontrolle zaten olculuyor
+    // ("A) yildizli base sol panelde GORUNUYOR"): liste bos kalmamali.
+    check('A) kabuk $starredBases i KENDISI dolduruyor (sayfa unutamaz)',
+        preg_match('#if \(!isset\(\$starredBases\) \|\| !is_array\(\$starredBases\)\) \{\s*\$starredBases = bcc_starred_bases_for_current_user\(\);#s', $shellPhp) === 1);
+    check('A) form_edit.php artik KENDI sorgusunu tekrarlamiyor (tek kaynak)',
+        strpos($formEditPhp, '$starredBases = bcc_fetch_all(') === false);
     // CANLI: yildizli base sol panelde GERCEKTEN cikiyor mu.
     check('A) yildizli base sol panelde GORUNUYOR',
         strpos($html, 'home-starred-item') !== false

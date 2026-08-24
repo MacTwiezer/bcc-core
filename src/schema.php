@@ -3958,6 +3958,13 @@ function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
         throw $e;
     }
 
+    // ⚠️ SLACK BİLDİRİMİ BURADA DEĞİL, ÇAĞIRANDA (api/table_duplicate.php).
+    // İlk denemede bu fonksiyonun içine konmuştu ve testleri KIRDI:
+    // "Call to undefined function bcc_notify_slack_new_table()" — src/schema.php
+    // slack.php'ye bağımlı DEĞİL ve CLI betikleri onu yüklemiyor (web'de
+    // bootstrap.php yüklediği için hata yalnızca testlerde görünüyordu, yani
+    // gizli bir bağımlılık olurdu). Tablo oluşturan diğer İKİ yol da bildirimi
+    // zaten GİRİŞ NOKTASINDA, commit'ten sonra gönderiyor — desen o.
     return array(
         'ok' => true, 'error' => null, 'id' => $newTableId,
         'record_count' => $recordCount, 'attachment_count' => $attachmentCount,

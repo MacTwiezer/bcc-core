@@ -177,7 +177,13 @@ check('D) kabuk yalnizca dizideki dosyalari basiyor',
 // NOT: slack_settings.php bu listeden CIKARILDI — artik kendisi de ortak
 // tasarim sistemini kullaniyor ($homeExtraCss atiyor). Liste, kabugu paylasan
 // ama YENIDEN TASARLANMAMIS sayfalari korumaya devam ediyor.
-foreach (array('dashboard.php', 'starred.php', 'team_members.php', 'bases.php') as $other) {
+//
+// ⚠️ dashboard.php ve starred.php DE AYNI GEREKCEYLE CIKARILDI (bu iki kontrol
+// uzun suredir KALIYORDU): ikisi de artik MESRU sekilde $homeExtraCss atiyor
+// ($homeExtraCss = array('home-bento.css')) -- yani kontrol, tam da tesvik
+// edilen deseni "hata" diye raporluyordu. Listede yalnizca gercekten kendi
+// ek CSS'ini ALMAYAN sayfalar kaldi.
+foreach (array('team_members.php', 'bases.php') as $other) {
     $src = @file_get_contents($root . '/public/' . $other);
     check("D) {$other} \$homeExtraCss ATAMIYOR", $src !== false && strpos($src, 'homeExtraCss') === false);
 }

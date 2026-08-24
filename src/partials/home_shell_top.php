@@ -108,7 +108,23 @@ if (!isset($starredBases) || !is_array($starredBases)) {
         // yer kaymasını (CLS) önler; görünen ölçü CSS'ten gelir.
         ?>
         <a href="/dashboard.php" class="home-logo" title="Ana sayfa" aria-label="Ana sayfa">
-            <img src="<?php echo bcc_asset_url('logo.png'); ?>" width="94" height="44" alt="">
+            <?php
+            // ⚠️ ARTIK ORTAK PARTIAL: markup buraya KOPYALANMIŞTI ve beş auth
+            // sayfasının kullandığı src/partials/brand_logo.php ile ikinci bir
+            // uygulama oluşturuyordu — logo dosyası ya da width/height oranı
+            // değişse biri güncellenip diğeri unutulurdu.
+            //
+            // Görünen ölçü CSS'ten (.home-logo img { height: 24px }); buradaki
+            // 44 yalnızca partial'ın DOĞRU EN/BOY oranını (94x44) üretmesi
+            // içindir — öznitelikler CLS'i önlemek üzere basılıyor.
+            //
+            // alt: partial marka adını yazıyor. Bu bağlamda ekran okuyucuya
+            // çift okuma OLMAZ, çünkü bağlantının aria-label'ı ("Ana sayfa")
+            // içeriğin yerine geçer.
+            $brandLogoClass = 'home-logo-mark';
+            $brandLogoHeight = 44;
+            require __DIR__ . '/brand_logo.php';
+            ?>
         </a>
     </div>
 

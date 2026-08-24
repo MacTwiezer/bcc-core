@@ -48,14 +48,33 @@
         }
 
         // --- dashboard.php / starred.php: base kartları ---
+        //
+        // ⚠️ BULUNAN GERÇEK BUG: burası `getElementById('home-base-grid')`
+        // kullanıyordu ama o id ARTIK HİÇBİR YERDE BASILMIYOR. Home, base'leri
+        // ÇALIŞMA ALANINA göre gruplayınca sayfada BİRDEN ÇOK ızgara oluştu ve
+        // tek-id yaklaşımı bırakıldı (home.js aynı düzeltmeyi almıştı, burası
+        // ALMAMIŞTI). Sonuç sessizdi: `grid` her zaman null dönüyor, fonksiyon
+        // erken çıkıyor ve GENEL ARAMA dashboard'daki base'leri HİÇ
+        // indekslemiyordu — arama kutusuna base adı yazınca sonuç gelmiyordu.
+        //
+        // Artık TÜM ızgaralar geziliyor. null dönüşü korunuyor: base ızgarası
+        // olmayan sayfalarda (grid.php vb.) bu bölüm atlanmalı.
         function collectBases() {
-            var grid = document.getElementById('home-base-grid');
-            if (!grid) {
+            var grids = document.querySelectorAll('.home-base-grid');
+            if (!grids.length) {
                 return null;
             }
 
+            var cards = [];
+            Array.prototype.forEach.call(grids, function (grid) {
+                Array.prototype.push.apply(
+                    cards,
+                    Array.prototype.slice.call(grid.querySelectorAll('.home-base-card'))
+                );
+            });
+
             var items = [];
-            Array.prototype.forEach.call(grid.querySelectorAll('.home-base-card'), function (card) {
+            cards.forEach(function (card) {
                 // "+ Yeni Base Oluştur" kutucuğu bir <button>, veri DEĞİL —
                 // aranabilir öğe listesine girmemeli.
                 if (card.classList.contains('home-base-create')) {

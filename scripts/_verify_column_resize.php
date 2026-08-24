@@ -329,15 +329,24 @@ try {
     $colCount = isset($cg[1]) ? substr_count($cg[1], '<col ') : 0;
     // rownum + 3 gorunur alan + "+" sutunu (owner) = 5
     check('C) col sayisi = rownum + gorunur alanlar + "+" sutunu', $colCount === 5, 'col=' . $colCount);
-    check('C) kaydedilen genislikler colgroup a yansiyor',
-        strpos($cg[1], 'width: 120px') !== false
-        && strpos($cg[1], 'width: 300px') !== false
+    // ⚠️ BEKLENTI GUNCELLENDI — 'row' ARTIK HARITADAN OKUNMUYOR. Test hala
+    // kaydedilen row=120'nin colgroup'a yansimasini ve toplamin 790 olmasini
+    // bekliyordu; oysa satir no sutunu BILEREK sabit BCC_ROW_COLUMN_WIDTH (44)
+    // kullaniyor: o sutun surukleneMEZ, dolayisiyla haritadaki 'row' degeri bir
+    // kullanici tercihi degil eski yogunlugun olculmus kalintisidir ve satir ici
+    // <col style> olarak basilinca CSS'i yenip sutunu 80px'te kilitliyordu
+    // (gerekce grid.php'de yazili).
+    // Yeni toplam = 44 (row, SABIT) + 300 + 150 + 180 (Not, varsayilan) + 40 ("+") = 714.
+    check('C) kaydedilen ALAN genislikleri colgroup a yansiyor',
+        strpos($cg[1], 'width: 300px') !== false
         && strpos($cg[1], 'width: 150px') !== false);
+    check('C) satir no sutunu SABIT 44px (kaydedilen row=120 KULLANILMIYOR)',
+        strpos($cg[1], 'width: 44px') !== false
+        && strpos($cg[1], 'width: 120px') === false, $cg[1]);
     check('C) haritada OLMAYAN alan varsayilan 180px aliyor',
         strpos($cg[1], 'width: 180px') !== false);
-    // toplam = 120 + 300 + 150 + 180 (Not) + 40 ("+") = 790
     check('C) tabloya toplam genislik inline yaziliyor',
-        strpos($html, 'style="width: 790px;"') !== false,
+        strpos($html, 'style="width: 714px;"') !== false,
         preg_match('/<table class="grid[^"]*"\s+style="([^"]*)"/', $html, $tm) ? $tm[1] : 'YOK');
 
     // Gizli sutun colgroup a girmemeli

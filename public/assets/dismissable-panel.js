@@ -70,6 +70,38 @@
     // panel   : konumlanacak kutu (position: fixed olmalı)
     // rect    : anchor'ın getBoundingClientRect()'i
     // options : align ('left'|'right'), gap (px)
+    // ---------------------------------------------------------------------
+    // YÜZEN PANELİ BARINDIRAN HÜCREYİ YIĞINDA YÜKSELT
+    // ---------------------------------------------------------------------
+    // ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): sütun başlığındaki "▾" menüsü
+    // açıldığında donuk sütunun kenar çizgisi ve sütun genişliği tutamaçları
+    // menünün ÜSTÜNE biniyordu.
+    //
+    // KÖK NEDEN — panelin `z-index: 30`'u işe yaramıyor: panel bir <th>/<td>
+    // İÇİNDE duruyor ve grid'in hücreleri `position: sticky` + `z-index`
+    // taşıyor (sticky başlık 2, donuk hücreler 1/3). z-index'li konumlandırılmış
+    // her öğe KENDİ YIĞILMA BAĞLAMINI kurar, yani panelin 30'u yalnızca O
+    // hücrenin içinde geçerlidir — dışarıdaki `.grid-col-resize-layer`
+    // (z-index 4) ve komşu sticky hücrelerle yarışan şey panelin kendisi değil,
+    // BARINDIRAN HÜCREdir. Paneli daha yükseğe çekmek bu yüzden hiçbir işe
+    // yaramaz; yükselmesi gereken hücredir.
+    //
+    // position:fixed de kurtarmıyor: fixed öğeler viewport'a göre KONUMLANIR
+    // ama yığılma bağlamından ÇIKMAZ.
+    //
+    // Çözüm: panel açıkken barındıran hücreye bir sınıf eklenir, kapanınca
+    // kaldırılır (CSS: table.grid .grid-floating-host). Panel <th>/<td> içinde
+    // değilse hiçbir şey yapılmaz — grid dışındaki çağrı yerleri etkilenmez.
+    window.bcc_raiseFloatingHost = function (panel, on) {
+        if (!panel || !panel.closest) {
+            return;
+        }
+        var host = panel.closest('th, td');
+        if (host) {
+            host.classList.toggle('grid-floating-host', !!on);
+        }
+    };
+
     window.bcc_positionFloating = function (panel, rect, options) {
         options = options || {};
         var align = options.align === 'right' ? 'right' : 'left';
@@ -158,11 +190,17 @@
             window.removeEventListener('resize', position);
         }
 
+        // Barındıran hücreyi yükseltme de BURADA: bu yardımcıdan geçen ÜÇ menü
+        // de (sütun başlığı ▾, "+ alan ekle", "+ yeni görünüm") aynı düzeltmeyi
+        // tek yerden alıyor — hücre içinde olmayanlarda sessizce hiçbir şey
+        // yapmıyor (bkz. bcc_raiseFloatingHost).
         menu.addEventListener('toggle', function () {
             if (!menu.open) {
+                window.bcc_raiseFloatingHost(panel, false);
                 detach();
                 return;
             }
+            window.bcc_raiseFloatingHost(panel, true);
             position();
             attach();
         });

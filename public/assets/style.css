@@ -1249,6 +1249,43 @@ table.grid tbody tr:hover td.grid-frozen-cell {
    çıkınca ortaya çıktı. */
 table.grid .grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }
 
+/* ---------------------------------------------------------------------------
+   YÜZEN PANEL BARINDIRAN HÜCRE — sınıfı JS ekler/kaldırır
+   (bcc_raiseFloatingHost, assets/dismissable-panel.js).
+
+   ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): "Şehir" sütununun ▾ menüsü
+   açıldığında donuk sütunun kenar çizgisi ve sütun genişliği tutamaçları
+   menünün ÜSTÜNE biniyordu.
+
+   KÖK NEDEN — panelin kendi `z-index: 30`'u ÇARE DEĞİL: panel bir <th>/<td>
+   içinde ve grid hücreleri `position: sticky` + z-index taşıyor (sticky başlık
+   2, donuk hücreler 1/3). z-index'li konumlandırılmış her öğe KENDİ YIĞILMA
+   BAĞLAMINI kurar; panelin 30'u yalnızca o hücrenin İÇİNDE geçerlidir.
+   Dışarıdaki `.grid-col-resize-layer` (4) ve komşu sticky hücrelerle yarışan
+   şey panel değil, BARINDIRAN HÜCREdir — o yüzden yükselmesi gereken odur.
+   (position:fixed de kurtarmaz: fixed öğe viewport'a göre KONUMLANIR ama
+   yığılma bağlamından ÇIKMAZ.)
+
+   50 SEÇİLDİ: grid iç kromunun (resize katmanı 4, araç çubuğu panelleri 5,
+   dondurma tutamacı 15) ÜSTÜNDE, ama modal/overlay ailesinin (60, kayıt detayı
+   70) ALTINDA — açık bir menü modalin üzerine ÇIKMAMALI.
+
+   DÖRT panel bu kuraldan yararlanıyor: sütun başlığı ▾ menüsü, "+ alan ekle",
+   "+ yeni görünüm" (üçü ortak bcc_bindFloatingPanel'den) ve grid.js'in iki
+   hücre popover'ı (metin + dosya eki) — sonuncular donuk sütunlarda AYNI
+   hatayı taşıyordu, bu turda birlikte düzeltildi.
+   --------------------------------------------------------------------------- */
+/* ⚠️ ÜÇ SEÇİCİ, ÖZGÜLLÜK YÜZÜNDEN: `table.grid thead th.grid-frozen-cell`
+   (0,2,3) donuk BAŞLIĞA z-index:3 yazıyor. Sade `table.grid th.grid-floating-host`
+   (0,2,2) ondan DÜŞÜK kalırdı, yani düzeltme tam da en çok gerektiği yerde
+   (donuk sütun) sessizce çalışmazdı. Ortadaki bileşik seçici (0,3,3) o kuralı
+   kesin olarak yeniyor — dosya SIRASINA güvenmeye gerek kalmıyor. */
+table.grid thead th.grid-floating-host,
+table.grid thead th.grid-frozen-cell.grid-floating-host,
+table.grid td.grid-floating-host {
+    z-index: 50;
+}
+
 /* Satır-no sütununun "kaldırma" gölgesi (yukarıda) donuk grubun SONUNU
    işaretler. Bir VERİ sütunu da donduğunda (varsayılan durum) grup satır
    no'da bitmiyor — gölge grubun ORTASINDA kalıp ikinci bir ayraç gibi

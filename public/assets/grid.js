@@ -887,6 +887,12 @@
         function positionPopover() {
             window.bcc_positionFloating(popover, td.getBoundingClientRect());
         }
+        // Donuk (sticky) bir sutunda bu <td> KENDI yigilma baglamini kurar;
+        // popover in z-index i ne olursa olsun o kutunun disina cikamaz --
+        // donuk kenar cizgisi ve sutun genisligi tutamaclari uzerine binerdi.
+        // Yukselmesi gereken panel degil, BARINDIRAN HUCRE (ortak yardimci,
+        // bkz. dismissable-panel.js -- sutun basligi menusuyle AYNI kok neden).
+        window.bcc_raiseFloatingHost(popover, true);
         positionPopover();
 
         // Bulunan gerçek bug: position:fixed konumu yalnızca AÇILIŞTA
@@ -905,6 +911,7 @@
 
         function endEdit() {
             td.classList.remove('editing', 'richtext-editing');
+            window.bcc_raiseFloatingHost(popover, false);
             if (popover.parentNode === td) {
                 td.removeChild(popover);
             }
@@ -1152,6 +1159,12 @@
         function positionPopover() {
             window.bcc_positionFloating(popover, td.getBoundingClientRect());
         }
+        // Donuk (sticky) bir sutunda bu <td> KENDI yigilma baglamini kurar;
+        // popover in z-index i ne olursa olsun o kutunun disina cikamaz --
+        // donuk kenar cizgisi ve sutun genisligi tutamaclari uzerine binerdi.
+        // Yukselmesi gereken panel degil, BARINDIRAN HUCRE (ortak yardimci,
+        // bkz. dismissable-panel.js -- sutun basligi menusuyle AYNI kok neden).
+        window.bcc_raiseFloatingHost(popover, true);
         positionPopover();
         window.addEventListener('scroll', positionPopover, true);
         window.addEventListener('resize', positionPopover);
@@ -1160,6 +1173,7 @@
 
         function endEdit() {
             td.classList.remove('editing', 'attachment-editing');
+            window.bcc_raiseFloatingHost(popover, false);
             if (popover.parentNode === td) {
                 td.removeChild(popover);
             }

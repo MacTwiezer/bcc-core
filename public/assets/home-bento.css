@@ -369,3 +369,37 @@ body.home-page .home-main {
         transition: border-color 0.18s ease, background-color 0.18s ease;
     }
 }
+
+/* "Katılımcılar" — çalışma alanı grup başlığındaki hızlı giriş.
+   Ana Sayfa'dan üye yönetimine TEK TIK (bkz. bcc_render_home_base_grid).
+   Başlık bir flex satır: ad + rol rozeti solda, "N base" sayacı
+   margin-left:auto ile sağda. Bu bağlantı ikisinin ARASINA girer, bu yüzden
+   kendi margin'i yok — sayacın auto'su onu da sağa iter. */
+.home-ws-members {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+    background: var(--bcc-surface);
+    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.home-ws-members:hover {
+    color: var(--bcc-accent-strong);
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+}
+
+.home-ws-members svg { flex: none; }
+
+/* Liste modunda gizlenir: o mod .home-list-header ile piksel hizalı bir
+   tablo; başlık satırına fazladan bir hap girmesi hizayı bozardı
+   (rol rozetinin liste modunda gizlenmesiyle AYNI gerekçe). */
+html.home-view-list .home-ws-members,
+.view-mode-list .home-ws-members { display: none; }

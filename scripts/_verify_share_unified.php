@@ -221,7 +221,11 @@ try {
         'data-share-invite'              => 'davet kutusu',
         'data-share-invite-role'         => 'rol secici',
         'data-share-invite-btn'          => 'Davet Et',
-        'data-share-suggestions'         => 'kullanici onerileri (arama)',
+        // Native <datalist> yerine kendi oneri kutusu (data-share-suggest):
+        // datalist'in gorunumu tarayiciya aitti ve 35 hesapla sayfa boyunda
+        // bir seride donusuyordu. Sozlesme AYNI: iki sayfada da oneri kutusu
+        // BULUNMALI, yalnizca ozniteligin adi degisti.
+        'data-share-suggest'            => 'kullanici onerileri (arama)',
         'data-share-tab="collaborators"' => 'Katilimcilar sekmesi',
         'data-share-tab="pending"'       => 'Bekleyen davetler sekmesi',
         'data-share-people-label'        => 'canli ozet etiketi',

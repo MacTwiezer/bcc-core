@@ -158,7 +158,42 @@
         // HİÇ kaydedilmez — istek bile atılmaz.
         var VIEW_START_DELAY_MS = 2000;
 
+        // ---- Nabız ----------------------------------------------------------
+        // Not AÇIK KALDIĞI sürece süreyi sunucuda tazeler (api/note_view_ping.php).
+        // NEDEN: süre eskiden YALNIZCA kapanışta yazılıyordu; kapanış olayı
+        // ulaşmazsa (tarayıcı çökmesi, makinenin uykuya alınması, sekmenin
+        // process olarak öldürülmesi, ağ kopması) satır sonsuza dek açık kalıyor
+        // ve listede "süre kaydedilmedi" yazıyordu — kullanıcı bunu bildirdi.
+        // Artık en kötü ihtimalle süre son nabızda donar (gerçeğe ≤15 sn uzak).
+        var VIEW_PING_MS = 15000;
+        var viewPingTimer = null;
+
+        function stopNoteViewPing() {
+            if (viewPingTimer !== null) {
+                clearInterval(viewPingTimer);
+                viewPingTimer = null;
+            }
+        }
+
+        function startNoteViewPing() {
+            stopNoteViewPing();
+            viewPingTimer = setInterval(function () {
+                if (currentViewId === null) {
+                    stopNoteViewPing();
+                    return;
+                }
+                var body = new FormData();
+                body.append('view_id', currentViewId);
+                body.append('csrf_token', auditCsrf);
+                // keepalive: nabız sırasında sayfa kapanmaya başlarsa istek
+                // yine de teslim edilir.
+                fetch('/api/note_view_ping.php', { method: 'POST', body: body, keepalive: true })
+                    .catch(function () {});
+            }, VIEW_PING_MS);
+        }
+
         function endNoteView() {
+            stopNoteViewPing();
             if (viewStartTimer !== null) {
                 clearTimeout(viewStartTimer);
                 viewStartTimer = null;
@@ -207,6 +242,7 @@
                         // dediğinde sessiz no-op döner (bkz. uçnokta yorumu).
                         if (data && data.ok && data.view_id) {
                             currentViewId = data.view_id;
+                            startNoteViewPing();
                         }
                     })
                     .catch(function () {});
@@ -258,17 +294,28 @@
 
                 var date = document.createElement('span');
                 date.className = 'if-audit-item-date';
-                date.textContent = v.opened_at_display;
+                // Kapanış saati varsa "başlangıç → bitiş" olarak gösterilir;
+                // süre böylece tek başına bir sayı olmaktan çıkıp
+                // doğrulanabilir hâle gelir (kullanıcı "saati saatine" istedi).
+                date.textContent = v.closed_at_display
+                    ? v.opened_at_display + ' → ' + v.closed_at_display
+                    : v.opened_at_display;
                 row.appendChild(date);
 
                 var dur = document.createElement('span');
                 dur.className = 'if-audit-item-duration';
-                if (v.is_open) {
-                    // Süresi olmayan satır GİZLENMEZ: "baktı ama ne kadar
-                    // baktığı bilinmiyor" da bir denetim bilgisidir (tarayıcı
-                    // kapanmış olabilir, bkz. uçnokta yorumu).
+                if (v.duration_display === null) {
+                    // Süre GERÇEKTEN hiç yazılmamış (nabız bile atamadan
+                    // kesilmiş). Satır GİZLENMEZ: "baktı ama ne kadar baktığı
+                    // bilinmiyor" da bir denetim bilgisidir.
                     dur.classList.add('is-open');
                     dur.textContent = 'süre kaydedilmedi';
+                } else if (v.is_open) {
+                    // Kapanış olayı henüz gelmedi ama nabız süre yazdı: ya not
+                    // HÂLÂ açık ya da kapanış ulaşmadı. "en az" demek yanıltıcı
+                    // olmaz — gerçek süre bundan kısa olamaz.
+                    dur.classList.add('is-open');
+                    dur.textContent = 'en az ' + v.duration_display;
                 } else {
                     dur.textContent = v.duration_display;
                 }

@@ -204,6 +204,81 @@ if (!isset($starredBases) || !is_array($starredBases)) {
                 <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
                 <span>Çalışma Alanları</span>
             </a>
+
+            <?php
+            // ---- Katılımcılar -------------------------------------------------
+            // NEDEN EKLENDİ (kullanıcı bildirdi): katılımcı yönetimine giden TÜM
+            // yollar bir bağlamın içinde gömülüydü — tabloya gir + "Paylaş", ya da
+            // Çalışma Alanları > alan seç > "Katılımcıları yönet". Giriş yapılan
+            // ilk ekranda (Ana Sayfa) hiçbir giriş yoktu; en zengin ekran olan
+            // team_members.php ise yalnızca modalin içindeki bir bağlantıdan
+            // erişilebiliyordu.
+            //
+            // YALNIZCA YETKİLİYE BASILIR: üye yönetebildiği (bcc_can_manage_members)
+            // en az bir çalışma alanı yoksa bu blok hiç render edilmez — CSS ile
+            // gizlenmiş bir menü DEĞİL (bu dosyadaki diğer "sunucu tarafı gate"
+            // kararlarıyla aynı). Asıl kapı yine team_members.php'nin kendi
+            // require_role() çağrısıdır.
+            //
+            // Liste $teams'ten SÜZÜLÜR, yeni sorgu AÇILMAZ:
+            // bcc_teams_for_current_user() statik önbellekli ve bu istekte
+            // sayfanın kendisi tarafından zaten çağrılmış oluyor.
+            $manageableTeams = array();
+            foreach (bcc_teams_for_current_user() as $mt) {
+                if (bcc_can_manage_members($mt['role'])) {
+                    $manageableTeams[] = $mt;
+                }
+            }
+            ?>
+            <?php if (count($manageableTeams) === 1): ?>
+                <?php // Tek alan: araya seçim adımı koymak anlamsız, doğrudan gider. ?>
+                <a href="/team_members.php?team_id=<?php echo (int) $manageableTeams[0]['id']; ?>" class="home-sidenav-item<?php echo $homeActiveNav === 'members' ? ' is-active' : ''; ?>">
+                    <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <span>Katılımcılar</span>
+                </a>
+            <?php elseif (count($manageableTeams) > 1): ?>
+                <?php // Birden çok alan: hangisinin katılımcıları sorusu KAÇINILMAZ.
+                      // Yıldızlı base'lerin alt listesiyle AYNI desen (grup başlığı
+                      // + altında satırlar) — ikinci bir menü mekanizması YOK. ?>
+                <div class="home-sidenav-item home-sidenav-label">
+                    <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <span>Katılımcılar</span>
+                </div>
+                <div class="home-starred-list" data-members-list>
+                    <?php
+                    // ARAMA KUTUSU EŞİĞİ: 6 alan. Platform yöneticisi TÜM ekipleri
+                    // gördüğü için bu liste onlarca satır olabiliyor (kullanıcı
+                    // bildirdi: ekranda 10 ekip). Az sayıda alanı olan kullanıcıda
+                    // ise kutu yalnızca gürültü olurdu — göz zaten 3-4 satırı
+                    // taramaktan hızlı. Aynı "sayıya göre arayüz" kararı Home'un
+                    // çalışma alanına göre gruplama eşiğinde de var (> 1 alan).
+                    //
+                    // Filtreleme TAMAMEN istemcide: liste zaten DOM'da, ikinci bir
+                    // sorgu/istek yok (bildirim panelindeki arama ile AYNI desen).
+                    ?>
+                    <?php if (count($manageableTeams) >= 6): ?>
+                        <div class="home-notif-search home-members-search">
+                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
+                            <input type="text" data-members-search placeholder="Çalışma alanı ara" autocomplete="off" aria-label="Çalışma alanı ara">
+                        </div>
+                    <?php endif; ?>
+                    <?php foreach ($manageableTeams as $mt): ?>
+                        <?php // data-members-name: küçük harfe indirgenmiş ad —
+                              // eşleştirme her tuşta yeniden lower() çağırmasın
+                              // (bildirim aramasındaki data-notif-text ile AYNI). ?>
+                        <a
+                            href="/team_members.php?team_id=<?php echo (int) $mt['id']; ?>"
+                            class="home-sidenav-item home-starred-item"
+                            title="<?php echo htmlspecialchars($mt['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                            data-members-name="<?php echo htmlspecialchars(mb_strtolower($mt['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
+                        >
+                            <span class="home-starred-item-dot"></span>
+                            <span class="home-starred-item-name"><?php echo htmlspecialchars($mt['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                    <div class="home-members-empty" data-members-empty hidden>Sonuç yok</div>
+                </div>
+            <?php endif; ?>
         </nav>
     </aside>
 

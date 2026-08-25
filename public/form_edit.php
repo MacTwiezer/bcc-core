@@ -148,7 +148,7 @@ $formIsOpen = ((int) $view['form_enabled'] === 1);
 // Sayfa iskeleti: table_fields.php/slack_settings.php ile AYNI kabuk
 // (home_shell_top/bottom) — yeni bir sayfa şablonu YAZILMADI.
 $homeActiveNav = 'fields';
-$homePageTitle = bcc_brand_domain() . ' — Form: ' . $table['name'];
+$homePageTitle = bcc_tab_title('Form: ' . $table['name']);
 // Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu oluşturucu.
 $homeExtraCss = array('settings-page.css', 'form-edit.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';

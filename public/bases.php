@@ -72,7 +72,7 @@ if (!empty($teams)) {
 // ($teamIds yukarıdaki base listesi için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'bases';
-$homePageTitle = bcc_brand_domain() . " — Base'ler";
+$homePageTitle = bcc_tab_title("Base'ler");
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">

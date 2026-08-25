@@ -3322,3 +3322,44 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     color: var(--bcc-text-muted);
     white-space: nowrap;
 }
+
+/* Sol paneldeki "Katılımcılar" GRUP BAŞLIĞI (tıklanabilir değil): birden
+   çok çalışma alanında üye yönetiyorsa altına alan listesi açılır. Yıldızlı
+   base gruplarıyla AYNI desen; fark yalnızca imlecin işaretçiye dönmemesi ve
+   hover zemininin olmaması — hedefi olmayan bir satır tıklanabilir görünmemeli. */
+.home-sidenav-label {
+    cursor: default;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.home-sidenav-label:hover { background: none; }
+
+/* Sol paneldeki "Katılımcılar" arama kutusu — bildirim panelindeki
+   .home-notif-search bileşeninin AYNISI, yalnızca sol panelin dar sütununa
+   göre kenar boşlukları daraltıldı (ikinci bir arama stili yazılmadı). */
+.home-members-search {
+    margin: 0.35rem 0.2rem 0.45rem;
+    padding: 0.3rem 0.5rem;
+}
+
+.home-members-search input { font-size: 0.8rem; }
+
+/* Aramada hiçbir alan eşleşmezse — bildirim panelindeki "Sonuç yok" ile
+   aynı ifade ve aynı sessiz ton. */
+.home-members-empty {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+.home-members-empty[hidden] { display: none; }
+
+/* ⚠️ BU KURAL ŞART, [hidden] TEK BAŞINA YETMEZ: .home-sidenav-item
+   `display: flex` taşıyor ve bu, tarayıcının varsayılan
+   `[hidden] { display: none }` kuralını EZER. Arama filtresi satırlara
+   hidden yazıyordu ama satırlar ekranda kalmaya devam ediyordu — sayısal
+   test "4 satır görünür" derken ekranda 10'u da duruyordu; hatayı ancak
+   ekran görüntüsü yakaladı. Bildirim satırları için aynı kural
+   .home-notif-item[hidden] olarak zaten AYNI gerekçeyle vardı. */
+[data-members-name][hidden] { display: none; }

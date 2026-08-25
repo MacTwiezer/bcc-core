@@ -128,14 +128,26 @@ foreach ($rows as $row) {
     // bilgisi de bir denetim bilgisidir; arayüz is_open ile ayırt eder.
     $isOpen = $row['closed_at'] === null;
 
+    // ⚠️ AÇIK SATIRIN SÜRESİ ARTIK VAR (kullanıcı bildirdi: "kaç saniye baktığı
+    // gözükmüyor"): api/note_view_ping.php not açık kaldığı sürece
+    // duration_seconds'ı tazeliyor. Yani closed_at NULL olsa bile süre BİLİNİYOR
+    // olabilir — "hâlâ bakıyor" ya da "kapanış olayı ulaşmadı, en son buraya
+    // kadar bakmıştı" demektir. Süre gerçekten hiç yazılmamışsa (nabız bile
+    // atamadan kesilmiş) eski davranış korunur.
+    $hasDuration = $row['duration_seconds'] !== null;
+
     $views[] = array(
         'id' => (int) $row['id'],
         'user_name' => $row['full_name'] !== null ? $row['full_name'] : 'Bilinmeyen kullanıcı',
         'role_at_view' => $row['role_at_view'],
         'opened_at' => $row['opened_at'],
-        'opened_at_display' => date('d.m.Y H:i', strtotime($row['opened_at'])),
-        'duration_seconds' => $isOpen ? null : (int) $row['duration_seconds'],
-        'duration_display' => bcc_note_view_duration_text($isOpen ? null : $row['duration_seconds']),
+        // Saniye DAHİL: "saati saatine" görünsün diye (kullanıcı isteği).
+        'opened_at_display' => date('d.m.Y H:i:s', strtotime($row['opened_at'])),
+        // Kapanış saati de gösteriliyor — "13:54:21 → 13:55:07" okunduğunda
+        // süre tek başına bir sayı olmaktan çıkıp doğrulanabilir hâle geliyor.
+        'closed_at_display' => $isOpen ? null : date('H:i:s', strtotime($row['closed_at'])),
+        'duration_seconds' => $hasDuration ? (int) $row['duration_seconds'] : null,
+        'duration_display' => bcc_note_view_duration_text($hasDuration ? $row['duration_seconds'] : null),
         'is_open' => $isOpen,
     );
 }

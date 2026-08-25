@@ -147,7 +147,7 @@ function bcc_account_format_dt($value)
 }
 
 $homeActiveNav = 'account';
-$homePageTitle = bcc_brand_domain() . ' — Hesap Özeti';
+$homePageTitle = bcc_tab_title('Hesap Özeti');
 // Ortak tasarım sistemi (table_fields.php / base_tables.php ile PAYLAŞILAN) +
 // yalnızca bu sayfaya ait iki sütunlu yerleşim ve widget'lar.
 $homeExtraCss = array('settings-page.css', 'account.css');

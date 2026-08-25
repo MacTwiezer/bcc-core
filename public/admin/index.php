@@ -104,7 +104,7 @@ foreach ($memberRows as $row) {
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
-$homePageTitle = bcc_brand_domain() . ' — Admin';
+$homePageTitle = bcc_tab_title('Admin');
 require __DIR__ . '/../../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">

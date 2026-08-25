@@ -57,7 +57,7 @@ header('Content-Type: text/html; charset=utf-8');
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_brand_domain() . ' — Tanı Sayfası', ENT_QUOTES, 'UTF-8'); ?></title>
+<title><?php echo htmlspecialchars(bcc_tab_title('Tanı Sayfası'), ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <style>
     body { font-family: Segoe UI, Arial, sans-serif; margin: 2rem; background: #f5f5f7; color: #1d1d1f; }

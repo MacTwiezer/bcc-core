@@ -1685,9 +1685,75 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text);
 }
 
-.gs-share-invite-email { flex: 1; min-width: 0; }
+/* Input + öneri kutusu ortak sarmalayıcı: kutu input'un ALTINA, tam onun
+   genişliğinde oturmalı (position:absolute'ün referansı bu kutu). */
+.gs-share-invite-field {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.gs-share-invite-email { width: 100%; box-sizing: border-box; }
 .gs-share-invite-role { flex: 0 0 auto; }
 .gs-share-invite-btn { flex: 0 0 auto; }
+
+/* ---------- Davet önerileri (native <datalist> YERİNE) ----------
+   Yerleşik datalist'in görünümü tarayıcıya aitti: yüksekliği, konumu ve
+   tipografisi ayarlanamıyordu ve 35 hesapla sayfa boyunda bir şeride dönüşüp
+   modalın üstüne taşıyordu (kullanıcı bildirdi). Bu kutu modalın diline uyar,
+   input'a bağlıdır ve YÜKSEKLİĞİ SINIRLIDIR — uzun listede kendi içinde kayar,
+   sayfayı asla taşırmaz. */
+.gs-share-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    /* ~8 satır; fazlası kutunun İÇİNDE kayar. */
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    padding: 0.25rem;
+}
+
+.gs-share-suggest[hidden] { display: none; }
+
+.gs-share-suggest-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+}
+
+.gs-share-suggest-item:hover,
+.gs-share-suggest-item.is-active {
+    background: var(--bcc-accent-soft);
+}
+
+.gs-share-suggest-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.gs-share-suggest-mail {
+    font-size: 0.75rem;
+    color: var(--bcc-text-muted);
+    /* Uzun adresler kutuyu genişletmesin. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .gs-share-invite-note,
 .gs-share-readonly-note {

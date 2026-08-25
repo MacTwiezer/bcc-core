@@ -288,7 +288,7 @@ function bcc_slack_masked_url($webhook)
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'fields';
-$homePageTitle = bcc_brand_domain() . ' — ' . $table['name'] . ' — Slack';
+$homePageTitle = bcc_tab_title($table['name'] . ': Slack');
 // Ortak tasarım sistemi (table_fields / base_tables / account ile PAYLAŞILAN) +
 // yalnızca bu sayfaya ait yerleşim. Durum hapı, toggle, bilgi kutusu ve
 // maskeli-sır rozeti ORTAK dosyada (settings-page.css) — burada kopyası yok.

@@ -84,8 +84,8 @@
     }
 
     /**
-     * Sekme başlığını "[Base]: [Tablo/Görünüm] — opsflow.bcccrm.com" biçiminde kurar.
-     * İkisi de boşsa yalnızca "opsflow.bcccrm.com" kalır.
+     * Sekme başlığını "[Base]: [Tablo/Görünüm] - OpsFlow" biçiminde kurar.
+     * İkisi de boşsa yalnızca "OpsFlow" kalır.
      *
      * DİKKAT: bu biçim src/schema.php'deki bcc_page_title() ile birebir AYNI
      * olmalı — sayfa açılışındaki başlığı O basıyor, bu fonksiyon yalnızca
@@ -98,17 +98,18 @@
 
         // Marka metni burada LİTERAL YAZILMAZ: sunucunun bastığı
         // <meta name="bcc-brand"> okunur (tek kaynak: config/app.php
-        // bcc_brand_domain()). Meta bir sebeple yoksa aşağıdaki yedek devreye
+        // bcc_brand_name()). Meta bir sebeple yoksa aşağıdaki yedek devreye
         // girer — başlık yine de markasız kalmaz.
-        var brand = metaContent('bcc-brand') || 'opsflow.bcccrm.com';
+        // Biçim: "<sayfa adı> - OpsFlow" (bkz. src/schema.php bcc_tab_title).
+        var brand = metaContent('bcc-brand') || 'OpsFlow';
 
         var title;
         if (base === '') {
-            title = ctx !== '' ? ctx + ' — ' + brand : brand;
+            title = ctx !== '' ? ctx + ' - ' + brand : brand;
         } else if (ctx !== '') {
-            title = base + ': ' + ctx + ' — ' + brand;
+            title = base + ': ' + ctx + ' - ' + brand;
         } else {
-            title = base + ' — ' + brand;
+            title = base + ' - ' + brand;
         }
 
         document.title = title;

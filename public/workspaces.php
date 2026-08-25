@@ -170,7 +170,7 @@ if ($selectedTeamId) {
 // ($teamIds yukarıdaki base sayaçları için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'workspaces';
-$homePageTitle = bcc_brand_domain() . ' — Çalışma Alanları';
+$homePageTitle = bcc_tab_title('Çalışma Alanları');
 // Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu yerleşim.
 // Rol hapı (.sp-role), avatar (.sp-avatar) ve bilgi kutusu (.sp-note) ORTAK
 // dosyada — burada kopyası yok.

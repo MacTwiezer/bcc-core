@@ -40,7 +40,7 @@
         var inviteEmail = overlay.querySelector('[data-share-invite-email]');
         var inviteRole = overlay.querySelector('[data-share-invite-role]');
         var inviteBtn = overlay.querySelector('[data-share-invite-btn]');
-        var suggestions = overlay.querySelector('[data-share-suggestions]');
+        var suggestBox = overlay.querySelector('[data-share-suggest]');
         var readonlyNote = overlay.querySelector('[data-share-readonly-note]');
         var statusEl = overlay.querySelector('[data-share-status]');
         var panels = {
@@ -261,34 +261,186 @@
             return div.innerHTML;
         }
 
-        function renderSuggestions() {
-            if (!suggestions) {
+        // ---- Öneri kutusu (native <datalist> YERİNE) -----------------------
+        // Neden kendi kutumuz: datalist'in görünümü tarayıcıya ait — yüksekliği,
+        // konumu ve tipografisi ayarlanamıyordu. 35 aktif hesapla açılan yerleşik
+        // kutu sayfa boyunda bir şeride dönüşüp modalın üstüne taşıyordu
+        // (kullanıcı bildirdi). Buradaki kutu: yazdıkça süzer, EN FAZLA 8 sonuç
+        // gösterir, klavyeyle gezilir ve modalın diline uyar.
+        //
+        // Serbest metin girişi ENGELLENMEZ: kutu yalnızca bir yardımcıdır,
+        // listede olmayan bir e-posta da yazılabilir — sunucu onu yine çözer.
+        var SUGGEST_LIMIT = 8;
+        var suggestItems = [];   // o an gösterilen adaylar
+        var suggestIndex = -1;   // klavyeyle seçili satır (-1 = yok)
+
+        function hideSuggest() {
+            if (!suggestBox) {
                 return;
             }
-            // Zaten üye olanlar öneri listesinden düşsün (popover'ın
-            // $shareCandidateUsers filtresiyle AYNI kural, burada istemci
-            // tarafında güncel listeye göre yeniden uygulanıyor).
+            suggestBox.hidden = true;
+            suggestBox.textContent = '';
+            suggestItems = [];
+            suggestIndex = -1;
+            if (inviteEmail) {
+                inviteEmail.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        // Zaten üye/davetli olanlar öneriden düşer — popover'ın
+        // $shareCandidateUsers filtresiyle AYNI kural, burada istemci tarafında
+        // GÜNCEL listeye göre yeniden uygulanıyor (biri az önce eklenmiş olabilir).
+        function availableCandidates() {
             var memberIds = {};
             state.collaborators.concat(state.pending).forEach(function (m) {
                 memberIds[m.id] = true;
             });
 
-            suggestions.textContent = '';
-            candidates.forEach(function (c) {
-                if (memberIds[c.id]) {
+            return candidates.filter(function (c) {
+                return !memberIds[c.id];
+            });
+        }
+
+        function markActive() {
+            Array.prototype.forEach.call(suggestBox.children, function (el, i) {
+                el.classList.toggle('is-active', i === suggestIndex);
+                el.setAttribute('aria-selected', i === suggestIndex ? 'true' : 'false');
+            });
+        }
+
+        function chooseSuggestion(c) {
+            inviteEmail.value = c.email;
+            hideSuggest();
+            inviteEmail.focus();
+        }
+
+        function renderSuggestions() {
+            if (!suggestBox || !inviteEmail) {
+                return;
+            }
+
+            var q = inviteEmail.value.trim().toLowerCase();
+            // Ad VEYA e-posta üzerinden eşleşme: kullanıcı "Demo" yazıp da
+            // adresi hatırlamıyor olabilir.
+            var matches = availableCandidates().filter(function (c) {
+                if (q === '') {
+                    return true;
+                }
+                return String(c.email).toLowerCase().indexOf(q) !== -1
+                    || String(c.full_name).toLowerCase().indexOf(q) !== -1;
+            }).slice(0, SUGGEST_LIMIT);
+
+            suggestBox.textContent = '';
+            suggestItems = matches;
+            suggestIndex = -1;
+
+            if (!matches.length) {
+                hideSuggest();
+                return;
+            }
+
+            matches.forEach(function (c) {
+                var row = document.createElement('button');
+                row.type = 'button';
+                row.className = 'gs-share-suggest-item';
+                row.setAttribute('role', 'option');
+                row.setAttribute('aria-selected', 'false');
+
+                var name = document.createElement('span');
+                name.className = 'gs-share-suggest-name';
+                // textContent: ad ve e-posta kullanıcı verisidir, innerHTML YOK.
+                name.textContent = c.full_name;
+                row.appendChild(name);
+
+                var mail = document.createElement('span');
+                mail.className = 'gs-share-suggest-mail';
+                mail.textContent = c.email;
+                row.appendChild(mail);
+
+                // mousedown: input'un blur'ünden ÖNCE çalışır — click'e bağlansaydı
+                // blur kutuyu kapatır ve tıklama boşluğa düşerdi.
+                row.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    chooseSuggestion(c);
+                });
+
+                suggestBox.appendChild(row);
+            });
+
+            suggestBox.hidden = false;
+            inviteEmail.setAttribute('aria-expanded', 'true');
+        }
+
+        if (inviteEmail && suggestBox) {
+            inviteEmail.addEventListener('input', renderSuggestions);
+
+            // ⚠️ 'focus' DEĞİL 'click' (kullanıcı bildirdi: "direkt liste
+            // açılmasın, ben basınca açılsın"). Modal açılırken alan KENDİLİĞİNDEN
+            // odaklanıyor; focus'a bağlıyken liste daha modal görünür görünmez
+            // açılıyor ve altındaki katılımcıları örtüyordu. click yalnızca
+            // GERÇEK bir tıklamada tetiklenir, programatik .focus()'ta değil.
+            inviteEmail.addEventListener('click', renderSuggestions);
+
+            inviteEmail.addEventListener('keydown', function (e) {
+                // Klavyeyle de açılabilmeli: kutu kapalıyken ↓ onu açar.
+                // (Fare kullanmayan kullanıcı için tek erişim yolu — 'focus'
+                // kaldırıldığı için liste artık kendiliğinden gelmiyor.)
+                if (suggestBox.hidden && e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    renderSuggestions();
                     return;
                 }
-                var opt = document.createElement('option');
-                opt.value = c.email;
-                opt.label = c.full_name;
-                suggestions.appendChild(opt);
+                if (suggestBox.hidden || !suggestItems.length) {
+                    return;
+                }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    var delta = e.key === 'ArrowDown' ? 1 : -1;
+                    suggestIndex = (suggestIndex + delta + suggestItems.length) % suggestItems.length;
+                    markActive();
+                    return;
+                }
+                if (e.key === 'Enter' && suggestIndex >= 0) {
+                    // Enter YALNIZCA listeden seçim yapılmışken yakalanır;
+                    // hiçbir satır seçili değilken davet akışına dokunulmaz.
+                    e.preventDefault();
+                    // ⚠️ stopImmediatePropagation ŞART: bu input'ta ZATEN başka
+                    // bir keydown dinleyicisi var (aşağıda) ve Enter'da doğrudan
+                    // "Davet Et"e basıyor. preventDefault tek başına AYNI
+                    // elemandaki diğer dinleyiciyi durdurmaz — testte yakalandı:
+                    // listeden ok tuşuyla bir kişi seçip Enter'a basmak, rol
+                    // seçilmeden daveti ANINDA gönderiyordu (iki kişi yanlışlıkla
+                    // ekibe eklendi, geri alındı). Seçim ile gönderim ayrı iki
+                    // adım olmalı: Enter yalnızca alanı doldurur.
+                    e.stopImmediatePropagation();
+                    chooseSuggestion(suggestItems[suggestIndex]);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    hideSuggest();
+                }
+            });
+
+            inviteEmail.addEventListener('blur', function () {
+                // Gecikme: satıra tıklamak önce blur tetikler; mousedown yakalasa
+                // bile kutu anında kapanırsa tıklama hedefi kaybolur.
+                setTimeout(hideSuggest, 120);
             });
         }
 
         function renderAll() {
             renderInviteBox();
             renderLists();
-            renderSuggestions();
+            // ⚠️ BURADA renderSuggestions() ÇAĞRILMAZ. Native <datalist>
+            // döneminde listeyi ÖNCEDEN doldurmak gerekiyordu (tarayıcı onu
+            // kendi açıyordu); artık aynı fonksiyon kutuyu AÇIYOR da — burada
+            // çağrılınca modal açılır açılmaz liste kendiliğinden geliyordu
+            // (kullanıcı bildirdi). Öneriler zaten her açılışta anlık üretiliyor
+            // (bkz. availableCandidates), önden doldurmaya gerek yok.
+            //
+            // Kapatmak ise ŞART: üye listesi değişmiş olabilir (biri az önce
+            // eklendi/çıkarıldı) ve ekranda duran eski liste artık yanlış olurdu.
+            hideSuggest();
         }
 
         // ---- Sunucu çağrıları -------------------------------------------------

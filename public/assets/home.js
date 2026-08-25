@@ -656,6 +656,41 @@
             window.bcc_bindDismissable(notifDetails);
         }
 
+        // ---- Sol paneldeki "Katılımcılar" listesinde arama --------------------
+        // Platform yöneticisi TÜM ekipleri gördüğü için bu liste onlarca satır
+        // olabiliyor (kullanıcı bildirdi). Kutu SUNUCUDA koşullu basılır (6+ alan,
+        // bkz. home_shell_top.php) — burası kutu yoksa sessizce no-op olur.
+        //
+        // Filtre TAMAMEN istemcide: liste zaten DOM'da, ikinci bir istek YOK
+        // (bildirim panelindeki arama ile AYNI gerekçe ve AYNI desen).
+        var membersSearch = document.querySelector('[data-members-search]');
+        if (membersSearch) {
+            var membersList = document.querySelector('[data-members-list]');
+            var membersEmpty = membersList ? membersList.querySelector('[data-members-empty]') : null;
+            var memberItems = membersList
+                ? Array.prototype.slice.call(membersList.querySelectorAll('[data-members-name]'))
+                : [];
+
+            membersSearch.addEventListener('input', function () {
+                var q = membersSearch.value.trim().toLowerCase();
+                var gorunen = 0;
+
+                memberItems.forEach(function (item) {
+                    // Ad sunucuda küçük harfe indirgenmiş olarak basıldı
+                    // (data-members-name) — her tuşta yeniden lower() yok.
+                    var eslesti = q === '' || (item.getAttribute('data-members-name') || '').indexOf(q) !== -1;
+                    item.hidden = !eslesti;
+                    if (eslesti) {
+                        gorunen++;
+                    }
+                });
+
+                if (membersEmpty) {
+                    membersEmpty.hidden = gorunen !== 0;
+                }
+            });
+        }
+
         var STORAGE_KEY = 'bcc_home_view_mode';
         // ⚠️ getElementById DEĞİL: Home artık çalışma alanına göre gruplanınca
         // sayfada BİRDEN ÇOK .home-base-grid oluyor (her grup bir ızgara, bir de

@@ -4324,12 +4324,28 @@ function bcc_base_icon_paths($baseName = null, $icon = null)
 
 // ---- Sekme kimliği: <title> + favicon ------------------------------------
 //
-// Sekme biçimi: "[Base]: [Tablo/Görünüm] — opsflow.bcccrm.com".
+// SEKME BİÇİMİ (TEK KURAL, TÜM SAYFALAR): "<sayfa adı> - OpsFlow".
 //
-// Marka metni burada LİTERAL YAZILMAZ: bcc_brand_domain() (config/app.php)
+// Eskiden başlıklar ALAN ADIYLA bitiyordu ("… — opsflow.bcccrm.com") ve her
+// sayfa kendi başlığını elle kuruyordu (15 ayrı $homePageTitle satırı + 10
+// <title> etiketi). Sekmede okunan ilk şey ürün adı değil alan adıydı ve
+// birden çok sekme açıkken hangisinin hangi sayfa olduğu ayırt edilemiyordu
+// (kullanıcı bildirdi). Artık marka SONDA ve yalnızca ÜRÜN ADI.
+//
+// Marka metni hiçbir yerde LİTERAL YAZILMAZ: bcc_brand_name() (config/app.php)
 // tek kaynaktır. Bu dosya bootstrap'ta config/app.php'den ÖNCE include edilir,
 // ama sorun değil — fonksiyon gövdesi ancak istek anında, bootstrap bittikten
 // sonra çalışır.
+//
+// TÜM sayfa başlıkları bu iki fonksiyondan geçer; ayırıcıyı veya markayı
+// değiştirmek isteyen tek satır değiştirir.
+function bcc_tab_title($pageName)
+{
+    $pageName = trim((string) $pageName);
+    $brand = bcc_brand_name();
+
+    return $pageName !== '' ? $pageName . ' - ' . $brand : $brand;
+}
 //
 // Başlık SUNUCUDA basılır (JS'siz de doğrudur ve sayfa açılırken yanlış bir
 // başlığın bir an görünüp düzelmesi — "title flash" — hiç yaşanmaz). Favicon
@@ -4339,19 +4355,19 @@ function bcc_base_icon_paths($baseName = null, $icon = null)
 //
 // DİKKAT: aşağıdaki biçim page-identity.js'teki updatePageTitle() ile
 // birebir AYNI olmalı — biri değişirse diğeri de değişmeli.
+// Base/tablo bağlamı olan sayfalar (grid, interface, base_tables) için sayfa
+// adını kurar ve TEK kurala (bcc_tab_title) devreder — "Demo CRM: Musteriler"
+// gibi. Marka/ayırıcı burada TEKRAR EDİLMEZ.
 function bcc_page_title($baseName, $contextName = null)
 {
     $base = trim((string) $baseName);
     $ctx = trim((string) $contextName);
-    $brand = bcc_brand_domain();
 
     if ($base === '') {
-        return $ctx !== '' ? $ctx . ' — ' . $brand : $brand;
+        return bcc_tab_title($ctx);
     }
 
-    return $ctx !== ''
-        ? $base . ': ' . $ctx . ' — ' . $brand
-        : $base . ' — ' . $brand;
+    return bcc_tab_title($ctx !== '' ? $base . ': ' . $ctx : $base);
 }
 
 // page-identity.js'in okuduğu <meta> etiketleri. Base ikonu VERİTABANINDA
@@ -4372,7 +4388,7 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null, $icon =
     // bcc-brand: page-identity.js başlığı sayfa yenilenmeden yeniden kurarken
     // marka metnini KENDİ İÇİNE yazmasın diye. Marka tek kaynak config/app.php;
     // JS onu buradan okur, ikinci bir literal kopya oluşmaz.
-    return '<meta name="bcc-brand" content="' . $esc(bcc_brand_domain()) . '">' . "\n"
+    return '<meta name="bcc-brand" content="' . $esc(bcc_brand_name()) . '">' . "\n"
         . '<meta name="bcc-base-name" content="' . $esc($baseName) . '">' . "\n"
         . '<meta name="bcc-context-name" content="' . $esc($contextName) . '">' . "\n"
         . '<meta name="bcc-base-color" content="' . $esc(bcc_base_icon_color($baseId, $iconColor)) . '">' . "\n"
@@ -4800,6 +4816,27 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
                           // rozet (margin-left:auto) .home-base-info'yu daraltıp
                           // uzun base adlarını erkenden kırpıyordu. ?>
                     <span class="home-base-role home-base-role--<?php echo htmlspecialchars($groupRole, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$groupRole], ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php endif; ?>
+                <?php
+                // "Katılımcılar" — Ana Sayfa'dan TEK TIKLA üye yönetimine.
+                //
+                // NEDEN BURADA: katılımcı yönetimine giden yolların hepsi bir
+                // bağlamın içinde gömülüydü (tabloya gir + "Paylaş", ya da
+                // Çalışma Alanları > alan seç > "Katılımcıları yönet"); giriş
+                // yapılan ilk ekranda hiçbir giriş yoktu (kullanıcı bildirdi).
+                // Bu başlık zaten alanın ADINI ve ROLÜNÜ taşıyor, yani bağlam
+                // burada hazır — ikinci bir seçim adımı gerekmiyor.
+                //
+                // YALNIZCA YETKİLİYE basılır (bcc_can_manage_members): rol
+                // rozetini besleyen $roleByTeamId'den okunur, YENİ SORGU YOK.
+                // Gizleme yetkilendirme değildir — asıl kapı team_members.php'nin
+                // kendi require_role() çağrısı.
+                ?>
+                <?php if ($groupRole !== null && bcc_can_manage_members($groupRole)): ?>
+                    <a class="home-ws-members" href="/team_members.php?team_id=<?php echo (int) $tid; ?>">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                        Katılımcılar
+                    </a>
                 <?php endif; ?>
                 <span class="home-section-meta"><?php echo count($byTeam[$tid]); ?> base</span>
             </div>

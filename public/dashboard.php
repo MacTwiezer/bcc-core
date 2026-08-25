@@ -115,7 +115,7 @@ foreach ($teams as $t) {
 }
 
 $homeActiveNav = 'home';
-$homePageTitle = bcc_brand_domain() . ' — Ana Sayfa';
+$homePageTitle = bcc_tab_title('Ana Sayfa');
 // home.css'ten SONRA yüklenir (bkz. home_shell_top.php). Bento IZGARASI artık
 // açılmıyor (aşağıdaki grid çağrısında $bento=false), ama bu dosya ızgaradan
 // ibaret değil: tipografi ölçeği, zemin ve kart cilası da burada. starred.php

@@ -183,7 +183,7 @@ if ($canEdit && $editId > 0) {
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'fields';
-$homePageTitle = bcc_brand_domain() . ' — ' . $table['name'];
+$homePageTitle = bcc_tab_title($table['name'] . ': Alanlar');
 // Sayfaya ÖZEL stylesheet. Bu ekranın .settings-* sınıfları dokuz başka sayfayla
 // PAYLAŞILIYOR (admin/*, bases, base_tables, form_edit, kanban, slack_settings) —
 // home.css'i değiştirmek hepsini yeniden tasarlardı. Bu yüzden tüm yeni kurallar

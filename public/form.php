@@ -73,7 +73,10 @@ if (!$view) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?php /* Herkese açık bir sayfa: arama motorlarına girmesin. */ ?>
 <meta name="robots" content="noindex, nofollow">
-<title><?php echo $notFound ? 'Form bulunamadı' : htmlspecialchars($formTitle, ENT_QUOTES, 'UTF-8'); ?></title>
+<?php /* Herkese açık form da AYNI kurala uyar: "<form adı> - OpsFlow"
+         (bkz. src/schema.php bcc_tab_title). Formu dolduran dış kullanıcı
+         sekmede hangi üründe olduğunu görür. */ ?>
+<title><?php echo htmlspecialchars(bcc_tab_title($notFound ? 'Form bulunamadı' : $formTitle), ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">

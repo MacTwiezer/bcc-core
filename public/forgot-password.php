@@ -237,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_brand_name() . ' — Şifremi unuttum', ENT_QUOTES, 'UTF-8'); ?></title>
+<title><?php echo htmlspecialchars(bcc_tab_title('Şifremi unuttum'), ENT_QUOTES, 'UTF-8'); ?></title>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">

@@ -40,19 +40,33 @@
               // gibi okunur (team_members.php'deki .tm-readonly-note ile AYNI karar). ?>
         <div class="gs-share-invite" data-share-invite hidden>
             <div class="gs-share-invite-row">
-                <input
-                    type="email"
-                    class="gs-share-invite-email"
-                    data-share-invite-email
-                    list="gs-share-invite-suggestions"
-                    placeholder="E-posta adresi ekleyin"
-                    aria-label="Davet edilecek e-posta"
-                    autocomplete="off"
-                >
-                <?php // <datalist>: takımda HENÜZ olmayan aktif kullanıcılar —
-                      // OpsFlow'un typeahead'i gibi davranır ama serbest metin
-                      // girişini de engellemez (sunucu e-postayı yine çözer). ?>
-                <datalist id="gs-share-invite-suggestions" data-share-suggestions></datalist>
+                <?php // ⚠️ NATIVE <datalist> KALDIRILDI (kullanıcı bildirdi:
+                      // "bu liste bozuk gözüküyor"). Sebep: datalist'in görünümü
+                      // tarayıcıya aittir — ne yüksekliği ne konumu ne de tipografisi
+                      // ayarlanabiliyordu. Sistemde 35 aktif hesap olduğu için
+                      // açılan yerleşik kutu sayfa boyunda bir şeride dönüşüp
+                      // modalın ve grid'in üstüne taşıyordu; üstelik yazmadan da
+                      // TÜM listeyi açıyordu.
+                      //
+                      // Yerine input'a bağlı, kendi CSS'i olan bir öneri kutusu
+                      // (aşağıdaki [data-share-suggest]) geldi: yazdıkça süzer,
+                      // en fazla 8 sonuç gösterir, klavye ile gezilir. Serbest
+                      // metin girişi ENGELLENMEZ — sunucu e-postayı yine kendisi
+                      // çözer, yani davranış sözleşmesi değişmedi. ?>
+                <div class="gs-share-invite-field">
+                    <input
+                        type="email"
+                        class="gs-share-invite-email"
+                        data-share-invite-email
+                        placeholder="E-posta adresi ekleyin"
+                        aria-label="Davet edilecek e-posta"
+                        autocomplete="off"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded="false"
+                    >
+                    <div class="gs-share-suggest" data-share-suggest role="listbox" hidden></div>
+                </div>
                 <select class="gs-share-invite-role" data-share-invite-role aria-label="Rol"></select>
                 <button type="button" class="gs-btn-primary gs-share-invite-btn" data-share-invite-btn>Davet Et</button>
             </div>

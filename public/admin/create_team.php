@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
-$homePageTitle = bcc_brand_domain() . ' — Yeni Ekip';
+$homePageTitle = bcc_tab_title('Yeni Ekip');
 require __DIR__ . '/../../src/partials/home_shell_top.php';
 ?>
         <div class="settings-breadcrumb">

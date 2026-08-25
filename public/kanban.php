@@ -171,7 +171,7 @@ if ($columnField !== null) {
 }
 
 $homeActiveNav = 'fields';
-$homePageTitle = bcc_brand_domain() . ' — Kanban: ' . $table['name'];
+$homePageTitle = bcc_tab_title('Kanban: ' . $table['name']);
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="settings-breadcrumb">

@@ -130,7 +130,7 @@ $allUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_activ
 // kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'workspaces';
-$homePageTitle = bcc_brand_domain() . ' — ' . $team['name'] . ' Üyeleri';
+$homePageTitle = bcc_tab_title($team['name'] . ' Üyeleri');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
         <div class="home-main-header">

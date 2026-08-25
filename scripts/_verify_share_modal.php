@@ -564,13 +564,19 @@ try {
         && strpos($modalJsCode, 'can_change_role') !== false
         && strpos($modalJsCode, 'can_remove') !== false);
 
-    // Escape + backdrop ortak yardimcidan gelir; JS'te ikinci bir Escape
-    // dinleyicisi YOK (keydown yalnizca davet kutusundaki Enter icin).
-    // DIKKAT: "escapeHtml" yardimcisi da "escape" iceriyor — aranan sey tus
-    // KARSILASTIRMASI ("Escape" tusunun kendi dinleyicisi), metin degil.
+    // MODALIN kapanmasi (Escape + backdrop) ortak yardimcidan gelir; JS kendi
+    // basina modali KAPATMAZ.
+    //
+    // Not: davet alanindaki oneri kutusu (data-share-suggest) Escape'i KENDISI
+    // dinler ve YALNIZCA kutuyu kapatir — modal acik kalir. Bu yuzden kontrol
+    // "hic Escape yok" degil, "Escape modali kapatmiyor" seklinde: closeModal
+    // cagrisi ile ayni satirda bir Escape karsilastirmasi olmamali.
+    // (Onceki hali "'Escape' hic gecmesin" diyordu; oneri kutusu eklenince
+    // yanlis alarm verdi — kural degil, ifade dardi.)
+    $escapeClosesModal = preg_match("/'Escape'[^\\n]*closeModal|closeModal[^\\n]*'Escape'/", $modalJsCode) === 1;
     check('F) kapanma ortak yardimcidan (bcc_bindDismissable)',
         strpos($modalJs, 'window.bcc_bindDismissable') !== false
-        && strpos($modalJsCode, "'Escape'") === false);
+        && !$escapeClosesModal);
     check('F) backdrop sinifi yeniden kullaniliyor (.gs-view-desc-overlay)',
         strpos($partial, 'gs-view-desc-overlay gs-share-overlay') !== false);
 

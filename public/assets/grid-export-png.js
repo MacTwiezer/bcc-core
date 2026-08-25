@@ -140,67 +140,80 @@
             // altında boş bir şerit kalır.
             var height = Math.ceil(table.scrollHeight - (addRow ? addRow.offsetHeight : 0));
 
-            if (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD) {
-                if (!window.confirm('Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?')) {
-                    return Promise.resolve(null);
+            // Büyük görünüm uyarısı — sayfa içi onay (assets/confirm-modal.js),
+            // native confirm DEĞİL. Uyarı gerekmiyorsa hiç pencere açılmaz:
+            // Promise.resolve(true) ile akış aynı zincirde devam eder, ikinci bir
+            // kod yolu yazılmadı.
+            var devamSozu = (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD)
+                ? window.bcc_confirm({
+                    title: label + ' oluştur',
+                    message: 'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?',
+                    confirmLabel: 'Devam et',
+                    danger: false,
+                })
+                : Promise.resolve(true);
+
+            return devamSozu.then(function (devam) {
+                if (!devam) {
+                    return null;
                 }
-            }
 
-            // Küçük tablolarda 2x (retina netliği), büyüklerde 1x — ve her
-            // durumda canvas kenar sınırına göre kısılır.
-            var scale = rowCount > 200 ? 1 : 2;
-            var longestEdge = Math.max(width, height);
-            if (longestEdge * scale > MAX_CANVAS_EDGE) {
-                scale = Math.max(1, Math.floor(MAX_CANVAS_EDGE / longestEdge));
-            }
+                // Küçük tablolarda 2x (retina netliği), büyüklerde 1x — ve her
+                // durumda canvas kenar sınırına göre kısılır.
+                var scale = rowCount > 200 ? 1 : 2;
+                var longestEdge = Math.max(width, height);
+                if (longestEdge * scale > MAX_CANVAS_EDGE) {
+                    scale = Math.max(1, Math.floor(MAX_CANVAS_EDGE / longestEdge));
+                }
 
-            return loadHtml2Canvas().then(function (html2canvas) {
-                return html2canvas(table, {
-                    backgroundColor: '#ffffff',
-                    scale: scale,
-                    logging: false,
-                    width: width,
-                    height: height,
-                    // Klonun yerleşim viewport'u tablodan DAR kalırsa tablo
-                    // yeniden sarılıp ekrandakinden farklı çıkardı — tablonun
-                    // kendi ölçüleri taban alınıyor.
-                    windowWidth: Math.max(document.documentElement.clientWidth, width + 100),
-                    windowHeight: Math.max(document.documentElement.clientHeight, height + 100),
-                    onclone: function (clonedDoc) {
-                        // ORTAK dışa aktarma kuralları (assets/grid-export.css,
-                        // sayfaya media="print" ile bağlı). Klon `screen`
-                        // medyasında render edildiği için media "all"a
-                        // çevriliyor — kurallar böylece PDF ile TEK KAYNAKTAN
-                        // paylaşılıyor, PNG'ye özel ikinci bir gizleme/kırpma
-                        // listesi YOK. Değişiklik yalnızca KOPYADA: canlı
-                        // sayfada hiçbir şey oynamıyor (ekranda titreme yok).
-                        var link = clonedDoc.querySelector('link[data-grid-export-css]');
-                        if (link) {
-                            link.media = 'all';
-                        }
+                return loadHtml2Canvas().then(function (html2canvas) {
+                    return html2canvas(table, {
+                        backgroundColor: '#ffffff',
+                        scale: scale,
+                        logging: false,
+                        width: width,
+                        height: height,
+                        // Klonun yerleşim viewport'u tablodan DAR kalırsa tablo
+                        // yeniden sarılıp ekrandakinden farklı çıkardı — tablonun
+                        // kendi ölçüleri taban alınıyor.
+                        windowWidth: Math.max(document.documentElement.clientWidth, width + 100),
+                        windowHeight: Math.max(document.documentElement.clientHeight, height + 100),
+                        onclone: function (clonedDoc) {
+                            // ORTAK dışa aktarma kuralları (assets/grid-export.css,
+                            // sayfaya media="print" ile bağlı). Klon `screen`
+                            // medyasında render edildiği için media "all"a
+                            // çevriliyor — kurallar böylece PDF ile TEK KAYNAKTAN
+                            // paylaşılıyor, PNG'ye özel ikinci bir gizleme/kırpma
+                            // listesi YOK. Değişiklik yalnızca KOPYADA: canlı
+                            // sayfada hiçbir şey oynamıyor (ekranda titreme yok).
+                            var link = clonedDoc.querySelector('link[data-grid-export-css]');
+                            if (link) {
+                                link.media = 'all';
+                            }
 
-                        // Ekrandan ölçülen sütun genişliklerini klona sabitle
-                        // (bkz. yukarıdaki "ÖLÇÜ" notu). table-layout:fixed,
-                        // genişliği ilk satırın hücrelerinden aldığı için
-                        // sütunlar ekrandakiyle BİREBİR aynı kalıyor.
-                        var clonedTable = clonedDoc.querySelector('table.grid');
-                        if (!clonedTable) {
-                            return;
-                        }
-                        clonedTable.style.tableLayout = 'fixed';
-                        clonedTable.style.width = width + 'px';
-                        clonedTable.style.minWidth = width + 'px';
-                        clonedTable.style.maxWidth = width + 'px';
-
-                        var wi = 0;
-                        Array.prototype.forEach.call(clonedTable.querySelectorAll('thead th'), function (th) {
-                            if (th.classList.contains('grid-add-field-th')) {
+                            // Ekrandan ölçülen sütun genişliklerini klona sabitle
+                            // (bkz. yukarıdaki "ÖLÇÜ" notu). table-layout:fixed,
+                            // genişliği ilk satırın hücrelerinden aldığı için
+                            // sütunlar ekrandakiyle BİREBİR aynı kalıyor.
+                            var clonedTable = clonedDoc.querySelector('table.grid');
+                            if (!clonedTable) {
                                 return;
                             }
-                            th.style.width = colWidths[wi] + 'px';
-                            wi++;
-                        });
-                    },
+                            clonedTable.style.tableLayout = 'fixed';
+                            clonedTable.style.width = width + 'px';
+                            clonedTable.style.minWidth = width + 'px';
+                            clonedTable.style.maxWidth = width + 'px';
+
+                            var wi = 0;
+                            Array.prototype.forEach.call(clonedTable.querySelectorAll('thead th'), function (th) {
+                                if (th.classList.contains('grid-add-field-th')) {
+                                    return;
+                                }
+                                th.style.width = colWidths[wi] + 'px';
+                                wi++;
+                            });
+                        },
+                    });
                 });
             });
         }

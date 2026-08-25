@@ -413,7 +413,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                     <a class="sp-icon-btn" title="Düzenle" aria-label="Webhook'u düzenle" href="/slack_settings.php?table_id=<?php echo (int) $table['id']; ?>&edit_webhook=<?php echo (int) $w['id']; ?>">
                                         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                                     </a>
-                                    <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/slack_settings.php" data-confirm="Bu webhook&#039;u silmek istediğinize emin misiniz?" data-confirm-title="Webhook&#039;u sil">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="delete_webhook">
                                         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -484,7 +484,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M17 3L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3l-5.5 14-3-6-6-3L17 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                             </button>
                         </form>
-                        <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu webhook\'u silmek istediğinize emin misiniz?');">
+                        <form method="post" action="/slack_settings.php" data-confirm="Bu webhook&#039;u silmek istediğinize emin misiniz?" data-confirm-title="Webhook&#039;u sil">
                             <?php echo csrf_field(); ?>
                             <input type="hidden" name="action" value="delete_webhook">
                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -578,7 +578,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                                 <?php endif; ?>
                                             </button>
                                         </form>
-                                        <form method="post" action="/slack_settings.php" onsubmit="return confirm('Bu kuralı silmek istediğinize emin misiniz?');">
+                                        <form method="post" action="/slack_settings.php" data-confirm="Bu kuralı silmek istediğinize emin misiniz?" data-confirm-title="Kuralı sil">
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_routing_rule">
                                             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">

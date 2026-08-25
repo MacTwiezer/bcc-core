@@ -574,19 +574,25 @@
         }
 
         function deleteComment(commentId, item) {
-            if (!window.confirm('Bu yorumu silmek istediğinize emin misiniz?')) {
-                return;
-            }
-            apiPost('/api/comment_delete.php', { comment_id: commentId, csrf_token: CSRF }).then(function (result) {
-                var ok = result.httpOk && result.data && result.data.ok;
-                if (!ok) {
-                    window.alert((result.data && result.data.error) ? result.data.error : 'Silinemedi.');
+            // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
+            window.bcc_confirm({
+                title: 'Yorumu sil',
+                message: 'Bu yorumu silmek istediğinize emin misiniz?',
+            }).then(function (onaylandi) {
+                if (!onaylandi) {
                     return;
                 }
-                item.remove();
-                if (commentsList && commentsList.children.length === 0) {
-                    renderComments([]);
-                }
+                apiPost('/api/comment_delete.php', { comment_id: commentId, csrf_token: CSRF }).then(function (result) {
+                    var ok = result.httpOk && result.data && result.data.ok;
+                    if (!ok) {
+                        window.alert((result.data && result.data.error) ? result.data.error : 'Silinemedi.');
+                        return;
+                    }
+                    item.remove();
+                    if (commentsList && commentsList.children.length === 0) {
+                        renderComments([]);
+                    }
+                });
             });
         }
 
@@ -774,59 +780,65 @@
                 var confirmMsg = selectedRows.length === 1
                     ? 'Seçili 1 kaydı silmek istediğinize emin misiniz?'
                     : 'Seçili ' + selectedRows.length + ' kaydı silmek istediğinize emin misiniz?';
-                if (!window.confirm(confirmMsg)) {
-                    return;
-                }
-
-                var tableId = deleteSelectedBtn.getAttribute('data-table-id');
-                var body = new URLSearchParams();
-                body.append('csrf_token', CSRF);
-                body.append('table_id', tableId);
-                selectedRows.forEach(function (tr) {
-                    body.append('record_ids[]', tr.getAttribute('data-record-id'));
-                });
-
-                deleteSelectedBtn.disabled = true;
-
-                fetch('/api/record_delete.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: body.toString(),
-                }).then(function (res) {
-                    return res.json().catch(function () {
-                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
-                    });
-                }).then(function (data) {
-                    deleteSelectedBtn.disabled = false;
-
-                    if (!data || !data.ok) {
-                        window.alert((data && data.error) || 'Kayıtlar silinemedi.');
+                window.bcc_confirm({
+                    title: 'Kayıtları sil',
+                    message: confirmMsg,
+                }).then(function (onaylandi) {
+                    if (!onaylandi) {
                         return;
                     }
 
-                    var deletedIds = (data.deleted_record_ids || []).map(String);
+
+                    var tableId = deleteSelectedBtn.getAttribute('data-table-id');
+                    var body = new URLSearchParams();
+                    body.append('csrf_token', CSRF);
+                    body.append('table_id', tableId);
                     selectedRows.forEach(function (tr) {
-                        if (deletedIds.indexOf(tr.getAttribute('data-record-id')) !== -1 && tr.parentNode) {
-                            tr.parentNode.removeChild(tr);
-                        }
+                        body.append('record_ids[]', tr.getAttribute('data-record-id'));
                     });
 
-                    // Tam sayfa reload YOK — record_add.php'nin AJAX satır-ekleme
-                    // deseniyle simetrik. Satır numaraları + "X kayıt" sayacı
-                    // grid.js'nin zaten sahip olduğu renumberRows() ile güncellenir
-                    // (window.BCC_GRID üzerinden, ikinci bir sayaç mantığı YAZILMAZ).
-                    if (window.BCC_GRID && window.BCC_GRID.renumberRows) {
-                        window.BCC_GRID.renumberRows();
-                    }
+                    deleteSelectedBtn.disabled = true;
 
-                    if (selectAll) {
-                        selectAll.checked = false;
-                        selectAll.indeterminate = false;
-                    }
-                    updateDeleteButtonState();
-                }).catch(function () {
-                    deleteSelectedBtn.disabled = false;
-                    window.alert('Kayıtlar silinemedi (bağlantı hatası).');
+                    fetch('/api/record_delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body.toString(),
+                    }).then(function (res) {
+                        return res.json().catch(function () {
+                            return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                        });
+                    }).then(function (data) {
+                        deleteSelectedBtn.disabled = false;
+
+                        if (!data || !data.ok) {
+                            window.alert((data && data.error) || 'Kayıtlar silinemedi.');
+                            return;
+                        }
+
+                        var deletedIds = (data.deleted_record_ids || []).map(String);
+                        selectedRows.forEach(function (tr) {
+                            if (deletedIds.indexOf(tr.getAttribute('data-record-id')) !== -1 && tr.parentNode) {
+                                tr.parentNode.removeChild(tr);
+                            }
+                        });
+
+                        // Tam sayfa reload YOK — record_add.php'nin AJAX satır-ekleme
+                        // deseniyle simetrik. Satır numaraları + "X kayıt" sayacı
+                        // grid.js'nin zaten sahip olduğu renumberRows() ile güncellenir
+                        // (window.BCC_GRID üzerinden, ikinci bir sayaç mantığı YAZILMAZ).
+                        if (window.BCC_GRID && window.BCC_GRID.renumberRows) {
+                            window.BCC_GRID.renumberRows();
+                        }
+
+                        if (selectAll) {
+                            selectAll.checked = false;
+                            selectAll.indeterminate = false;
+                        }
+                        updateDeleteButtonState();
+                    }).catch(function () {
+                        deleteSelectedBtn.disabled = false;
+                        window.alert('Kayıtlar silinemedi (bağlantı hatası).');
+                    });
                 });
             });
         }
@@ -1187,28 +1199,38 @@
                     return;
                 }
                 var title = primaryFieldTitle(currentDetailRow) || '(başlıksız kayıt)';
-                var confirmMsg = "'" + title + "' kaydını silmek istediğinizden emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.";
-                if (!window.confirm(confirmMsg)) {
-                    return;
-                }
-
-                var recordId = currentDetailRow.getAttribute('data-record-id');
-                apiPost('/api/record_soft_delete.php', {
-                    csrf_token: CSRF,
-                    record_id: recordId,
-                }).then(function (result) {
-                    var ok = result.httpOk && result.data && result.data.ok;
-                    if (!ok) {
-                        var message = (result.data && result.data.error) ? result.data.error : 'Kayıt silinemedi.';
-                        window.alert(message);
+                var recordRow = currentDetailRow;
+                window.bcc_confirm({
+                    title: 'Kaydı sil',
+                    message: "'" + title + "' kaydını silmek istediğinizden emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.",
+                }).then(function (onaylandi) {
+                    if (!onaylandi) {
                         return;
                     }
 
-                    // Toast'ın (henüz açık olan) modal header'ında görünmesi
-                    // için kapatma kısa bir gecikmeyle yapılır — showDetailToast
-                    // AYNEN yeniden kullanılıyor, yeni bir bildirim yolu yok.
-                    showDetailToast('Kayıt silindi');
-                    setTimeout(closeDetail, 700);
+                    // ⚠️ recordRow, onay penceresi AÇILMADAN ÖNCE yakalandı:
+                    // onay artık asenkron, bu arada kullanıcı başka bir kayda
+                    // geçerse currentDetailRow değişmiş olurdu ve YANLIŞ kayıt
+                    // silinirdi. Native confirm senkron olduğu için bu risk
+                    // eskiden yoktu.
+                    var recordId = recordRow.getAttribute('data-record-id');
+                    apiPost('/api/record_soft_delete.php', {
+                        csrf_token: CSRF,
+                        record_id: recordId,
+                    }).then(function (result) {
+                        var ok = result.httpOk && result.data && result.data.ok;
+                        if (!ok) {
+                            var message = (result.data && result.data.error) ? result.data.error : 'Kayıt silinemedi.';
+                            window.alert(message);
+                            return;
+                        }
+
+                        // Toast'ın (henüz açık olan) modal header'ında görünmesi
+                        // için kapatma kısa bir gecikmeyle yapılır — showDetailToast
+                        // AYNEN yeniden kullanılıyor, yeni bir bildirim yolu yok.
+                        showDetailToast('Kayıt silindi');
+                        setTimeout(closeDetail, 700);
+                    });
                 });
             });
         }

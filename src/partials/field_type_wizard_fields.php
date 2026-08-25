@@ -48,8 +48,16 @@ if (!isset($fieldWizardShowRequired)) {
     <label>Alan adı
         <input type="text" name="name" id="new-field-name-input">
     </label>
+    <?php // Seçenek kutusu YALNIZCA tekli/çoklu seçimde görünür ve o tiplerde
+          // ZORUNLUDUR — sunucu zaten boş seçeneği reddediyordu ama hata tam
+          // sayfa POST'undan sonra sayfanın EN ÜSTÜNDE çıkıyordu; kullanıcı
+          // modalın içinde kaldığı için "hiçbir şey olmadı" sanıyordu (bildirildi).
+          // Artık required + özel mesaj: tarayıcı gönderimi durdurup uyarıyı
+          // kutunun YANINDA gösteriyor (bkz. assets/field-type-wizard.js).
+          // Placeholder de somut bir örnek veriyor — "her satıra bir seçenek"
+          // ifadesi tek başına yeterince açık değildi. ?>
     <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
-        <textarea name="options_text" rows="4"></textarea>
+        <textarea name="options_text" rows="4" placeholder="Örn.&#10;Düşük&#10;Orta&#10;Yüksek"></textarea>
     </label>
     <!-- Currency/Percent/Rating (Grup C1) — field-type-wizard.js seçilen tipe göre
          gösterir/gizler, select'in #new-field-options-row'uyla AYNI desen.

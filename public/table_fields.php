@@ -288,7 +288,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     <a class="sp-icon-btn" title="Düzenle" aria-label="Alanı düzenle" href="/table_fields.php?table_id=<?php echo (int) $table['id']; ?>&edit=<?php echo (int) $f['id']; ?>">
                                         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                                     </a>
-                                    <form method="post" action="/table_fields.php" onsubmit="return confirm('Bu alanı silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/table_fields.php" data-confirm="Bu alanı silmek istediğinize emin misiniz?" data-confirm-title="Alanı sil">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="delete_field">
                                         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">

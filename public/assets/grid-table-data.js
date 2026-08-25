@@ -56,28 +56,35 @@
             btn.addEventListener('click', function () {
                 closeTabMenu(btn);
                 var tableId = btn.getAttribute('data-table-clear');
-                if (!window.confirm('Bu tablodaki TÜM kayıtlar kalıcı olarak silinecek (alanlar/kolonlar kalır). Emin misiniz?')) {
-                    return;
-                }
-                btn.disabled = true;
-                fetch('/api/table_clear_data.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ csrf_token: CSRF, table_id: tableId }).toString(),
-                }).then(function (res) {
-                    return res.json().catch(function () {
-                        return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
-                    });
-                }).then(function (data) {
-                    if (data && data.ok) {
-                        window.location.reload();
-                    } else {
-                        btn.disabled = false;
-                        window.alert((data && data.error) || 'Veriler temizlenemedi.');
+                // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
+                window.bcc_confirm({
+                    title: 'Tablo verilerini temizle',
+                    message: 'Bu tablodaki TÜM kayıtlar kalıcı olarak silinecek (alanlar/kolonlar kalır). Emin misiniz?',
+                    confirmLabel: 'Evet, temizle',
+                }).then(function (onaylandi) {
+                    if (!onaylandi) {
+                        return;
                     }
-                }).catch(function () {
-                    btn.disabled = false;
-                    window.alert('Veriler temizlenemedi (bağlantı hatası).');
+                    btn.disabled = true;
+                    fetch('/api/table_clear_data.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ csrf_token: CSRF, table_id: tableId }).toString(),
+                    }).then(function (res) {
+                        return res.json().catch(function () {
+                            return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+                        });
+                    }).then(function (data) {
+                        if (data && data.ok) {
+                            window.location.reload();
+                        } else {
+                            btn.disabled = false;
+                            window.alert((data && data.error) || 'Veriler temizlenemedi.');
+                        }
+                    }).catch(function () {
+                        btn.disabled = false;
+                        window.alert('Veriler temizlenemedi (bağlantı hatası).');
+                    });
                 });
             });
         });

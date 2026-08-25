@@ -416,18 +416,26 @@
         if (deleteItem) {
             deleteItem.addEventListener('click', function () {
                 closeOptionsMenu();
-                if (!window.confirm('Bu görünümü silmek istediğinize emin misiniz?')) {
-                    return;
-                }
-                var tableId = new URLSearchParams(window.location.search).get('table_id');
-                post('/api/view_delete.php', { csrf_token: CSRF, view_id: activeViewId() }).then(function (result) {
-                    if (result.httpOk && result.data && result.data.ok) {
-                        window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId);
-                    } else {
-                        window.alert((result.data && result.data.error) || 'Görünüm silinemedi.');
+                // Sayfa içi onay penceresi (assets/confirm-modal.js) — native
+                // window.confirm DEĞİL; o, tarayıcının "localhost web sitesinin
+                // mesajı…" kutusunu açıyordu.
+                window.bcc_confirm({
+                    title: 'Görünümü sil',
+                    message: 'Bu görünümü silmek istediğinize emin misiniz?',
+                }).then(function (ok) {
+                    if (!ok) {
+                        return;
                     }
-                }).catch(function () {
-                    window.alert('Görünüm silinemedi (bağlantı hatası).');
+                    var tableId = new URLSearchParams(window.location.search).get('table_id');
+                    post('/api/view_delete.php', { csrf_token: CSRF, view_id: activeViewId() }).then(function (result) {
+                        if (result.httpOk && result.data && result.data.ok) {
+                            window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId);
+                        } else {
+                            window.alert((result.data && result.data.error) || 'Görünüm silinemedi.');
+                        }
+                    }).catch(function () {
+                        window.alert('Görünüm silinemedi (bağlantı hatası).');
+                    });
                 });
             });
         }
@@ -497,26 +505,31 @@
         Array.prototype.forEach.call(document.querySelectorAll('[data-view-delete]'), function (btn) {
             btn.addEventListener('click', function () {
                 closeOptionsMenu();
-                if (!window.confirm('Bu görünümü silmek istediğinize emin misiniz?')) {
-                    return;
-                }
-                var viewId = btn.getAttribute('data-view-id');
-                var row = btn.closest('.gs-view-drawer-row');
-                var tableId = new URLSearchParams(window.location.search).get('table_id');
-                var wasActive = row && row.classList.contains('is-selected');
-
-                post('/api/view_delete.php', { csrf_token: CSRF, view_id: viewId }).then(function (result) {
-                    if (result.httpOk && result.data && result.data.ok) {
-                        if (wasActive) {
-                            window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.fallback_view_id);
-                        } else {
-                            window.location.reload();
-                        }
-                    } else {
-                        window.alert((result.data && result.data.error) || 'Görünüm silinemedi.');
+                window.bcc_confirm({
+                    title: 'Görünümü sil',
+                    message: 'Bu görünümü silmek istediğinize emin misiniz?',
+                }).then(function (ok) {
+                    if (!ok) {
+                        return;
                     }
-                }).catch(function () {
-                    window.alert('Görünüm silinemedi (bağlantı hatası).');
+                    var viewId = btn.getAttribute('data-view-id');
+                    var row = btn.closest('.gs-view-drawer-row');
+                    var tableId = new URLSearchParams(window.location.search).get('table_id');
+                    var wasActive = row && row.classList.contains('is-selected');
+
+                    post('/api/view_delete.php', { csrf_token: CSRF, view_id: viewId }).then(function (result) {
+                        if (result.httpOk && result.data && result.data.ok) {
+                            if (wasActive) {
+                                window.location.href = '/grid.php?table_id=' + encodeURIComponent(tableId) + '&view_id=' + encodeURIComponent(result.data.fallback_view_id);
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            window.alert((result.data && result.data.error) || 'Görünüm silinemedi.');
+                        }
+                    }).catch(function () {
+                        window.alert('Görünüm silinemedi (bağlantı hatası).');
+                    });
                 });
             });
         });

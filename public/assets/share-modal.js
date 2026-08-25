@@ -120,10 +120,16 @@
             btn.title = 'Ekipten çıkar';
             btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             btn.addEventListener('click', function () {
-                if (!window.confirm(member.name + ' ekipten çıkarılsın mı?')) {
-                    return;
-                }
-                remove(member.id);
+                // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
+                window.bcc_confirm({
+                    title: 'Ekipten çıkar',
+                    message: member.name + ' ekipten çıkarılsın mı?',
+                    confirmLabel: 'Evet, çıkar',
+                }).then(function (onaylandi) {
+                    if (onaylandi) {
+                        remove(member.id);
+                    }
+                });
             });
             return btn;
         }

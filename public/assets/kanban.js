@@ -15,14 +15,6 @@
     // gerçek kapı sunucudaki require_role('editor').
 
     document.addEventListener('DOMContentLoaded', function () {
-        var board = document.querySelector('[data-kanban-board]');
-        if (!board) {
-            return;
-        }
-
-        var columnFieldId = board.getAttribute('data-column-field-id');
-        var canEdit = board.getAttribute('data-can-edit') === '1';
-
         function post(url, data) {
             var body = new URLSearchParams();
             Object.keys(data).forEach(function (k) {
@@ -45,6 +37,65 @@
                 });
             });
         }
+
+        // ---- Sütunlama ayarları paneli --------------------------------------
+        // ⚠️ TAHTADAN ÖNCE ve TAHTADAN BAĞIMSIZ bağlanır.
+        //
+        // BULUNAN GERÇEK HATA (kullanıcı bildirdi): bu blok eskiden aşağıdaki
+        // `if (!board) return;` korumasının ALTINDAYDI. Tahta ([data-kanban-board])
+        // yalnızca sütunlama alanı ZATEN SEÇİLMİŞKEN basılıyor (bkz. kanban.php'nin
+        // boş durum dalı) — yani alan seçilmemişken script daha ilk satırda
+        // çıkıyor, "Kaydet" düğmesine hiçbir dinleyici bağlanmıyordu. Sonuç:
+        // Kanban'ı yapılandırmak için önce yapılandırılmış olması gerekiyordu;
+        // kullanıcı radyo düğmesini seçip Kaydet'e basıyor ve hiçbir şey
+        // olmuyordu (hata da yok, çünkü kod hiç çalışmıyordu).
+        //
+        // view_id artık panelin KENDİ data-view-id'sinden okunur, tahtadan değil.
+        var settings = document.querySelector('[data-kanban-settings]');
+        if (settings) {
+            var saveBtn = settings.querySelector('[data-kanban-save]');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    var chosen = settings.querySelector('input[name="kanban_field_id"]:checked');
+                    var cardFields = Array.prototype.map.call(
+                        settings.querySelectorAll('input[name="kanban_card_fields"]:checked'),
+                        function (cb) { return cb.value; }
+                    );
+
+                    saveBtn.disabled = true;
+                    post('/api/kanban_config_update.php', {
+                        csrf_token: BCC_KANBAN_CSRF,
+                        view_id: settings.getAttribute('data-view-id'),
+                        kanban_field_id: chosen ? chosen.value : '0',
+                        kanban_card_fields: cardFields,
+                    }).then(function (result) {
+                        saveBtn.disabled = false;
+                        if (result.httpOk && result.data && result.data.ok) {
+                            // Sütun yapısı tamamen değişebilir (farklı alan =
+                            // farklı seçenekler) — kısmi DOM güncellemesi yerine
+                            // sayfayı yenilemek hem basit hem doğru. Boş durumdan
+                            // geliniyorsa yenileme zaten tahtayı İLK KEZ basar.
+                            window.location.reload();
+                            return;
+                        }
+                        window.alert((result.data && result.data.error) || 'Ayarlar kaydedilemedi.');
+                    }).catch(function () {
+                        saveBtn.disabled = false;
+                        window.alert('Ayarlar kaydedilemedi (bağlantı hatası).');
+                    });
+                });
+            }
+        }
+
+        // Buradan AŞAĞISI tahtayı gerektirir: sütunlama alanı seçilmemişken
+        // (boş durum) tahta hiç basılmaz, kart tıklaması/sürükleme de anlamsızdır.
+        var board = document.querySelector('[data-kanban-board]');
+        if (!board) {
+            return;
+        }
+
+        var columnFieldId = board.getAttribute('data-column-field-id');
+        var canEdit = board.getAttribute('data-can-edit') === '1';
 
         function refreshCounts() {
             Array.prototype.forEach.call(board.querySelectorAll('[data-kanban-column]'), function (col) {
@@ -84,41 +135,6 @@
                 + '&record_id=' + encodeURIComponent(card.getAttribute('data-record-id'));
         });
 
-        // ---- Sütunlama ayarları paneli -------------------------------------
-        var settings = document.querySelector('[data-kanban-settings]');
-        if (settings) {
-            var saveBtn = settings.querySelector('[data-kanban-save]');
-            if (saveBtn) {
-                saveBtn.addEventListener('click', function () {
-                    var chosen = settings.querySelector('input[name="kanban_field_id"]:checked');
-                    var cardFields = Array.prototype.map.call(
-                        settings.querySelectorAll('input[name="kanban_card_fields"]:checked'),
-                        function (cb) { return cb.value; }
-                    );
-
-                    saveBtn.disabled = true;
-                    post('/api/kanban_config_update.php', {
-                        csrf_token: BCC_KANBAN_CSRF,
-                        view_id: board.getAttribute('data-view-id'),
-                        kanban_field_id: chosen ? chosen.value : '0',
-                        kanban_card_fields: cardFields,
-                    }).then(function (result) {
-                        saveBtn.disabled = false;
-                        if (result.httpOk && result.data && result.data.ok) {
-                            // Sütun yapısı tamamen değişebilir (farklı alan =
-                            // farklı seçenekler) — kısmi DOM güncellemesi yerine
-                            // sayfayı yenilemek hem basit hem doğru.
-                            window.location.reload();
-                            return;
-                        }
-                        window.alert((result.data && result.data.error) || 'Ayarlar kaydedilemedi.');
-                    }).catch(function () {
-                        saveBtn.disabled = false;
-                        window.alert('Ayarlar kaydedilemedi (bağlantı hatası).');
-                    });
-                });
-            }
-        }
 
         if (!canEdit) {
             return; // viewer/commenter: tahta salt-okunur, sürükleme bağlanmaz

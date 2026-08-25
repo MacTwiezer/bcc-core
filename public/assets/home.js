@@ -308,42 +308,50 @@
                 e.preventDefault();
                 e.stopPropagation();
 
-                if (!window.confirm('Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.')) {
-                    return;
-                }
-
-                var card = btn.closest('.home-base-card');
-                var baseId = btn.getAttribute('data-base-delete');
-                btn.disabled = true;
-
-                fetch('/api/base_delete.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ csrf_token: CSRF_TOKEN, base_id: baseId }).toString(),
-                }).then(function (res) {
-                    return res.json().catch(function () { return { ok: false }; });
-                }).then(function (data) {
-                    if (data && data.ok) {
-                        if (card) {
-                            card.remove();
-                        }
-
-                        // Bulunan gerçek bug: Ctrl+K arama popover'ı kartlardan
-                        // KLONLANMIŞ ayrı bir kopya listesi tutuyor — kart
-                        // silinince bu klon silinmiyordu, artık var olmayan bir
-                        // base'e giden tıklanabilir bir sonuç sayfa yenilenene
-                        // kadar aramada kalıyordu. Liste artık global-search.js'te
-                        // yaşadığı için temizlik onun açtığı kancadan yapılır.
-                        if (typeof window.bcc_searchRemoveItem === 'function') {
-                            window.bcc_searchRemoveItem(baseId);
-                        }
-                    } else {
-                        btn.disabled = false;
-                        window.alert((data && data.error) || 'Silinemedi.');
+                // Sayfa içi onay penceresi (assets/confirm-modal.js) — native
+                // window.confirm DEĞİL; o, tarayıcının kendi "localhost web
+                // sitesinin mesajı…" kutusunu açıyordu.
+                window.bcc_confirm({
+                    title: 'Base\'i sil',
+                    message: 'Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.',
+                }).then(function (onaylandi) {
+                    if (!onaylandi) {
+                        return;
                     }
-                }).catch(function () {
-                    btn.disabled = false;
-                    window.alert('Silinemedi (bağlantı hatası).');
+
+                    var card = btn.closest('.home-base-card');
+                    var baseId = btn.getAttribute('data-base-delete');
+                    btn.disabled = true;
+
+                    fetch('/api/base_delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ csrf_token: CSRF_TOKEN, base_id: baseId }).toString(),
+                    }).then(function (res) {
+                        return res.json().catch(function () { return { ok: false }; });
+                    }).then(function (data) {
+                        if (data && data.ok) {
+                            if (card) {
+                                card.remove();
+                            }
+
+                            // Bulunan gerçek bug: Ctrl+K arama popover'ı kartlardan
+                            // KLONLANMIŞ ayrı bir kopya listesi tutuyor — kart
+                            // silinince bu klon silinmiyordu, artık var olmayan bir
+                            // base'e giden tıklanabilir bir sonuç sayfa yenilenene
+                            // kadar aramada kalıyordu. Liste artık global-search.js'te
+                            // yaşadığı için temizlik onun açtığı kancadan yapılır.
+                            if (typeof window.bcc_searchRemoveItem === 'function') {
+                                window.bcc_searchRemoveItem(baseId);
+                            }
+                        } else {
+                            btn.disabled = false;
+                            window.alert((data && data.error) || 'Silinemedi.');
+                        }
+                    }).catch(function () {
+                        btn.disabled = false;
+                        window.alert('Silinemedi (bağlantı hatası).');
+                    });
                 });
             });
         });

@@ -5,6 +5,10 @@
     </main>
 </div>
 
+<?php // Sayfa ici onay penceresi (native window.confirm yerine) — silme/geri
+      // alinamaz islemlerin HEPSI bunu kullanir, bkz. assets/confirm-modal.js.
+      // .home-modal-* sinifiyla ciziliyor, home.css bu sayfalarda zaten yukleniyor. ?>
+<script src="<?php echo bcc_asset_url('confirm-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <?php // global-search.js, dismissable-panel.js'ten SONRA (bcc_bindDismissable'ı

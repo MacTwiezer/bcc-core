@@ -3204,6 +3204,20 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     cursor: default;
 }
 
+/* Yıkıcı onay butonu (assets/confirm-modal.js) — silme onayında birincil MAVİ
+   buton "devam et" hissi verir ve yanlış tıklamayı davet eder; kırmızı, geri
+   alınamaz işlemi görünür kılar. Renkler tema token'larından (koyu temada da
+   doğru), ayrı bir hex tablosu yok. */
+.home-modal-btn-danger {
+    border-color: transparent;
+    background: var(--bcc-danger);
+    color: #fff;
+}
+
+.home-modal-btn-danger:hover {
+    background: color-mix(in srgb, var(--bcc-danger) 82%, #000);
+}
+
 /* ---------------------------------------------------------------------------
    Çevrimiçi kullanıcı göstergesi (presence)
    - Rozet: src/partials/home_shell_top.php, üst barın sağ bloğunda

@@ -189,7 +189,13 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                      sınıf adına değil name özniteliğine bakıyor). */ ?>
             <details class="gs-tool-details kanban-settings-menu" name="gs-table-tab-menu">
                 <summary class="settings-btn">Sütunlama</summary>
-                <div class="kanban-settings-panel" data-kanban-settings>
+                <?php /* ⚠️ data-view-id BURADA da duruyor (yalnızca tahtada
+                         değil): sütunlama alanı HENÜZ SEÇİLMEMİŞKEN tahta hiç
+                         basılmıyor (aşağıdaki boş durum dalı), yani panelin
+                         "Kaydet"i tahtadan okuyacak bir view id bulamazdı.
+                         Tam olarak yapılandırmanın YAPILAMADIĞI durumda
+                         yapılandırma paneli çalışmıyordu (kullanıcı bildirdi). */ ?>
+                <div class="kanban-settings-panel" data-kanban-settings data-view-id="<?php echo (int) $view['id']; ?>">
                     <p class="settings-hint">Hangi alana göre sütunlansın?</p>
                     <?php foreach ($kanbanEligibleFields as $ef): ?>
                         <label class="kanban-settings-row">

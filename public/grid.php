@@ -1949,6 +1949,10 @@ $gridUser = current_user();
       // zaten gizleniyor (grid-export.css). ?>
 <?php require __DIR__ . '/../src/partials/share_modal.php'; ?>
 
+<?php // Sayfa ici onay penceresi (native window.confirm yerine) — silme/geri
+      // alinamaz islemlerin HEPSI bunu kullanir, bkz. assets/confirm-modal.js.
+      // .home-modal-* sinifiyla ciziliyor, home.css bu sayfalarda zaten yukleniyor. ?>
+<script src="<?php echo bcc_asset_url('confirm-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <?php // Genel arama (Ctrl K) — dismissable-panel.js'ten SONRA yüklenir
       // (bcc_bindDismissable'ı çağırıyor). home_shell_bottom.php'deki AYNI

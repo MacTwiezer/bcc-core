@@ -122,9 +122,23 @@
                     e.preventDefault();
                     return;
                 }
-                if (!window.confirm(checked.length + ' kişiyi ekipten çıkarmak istediğinize emin misiniz?')) {
-                    e.preventDefault();
-                }
+
+                // ⚠️ ONAY ARTIK ASENKRON: gönderim HER DURUMDA durdurulur,
+                // kullanıcı onaylarsa form JS'ten gönderilir. Native confirm
+                // senkron olduğu için eskiden "yalnızca iptalde preventDefault"
+                // yetiyordu; promise ile o kurgu formu onay gelmeden gönderirdi.
+                // form.submit() submit olayını yeniden tetiklemez, döngü olmaz.
+                e.preventDefault();
+                var form = bulkRemoveBtn.form;
+                window.bcc_confirm({
+                    title: 'Ekipten çıkar',
+                    message: checked.length + ' kişiyi ekipten çıkarmak istediğinize emin misiniz?',
+                    confirmLabel: 'Evet, çıkar',
+                }).then(function (onaylandi) {
+                    if (onaylandi && form) {
+                        form.submit();
+                    }
+                });
             });
         }
 

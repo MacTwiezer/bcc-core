@@ -1004,27 +1004,36 @@ html.home-view-list .home-base-role,
     transition: opacity 0.1s ease, transform 0.12s ease;
 }
 
+/* ⚠️ ÜÇÜ DE ÇIPLAK: zemin/gölge/kenarlık YOK (kullanıcı isteği) — yıldız
+   butonunun en baştan beri taşıdığı görünüm artık üçünün ortak dili. Eskiden
+   "Tabloya git" ve ⋯ beyaz zeminli + gölgeliydi; o zemin kartın renkli kapağı
+   üzerinde okunurluk içindi, ama butonlar artık başlık ŞERİDİNİN içinde
+   duruyor (bkz. .home-base-card::before) ve şerit zaten düşük kontrastlı bir
+   yüzey — zemine gerek kalmadı, üç kutu yan yana gereksiz gürültü yapıyordu.
+   Geri bildirim yalnızca ikon renginden gelir (muted -> text), yıldızdaki
+   davranışın aynısı. Kutunun 26px ölçüsü DURUYOR: görünmez olsa da tıklama
+   hedefi küçülmemeli. */
 .home-base-more-btn {
     width: 26px;
     height: 26px;
     border: none;
     border-radius: 6px;
-    background: var(--bcc-surface);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    background: none;
+    box-shadow: none;
+    color: var(--bcc-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
     opacity: 0;
-    transition: opacity 0.1s ease, background 0.1s ease;
+    transition: opacity 0.1s ease, color 0.1s ease;
 }
 
-/* "Tabloya git" kısayolu — yıldız/⋯ ile AYNI overlay ailesi ve AYNI ölçü.
-   Zeminli (⋯ gibi), çıplak yıldız butonu gibi değil: kartın renkli kapağının
-   üstüne denk geldiği için zeminsiz bir ikon okunmuyordu. Yıldızla aynı
-   mantıkla akıştan çıkarılıp (position:absolute) ⋯'nin üstüne oturur ve kart
-   hover'landığında sırayı bozmadan ikinci adım kadar (2 x 30px) sola kayar. */
+/* "Tabloya git" kısayolu — yıldız/⋯ ile AYNI overlay ailesi, AYNI ölçü ve
+   (yukarıdaki gerekçeyle) AYNI çıplak görünüm. Yıldızla aynı mantıkla akıştan
+   çıkarılıp (position:absolute) ⋯'nin üstüne oturur ve kart hover'landığında
+   sırayı bozmadan ikinci adım kadar (2 x 30px) sola kayar. */
 .home-base-data-btn {
     position: absolute;
     top: 0;
@@ -1033,8 +1042,8 @@ html.home-view-list .home-base-role,
     height: 26px;
     border: none;
     border-radius: 6px;
-    background: var(--bcc-surface);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    background: none;
+    box-shadow: none;
     color: var(--bcc-text-muted);
     display: flex;
     align-items: center;
@@ -1042,13 +1051,10 @@ html.home-view-list .home-base-role,
     cursor: pointer;
     padding: 0;
     opacity: 0;
-    transition: opacity 0.1s ease, transform 0.12s ease, background 0.1s ease, color 0.1s ease;
+    transition: opacity 0.1s ease, transform 0.12s ease, color 0.1s ease;
 }
 
-.home-base-data-btn:hover {
-    background: var(--bcc-surface-hover);
-    color: var(--bcc-text);
-}
+.home-base-data-btn:hover { color: var(--bcc-text); }
 
 .home-base-card:hover .home-base-star-btn,
 .home-base-card:hover .home-base-data-btn,
@@ -1116,7 +1122,10 @@ html.home-view-list .home-base-card:hover .home-base-star-btn,
 
 .home-base-more-btn::-webkit-details-marker { display: none; }
 
-.home-base-more-btn:hover { background: var(--bcc-surface-hover); }
+/* Hover geri bildirimi zeminden DEĞİL ikon renginden (yıldız/veri butonuyla
+   aynı dil) — üçü de çıplak olduğu için bir tanesine zemin vermek sırayı
+   bozardı. Noktaların rengi currentColor (bkz. src/schema.php'deki SVG). */
+.home-base-more-btn:hover { color: var(--bcc-text); }
 
 .home-base-star-btn:hover .home-base-star-icon { stroke: var(--bcc-text); }
 

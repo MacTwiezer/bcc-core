@@ -4570,7 +4570,12 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
             </button>
             <details class="home-base-more-menu">
                 <summary class="home-base-more-btn" aria-label="Diğer aksiyonlar">
-                    <svg width="16" height="16" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="#5f6368"/><circle cx="10" cy="10" r="1.6" fill="#5f6368"/><circle cx="16" cy="10" r="1.6" fill="#5f6368"/></svg>
+                    <?php // fill="currentColor" (sabit #5f6368 DEĞİL): buton artık
+                          // çıplak ve geri bildirimini yalnızca ikon renginden
+                          // veriyor (home.css .home-base-more-btn:hover) — sabit
+                          // hex yazılsaydı hover'da renk değişmez, ayrıca koyu
+                          // temada bu gri koyu zeminde sönük kalırdı. ?>
+                    <svg width="16" height="16" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/><circle cx="16" cy="10" r="1.6" fill="currentColor"/></svg>
                 </summary>
                 <div class="home-base-more-panel">
                     <details class="home-base-more-submenu">

@@ -70,6 +70,16 @@ CREATE TABLE IF NOT EXISTS bases (
     team_id      INT UNSIGNED NOT NULL,
     name         VARCHAR(150) NOT NULL,
     description  VARCHAR(500) DEFAULT NULL,
+    -- Kullanıcının seçtiği kart ikonu ve rengi (migrations/020_bases_icon.sql).
+    -- İKİSİ DE NULL OLABİLİR ve varsayılan NULL'dır: o durumda ikon base'in
+    -- ADINDAN (bcc_base_icon_category), renk ise ID'sinden (bcc_base_icon_theme)
+    -- türetilir — yani kolonlar eklenmeden önceki davranış.
+    -- icon       = BCC_BASE_ICON_PATHS anahtarı ('flask', 'users', ...); ham SVG
+    --              DEĞİL, çizim yolları kodda tek yerde durur.
+    -- icon_color = BCC_BASE_ICON_THEMES dizisinin indeksi (bugün 0-5); ham hex DEĞİL,
+    --              palet (koyu tema karşılıkları dahil) tek yerden değişebilsin.
+    icon         VARCHAR(20) DEFAULT NULL,
+    icon_color   TINYINT UNSIGNED DEFAULT NULL,
     created_by   INT UNSIGNED DEFAULT NULL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at   DATETIME NULL,

@@ -74,6 +74,51 @@ $createBaseSelected = isset($createBaseSelectedTeamId) ? (int) $createBaseSelect
                 <input type="text" name="description" class="home-modal-input" maxlength="500" autocomplete="off">
             </label>
 
+            <?php
+            // ---- İkon + renk seçimi (migrations/020_bases_icon.sql) ----------
+            //
+            // İkİsİ de OPSİYONEL: hiçbir şey seçilmezse radio'ların hiçbiri
+            // işaretli GELMEZ, form 'icon'/'icon_color' alanlarını hiç
+            // göndermez ve base eski otomatik davranışa düşer (glif ad'dan,
+            // renk id'den türetilir). "Otomatik" diye sahte bir seçenek
+            // konmadı — seçim yapmamak zaten o.
+            //
+            // <input type="radio"> KULLANILDI, JS ile yönetilen <button>'lar
+            // değil: seçim JS olmadan da çalışmalı (modal, JS yüklenmezse düz
+            // form olarak /bases.php'ye POST ediyor — bkz. dosya başındaki not)
+            // ve klavye/okuyucu desteği bedavaya gelir. Görsel kutucuk saf CSS
+            // (home.css .home-icon-pick-*), :checked ile işaretleniyor.
+            //
+            // Glifler bcc_base_icon_svg() ile basılıyor: kartta görünecek
+            // ÇİZİMİN TA KENDİSİ, ikinci bir ikon kopyası yok.
+            ?>
+            <div class="home-modal-field">
+                <span class="home-modal-label">İkon <span class="home-modal-optional">(opsiyonel)</span></span>
+                <div class="home-icon-pick" role="group" aria-label="Base ikonu">
+                    <?php foreach ($GLOBALS['BCC_BASE_ICON_LABELS'] as $iconKey => $iconLabel): ?>
+                        <label class="home-icon-pick-item" title="<?php echo htmlspecialchars($iconLabel, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="radio" name="icon" value="<?php echo htmlspecialchars($iconKey, ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars($iconLabel, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="home-icon-pick-box"><?php echo bcc_base_icon_svg(18, null, $iconKey); ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="home-modal-field">
+                <span class="home-modal-label">Renk <span class="home-modal-optional">(opsiyonel)</span></span>
+                <div class="home-color-pick" role="group" aria-label="Base rengi">
+                    <?php foreach ($GLOBALS['BCC_BASE_ICON_THEMES'] as $themeIndex => $theme): ?>
+                        <?php // Değer HEX DEĞİL, tema İNDEKSİ — palet değişirse
+                              // DB'deki kayıtlar donmuş bir renge saplanmasın
+                              // (bkz. migrations/020_bases_icon.sql). ?>
+                        <label class="home-color-pick-item">
+                            <input type="radio" name="icon_color" value="<?php echo (int) $themeIndex; ?>" aria-label="Renk <?php echo (int) $themeIndex + 1; ?>">
+                            <span class="home-color-pick-dot" style="--pick-solid: <?php echo htmlspecialchars($theme['solid'], ENT_QUOTES, 'UTF-8'); ?>;"></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
             <p class="home-modal-error" id="home-create-base-error" hidden></p>
 
             <div class="home-modal-actions">

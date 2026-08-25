@@ -20,6 +20,12 @@ $user = current_user();
 $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
 $name = isset($_POST['name']) ? $_POST['name'] : '';
 $description = isset($_POST['description']) ? $_POST['description'] : '';
+// İkon/renk seçimi OPSİYONEL: modalda seçim yapılmazsa (ya da JS'siz düz form
+// gönderiminde hiç basılmazsa) bcc_create_base() ikisini de NULL yazar ve base
+// eski otomatik davranışa düşer. Doğrulama BURADA yapılmaz — whitelist tek
+// yerde, bcc_create_base()'in içinde (aynı kapıdan bases.php de geçiyor).
+$icon = isset($_POST['icon']) ? $_POST['icon'] : null;
+$iconColor = isset($_POST['icon_color']) ? $_POST['icon_color'] : null;
 
 // require_role() BİLEREK kullanılmadı: o, hata durumunda düz metinle die() eder
 // ve bu uçnoktanın JSON sözleşmesini bozardı. Aynı iki adım (önce üyelik =
@@ -35,7 +41,7 @@ if (!bcc_can_manage_bases(current_user_role_in_team($teamId))) {
 }
 
 try {
-    $result = bcc_create_base($teamId, $name, $description, $user['id']);
+    $result = bcc_create_base($teamId, $name, $description, $user['id'], $icon, $iconColor);
 } catch (Throwable $e) {
     json_fail(500, 'Veritabanı hatası.');
 }

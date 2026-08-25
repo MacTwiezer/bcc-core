@@ -75,7 +75,7 @@ if (!empty($teams)) {
     // today/7days/30days koşullarında otomatik elenir (NULL >= ... => NULL/false),
     // yalnızca 'anytime'da görünür.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $sql = "SELECT b.id, b.team_id, b.name, b.description, b.created_at, al.last_opened
+    $sql = "SELECT b.id, b.team_id, b.name, b.description, b.icon, b.icon_color, b.created_at, al.last_opened
             FROM bases b
             LEFT JOIN (
                 SELECT entity_id, MAX(created_at) AS last_opened

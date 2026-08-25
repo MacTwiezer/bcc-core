@@ -26,7 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Doğrulama + INSERT + audit: bcc_create_base() (bkz. src/schema.php) —
     // api/base_create.php ile ORTAK, ikinci bir kopya yok.
-    $result = bcc_create_base($teamId, $name, $description, $user['id']);
+    // İkon/renk: modalın JS'siz (düz POST) yolu da aynı alanları taşır —
+    // doğrulama tek yerde, bcc_create_base()'in içindeki whitelist'te.
+    $result = bcc_create_base(
+        $teamId,
+        $name,
+        $description,
+        $user['id'],
+        isset($_POST['icon']) ? $_POST['icon'] : null,
+        isset($_POST['icon_color']) ? $_POST['icon_color'] : null
+    );
 
     if ($result['ok']) {
         $success = 'Base oluşturuldu: ' . $name;

@@ -688,7 +688,7 @@ $GLOBALS['BCC_ROW_HEIGHT_LABELS'] = array(
 function find_base_or_404($baseId)
 {
     $base = bcc_fetch_one(
-        'SELECT id, team_id, name, description FROM bases WHERE id = :id AND deleted_at IS NULL LIMIT 1',
+        'SELECT id, team_id, name, description, icon, icon_color FROM bases WHERE id = :id AND deleted_at IS NULL LIMIT 1',
         array('id' => $baseId)
     );
 
@@ -706,7 +706,8 @@ function find_base_or_404($baseId)
 function find_table_or_404($tableId)
 {
     $table = bcc_fetch_one(
-        'SELECT tm.id, tm.base_id, tm.name, tm.description, tm.position, b.team_id, b.name AS base_name
+        'SELECT tm.id, tm.base_id, tm.name, tm.description, tm.position, b.team_id, b.name AS base_name,
+                b.icon AS base_icon, b.icon_color AS base_icon_color
          FROM tables_meta tm
          INNER JOIN bases b ON b.id = tm.base_id
          WHERE tm.id = :id AND b.deleted_at IS NULL LIMIT 1',
@@ -3586,10 +3587,18 @@ function bcc_name_taken_error($entity, $what)
 // fonksiyon yalnızca yetkisi doğrulanmış istekle çağrılır.
 //
 // Dönüş: array('ok' => bool, 'error' => string|null, 'id' => int|null)
-function bcc_create_base($teamId, $name, $description, $userId)
+// $icon / $iconColor: modaldaki ikon+renk seçimi (migrations/020_bases_icon.sql).
+// İkisi de OPSİYONEL ve whitelist'ten geçer (bcc_base_icon_key_or_null /
+// bcc_base_icon_color_index_or_null) — istemciden gelen tanımsız bir glif adı
+// veya sınır dışı bir indeks DB'ye yazılmaz, NULL olur ve base eski otomatik
+// davranışa (ad'dan glif, id'den renk) düşer. Dört argümanla çağıran eski kod
+// yolları bu yüzden değişmeden çalışır.
+function bcc_create_base($teamId, $name, $description, $userId, $icon = null, $iconColor = null)
 {
     $name = trim((string) $name);
     $description = trim((string) $description);
+    $icon = bcc_base_icon_key_or_null($icon);
+    $iconColor = bcc_base_icon_color_index_or_null($iconColor);
 
     if ($name === '') {
         return array('ok' => false, 'error' => 'Base adı boş olamaz.', 'id' => null);
@@ -3613,11 +3622,14 @@ function bcc_create_base($teamId, $name, $description, $userId)
     }
 
     bcc_execute(
-        'INSERT INTO bases (team_id, name, description, created_by) VALUES (:team_id, :name, :description, :created_by)',
+        'INSERT INTO bases (team_id, name, description, icon, icon_color, created_by)
+         VALUES (:team_id, :name, :description, :icon, :icon_color, :created_by)',
         array(
             'team_id' => $teamId,
             'name' => $name,
             'description' => $description !== '' ? $description : null,
+            'icon' => $icon,
+            'icon_color' => $iconColor,
             'created_by' => $userId,
         )
     );
@@ -4115,17 +4127,49 @@ $GLOBALS['BCC_BASE_ICON_THEMES'] = array(
 // aynı renkte görünür. Önceki hâl (listedeki sıraya göre $i % count(...))
 // kaldırıldı — o yöntemde aynı base, listede farklı bir sırada göründüğünde
 // (ör. farklı kullanıcı, farklı sıralama) FARKLI renk gösterebiliyordu.
-function bcc_base_icon_theme($baseId)
+// $iconColor: bases.icon_color — kullanıcının modalda SEÇTİĞİ tema indeksi
+// (migrations/020_bases_icon.sql). NULL/geçersizse eski davranışa düşer, yani
+// id'den türetir; bu yüzden hiç seçim yapılmamış base'ler birebir eskisi gibi
+// görünür ve tek argümanla çağıran eski kod yolları da bozulmaz.
+function bcc_base_icon_theme($baseId, $iconColor = null)
 {
     $themes = $GLOBALS['BCC_BASE_ICON_THEMES'];
+
+    if ($iconColor !== null && $iconColor !== '' && isset($themes[(int) $iconColor])) {
+        return $themes[(int) $iconColor];
+    }
+
     return $themes[(int) $baseId % count($themes)];
+}
+
+// bases.icon / bases.icon_color için TEK doğrulama kapısı: yalnızca gerçekten
+// var olan bir glif anahtarı / tema indeksi geri döner, aksi hâlde NULL.
+// Hem yazarken (bcc_create_base) hem okurken (yukarıdaki türetme fonksiyonları)
+// aynı whitelist geçerli — DB'ye elle yazılmış çöp bir değer bile arayüzü
+// bozamaz, sessizce otomatik davranışa düşer.
+function bcc_base_icon_key_or_null($icon)
+{
+    $icon = is_string($icon) ? trim($icon) : '';
+
+    return isset($GLOBALS['BCC_BASE_ICON_PATHS'][$icon]) ? $icon : null;
+}
+
+function bcc_base_icon_color_index_or_null($index)
+{
+    if ($index === null || $index === '' || !is_numeric($index)) {
+        return null;
+    }
+
+    $index = (int) $index;
+
+    return isset($GLOBALS['BCC_BASE_ICON_THEMES'][$index]) ? $index : null;
 }
 
 // Geriye dönük uyumlu sarmalayıcı (grid.php / interface.php dolu çip rengini
 // bununla basar) — artık kendi paletini TAŞIMAZ, üstteki tek tablodan okur.
-function bcc_base_icon_color($baseId)
+function bcc_base_icon_color($baseId, $iconColor = null)
 {
-    $theme = bcc_base_icon_theme($baseId);
+    $theme = bcc_base_icon_theme($baseId, $iconColor);
     return $theme['solid'];
 }
 
@@ -4134,9 +4178,9 @@ function bcc_base_icon_color($baseId)
 // değişmesi gerekiyor ve bir inline `background` her CSS kuralını yenerdi.
 // Karşılığı home.css'teki .home-base-icon kuralı (üç tema durumu: açık,
 // data-theme="dark", prefers-color-scheme).
-function bcc_base_icon_style_attr($baseId)
+function bcc_base_icon_style_attr($baseId, $iconColor = null)
 {
-    $t = bcc_base_icon_theme($baseId);
+    $t = bcc_base_icon_theme($baseId, $iconColor);
 
     // --bi-solid: paletin CANLI ana rengi. Home kartındaki ikon rozeti zemini
     // artık hazır pastelden (--bi-bg) değil, bu rengin YARI SAYDAM bir
@@ -4199,13 +4243,36 @@ $GLOBALS['BCC_BASE_ICON_PATHS'] = array(
     'flask' => '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
 );
 
+// İkon seçicideki (create_base_modal.php) Türkçe etiketler — hem <button>'ın
+// title'ı hem aria-label'ı buradan gelir. AYRI bir dizi çünkü BCC_BASE_ICON_PATHS
+// anahtarları teknik ('receipt', 'layout'); kullanıcıya "Fatura", "Proje" diye
+// görünmeli. Sıra ÖNEMLİ: seçicideki ızgara sırası budur — 'database' başta,
+// çünkü seçim yapılmayan base'lerin varsayılanı da o.
+$GLOBALS['BCC_BASE_ICON_LABELS'] = array(
+    'database' => 'Veritabanı',
+    'users' => 'Müşteri / Kişiler',
+    'layout' => 'Proje / Görev',
+    'receipt' => 'Fatura / Finans',
+    'package' => 'Stok / Ürün',
+    'calendar' => 'Takvim / Etkinlik',
+    'shield' => 'Yetki / Personel',
+    'export' => 'İçe / Dışa aktarım',
+    'flask' => 'Deneme / Test',
+);
+
 // Dashboard/Starred kartındaki ikonun SVG'si — grid.php üst barı ve
 // interface.php'nin base menüsünde de AYNEN kullanılır, ikinci bir
 // kopya YOK. $baseName verilmezse (veya kategori bilinmiyorsa) varsayılan
 // veritabanı gliftir — eski tek-argümanlı çağrılar bu yüzden bozulmaz.
-function bcc_base_icon_svg($size = 20, $baseName = null)
+// $icon: bases.icon — kullanıcının SEÇTİĞİ glif. Verilmemişse/geçersizse eski
+// davranış (ad'dan türetme) aynen sürer, yani iki argümanla çağıran mevcut kod
+// yolları değişmeden çalışır.
+function bcc_base_icon_svg($size = 20, $baseName = null, $icon = null)
 {
-    $category = $baseName === null ? 'database' : bcc_base_icon_category($baseName);
+    $chosen = bcc_base_icon_key_or_null($icon);
+    $category = $chosen !== null
+        ? $chosen
+        : ($baseName === null ? 'database' : bcc_base_icon_category($baseName));
     $paths = $GLOBALS['BCC_BASE_ICON_PATHS'];
     $d = isset($paths[$category]) ? $paths[$category] : $paths['database'];
 
@@ -4220,9 +4287,12 @@ function bcc_base_icon_svg($size = 20, $baseName = null)
 // ile AYNI kategori tablosunu okur — favicon'u istemcide kurabilmek için
 // (assets/page-identity.js) yalnızca iç yollar gerekiyor, kabuğu o kendi
 // boyutunda/renginde yeniden çiziyor.
-function bcc_base_icon_paths($baseName = null)
+function bcc_base_icon_paths($baseName = null, $icon = null)
 {
-    $category = $baseName === null ? 'database' : bcc_base_icon_category($baseName);
+    $chosen = bcc_base_icon_key_or_null($icon);
+    $category = $chosen !== null
+        ? $chosen
+        : ($baseName === null ? 'database' : bcc_base_icon_category($baseName));
     $paths = $GLOBALS['BCC_BASE_ICON_PATHS'];
 
     return isset($paths[$category]) ? $paths[$category] : $paths['database'];
@@ -4265,7 +4335,11 @@ function bcc_page_title($baseName, $contextName = null)
 // (bcc_base_icon_theme) deterministik olarak türetilir — bu yüzden favicon,
 // Home kartındaki ve grid üst barındaki çiple HER ZAMAN aynı çıkar, ayrıca
 // senkronlanacak ikinci bir veri yoktur.
-function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
+// $icon / $iconColor: base'in SEÇİLMİŞ glif/rengi (bases.icon, bases.icon_color).
+// Verilmezse eski türetme davranışı sürer — sekme ikonu ile kart ikonu HER ZAMAN
+// aynı kalsın diye bu iki değer buraya da taşınır, yoksa kullanıcı kartta seçtiği
+// gliftin sekmede görünmediğini fark ederdi.
+function bcc_page_identity_meta($baseId, $baseName, $contextName = null, $icon = null, $iconColor = null)
 {
     $esc = function ($v) {
         return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
@@ -4277,8 +4351,8 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null)
     return '<meta name="bcc-brand" content="' . $esc(bcc_brand_domain()) . '">' . "\n"
         . '<meta name="bcc-base-name" content="' . $esc($baseName) . '">' . "\n"
         . '<meta name="bcc-context-name" content="' . $esc($contextName) . '">' . "\n"
-        . '<meta name="bcc-base-color" content="' . $esc(bcc_base_icon_color($baseId)) . '">' . "\n"
-        . '<meta name="bcc-base-icon" content="' . $esc(bcc_base_icon_paths($baseName)) . '">';
+        . '<meta name="bcc-base-color" content="' . $esc(bcc_base_icon_color($baseId, $iconColor)) . '">' . "\n"
+        . '<meta name="bcc-base-icon" content="' . $esc(bcc_base_icon_paths($baseName, $icon)) . '">';
 }
 
 // Tek bir base kartı (Home'daki .home-base-grid VE Starred sayfasında AYNI
@@ -4347,7 +4421,7 @@ function bcc_starred_bases_for_current_user($forceReload = false)
     // zaten var olan bases JOIN'inin üstüne bedavaya biniyor.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
     $cache = bcc_fetch_all(
-        "SELECT b.id, b.name, b.team_id, t.name AS team_name
+        "SELECT b.id, b.name, b.team_id, b.icon, b.icon_color, t.name AS team_name
          FROM user_starred_bases usb
          INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
          INNER JOIN teams t ON t.id = b.team_id
@@ -4481,7 +4555,7 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
     // starred.php taşıyor, taşımayan bir çağıran çıkarsa öznitelik hiç basılmaz
     // ve JS o kartı yalnızca yeniden yüklemede gruplar (bozulmaz).
     ?>
-    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?><?php echo $isFeature ? ' home-base-card--feature' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>"<?php echo isset($base['team_id']) ? ' data-team-id="' . (int) $base['team_id'] . '"' : ''; ?> style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id']), ENT_QUOTES, 'UTF-8'); ?>">
+    <a class="home-base-card<?php echo $isStarred ? ' is-starred' : ''; ?><?php echo $isFeature ? ' home-base-card--feature' : ''; ?>" href="/base.php?base_id=<?php echo (int) $base['id']; ?>" data-base-id="<?php echo (int) $base['id']; ?>"<?php echo isset($base['team_id']) ? ' data-team-id="' . (int) $base['team_id'] . '"' : ''; ?> style="<?php echo htmlspecialchars(bcc_base_icon_style_attr($base['id'], isset($base['icon_color']) ? $base['icon_color'] : null), ENT_QUOTES, 'UTF-8'); ?>">
         <?php
         // "Kapak": base'lerde görsel YOK (DB'de böyle bir kolon hiç olmadı), bu
         // yüzden Framer'ın önizleme görselinin karşılığı kartın KENDİ deterministik
@@ -4490,10 +4564,10 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
         // temsil eden değerin ta kendisi.
         ?>
         <span class="home-base-cover" aria-hidden="true">
-            <span class="home-base-cover-glyph"><?php echo bcc_base_icon_svg($isFeature ? 64 : 34, $base['name']); ?></span>
+            <span class="home-base-cover-glyph"><?php echo bcc_base_icon_svg($isFeature ? 64 : 34, $base['name'], isset($base['icon']) ? $base['icon'] : null); ?></span>
         </span>
         <div class="home-base-icon">
-            <?php echo bcc_base_icon_svg(20, $base['name']); ?>
+            <?php echo bcc_base_icon_svg(20, $base['name'], isset($base['icon']) ? $base['icon'] : null); ?>
         </div>
         <div class="home-base-info">
             <div class="home-base-name"><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -5121,6 +5195,8 @@ function bcc_workspace_bases($teamId, $userId = null)
              b.name,
              b.description,
              b.created_at,
+             b.icon,
+             b.icon_color,
              (SELECT COUNT(*) FROM tables_meta tm WHERE tm.base_id = b.id) AS table_count,
              (SELECT COUNT(*)
                 FROM records r

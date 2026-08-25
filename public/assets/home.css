@@ -3044,6 +3044,99 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     font-size: 0.88rem;
 }
 
+/* ---------- Base oluşturma modalındaki ikon + renk seçicisi ----------
+   Kutucukların içi GERÇEK <input type="radio">'dur (bkz. create_base_modal.php'deki
+   gerekçe: JS'siz form gönderimi + klavye/okuyucu desteği). Radio'nun kendisi
+   görsel olarak gizlenir ama DOM'da ve odak sırasında KALIR — display:none
+   olsaydı klavyeyle seçilemez, hatta bazı tarayıcılarda form değeriyle birlikte
+   gönderilmezdi. Bu yüzden opacity:0 + position:absolute deseni. */
+.home-icon-pick,
+.home-color-pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.home-icon-pick-item,
+.home-color-pick-item {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.home-icon-pick-item input,
+.home-color-pick-item input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Görsel kutucuk/daire SÜSTÜR, tıklama hedefi DEĞİL: pointer-events kapalı
+   olmasaydı tıklama görünen <span>'e düşer, altındaki radio'ya yalnızca <label>
+   semantiği sayesinde DOLAYLI olarak ulaşırdı — insan faresiyle çalışır ama
+   otomatik testler (ve bazı yardımcı teknolojiler) hedefi "kapalı" sayar.
+   Kapatınca tıklama doğrudan radio'ya iner; :hover hâlâ <label> üzerinden
+   geldiği için görsel geri bildirim değişmez. */
+.home-icon-pick-box,
+.home-color-pick-dot { pointer-events: none; }
+
+.home-icon-pick-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 9px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text-muted);
+    transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.home-icon-pick-item:hover .home-icon-pick-box {
+    border-color: var(--bcc-accent);
+    color: var(--bcc-text);
+}
+
+/* Seçili hâl: accent kenarlık + yumuşak zemin. :focus-visible ayrı tutulur —
+   klavyeyle gezerken hangi kutucukta olunduğu, hangisinin SEÇİLİ olduğundan
+   ayırt edilebilmeli. */
+.home-icon-pick-item input:checked + .home-icon-pick-box {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+}
+
+.home-icon-pick-item input:focus-visible + .home-icon-pick-box,
+.home-color-pick-item input:focus-visible + .home-color-pick-dot {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
+}
+
+.home-color-pick-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    /* Renk PALETTEN gelir (inline --pick-solid), kart ikonundaki color-mix
+       oranıyla AYNI mantık: dolu daire + koyu kenar, böylece açık zeminde de
+       koyu zeminde de sınırı görünür. */
+    background: color-mix(in srgb, var(--pick-solid) 22%, var(--bcc-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pick-solid) 45%, transparent);
+    transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+.home-color-pick-item:hover .home-color-pick-dot { transform: scale(1.08); }
+
+/* Seçili renk: içi TAM dolar + dış halka. Sadece kenarlıkla işaretlemek
+   yetmiyordu — daireler zaten kenarlıklı, fark okunmuyordu. */
+.home-color-pick-item input:checked + .home-color-pick-dot {
+    background: var(--pick-solid);
+    box-shadow: 0 0 0 2px var(--bcc-surface), 0 0 0 4px var(--pick-solid);
+}
+
 .home-modal-error {
     margin: 0 0 0.9rem;
     padding: 0.5rem 0.65rem;

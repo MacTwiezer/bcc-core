@@ -571,7 +571,7 @@ $gridUser = current_user();
 <title><?php echo htmlspecialchars(bcc_page_title($table['base_name'], $table['name']), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
-<?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name']), "\n"; ?>
+<?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name'], isset($table['base_icon']) ? $table['base_icon'] : null, isset($table['base_icon_color']) ? $table['base_icon_color'] : null), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <?php // ⚠️ SENKRON (defer YOK) — theme-init.js ile AYNI gerekçe: kayıtlı panel
@@ -635,7 +635,11 @@ $gridUser = current_user();
 <div class="gs-main-col">
     <header class="gs-topbar">
         <a href="/dashboard.php" class="gs-topbar-left" title="Ana sayfaya dön">
-            <span class="gs-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($table['base_id']), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14, $table['base_name']); ?></span>
+            <?php // base_icon / base_icon_color find_table_or_404()'ten gelir —
+                  // kullanıcının base oluştururken seçtiği glif/renk (NULL ise
+                  // eski otomatik türetme). Kart, grid üst barı ve interface
+                  // aynı iki değeri okur, ikinci bir kaynak yok. ?>
+            <span class="gs-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($table['base_id'], isset($table['base_icon_color']) ? $table['base_icon_color'] : null), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14, $table['base_name'], isset($table['base_icon']) ? $table['base_icon'] : null); ?></span>
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </a>
         <div class="gs-topbar-right">

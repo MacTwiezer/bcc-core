@@ -458,7 +458,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </span>
                                 <?php foreach ($wsStarredBases as $fb): ?>
                                     <a class="wsx-fav-chip" href="/base.php?base_id=<?php echo (int) $fb['id']; ?>">
-                                        <span class="wsx-fav-chip-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color((int) $fb['id']), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(11, $fb['name']); ?></span>
+                                        <span class="wsx-fav-chip-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color((int) $fb['id'], isset($fb['icon_color']) ? $fb['icon_color'] : null), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(11, $fb['name'], isset($fb['icon']) ? $fb['icon'] : null); ?></span>
                                         <?php echo htmlspecialchars($fb['name'], ENT_QUOTES, 'UTF-8'); ?>
                                     </a>
                                 <?php endforeach; ?>
@@ -487,7 +487,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 ?>
                                     <a class="wsx-base-card" href="/base.php?base_id=<?php echo $bid; ?>">
                                         <span class="wsx-base-top">
-                                            <span class="wsx-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($bid), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(16, $b['name']); ?></span>
+                                            <span class="wsx-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($bid, isset($b['icon_color']) ? $b['icon_color'] : null), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(16, $b['name'], isset($b['icon']) ? $b['icon'] : null); ?></span>
                                             <?php if ((int) $b['is_starred'] > 0): ?>
                                                 <span class="wsx-base-star" title="Yıldızlı">
                                                     <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="currentColor"/></svg>

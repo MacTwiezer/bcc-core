@@ -130,7 +130,7 @@ if (!empty($shareExistingIds)) {
 <title><?php echo htmlspecialchars(bcc_page_title($base['name'], $activeTableName), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
-<?php echo bcc_page_identity_meta($base['id'], $base['name'], $activeTableName), "\n"; ?>
+<?php echo bcc_page_identity_meta($base['id'], $base['name'], $activeTableName, isset($base['icon']) ? $base['icon'] : null, isset($base['icon_color']) ? $base['icon_color'] : null), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
@@ -175,7 +175,7 @@ if (!empty($shareExistingIds)) {
                          interface.css'te (.if-nav-back .home-base-icon).
                          Kategori GLİFİ değişmedi — base'ler hâlâ birbirinden
                          ayırt edilebiliyor. -->
-                    <span class="home-base-icon"><?php echo bcc_base_icon_svg(14, $base['name']); ?></span>
+                    <span class="home-base-icon"><?php echo bcc_base_icon_svg(14, $base['name'], isset($base['icon']) ? $base['icon'] : null); ?></span>
                     <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </summary>

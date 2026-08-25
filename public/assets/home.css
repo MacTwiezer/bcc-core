@@ -818,10 +818,68 @@ button.home-search-result {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
     border-radius: 14px;
-    padding: 20px 24px;
+    /* Üst dolgu 20px DEĞİL 56px: kartın üst 44px'i artık bir BAŞLIK ŞERİDİ
+       (::before, aşağıda) — içerik onun altından başlar. Alt dolgu bilerek
+       ESKİ değerinde (20px) bırakıldı. */
+    padding: 56px 24px 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     transition: box-shadow 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
+
+/* ---------- Kart başlık şeridi ----------
+   NEDEN VAR: sağ üstteki [tabloya git]/[yıldız]/[⋯] kümesi mutlak konumlu ve
+   kartın üst bandını kaplıyor; kart yalnızca içeriği kadar yüksekken (125px)
+   base ADI tam o banda denk geliyor, geniş kartlarda uzun adlar butonların
+   ALTINDAN geçiyordu.
+   İLK DENEME (min-height: 164px + dikey ortalama) REDDEDİLDİ: çakışmayı
+   çözüyordu ama içeriği ortada bırakıp HEM üstte HEM altta ölü boşluk üretti
+   (kullanıcı bildirdi: "üstle alt absürt şekilde boş").
+   ŞİMDİKİ ÇÖZÜM: alt dolgu eski hâline döndü, üstteki boşluk ise DOLU bir
+   şeride dönüştü — solunda "N tablo" rozeti, sağında rol rozeti (hover'da
+   solup yerini aksiyonlara bırakır). Şerit düz gri bir bant değil, base'in
+   kendi renginden (--bi-solid) çok düşük oranlı bir karışım: her kart kendi
+   kimliğini taşır.
+   44px: aksiyon butonları (top 0.6rem ≈ 10px + 26px) şeridin İÇİNDE ve dikeyde
+   ortalanmış kalsın diye — (44 − 26) / 2 = 9 ≈ 10px. */
+.home-base-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: color-mix(in srgb, var(--bi-solid) 7%, var(--bcc-surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--bi-solid) 16%, var(--bcc-border));
+    /* 13px = 14px kart yarıçapı − 1px kenarlık; şeridin köşeleri kartınkinin
+       İÇİNE oturmalı, yoksa üst köşelerde kenarlığın dışına taşar. */
+    border-radius: 13px 13px 0 0;
+    pointer-events: none;
+}
+
+/* "N tablo" rozeti şeridin SOL ucuna taşınır (kart modu). Akıştan çıktığı için
+   .home-base-info artık iki satır (ad + "Açıldı: …") — kart eski yüksekliğine
+   döner. left: 24px kartın yatay dolgusuyla AYNI, yani rozet ikonla hizalı.
+   ⚠️ Özgüllük .home-base-card ile artırıldı: taban .home-base-stats kuralı
+   home-bento.css'te ve o dosya home.css'ten SONRA yükleniyor — düz
+   .home-base-stats yazılsaydı oradaki margin-top mutlak konumu 6px kaydırırdı. */
+.home-base-card .home-base-stats {
+    position: absolute;
+    top: 11px;
+    left: 24px;
+    margin-top: 0;
+}
+
+/* "Yeni Base Oluştur" kutucuğunda şerit YOK: bir base değil, ne rozeti ne
+   aksiyonu var — boş bir bant tam da kaçınılmak istenen şey olurdu. Dolgusu da
+   eski hâlinde kalır; ızgara satırı zaten en uzun kartın boyuna gerilir
+   (align-items: stretch), yani kutucuk yine kartlarla aynı yükseklikte durur. */
+.home-base-create::before { display: none; }
+.home-base-create { padding: 20px 24px; }
+
+/* Bento ızgarasında şerit YOK: orada kartın üstü zaten "kapak" (.home-base-cover)
+   ve içerik alta yaslı — iki katman üst üste binerdi. ($bento bugün hiçbir
+   çağıranda açık değil, kural ileride açılırsa diye duruyor.) */
+.home-base-grid--bento .home-base-card::before { display: none; }
 
 /* ---------- Rol rozeti (kart modu) ----------
    Kullanıcının o base'in çalışma alanındaki yetkisi (Owner/Editor/Commenter/
@@ -854,6 +912,23 @@ button.home-search-result {
     text-transform: uppercase;
     white-space: nowrap;
     transition: opacity 0.16s ease;
+}
+
+/* KART İÇİNDEKİ rozet artık başlık şeridinin SAĞ ucunda (akışta değil).
+   ⚠️ Seçici .home-base-card ile kapsandı: AYNI sınıf çalışma alanı grup
+   BAŞLIKLARINDA da kullanılıyor (bkz. .home-ws-head) — düz .home-base-role
+   yazılsaydı oradaki rozet de akıştan çıkıp başlığın üstüne binerdi.
+   Aksiyonlarla çakışmaz: rozet hover'da zaten soluyor (aşağıdaki kural),
+   butonlar tam o anda aynı köşede beliriyor — yani şeridin sağ ucu durağan
+   hâlde rolü, hover'da eylemleri gösterir, ikisi asla aynı anda değil.
+   Kazanç: rozet .home-base-info'yu artık daraltmıyor, base adı kartın tüm
+   genişliğini kullanıyor (eskiden "Demo C..." diye erken kırpılıyordu). */
+.home-base-card .home-base-role {
+    position: absolute;
+    top: 11px;
+    right: 24px;
+    margin-left: 0;
+    align-self: auto;
 }
 
 /* ÖLÇÜLEN ÇAKIŞMA: rozet dikeyde ortalanınca, sağ üstte hover'da beliren
@@ -945,11 +1020,82 @@ html.home-view-list .home-base-role,
     transition: opacity 0.1s ease, background 0.1s ease;
 }
 
+/* "Tabloya git" kısayolu — yıldız/⋯ ile AYNI overlay ailesi ve AYNI ölçü.
+   Zeminli (⋯ gibi), çıplak yıldız butonu gibi değil: kartın renkli kapağının
+   üstüne denk geldiği için zeminsiz bir ikon okunmuyordu. Yıldızla aynı
+   mantıkla akıştan çıkarılıp (position:absolute) ⋯'nin üstüne oturur ve kart
+   hover'landığında sırayı bozmadan ikinci adım kadar (2 x 30px) sola kayar. */
+.home-base-data-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: var(--bcc-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    color: var(--bcc-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.1s ease, transform 0.12s ease, background 0.1s ease, color 0.1s ease;
+}
+
+.home-base-data-btn:hover {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text);
+}
+
 .home-base-card:hover .home-base-star-btn,
+.home-base-card:hover .home-base-data-btn,
 .home-base-card:hover .home-base-more-btn { opacity: 1; }
 
 /* Hover'da ⋯'nin üstünden ayrılıp soluna kayar (26px buton + 0.25rem boşluk). */
 .home-base-card:hover .home-base-star-btn { transform: translateX(-30px); }
+
+/* Sıra (soldan sağa): [tabloya git] [yıldız] [⋯] — yıldızın bir adım solu. */
+.home-base-card:hover .home-base-data-btn { transform: translateX(-60px); }
+
+/* İpucu balonu — grid kabuğundaki .gs-kbd-tooltip'in Home karşılığı (o dosya
+   burada yüklenmiyor, bkz. home_shell_top.php).
+   Kart modunda YUKARI açılır: butonlar artık başlık şeridinin içinde, kartın en
+   üstünde — aşağı açılan balon base ADININ üstünü kapatıyordu. Kart ızgarasında
+   kırpan bir kap yok, balon kartın üst kenarının dışına rahatça taşar.
+   Sola da açılmıyor: orada da adın üstüne biniyordu. */
+.home-base-btn-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    background: var(--bcc-text);
+    color: var(--bcc-surface);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    padding: 0.3rem 0.45rem;
+    border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.home-base-data-btn:hover .home-base-btn-tip,
+.home-base-data-btn:focus-visible .home-base-btn-tip { display: block; }
+
+/* Liste modunda balon AŞAĞI açılır: orada ızgara kabı köşe yuvarlaklığı için
+   overflow:hidden taşıyor (bkz. .home-base-grid.view-mode-list) — yukarı açılan
+   balon İLK satırda kırpılırdı. Aşağıda balonun alt kenarı (10px üst konum +
+   26px buton + 6px boşluk + ~23px balon ≈ 65px) 74px'lik satırın İÇİNDE kalır. */
+html.home-view-list .home-base-btn-tip,
+.view-mode-list .home-base-btn-tip {
+    top: calc(100% + 6px);
+    bottom: auto;
+}
 
 .home-base-star-btn[aria-pressed="true"] { opacity: 1; }
 
@@ -1291,6 +1437,19 @@ html.home-view-list .home-base-card,
     border-radius: 0;
     box-shadow: none;
     padding: 1rem 1.1rem;
+}
+
+/* Başlık şeridi liste modunda YOK ve "N tablo" rozeti AKIŞA geri döner: bu mod
+   .home-list-header ile piksel piksel hizalanan bir tablo (Ad / Son açılma /
+   Çalışma alanı) — rozet satırın içinde, adın yanında durmalı; mutlak konumda
+   kalsaydı satırın sol üstüne yapışıp kolon hizasını bozardı. */
+html.home-view-list .home-base-card::before,
+.view-mode-list .home-base-card::before { display: none; }
+
+html.home-view-list .home-base-card .home-base-stats,
+.view-mode-list .home-base-card .home-base-stats {
+    position: static;
+    margin-top: 0;
 }
 
 html.home-view-list .home-base-icon,

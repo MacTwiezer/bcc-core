@@ -270,20 +270,26 @@
                     },
                 });
             });
-
-            // "Interface" (Open > Interface): gerçek <a> DEĞİL (kartın kendisi
-            // zaten bir <a> — iç içe <a> HTML ayrıştırıcısı tarafından otomatik
-            // kapatılıp yapı bozulurdu, bkz. grid satır genişletme/Starred
-            // işlerindeki AYNI karar). Bu yüzden <button data-nav-href> +
-            // window.location.href.
-            document.querySelectorAll('[data-nav-href]').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.location.href = btn.getAttribute('data-nav-href');
-                });
-            });
         }
+
+        // "Duyuru" (Aç > Duyuru) ve kartın "Tabloya git" kısayolu: gerçek <a>
+        // DEĞİL (kartın kendisi zaten bir <a> — iç içe <a> HTML ayrıştırıcısı
+        // tarafından otomatik kapatılıp yapı bozulurdu, bkz. grid satır
+        // genişletme/Starred işlerindeki AYNI karar). Bu yüzden
+        // <button data-nav-href> + window.location.href.
+        //
+        // ⚠️ "⋯ menüsü var mı" (menuEntries.length) koşulunun DIŞINDA: artık
+        // menünün İÇİNDE olmayan bir data-nav-href de var ("Tabloya git",
+        // kartın aksiyon kümesinde). Koşulun içinde bıraksaydık kısayol,
+        // ilgisiz bir sebeple (ör. menü hiç basılmayan bir kart varyantı)
+        // sessizce ölürdü.
+        document.querySelectorAll('[data-nav-href]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = btn.getAttribute('data-nav-href');
+            });
+        });
 
         // Trash — "⋯" menüsündeki "Sil" (yalnızca owner rolünde render edilir,
         // bkz. schema.php $canDelete). Soft-delete olduğu için (geri alınabilir,

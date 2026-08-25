@@ -4541,6 +4541,30 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
             </span>
         <?php endif; ?>
         <div class="home-base-card-actions">
+            <?php
+            // "Tabloya git" — kartın KENDİ href'iyle AYNI hedef: /base.php
+            // görünür çıktısı olmayan bir köprüdür, base'in İLK tablosunun
+            // grid.php'sine yönlendirir (hiç tablosu yoksa base_tables.php'ye).
+            // Kısayol, kartın gövdesinden BAĞIMSIZ ve kendi ipucunu taşıyan bir
+            // eylem olarak istendi (hover'da "Tabloya git" balonu + tek tık);
+            // hedefi kart tıklamasıyla bilerek aynı, çünkü "base'in verisi"nin
+            // tek kanonik girişi /base.php (base.open denetim kaydını da o basar
+            // — doğrudan grid.php'ye linklenseydi "Açıldı:" güncellenmezdi).
+            //
+            // Gerçek <a> DEĞİL: kartın kendisi bir <a> ve iç içe <a>, HTML
+            // ayrıştırıcısı tarafından kapatılıp yapıyı bozardı — aşağıdaki
+            // "Duyuru" öğesindeki AYNI gerekçe, bu yüzden <button data-nav-href>
+            // + home.js. JS yüklenmezse tıklama kartın <a>'sına düşer ve
+            // kullanıcı ZATEN aynı adrese gider (kısayol sessizce bozulmaz).
+            ?>
+            <button type="button" class="home-base-data-btn" data-nav-href="/base.php?base_id=<?php echo (int) $base['id']; ?>" aria-label="Tabloya git">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <ellipse cx="10" cy="5.2" rx="5.8" ry="2.4" stroke="currentColor" stroke-width="1.4"/>
+                    <path d="M4.2 5.2v9.6c0 1.33 2.6 2.4 5.8 2.4s5.8-1.07 5.8-2.4V5.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    <path d="M4.2 10c0 1.33 2.6 2.4 5.8 2.4s5.8-1.07 5.8-2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+                <span class="home-base-btn-tip" aria-hidden="true">Tabloya git</span>
+            </button>
             <button type="button" class="home-base-star-btn" aria-label="Favorilere ekle/çıkar" aria-pressed="<?php echo $isStarred ? 'true' : 'false'; ?>">
                 <svg width="16" height="16" viewBox="0 0 20 20" class="home-base-star-icon"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" stroke-width="1.4" stroke-linejoin="round"/></svg>
             </button>

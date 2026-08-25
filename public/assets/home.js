@@ -447,10 +447,26 @@
                     return res.json().catch(function () { return { ok: false }; });
                 }).then(function (data) {
                     if (data && data.ok && data.id) {
-                        // Yeni base doğrudan açılır (OpsFlow de oluşturur
-                        // oluşturmaz base'e girer). Kartı DOM'a elle eklemeye
-                        // gerek yok — sayfa zaten terk ediliyor.
-                        window.location.href = '/base.php?base_id=' + encodeURIComponent(data.id);
+                        // ⚠️ ARTIK BASE'E GİTMİYORUZ (kullanıcı isteği).
+                        // Eskiden '/base.php?base_id=...' açılıyordu; yeni
+                        // base'in HİÇ TABLOSU OLMADIĞI için base.php onu
+                        // base_tables.php'ye yönlendiriyordu, yani kullanıcı her
+                        // base oluşturuşunda istemediği bir ara ekrana düşüyordu
+                        // — oraya zaten karta tıklayarak ulaşılabiliyor.
+                        //
+                        // Bunun yerine bulunduğumuz sayfada kalınıp yeniden
+                        // yükleniyor: yeni kart SUNUCUDAN gelir, yani sıralama,
+                        // çalışma alanı gruplaması, "N tablo" rozeti, rol ve
+                        // seçilen ikon/renk kendiliğinden doğru olur. Kartı JS
+                        // ile elle kurmak bcc_render_home_base_card()'ın
+                        // TAMAMINI (başlık şeridi, aksiyonlar, menü, ipucu)
+                        // ikinci kez yazmak demekti — tek doğruluk kaynağı
+                        // sunucudaki o fonksiyon kalsın.
+                        //
+                        // Aynı davranış workspaces.php'de de doğru: orada da
+                        // sayfa yenilenince yeni base kendi listesinde çıkar.
+                        closeCreateModal();
+                        window.location.reload();
                         return;
                     }
                     createSubmitBtn.disabled = false;

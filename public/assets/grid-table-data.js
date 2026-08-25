@@ -27,8 +27,12 @@
 
             function positionPanel() {
                 var rect = summary.getBoundingClientRect();
-                panel.style.top = (rect.bottom + 4) + 'px';
-                panel.style.left = rect.left + 'px';
+                // rect GÖRSEL, style YERLEŞİM pikseli — büyük ekranda zoom
+                // devredeyken bölünmezse panel kayar (bkz. theme-init.js
+                // bcc_uiScale; aynı düzeltme home.js/grid-view-manage.js'de).
+                var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+                panel.style.top = (rect.bottom / s + 4) + 'px';
+                panel.style.left = (rect.left / s) + 'px';
             }
 
             // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —

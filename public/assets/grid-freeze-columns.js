@@ -133,7 +133,12 @@
 
         function computeFrozenCountForX(clientX) {
             var rect = table.getBoundingClientRect();
-            var x = clientX - rect.left;
+            // clientX ve rect GÖRSEL piksel, aşağıdaki offsetWidth toplamı
+            // YERLEŞİM pikseli (bkz. assets/theme-init.js bcc_uiScale) — büyük
+            // ekranda zoom devredeyken bölünmezse tutamaç YANLIŞ sütunda
+            // durur (imleç ilerledikçe hata zoom oranı kadar büyür).
+            var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+            var x = (clientX - rect.left) / s;
             var heads = headerCells();
             var acc = 0;
             var count = 1;

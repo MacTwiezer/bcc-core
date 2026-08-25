@@ -159,17 +159,24 @@
         var moreMenus = Array.prototype.slice.call(document.querySelectorAll('.home-base-more-menu'));
         var menuEntries = []; // {menu, panel} — dışarı-tık/Escape kontrolü panel.contains() de bakmalı (aşağıya bkz.)
 
+        // ⚠️ uiScale ŞART (bkz. assets/theme-init.js bcc_uiScale): rect ve
+        // innerWidth GÖRSEL piksel, style'a yazdığımız değer YERLEŞİM pikseli.
+        // Büyük ekranda (:root { zoom }) bölme yapılmazsa panel tam olarak zoom
+        // oranı kadar aşağı-sola kayar — kullanıcının bildirdiği hata buydu,
+        // dizüstünde zoom 1 olduğu için orada görünmüyordu.
         function positionPanelBelow(panel, anchorEl) {
             var rect = anchorEl.getBoundingClientRect();
-            panel.style.top = (rect.bottom + 4) + 'px';
+            var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+            panel.style.top = (rect.bottom / s + 4) + 'px';
             panel.style.left = 'auto';
-            panel.style.right = (window.innerWidth - rect.right) + 'px';
+            panel.style.right = ((window.innerWidth - rect.right) / s) + 'px';
         }
 
         function positionPanelRight(panel, anchorEl) {
             var rect = anchorEl.getBoundingClientRect();
-            panel.style.top = rect.top + 'px';
-            panel.style.left = (rect.right + 4) + 'px';
+            var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+            panel.style.top = (rect.top / s) + 'px';
+            panel.style.left = (rect.right / s + 4) + 'px';
             panel.style.right = 'auto';
         }
 

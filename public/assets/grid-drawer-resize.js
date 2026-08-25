@@ -54,7 +54,10 @@
             if (!dragging) { return; }
             // Sürükleme sırasında metin seçimi/otomatik kaydırma başlamasın.
             e.preventDefault();
-            apply(startW + (e.clientX - startX));
+            // Fare koordinatları GÖRSEL piksel, yazdığımız genişlik YERLEŞİM
+            // pikseli (bkz. assets/theme-init.js bcc_uiScale) — büyük ekranda
+            // zoom devredeyken bölünmezse çekmece imleçten hızlı hareket eder.
+            apply(startW + (e.clientX - startX) / (window.bcc_uiScale ? window.bcc_uiScale() : 1));
         }
 
         function onUp() {
@@ -84,7 +87,10 @@
             // Başlangıç genişliği GERÇEK ölçümden alınır (değişkenden değil):
             // kullanıcı hiç sürüklememişse değişken hiç tanımlı olmayabilir,
             // o zaman CSS'teki varsayılan geçerlidir.
-            startW = drawer.getBoundingClientRect().width;
+            // offsetWidth (rect DEĞİL): rect GÖRSEL piksel verir, apply() ise
+            // YERLEŞİM pikseli yazar — zoom altında ikisi karışırsa çekmece
+            // sürüklemenin ilk anında sıçrar (bkz. theme-init.js bcc_uiScale).
+            startW = drawer.offsetWidth;
 
             document.body.classList.add('gs-drawer-resizing');
             handle.classList.add('is-dragging');
@@ -112,7 +118,7 @@
             e.preventDefault();
             var next = (step === null)
                 ? DEFAULT
-                : drawer.getBoundingClientRect().width + step;
+                : drawer.offsetWidth + step;
             apply(next);
             try {
                 window.localStorage.setItem(STORAGE_KEY, String(clamp(next)));

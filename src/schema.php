@@ -4582,7 +4582,11 @@ function bcc_render_home_base_card($base, $iconColor, $isStarred, $workspaceName
                             <button type="button" class="home-base-more-item" data-nav-href="/interface.php?base_id=<?php echo (int) $base['id']; ?>">Duyuru</button>
                         </div>
                     </details>
-                    <button type="button" class="home-base-more-item" disabled>Çoğalt</button>
+                    <?php // "Çoğalt" öğesi KALDIRILDI (kullanıcı isteği): her zaman
+                          // disabled basılıyordu, yani hiçbir işlevi yoktu — base
+                          // çoğaltma diye bir uçnokta da yok (api/table_duplicate.php
+                          // TABLO çoğaltır, base değil). Menüde ölü bir satır
+                          // bırakmaktansa satır hiç basılmıyor. ?>
                     <?php if ($canDelete): ?>
                     <div class="home-base-more-divider"></div>
                     <button type="button" class="home-base-more-item home-base-more-item-danger" data-base-delete="<?php echo (int) $base['id']; ?>">Sil</button>

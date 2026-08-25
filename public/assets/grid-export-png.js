@@ -127,14 +127,18 @@
                 if (th === addFieldTh) {
                     return;
                 }
-                colWidths.push(Math.round(th.getBoundingClientRect().width));
+                // offsetWidth (rect DEĞİL): rect GÖRSEL piksel verir, aşağıdaki
+                // table.scrollHeight ise YERLEŞİM pikseli — büyük ekranda zoom
+                // devredeyken ikisi karışırsa PNG en-boy oranı bozulurdu
+                // (bkz. assets/theme-init.js bcc_uiScale).
+                colWidths.push(th.offsetWidth);
             });
 
             var width = 0;
             for (var ci = 0; ci < colWidths.length; ci++) { width += colWidths[ci]; }
             // Taban "+" satırı da çıktıda gizli — yüksekliğinden düşülmezse PNG'nin
             // altında boş bir şerit kalır.
-            var height = Math.ceil(table.scrollHeight - (addRow ? addRow.getBoundingClientRect().height : 0));
+            var height = Math.ceil(table.scrollHeight - (addRow ? addRow.offsetHeight : 0));
 
             if (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD) {
                 if (!window.confirm('Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?')) {

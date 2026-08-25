@@ -596,15 +596,19 @@
             var btn = details.querySelector('.if-tool-btn');
             if (!panel || !btn) { return; }
 
+            // rect'ler ve innerWidth GÖRSEL piksel, style'a yazılan değer
+            // YERLEŞİM pikseli — büyük ekranda zoom devredeyken bölünmezse
+            // panel kayar (bkz. assets/theme-init.js bcc_uiScale).
+            var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
             var r = btn.getBoundingClientRect();
-            panel.style.top = (r.bottom + 4) + 'px';
-            panel.style.left = r.left + 'px';
+            panel.style.top = (r.bottom / s + 4) + 'px';
+            panel.style.left = (r.left / s) + 'px';
 
             // Genişliği ölçmek için önce yerleştirildi; taşma varsa sola kaydır.
             var pr = panel.getBoundingClientRect();
-            var overflowRight = pr.right - (window.innerWidth - 8);
+            var overflowRight = (pr.right - (window.innerWidth - 8)) / s;
             if (overflowRight > 0) {
-                panel.style.left = Math.max(8, r.left - overflowRight) + 'px';
+                panel.style.left = Math.max(8, r.left / s - overflowRight) + 'px';
             }
         }
 

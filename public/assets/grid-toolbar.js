@@ -195,7 +195,10 @@
                 }
             );
 
-            var gap = frozenRight - el.getBoundingClientRect().left;
+            // rect'ler GÖRSEL piksel ama scrollLeft YERLEŞİM pikseli (bkz.
+            // assets/theme-init.js bcc_uiScale) — büyük ekranda zoom
+            // devredeyken bölünmezse içerik gereğinden fazla kaydırılır.
+            var gap = (frozenRight - el.getBoundingClientRect().left) / (window.bcc_uiScale ? window.bcc_uiScale() : 1);
             if (gap > 0) {
                 // scrollLeft AZALTMAK içeriği SAĞA kaydırır; +8px nefes payı.
                 // Tarayıcı değeri 0'ın altına düşürmez, ayrıca kırpma gerekmez.

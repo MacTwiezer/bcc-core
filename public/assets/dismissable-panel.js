@@ -108,6 +108,25 @@
         var gap = typeof options.gap === 'number' ? options.gap : 4;
         var margin = 8; // viewport kenarlarına bırakılan pay
 
+        // ⚠️ ÖNCE ÖLÇÜ BİRİMİ EŞİTLENİR (bkz. assets/theme-init.js
+        // bcc_uiScale): rect ve innerWidth/innerHeight GÖRSEL piksel, ama
+        // aşağıda onlarla birlikte kullanılan panel.offsetWidth/offsetHeight ve
+        // panel.style'a YAZILAN değerler YERLEŞİM pikseli. Büyük ekranda
+        // (:root { zoom } devrede) ikisi karışınca panel tam olarak zoom oranı
+        // kadar kayıyordu. Her şey burada yerleşim pikseline çevrilir; zoom 1
+        // olan ekranlarda bölme etkisizdir, yani eski davranış birebir korunur.
+        var uiScale = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+        if (uiScale !== 1) {
+            rect = {
+                top: rect.top / uiScale,
+                bottom: rect.bottom / uiScale,
+                left: rect.left / uiScale,
+                right: rect.right / uiScale,
+            };
+        }
+        var viewportW = window.innerWidth / uiScale;
+        var viewportH = window.innerHeight / uiScale;
+
         // ---- DİKEY: aşağı sığmıyorsa YUKARI ÇEVİR ----
         // Bulunan gerçek bug: konum koşulsuz "anchor'ın ALTI" idi. Alt
         // satırlardaki (ör. 8./9. satır) hücrelerde popover ekranın altından
@@ -118,7 +137,7 @@
         // panel, yer açıldığında dar kalırdı.
         panel.style.maxHeight = '';
         var panelHeight = panel.offsetHeight || 0;
-        var spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+        var spaceBelow = viewportH - rect.bottom - gap - margin;
         var spaceAbove = rect.top - gap - margin;
 
         if (panelHeight <= spaceBelow || spaceBelow >= spaceAbove) {
@@ -132,17 +151,17 @@
                 panel.style.maxHeight = Math.max(spaceAbove, 120) + 'px';
             }
             panel.style.top = 'auto';
-            panel.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
+            panel.style.bottom = (viewportH - rect.top + gap) + 'px';
         }
 
         // ---- YATAY ----
         if (align === 'right') {
             // Sağ kenarı anchor'ın sağına hizala. Dar ekranda panel sola
             // taşarsa sol kenardan margin kadar içeri çekilir.
-            var rightOffset = window.innerWidth - rect.right;
+            var rightOffset = viewportW - rect.right;
             var pw = panel.offsetWidth || 0;
-            if (rightOffset + pw > window.innerWidth - margin) {
-                rightOffset = window.innerWidth - margin - pw;
+            if (rightOffset + pw > viewportW - margin) {
+                rightOffset = viewportW - margin - pw;
             }
             if (rightOffset < margin) {
                 rightOffset = margin;
@@ -157,8 +176,8 @@
         // taşıyordu) burada TÜM yüzen paneller için geçerli.
         var left = rect.left;
         var panelWidth = panel.offsetWidth || 0;
-        if (left + panelWidth > window.innerWidth - margin) {
-            left = window.innerWidth - margin - panelWidth;
+        if (left + panelWidth > viewportW - margin) {
+            left = viewportW - margin - panelWidth;
         }
         if (left < margin) {
             left = margin;

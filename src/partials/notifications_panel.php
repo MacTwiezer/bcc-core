@@ -24,9 +24,25 @@ if (!isset($notifIconStroke)) {
 
 $notifications = bcc_fetch_notifications();
 $lastSeenAt = $notifUser['last_seen_notifications_at'];
+
+// Okundu/okunmadı İKİ kaynaktan gelir (bkz. migrations/021):
+//   1) $lastSeenAt        — "Tümünü okundu işaretle"nin çektiği toplu damga
+//   2) $readIds           — göz ikonuyla TEK TEK işaretlenenler
+// okunmamış = damgadan yeni VE tek tek işaretlenmemiş. Tek sorgu, bildirim
+// başına ayrı sorgu yok.
+$readIds = bcc_read_notification_ids(array_column($notifications, 'id'));
+
+$isUnreadFn = function ($n) use ($lastSeenAt, $readIds) {
+    if (isset($readIds[(int) $n['id']])) {
+        return false;
+    }
+
+    return $lastSeenAt === null || $n['created_at'] > $lastSeenAt;
+};
+
 $unreadCount = 0;
 foreach ($notifications as $n) {
-    if ($lastSeenAt === null || $n['created_at'] > $lastSeenAt) {
+    if ($isUnreadFn($n)) {
         $unreadCount++;
     }
 }
@@ -53,20 +69,38 @@ foreach ($notifications as $n) {
                 <div class="home-notif-empty">Bildirim yok</div>
             <?php else: ?>
                 <?php foreach ($notifications as $n):
-                    $isUnread = ($lastSeenAt === null || $n['created_at'] > $lastSeenAt);
+                    $isUnread = $isUnreadFn($n);
                     $message = bcc_notification_message($n);
                     $initial = ($n['actor_name'] !== null && $n['actor_name'] !== '') ? mb_strtoupper(mb_substr($n['actor_name'], 0, 1, 'UTF-8'), 'UTF-8') : '?';
                 ?>
                     <div
                         class="home-notif-item<?php echo $isUnread ? ' is-unread' : ''; ?>"
                         data-notif-unread="<?php echo $isUnread ? '1' : '0'; ?>"
+                        data-notif-id="<?php echo (int) $n['id']; ?>"
                         data-notif-text="<?php echo htmlspecialchars(mb_strtolower($message, 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
                     >
                         <div class="home-notif-avatar"><?php echo htmlspecialchars($initial, ENT_QUOTES, 'UTF-8'); ?></div>
                         <div class="home-notif-body">
                             <div class="home-notif-message"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="home-notif-time"><?php echo htmlspecialchars(bcc_home_relative_date($n['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php // Kaba yakınlık ("Bugün") DEĞİL kesin saat: aynı gün
+                                  // içinde onlarca bildirim birikiyor ve hepsi "Bugün"
+                                  // yazınca hangisinin ne zaman geldiği okunamıyordu.
+                                  // Bugünse yalnızca saat, diğer günlerde tarih + saat
+                                  // (bkz. bcc_notification_time_text). Base kartlarının
+                                  // "Açıldı: 10 gün önce" biçimi DEĞİŞMEDİ. ?>
+                            <div class="home-notif-time"><?php echo htmlspecialchars(bcc_notification_time_text($n['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
+                        <?php // Tek tek "okundu" — göz ikonu. YALNIZCA okunmamış
+                              // satırlarda basılır: zaten okunmuş bir bildirimi
+                              // yeniden okundu yapmanın anlamı yok, buton da
+                              // "tıklayınca hiçbir şey olmayan" bir öğeye dönerdi.
+                              // Okundu işaretlemeyi GERİ ALMA bu turun kapsamı
+                              // dışında (uçnokta yalnızca INSERT yapıyor). ?>
+                        <?php if ($isUnread): ?>
+                            <button type="button" class="home-notif-read-btn" data-notif-read="<?php echo (int) $n['id']; ?>" title="Okundu işaretle" aria-label="Okundu işaretle">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>

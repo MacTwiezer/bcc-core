@@ -4103,6 +4103,30 @@ function bcc_home_relative_date($datetimeStr)
     return intdiv($months, 12) . ' yıl önce';
 }
 
+// Bildirim zaman damgası — bcc_home_relative_date()'ten AYRI bir fonksiyon.
+//
+// NEDEN AYRI: o fonksiyon base kartındaki "Açıldı: 10 gün önce" gibi KABA bir
+// yakınlık ifadesi veriyor ve orada doğru olan bu. Bildirimlerde ise aynı gün
+// içinde onlarca satır birikiyor, hepsi "Bugün" yazınca sıra/zaman hiç
+// okunamıyordu (kullanıcı bildirdi). Ortak fonksiyonu değiştirmek kartları da
+// bozardı, bu yüzden ikinci bir biçim eklendi.
+//
+// Kural: AYNI GÜN ise yalnızca saat (14:32), diğer günlerde tam tarih + saat
+// (24.08.2026 09:15). Karşılaştırma gün DAMGASINA göre yapılır (Y-m-d),
+// "24 saat içinde mi" hesabına göre DEĞİL — dün 23:50'deki bir bildirim bugün
+// 00:10'da "bugün" görünmemeli.
+function bcc_notification_time_text($datetimeStr)
+{
+    $ts = strtotime((string) $datetimeStr);
+    if ($ts === false) {
+        return '';
+    }
+
+    return date('Y-m-d', $ts) === date('Y-m-d')
+        ? date('H:i', $ts)
+        : date('d.m.Y H:i', $ts);
+}
+
 // Base kimlik paleti — TEK kaynak. Her satır AYNI rengin üç sunumu:
 //   solid   : küçük kroma yerlerinde (grid.php üst barı, interface.php nav'ı)
 //             kullanılan dolu çip rengi — beyaz glif üstünde.

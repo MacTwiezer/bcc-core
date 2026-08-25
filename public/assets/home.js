@@ -559,6 +559,19 @@
                             item.classList.remove('is-unread');
                             item.setAttribute('data-notif-unread', '0');
                         });
+                        // ⚠️ GÖZ İKONLARI DA KALKAR (kullanıcı bildirdi): satırlar
+                        // okunmuşa döndüğü hâlde "okundu işaretle" düğmeleri
+                        // duruyordu — tıklandığında hiçbir şey yapmayan, üstelik
+                        // satırın zaten okunduğunu yalanlayan bir düğme.
+                        // Sunucu tarafı zaten no-op'tu; sorun tamamen görseldi.
+                        Array.prototype.forEach.call(
+                            notifDetails.querySelectorAll('[data-notif-read]'),
+                            function (b) {
+                                if (b.parentNode) {
+                                    b.parentNode.removeChild(b);
+                                }
+                            }
+                        );
                         if (notifBadge && notifBadge.parentNode) {
                             notifBadge.parentNode.removeChild(notifBadge);
                         }
@@ -568,6 +581,75 @@
                     });
                 });
             }
+
+            // ---- Tek tek "okundu" (göz ikonu) -------------------------------
+            // Sunucuda user_read_notifications'a bir satır yazar
+            // (api/notification_mark_one_read.php, migrations/021). "Tümünü
+            // okundu"dan farkı: o, damgayı NOW()'a çekip HEPSİNİ kapatıyor.
+            //
+            // Sayfa YENİLENMEZ: satır yerinde "okunmuş"a döner, rozet bir azalır
+            // ve aktif sekme süzgeci yeniden uygulanır — "Okunmamış" sekmesinde
+            // duran kullanıcı satırın listeden çıktığını anında görür.
+            var notifBadgeEl = notifBadge;
+            Array.prototype.forEach.call(notifDetails.querySelectorAll('[data-notif-read]'), function (btn) {
+                btn.addEventListener('click', function (e) {
+                    // Panel bir <details>; tıklama yukarı kabarırsa panel
+                    // kapanır ve kullanıcı sonucu göremezdi.
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (btn.disabled) {
+                        return;
+                    }
+                    btn.disabled = true;
+
+                    var item = btn.closest('.home-notif-item');
+
+                    fetch('/api/notification_mark_one_read.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({
+                            csrf_token: CSRF_TOKEN,
+                            notification_id: btn.getAttribute('data-notif-read'),
+                        }).toString(),
+                    }).then(function (res) {
+                        return res.json().catch(function () { return { ok: false }; });
+                    }).then(function (data) {
+                        if (!data || !data.ok) {
+                            btn.disabled = false;
+                            window.alert((data && data.error) || 'Okundu işaretlenemedi.');
+                            return;
+                        }
+
+                        if (item) {
+                            item.classList.remove('is-unread');
+                            item.setAttribute('data-notif-unread', '0');
+                        }
+                        // Buton kaldırılır: satır artık okunmuş, ikinci kez
+                        // işaretlemek anlamsız (sunucu tarafında da no-op).
+                        if (btn.parentNode) {
+                            btn.parentNode.removeChild(btn);
+                        }
+
+                        if (notifBadgeEl && notifBadgeEl.parentNode) {
+                            var kalan = notifItems.filter(function (it) {
+                                return it.getAttribute('data-notif-unread') === '1';
+                            }).length;
+                            if (kalan === 0) {
+                                notifBadgeEl.parentNode.removeChild(notifBadgeEl);
+                                notifBadgeEl = null;
+                            } else {
+                                notifBadgeEl.textContent = kalan > 9 ? '9+' : String(kalan);
+                            }
+                        }
+
+                        applyNotifFilter();
+                    }).catch(function () {
+                        btn.disabled = false;
+                        window.alert('Okundu işaretlenemedi (bağlantı hatası).');
+                    });
+                });
+            });
 
             applyNotifFilter();
 

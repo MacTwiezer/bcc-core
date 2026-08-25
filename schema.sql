@@ -101,6 +101,26 @@ CREATE TABLE IF NOT EXISTS bases (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- user_read_notifications — TEK TEK okundu işaretlenen bildirimler
+-- (migrations/021). Okundu/okunmadı ayrımı İKİ kaynaktan gelir:
+--   users.last_seen_notifications_at -> "bu andan sonrakiler okunmamış" (toplu)
+--   bu tablo                         -> tek tek işaretlenenler
+-- okunmamış = (audit_log.created_at > last_seen) VE bu tabloda YOK.
+-- Desen user_starred_bases ile birebir aynı (UNIQUE + iki yönlü CASCADE);
+-- ayrı bir user_id index'i YOK, UNIQUE zaten user_id ile başlıyor.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_read_notifications (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id       INT UNSIGNED NOT NULL,
+    audit_log_id  BIGINT UNSIGNED NOT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_read_notifications (user_id, audit_log_id),
+    CONSTRAINT fk_user_read_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_read_notifications_audit FOREIGN KEY (audit_log_id) REFERENCES audit_log(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- user_starred_bases — kullanıcı bazlı favori/yıldızlı base'ler
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_starred_bases (

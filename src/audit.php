@@ -91,6 +91,36 @@ function bcc_fetch_notifications($limit = 30)
     return bcc_fetch_all($sql, array_merge($teamIds, $actions));
 }
 
+// TEK TEK "okundu" işaretlenmiş bildirimlerin id kümesi (migrations/021).
+// Dönüş: audit_log.id => true haritası — panel "bu satır okundu mu?" sorusunu
+// O(1) sorar, bildirim başına ayrı sorgu AÇILMAZ.
+//
+// ⚠️ SORGU BİLDİRİM LİSTESİYLE SINIRLI: kullanıcının tüm okundu geçmişi
+// (zamanla binlerce satır) çekilmez, yalnızca ekranda basılacak id'ler
+// sorulur. $auditIds boşsa hiç sorgu açılmaz.
+function bcc_read_notification_ids($auditIds)
+{
+    $user = current_user();
+    if ($user === null || empty($auditIds)) {
+        return array();
+    }
+
+    $auditIds = array_map('intval', $auditIds);
+    $placeholders = implode(',', array_fill(0, count($auditIds), '?'));
+    $rows = bcc_fetch_all(
+        "SELECT audit_log_id FROM user_read_notifications
+         WHERE user_id = ? AND audit_log_id IN ($placeholders)",
+        array_merge(array((int) $user['id']), $auditIds)
+    );
+
+    $map = array();
+    foreach ($rows as $r) {
+        $map[(int) $r['audit_log_id']] = true;
+    }
+
+    return $map;
+}
+
 // Her action için okunabilir tek cümle — details JSON'undaki alanlar action'a
 // göre değişir (bkz. log_audit() çağrı noktaları), bu yüzden switch/case.
 function bcc_notification_message($row)

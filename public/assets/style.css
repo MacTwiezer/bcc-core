@@ -531,7 +531,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     width: 760px;
     max-width: 92vw;
     height: 620px;
-    max-height: 88vh;
+    max-height: calc(var(--bcc-vh) * 0.88);
     background: var(--bcc-surface);
     border-radius: 12px;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
@@ -1042,7 +1042,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 .grid-send-modal {
     width: 480px;
     max-width: 92vw;
-    max-height: 88vh;
+    max-height: calc(var(--bcc-vh) * 0.88);
     background: var(--bcc-surface);
     border-radius: 12px;
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
@@ -2462,7 +2462,7 @@ td.grid-cell.is-paste-anchor.editing {
     padding: 0.85rem;
     min-width: 260px;
     max-width: 320px;
-    max-height: min(70vh, 420px);
+    max-height: min(calc(var(--bcc-vh) * 0.70), 420px);
     overflow-y: auto;
     text-align: left;
     font-weight: normal;
@@ -3828,7 +3828,7 @@ a.sort-btn:hover {
     max-width: 680px;
     /* Uzun listede pencere ekranı aşmasın: kaydırma İÇERİDE olsun, sayfada
        değil. Başlık sabit kalır, yalnızca form gövdesi kayar. */
-    max-height: calc(100vh - 2rem);
+    max-height: calc(var(--bcc-vh) - 2rem);
     display: flex;
     flex-direction: column;
 }

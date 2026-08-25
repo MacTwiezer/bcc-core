@@ -128,7 +128,7 @@
 .sp-page .fe-col-right > .settings-card {
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 2rem);
+    max-height: calc(var(--bcc-vh) - 2rem);
 }
 
 /* Başlık / bilgi notu / sayaç: sabit yükseklik, sıkışmaz. */

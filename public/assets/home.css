@@ -148,7 +148,7 @@ a { text-decoration: none; color: inherit; }
     transform: translateX(-50%);
     width: 560px;
     max-width: 92vw;
-    max-height: 70vh;
+    max-height: calc(var(--bcc-vh) * 0.70);
     display: flex;
     flex-direction: column;
     background: var(--bcc-surface);
@@ -365,7 +365,7 @@ button.home-search-result {
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
     min-width: 220px;
-    max-height: min(80vh, 520px);
+    max-height: min(calc(var(--bcc-vh) * 0.80), 520px);
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -442,7 +442,7 @@ button.home-search-result {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
     width: 480px;
     max-width: 92vw;
-    max-height: 70vh;
+    max-height: calc(var(--bcc-vh) * 0.70);
     display: flex;
     flex-direction: column;
     padding: 1.25rem 1.25rem 1rem;
@@ -566,7 +566,7 @@ button.home-search-result {
 .home-body {
     display: flex;
     align-items: stretch;
-    min-height: calc(100vh - 56px);
+    min-height: calc(var(--bcc-vh) - 56px);
     position: relative;
 }
 
@@ -1880,7 +1880,7 @@ a.ws-detail-btn:hover {
     right: 0;
     top: calc(100% + 8px);
     width: 340px;
-    max-height: min(75vh, 480px);
+    max-height: min(calc(var(--bcc-vh) * 0.75), 480px);
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
     border-radius: 10px;
@@ -2793,7 +2793,7 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     right: 0;
     z-index: 30;
     min-width: 260px;
-    max-height: 70vh;
+    max-height: calc(var(--bcc-vh) * 0.70);
     overflow-y: auto;
     margin-top: 0.35rem;
     padding: 0.75rem;

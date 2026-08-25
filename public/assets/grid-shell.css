@@ -18,7 +18,7 @@ body.gs-body {
        kalırdı.
        body.gs-body YALNIZCA grid.php'de; interface.php body.if-page
        kullanıyor, bu yüzden orası etkilenmiyor. */
-    height: 100vh;
+    height: var(--bcc-vh);
     overflow: hidden;
 }
 
@@ -128,7 +128,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     min-width: 220px;
-    max-height: min(80vh, 520px);
+    max-height: min(calc(var(--bcc-vh) * 0.80), 520px);
     overflow-x: hidden;
     overflow-y: auto;
     z-index: 40;
@@ -1618,7 +1618,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
 .gs-share-modal {
     width: 560px;
     max-width: 94vw;
-    max-height: 86vh;
+    max-height: calc(var(--bcc-vh) * 0.86);
     display: flex;
     flex-direction: column;
     background: var(--bcc-surface);

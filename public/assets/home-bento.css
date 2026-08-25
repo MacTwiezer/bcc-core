@@ -57,9 +57,18 @@ body.home-page .home-main {
     border-top: none;
 }
 
+/* 13px -> 25px (kullanıcı isteği): bu başlık hem "Base'leriniz" bölümünü hem de
+   çalışma alanı gruplarını ("ABC", "Demo Calisma Alani") adlandırıyor, yani bir
+   bölümün SAHİBİNİ söylüyor — 13px'te kart içindeki "N tablo" rozetiyle (11px)
+   neredeyse aynı ağırlıkta okunuyor ve üstünde durduğu kart ızgarasını
+   taşıyamıyordu. Kalınlık (650) DEĞİŞMEDİ: yalnızca punto büyüdü.
+   Hiyerarşi korunuyor (ölçüldü): sayfa başlığı .home-main-header h1 30px/700,
+   bölüm başlığı 25px/650 — h1 hem daha büyük hem daha kalın kalır.
+   Tek kural yeter, çünkü iki başlık da aynı sınıfı kullanıyor — gruplu ve
+   gruplu olmayan görünüm birbirinden farklı boyda olmaz. */
 .home-section-title {
     margin: 0;
-    font-size: 13px;
+    font-size: 25px;
     font-weight: 650;
     letter-spacing: -0.01em;
     color: var(--bcc-text);

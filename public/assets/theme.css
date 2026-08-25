@@ -332,3 +332,60 @@ button {
 .field-badge--attachment, .field-type-badge--attachment {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E");
 }
+
+/* ---------------------------------------------------------------------------
+   Ekrana göre ORANTILI ölçek (tüm sayfalar)
+   ---------------------------------------------------------------------------
+   SORUN: arayüzün ölçüleri sabit (px/rem karışık, ~yarı yarıya). Dizüstünde
+   (mantıksal ~1536px) dolu görünen bir sayfa, büyük monitörde (1920/2560/4K)
+   aynı piksel boyutunda kalıp ekranın küçük bir köşesine sıkışıyordu — yazılar
+   ve satırlar oransal olarak küçülüyordu.
+
+   ÇÖZÜM: kök öğeye `zoom`. Neden font-size/rem DEĞİL: bu depodaki CSS'in
+   yaklaşık yarısı px ile yazılmış (ölçüldü: px≈1465, rem≈1665 tüm assets/*.css
+   içinde), kök font-size büyütmek yalnızca rem'leri ölçekler; yazı büyürken
+   ikon kutuları, dolgular ve kenarlıklar sabit kalır, düzen ORANTISI bozulurdu.
+   `zoom` her şeyi (px dahil) tek bir oranla ölçekler — tarayıcı yakınlaştırması
+   ne yapıyorsa aynısı, ama kullanıcı her açılışta elle yapmak zorunda kalmadan.
+
+   ⚠️ MEDYA SORGULARI ZOOM'DAN ETKİLENMEZ (ölçüldü): 1920px'lik ekranda
+   `zoom: 1.25` uygulandığında `min-width: 1900px` HÂLÂ eşleşiyor (sorgu gerçek
+   viewport'a bakar), yalnızca yerleşim genişliği 1536'ya iner. Yani kural kendi
+   kendini kapatıp açan bir salınım YARATMAZ.
+
+   HEDEF: her adımda yerleşim ~1536x864'e (yaygın dizüstü mantıksal çözünürlüğü)
+   yakın kalsın — "dizüstünde ne görüyorsam monitörde de o boyda" isteği bu.
+
+   YÜKSEKLİK KOŞULU ŞART: yalnızca genişliğe bakılsaydı 3440x1440 gibi ULTRA
+   GENİŞ ama kısa ekranlarda oran 2.2'ye çıkar, dikeyde 1440/2.2 ≈ 654px kalır
+   ve dizüstünden DAHA AZ satır görünürdü. Her adım hem genişlik hem yükseklik
+   ister; ultra geniş ekran bu yüzden bir alt basamakta durur.
+
+   Sıra ÖNEMLİ: hepsi aynı özgüllükte, en sondaki eşleşen kural kazanır — bu
+   yüzden basamaklar küçükten büyüğe yazılı. 1700px altındaki hiçbir ekran
+   (dizüstü, tablet, telefon) ETKİLENMEZ: orada ölçek 1'de kalır.
+
+   ⚠️ vh BİRİMİ ZOOM'DAN ETKİLENMEZ (ölçüldü) — bu yüzden --bcc-vh var:
+   `zoom: 1.25` altında `100vh` hâlâ 1080 CSS px'tir ama ekranda 1080 × 1.25 =
+   1350 piksel yer kaplar, yani "tam ekran yüksekliği" kuralı sayfayı ekrandan
+   TAŞIRIR (her sayfada 270px'lik sahte dikey kaydırma çubuğu). Bu yüzden
+   assets/*.css içindeki TÜM yükseklik kuralları 100vh/70vh yerine
+   var(--bcc-vh) üzerinden yazılır; değişken zoom'a bölerek gerçek görünür
+   yüksekliği verir. Yeni bir kural yazarken de vh DEĞİL --bcc-vh kullanın. */
+:root {
+    --bcc-zoom: 1;
+    zoom: var(--bcc-zoom);
+    --bcc-vh: calc(100vh / var(--bcc-zoom));
+}
+
+@media (min-width: 1700px) and (min-height: 800px)  { :root { --bcc-zoom: 1.1; } }
+@media (min-width: 1900px) and (min-height: 900px)  { :root { --bcc-zoom: 1.25; } }
+@media (min-width: 2200px) and (min-height: 1000px) { :root { --bcc-zoom: 1.45; } }
+@media (min-width: 2500px) and (min-height: 1150px) { :root { --bcc-zoom: 1.65; } }
+@media (min-width: 3000px) and (min-height: 1350px) { :root { --bcc-zoom: 1.95; } }
+@media (min-width: 3400px) and (min-height: 1800px) { :root { --bcc-zoom: 2.5; } }
+
+/* Yazdırmada ölçek 1: kâğıt/PDF sayfa boyutu ekrandan bağımsız, zoom orada
+   yalnızca içeriği taşırırdı. Grid'in "PDF olarak indir" akışı window.print()
+   üzerinden gittiği için bu kural onu da kapsar. */
+@media print { :root { --bcc-zoom: 1; } }

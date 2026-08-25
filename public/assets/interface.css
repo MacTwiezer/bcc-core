@@ -24,7 +24,7 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-shell {
     display: flex;
-    height: 100vh;
+    height: var(--bcc-vh);
 }
 
 /* ---------- Sol: sarı nav paneli ---------- */
@@ -389,7 +389,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
     min-width: 220px;
-    max-height: min(80vh, 520px);
+    max-height: min(calc(var(--bcc-vh) * 0.80), 520px);
     overflow-x: hidden;
     overflow-y: auto;
     z-index: 40;

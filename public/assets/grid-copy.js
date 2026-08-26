@@ -71,6 +71,62 @@
             return String(text || '').replace(/\s+/g, ' ').trim();
         }
 
+        // ---- Zengin metnin SATIR YAPISI (kullanıcı isteği) -------------------
+        // Grid'de kapalı hücre HER ZAMAN tek satırdır: bcc_rich_text_grid_html()
+        // (src/schema.php) <br>'leri BOŞLUĞA indirir, yani .cell-view'in
+        // textContent'inde satır yapısı ARTIK YOKTUR. Notu büyütünce (satır
+        // detayı/düzenleyici) maddeler alt alta görünür, çünkü ORADA ham değer
+        // okunur.
+        //
+        // Kopyalamada beklenen davranış da bu: madde madde yazılmış bir not
+        // Excel'de/Not Defteri'nde TEK hücrede ama ALT ALTA olsun. Bu yüzden
+        // long_text için görünen metin değil HAM değer (data-value, <br>'leri
+        // duruyor) kaynak alınır.
+        //
+        // DOMParser: kalan etiketleri sökmenin ve &amp;/&#039; gibi varlıkları
+        // çözmenin güvenli yolu — ayrıştırılan belge ayrı bağlamdadır, içindeki
+        // <script>/<img onerror> ÇALIŞMAZ (grid-paste.js'te AYNI gerekçe).
+        // innerHTML ile yapılsaydı pano içeriği sayfaya enjekte edilmiş olurdu.
+        function richTextToLines(rawHtml) {
+            var withBreaks = String(rawHtml).replace(/<br\s*\/?>/gi, '\n');
+            var text;
+            try {
+                text = new DOMParser().parseFromString(withBreaks, 'text/html').body.textContent;
+            } catch (err) {
+                // Ayrıştırma başarısızsa metni kaybetmek yerine kaba temizlik.
+                text = withBreaks.replace(/<[^>]*>/g, '');
+            }
+
+            // Satır İÇİ fazla boşluk toplanır, satır YAPISI korunur. \s+ ile
+            // topluca ezmek satır sonlarını da yutardı — bu fonksiyonun tek
+            // varlık sebebi tam olarak onları korumak.
+            var lines = String(text || '').split('\n').map(function (line) {
+                return line.replace(/[ \t ]+/g, ' ').trim();
+            });
+
+            // Baştaki/sondaki boş satırlar atılır (sanitizer div/p sonrasına
+            // <br> eklediği için sonda neredeyse her zaman bir tane oluşur);
+            // ARADAKİ boş satırlar KORUNUR — onlar kullanıcının kendi
+            // paragraf aralığı.
+            while (lines.length && lines[0] === '') { lines.shift(); }
+            while (lines.length && lines[lines.length - 1] === '') { lines.pop(); }
+
+            return lines.join('\n');
+        }
+
+        // Panoya yazılacak metin. long_text dışındaki tiplerde GÖRÜNEN metin
+        // (tek satır) — davranış değişmedi.
+        function cellCopyText(td) {
+            if (td.getAttribute('data-field-type') === 'long_text') {
+                var raw = td.getAttribute('data-value');
+                if (raw !== null && raw !== '') {
+                    return richTextToLines(raw);
+                }
+            }
+
+            return cellDisplay(td);
+        }
+
         // ---- Pano biçimleri --------------------------------------------------
         // TSV: hücrede sekme, satır sonu veya çift tırnak varsa Excel kuralına
         // göre tırnaklanır ve içteki tırnak ikilenir.
@@ -83,7 +139,7 @@
 
         function buildTsv(matrix) {
             return matrix.map(function (row) {
-                return row.map(function (td) { return tsvCell(cellDisplay(td)); }).join('\t');
+                return row.map(function (td) { return tsvCell(cellCopyText(td)); }).join('\t');
             }).join('\n');
         }
 
@@ -110,8 +166,74 @@
         //
         // Renk/dolgu SABİT yazıldı, tasarım token'ı KULLANILMADI: --bcc-*
         // değişkenleri hedef programda tanımsızdır.
+        //
+        // ---- EXCEL'E YAPIŞTIRMA: DEV SATIRLAR / "BOŞLUKLAR" -----------------
+        // Kullanıcı bildirdi (ekran görüntüsüyle): uzun notlar Excel'e
+        // yapışınca satırlar yüzlerce piksel yükseliyor, metin üstte kalıp
+        // altında kocaman boşluk oluşuyordu.
+        //
+        // Sebep: HTML tablo hücresi VARSAYILAN OLARAK KAYDIRIR (wrap). Excel bu
+        // parçayı içe alırken hücreye "Metni Kaydır"ı AÇIK yazıyor ve satır
+        // yüksekliğini kaydırılmış metne göre otomatik ayarlıyor; içerikte
+        // emoji varsa (bu tabloda var: 🧡 ☑) emoji fontunun satır yüksekliği
+        // çok daha büyük olduğu için otomatik yükseklik iyice şişiyor.
+        // Panonun DÜZ METİN (TSV) dalında böyle bir sorun yok — Not Defteri /
+        // sekmeyle ayrılmış içe aktarma zaten temiz geliyordu.
+        //
+        // Çözüm hedef programın kendi dilinde yazılıyor:
+        //   white-space:nowrap          -> Excel: "Metni Kaydır" KAPALI gelir,
+        //                                  satır tek satır yüksekliğinde kalır
+        //                                  (uzun metin Excel'de normalde nasıl
+        //                                  davranıyorsa öyle davranır).
+        //   mso-data-placement:same-cell-> içinde satır sonu OLAN bir metin
+        //                                  ALT SATIRA TAŞMAZ, aynı hücrede
+        //                                  kalır. Bugün cellDisplay() satır
+        //                                  sonlarını zaten boşluğa çeviriyor;
+        //                                  bu, o davranış değişirse hücrelerin
+        //                                  sessizce kaymasını önleyen kemer.
+        //   vertical-align:top          -> çok satırlı hücrede metin üstten
+        //                                  başlar (Excel varsayılanı alt).
+        // ---- SATIR SONU OLAN HÜCRELER (kullanıcı isteği) --------------------
+        // Madde madde yazılmış bir not, Excel'de TEK hücrede ama ALT ALTA
+        // görünmeli — grid'de notu büyütünce görülen yapının aynısı.
+        //
+        // ⚠️ BİÇİM TAHMİN EDİLMEDİ, EXCEL'E SORULDU: Excel'de çok satırlı bir
+        // hücre kopyalanıp panodaki "HTML Format" okundu. Excel'in KENDİ ürettiği
+        // biçim şu (kısaltılmış):
+        //     <style> br{mso-data-placement:same-cell;}
+        //             td{white-space:nowrap; …}
+        //             .xl63{white-space:normal;} </style>
+        //     <td class=xl63>Madde bir<br />Madde iki<br />Madde uc</td>
+        // Yani üç kural birden gerekiyor:
+        //   1. Satır sonu <br> ile yazılır (metin içi &#10; İŞE YARAMIYOR —
+        //      ölçüldü: Excel onu boşluğa çevirdi, satır sonu kayboldu).
+        //   2. same-cell hint'i <br> ETİKETİNE ait — <td>'ye yazılırsa Excel
+        //      yok sayıyor ve <br>'leri SATIR AYIRICI sanıyor (ölçüldü: 4
+        //      satırlık seçim 40 SATIRA yayıldı).
+        //   3. Satır sonları hücrenin DEĞERİNE girer; ekranda alt alta
+        //      görünmeleri için o hücrede "Metni Kaydır" açık olmalıdır.
+        //
+        // ⚠️ KAYDIRMAYI BİZ AÇMIYORUZ — nedeni ölçüldü. Kaydırma açık gelen bir
+        // hücrede Excel satır yüksekliğini YAPIŞTIRMA ANINDAKİ sütun
+        // genişliğine göre hesaplıyor; o an sütunlar VARSAYILAN (~8 karakter)
+        // genişlikte olduğu için 100 karakterlik bir madde ~13 satıra
+        // kaydırılıyor ve satır yüksekliği tavana (409,5 punto) dayanıyordu.
+        // Kullanıcı sonradan sütunu genişletince metin daralıyor ama yükseklik
+        // OLDUĞU GİBİ KALIYOR — ekranda gördüğü "gereksiz uzunluk" tam olarak
+        // buydu.
+        // Panodan sütun genişliği / satır yüksekliği dayatmak da MÜMKÜN DEĞİL:
+        // <col width>, <td width>, <tr height>, mso-height-source:auto,
+        // mso-width-source:auto — hepsi denendi, Excel yapıştırmada HİÇBİRİNİ
+        // uygulamadı (sütun 8,1 karakterde kaldı).
+        // Bu yüzden davranış GRID'İN KENDİSİYLE aynı bırakıldı: hücre tek satır
+        // görünür (nowrap), satır sonları değerin içinde durur. Kullanıcı
+        // sütunu kendi genişliğine getirip "Metni Kaydır"ı açtığında (veya satır
+        // kenarına çift tıkladığında) Excel yüksekliği KENDİ sütun genişliğine
+        // göre hesaplar ve maddeler tam içerik kadar yer kaplayarak alt alta
+        // dizilir.
         var CLIP_TABLE_ATTRS = ' border="1" style="border-collapse:collapse"';
-        var CLIP_CELL_STYLE = 'border:1px solid #9aa0a6;padding:2px 6px';
+        var CLIP_CELL_STYLE = 'border:1px solid #9aa0a6;padding:2px 6px'
+            + ';mso-data-placement:same-cell;vertical-align:top;white-space:nowrap';
         var CLIP_HEAD_STYLE = CLIP_CELL_STYLE + ';font-weight:bold;background:#f1f3f4';
 
         function buildHtml(matrix) {
@@ -119,14 +241,42 @@
             matrix.forEach(function (row) {
                 out += '<tr>';
                 row.forEach(function (td) {
+                    var text = cellCopyText(td);
                     out += '<td data-bcc-raw="' + esc(cellRaw(td)) + '"'
                         + ' data-bcc-type="' + esc(td.getAttribute('data-field-type') || '') + '"'
                         + ' style="' + CLIP_CELL_STYLE + '">'
-                        + esc(cellDisplay(td)) + '</td>';
+                        // Önce kaçış, SONRA <br> — ters sırada olsaydı kendi
+                        // <br>'imiz de kaçırılıp metin olarak görünürdü.
+                        // <br>'nin AYNI HÜCREDE kalmasını sağlayan kural
+                        // belgenin <style> bloğunda (bkz. wrapHtmlDocument).
+                        + esc(text).replace(/\n/g, '<br>') + '</td>';
                 });
                 out += '</tr>';
             });
             return out + '</tbody></table>';
+        }
+
+        // Panoya yazılan HTML'i TAM BİR BELGEYE sarar.
+        //
+        // ⚠️ Çıplak <table> parçası da çoğu yerde çalışır, ama Excel/Word'ün
+        // HTML içe aktarıcısı belge başlığı olmayan parçalarda stilleri
+        // (kenarlık, nowrap) yok sayabiliyor — dosyanın önceki hâlinde
+        // "kenarlıklar Excel'e gelmiyor, denenmemiş sonraki adım budur" diye
+        // duran not tam olarak buydu. meta charset ayrıca Türkçe karakter ve
+        // emoji'nin hedefte bozulmamasını garantiye alır.
+        //
+        // KENDİ yapıştırma yolumuzu BOZMAZ: grid-paste.js HTML'i DOMParser ile
+        // ayrıştırıyor (innerHTML değil), tam belge de parça da aynı şekilde
+        // çözülüyor ve data-bcc-grid işareti yerinde kalıyor.
+        //
+        // <style> bloğu: "bir <br> SATIR DEĞİŞTİRMEZ, aynı hücrede kalır"
+        // kuralı. Excel'in KENDİ pano çıktısında da tam olarak böyle duruyor
+        // (satır içi <td style> ile denendi, Excel yok saydı — bkz.
+        // CLIP_CELL_STYLE_MULTILINE üzerindeki ölçüm notu).
+        function wrapHtmlDocument(html) {
+            return '<html><head><meta charset="utf-8">'
+                + '<style>br{mso-data-placement:same-cell;}</style>'
+                + '</head><body>' + html + '</body></html>';
         }
 
         // ---- Panoya yazma ----------------------------------------------------
@@ -158,7 +308,12 @@
 
             function onCopy(e) {
                 e.clipboardData.setData('text/plain', tsv);
-                e.clipboardData.setData('text/html', html);
+                // Sarmalama BURADA yapılır, holder'ın innerHTML'ine DEĞİL:
+                // gizli holder yalnızca execCommand('copy')'nin bir şey
+                // seçebilmesi için var; ona tam belge yazmak innerHTML
+                // ayrıştırması sırasında <html>/<body> etiketlerini zaten
+                // atardı. Panoya giden asıl içerik bu satırdır.
+                e.clipboardData.setData('text/html', wrapHtmlDocument(html));
                 e.preventDefault();
             }
 

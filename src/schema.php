@@ -55,6 +55,25 @@ $GLOBALS['BCC_FIELD_TYPES'] = array(
 
 $GLOBALS['BCC_SELECT_FIELD_TYPES'] = array('single_select', 'multiple_select');
 
+// DEĞERİ BİR KULLANICI OLAN alan tipleri — üçünün de "değeri" users.id'dir,
+// yalnızca nereden geldiği farklı: 'user' elle seçilir, 'created_by'
+// records.created_by'dan, 'last_modified_by' records.updated_by'dan gelir.
+//
+// NEDEN TEK LİSTE: filtre panelinde değer kutusunun serbest metin mi yoksa
+// TAKIM ÜYESİ AÇILIR LİSTESİ mi olacağına bu liste karar veriyor. Eskiden
+// yalnızca 'user' için açılır liste vardı (grid.php'de "=== 'user'",
+// grid-filter.js'te ayrıca "=== 'user'") — "Oluşturan"/"Son değiştiren"
+// alanlarına filtre kurmak isteyen kullanıcıya BOŞ BİR METİN KUTUSU çıkıyor ve
+// oraya kullanıcının sayısal id'sini yazması bekleniyordu; pratikte
+// filtrelenemez demekti (kullanıcı bildirdi). Kural iki yerde birden yazılıydı,
+// şimdi tek kaynak burası ve JS'e de buradan gidiyor.
+$GLOBALS['BCC_USER_VALUE_FIELD_TYPES'] = array('user', 'created_by', 'last_modified_by');
+
+function bcc_is_user_value_field_type($fieldType)
+{
+    return in_array($fieldType, $GLOBALS['BCC_USER_VALUE_FIELD_TYPES'], true);
+}
+
 // Kullanıcının ASLA yazamadığı, sunucunun doldurduğu alan tipleri.
 // TEK KAYNAK — bu dizi eskiden bcc_render_grid_data_row() içinde satır içi bir
 // literal olarak duruyordu; form görünümü (Grup View-Form) aynı listeye ikinci
@@ -422,6 +441,27 @@ $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'] = array(
     'last_modified_time' => 'updated_at',
     'last_modified_by' => 'updated_by',
 );
+
+// Yukarıdaki kolonun SQL İFADESİ (alias'lı). Neden ayrı bir fonksiyon:
+// 'last_modified_by' EKRANDA hiç düzenlenmemiş kayıtta OLUŞTURANI gösteriyor
+// (bcc_cell_row_for_field'daki OpsFlow fallback'i), ama filtre/sıralama/
+// gruplama HAM updated_by üzerinde çalışıyordu. Sonuç, kullanıcı için tuzak:
+// ekranda "Son değiştiren: Ahmet" yazan bir satır, "Son değiştiren = Ahmet"
+// filtresinde ÇIKMIYORDU (hiç düzenlenmemiş kayıtların updated_by'ı NULL).
+// Demo tabloda 16 kaydın 5'i tam olarak bu durumdaydı.
+// Artık üç yol da ekrandaki değerle AYNI ifadeyi kullanıyor — tek kaynak burası.
+//
+// ⚠️ 'empty'in anlamı da buna bağlı olarak "ne düzenleyeni ne oluşturanı var"
+// demek oluyor (pratikte: oluşturan kullanıcı silinmiş kayıtlar). Eski anlamı
+// ("hiç düzenlenmemiş") ekranda hiçbir karşılığı olmayan bir bilgiydi.
+function bcc_record_column_expr($fieldType, $alias)
+{
+    if ($fieldType === 'last_modified_by') {
+        return "COALESCE({$alias}.updated_by, {$alias}.created_by)";
+    }
+
+    return $alias . '.' . $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType];
+}
 
 // Grid sütun başlığında gösterilen kısa tip rozeti.
 $GLOBALS['BCC_FIELD_TYPE_BADGE'] = array(
@@ -2317,6 +2357,12 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                        <svg>'si literal metne dönerdi). Değerin kendisi orada
                        htmlspecialchars'tan geçiyor, href ise whitelist'ten. */ ?>
                     <?php echo bcc_render_linkified_cell($f['field_type'], $displayText); ?>
+                <?php elseif (bcc_is_user_value_field_type($f['field_type'])): ?>
+                    <?php /* user/created_by/last_modified_by: adın solunda avatar.
+                       htmlspecialchars İÇERİDE yapılır (bcc_render_user_cell) —
+                       burada uygulansaydı avatar <span>'ı literal metne dönerdi,
+                       Grup A'nın linkleştirme dalındaki AYNI gerekçe. */ ?>
+                    <?php echo bcc_render_user_cell($displayText); ?>
                 <?php else: ?>
                     <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
@@ -2492,6 +2538,35 @@ function bcc_cell_link_href($fieldType, $text)
     }
 
     return null;
+}
+
+// Kullanıcı hücresinin (user / created_by / last_modified_by) HTML gövdesi:
+// adın SOLUNDA profil avatarı (kullanıcı isteği). Avatar bileşeni YENİDEN
+// YAZILMADI — uygulamanın her yerinde kullanılan .ws-collab-avatar (home.css,
+// grid.php onu zaten yüklüyor) kullanılıyor, .cell-user-avatar yalnızca hücreye
+// uygun boyutu veriyor (grid-shell.css'teki .gs-share-avatar ile AYNI desen).
+// Baş harf de bcc_name_initial() ile hesaplanıyor, yani hesap menüsündeki
+// avatarla AYNI kural.
+//
+// ⚠️ bcc_render_linkified_cell() ile AYNI SÖZLEŞME: yalnızca gerçekten HTML
+// üreten yerden (bcc_render_grid_data_row) çağrılır. Excel export'u, Slack
+// mesajı ve grup başlığı cell_display_text()'in DÜZ METİN çıktısını kullanmaya
+// devam eder — oralara avatar/HTML sızmaz.
+//
+// Değer boşsa avatar BASILMAZ: boş bir hücrede tek başına duran renkli bir
+// daire "bir kullanıcı var" izlenimi verirdi.
+function bcc_render_user_cell($displayText)
+{
+    if ($displayText === '') {
+        return '<div class="cell-view"></div>';
+    }
+
+    return '<div class="cell-view cell-user-view">'
+        . '<span class="ws-collab-avatar cell-user-avatar" aria-hidden="true">'
+        . htmlspecialchars(bcc_name_initial($displayText), ENT_QUOTES, 'UTF-8')
+        . '</span><span class="cell-user-name">'
+        . htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8')
+        . '</span></div>';
 }
 
 // Grup A — grid <td>'sinin HTML gövdesi (dıştaki <div class="cell-view"> DAHİL).
@@ -3254,9 +3329,14 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
     // created_time/created_by: gerçek SQL kolonu records'un KENDİ kolonu
     // (created_at/created_by) — BCC_FIELD_VALUE_COLUMN'daki 'value_date'/
     // 'value_number' yalnızca render fonksiyonları içindir, SQL'e ASLA gömülmez.
+    // ⚠️ $column ARTIK TAM İFADE, ALIAS DAHİL ("r.updated_by" ya da
+    // "COALESCE(r.updated_by, r.created_by)" — bkz. bcc_record_column_expr).
+    // Eskiden yalnızca kolon ADI tutuyordu ve aşağıda alias ile birleştiriliyordu;
+    // COALESCE'li ifade o birleştirmede bozulacağı için tüm kullanımlar
+    // doğrudan {$column} olarak yazıldı, başına alias EKLENMEZ.
     $column = isset($GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType])
-        ? $GLOBALS['BCC_RECORD_COLUMN_FIELD_TYPES'][$fieldType]
-        : $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType];
+        ? bcc_record_column_expr($fieldType, $alias)
+        : $alias . '.' . $GLOBALS['BCC_FIELD_VALUE_COLUMN'][$fieldType];
     // url/email/phone (Grup A) de metin benzeri — bu diziye EKLENMEZSE
     // 'empty'/'not_empty' yalnızca IS NULL bakar ve boş string ('') olarak
     // kaydedilmiş hücreleri SESSİZCE kaçırırdı.
@@ -3266,18 +3346,18 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         switch ($operator) {
             case 'empty':
                 if ($isTextLike) {
-                    return array('sql' => "({$alias}.{$column} IS NULL OR {$alias}.{$column} = '')", 'params' => array());
+                    return array('sql' => "({$column} IS NULL OR {$column} = '')", 'params' => array());
                 }
-                return array('sql' => "{$alias}.{$column} IS NULL", 'params' => array());
+                return array('sql' => "{$column} IS NULL", 'params' => array());
             case 'not_empty':
                 if ($isTextLike) {
-                    return array('sql' => "({$alias}.{$column} IS NOT NULL AND {$alias}.{$column} <> '')", 'params' => array());
+                    return array('sql' => "({$column} IS NOT NULL AND {$column} <> '')", 'params' => array());
                 }
-                return array('sql' => "{$alias}.{$column} IS NOT NULL", 'params' => array());
+                return array('sql' => "{$column} IS NOT NULL", 'params' => array());
             case 'checked':
-                return array('sql' => "{$alias}.{$column} = 1", 'params' => array());
+                return array('sql' => "{$column} = 1", 'params' => array());
             case 'unchecked':
-                return array('sql' => "({$alias}.{$column} = 0 OR {$alias}.{$column} IS NULL)", 'params' => array());
+                return array('sql' => "({$column} = 0 OR {$column} IS NULL)", 'params' => array());
         }
     }
 
@@ -3306,10 +3386,10 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         }
 
         if ($operator === 'neq') {
-            return array('sql' => "({$alias}.{$column} <> {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $value));
+            return array('sql' => "({$column} <> {$paramName} OR {$column} IS NULL)", 'params' => array($paramName => $value));
         }
 
-        return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $value));
+        return array('sql' => "{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $value));
     }
 
     if ($fieldType === 'user' || $fieldType === 'created_by' || $fieldType === 'last_modified_by') {
@@ -3320,10 +3400,10 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         $value = (int) $raw;
 
         if ($operator === 'not_equals') {
-            return array('sql' => "({$alias}.{$column} <> {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $value));
+            return array('sql' => "({$column} <> {$paramName} OR {$column} IS NULL)", 'params' => array($paramName => $value));
         }
         if ($operator === 'equals') {
-            return array('sql' => "{$alias}.{$column} = {$paramName}", 'params' => array($paramName => $value));
+            return array('sql' => "{$column} = {$paramName}", 'params' => array($paramName => $value));
         }
 
         return null;
@@ -3340,7 +3420,7 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
             return null;
         }
 
-        return array('sql' => "{$alias}.{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $raw));
+        return array('sql' => "{$column} {$map[$operator]} {$paramName}", 'params' => array($paramName => $raw));
     }
 
     if ($fieldType === 'date' || $fieldType === 'created_time' || $fieldType === 'last_modified_time') {
@@ -3350,13 +3430,13 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         }
 
         if ($operator === 'before') {
-            return array('sql' => "{$alias}.{$column} < {$paramName}", 'params' => array($paramName => $raw . ' 00:00:00'));
+            return array('sql' => "{$column} < {$paramName}", 'params' => array($paramName => $raw . ' 00:00:00'));
         }
         if ($operator === 'after') {
-            return array('sql' => "{$alias}.{$column} > {$paramName}", 'params' => array($paramName => $raw . ' 23:59:59'));
+            return array('sql' => "{$column} > {$paramName}", 'params' => array($paramName => $raw . ' 23:59:59'));
         }
         if ($operator === 'equals') {
-            return array('sql' => "DATE({$alias}.{$column}) = {$paramName}", 'params' => array($paramName => $raw));
+            return array('sql' => "DATE({$column}) = {$paramName}", 'params' => array($paramName => $raw));
         }
 
         return null;
@@ -3368,10 +3448,10 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
         }
 
         if ($operator === 'contains') {
-            return array('sql' => "JSON_CONTAINS({$alias}.{$column}, JSON_QUOTE({$paramName}))", 'params' => array($paramName => $raw));
+            return array('sql' => "JSON_CONTAINS({$column}, JSON_QUOTE({$paramName}))", 'params' => array($paramName => $raw));
         }
         if ($operator === 'not_contains') {
-            return array('sql' => "(NOT JSON_CONTAINS({$alias}.{$column}, JSON_QUOTE({$paramName})) OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $raw));
+            return array('sql' => "(NOT JSON_CONTAINS({$column}, JSON_QUOTE({$paramName})) OR {$column} IS NULL)", 'params' => array($paramName => $raw));
         }
 
         return null;
@@ -3384,13 +3464,13 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
 
     switch ($operator) {
         case 'contains':
-            return array('sql' => "{$alias}.{$column} LIKE {$paramName}", 'params' => array($paramName => '%' . $raw . '%'));
+            return array('sql' => "{$column} LIKE {$paramName}", 'params' => array($paramName => '%' . $raw . '%'));
         case 'not_contains':
-            return array('sql' => "({$alias}.{$column} NOT LIKE {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => '%' . $raw . '%'));
+            return array('sql' => "({$column} NOT LIKE {$paramName} OR {$column} IS NULL)", 'params' => array($paramName => '%' . $raw . '%'));
         case 'equals':
-            return array('sql' => "{$alias}.{$column} = {$paramName}", 'params' => array($paramName => $raw));
+            return array('sql' => "{$column} = {$paramName}", 'params' => array($paramName => $raw));
         case 'not_equals':
-            return array('sql' => "({$alias}.{$column} <> {$paramName} OR {$alias}.{$column} IS NULL)", 'params' => array($paramName => $raw));
+            return array('sql' => "({$column} <> {$paramName} OR {$column} IS NULL)", 'params' => array($paramName => $raw));
     }
 
     return null;
@@ -3413,7 +3493,7 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
     $groupSelectExtra = '';
     foreach ($groupRules as $gIdx => $gRule) {
         if (isset($recordColumnTypes[$gRule['field_type']])) {
-            $groupSelectExtra .= ", r.{$recordColumnTypes[$gRule['field_type']]} AS group_raw_value_{$gIdx}";
+            $groupSelectExtra .= ', ' . bcc_record_column_expr($gRule['field_type'], 'r') . " AS group_raw_value_{$gIdx}";
         } else {
             $groupSelectExtra .= ", gv{$gIdx}.{$gRule['column']} AS group_raw_value_{$gIdx}";
         }
@@ -3427,7 +3507,9 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
 
     foreach ($groupRules as $gIdx => $gRule) {
         if (isset($recordColumnTypes[$gRule['field_type']])) {
-            $col = 'r.' . $recordColumnTypes[$gRule['field_type']];
+            // İfade (kolon adı DEĞİL): last_modified_by'da COALESCE — gruplama
+            // da ekranda görünen kişiye göre yapılsın (bkz. bcc_record_column_expr).
+            $col = bcc_record_column_expr($gRule['field_type'], 'r');
             $orderParts[] = "({$col} IS NULL) DESC";
             $orderParts[] = "{$col} {$gRule['dir']}";
             continue;
@@ -3441,7 +3523,7 @@ function bcc_build_grid_records_query($tableId, $groupRules, $sortRules, $filter
 
     foreach ($sortRules as $idx => $rule) {
         if (isset($recordColumnTypes[$rule['field_type']])) {
-            $orderParts[] = "r.{$recordColumnTypes[$rule['field_type']]} {$rule['dir']}";
+            $orderParts[] = bcc_record_column_expr($rule['field_type'], 'r') . ' ' . $rule['dir'];
             continue;
         }
         $alias = 'sv' . $idx;

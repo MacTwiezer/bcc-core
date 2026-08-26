@@ -276,6 +276,24 @@ body.tf-modal-open { overflow: hidden; }
     color: var(--bcc-text-muted);
 }
 
+/* ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): "Oluşturan" gibi seçeneği OLMAYAN
+   bir alan tipi seçilince pencerede "Seçenekler (her satıra bir seçenek)"
+   kutusu duruyordu.
+   Sebep JS DEĞİL — field-type-wizard.js `hidden` özniteliğini doğru koyuyor
+   (ölçüldü: hidden=true), ama YUKARIDAKİ kural `display:flex` verdiği için
+   tarayıcının `[hidden] { display: none }` varsayılanını EZİYOR ve eleman
+   görünmeye devam ediyordu. Yalnızca bu sayfada oluyordu: grid.php'nin "+"
+   popup'ı bu dosyayı yüklemiyor, orada kutu doğru gizleniyordu.
+   Aynı sınıf hata bu projede daha önce de yaşandı (bkz. home.css
+   `.home-notif-item[hidden]`), çözüm de aynı: gizlemeyi açıkça geri kazandır.
+   Kural yalnızca `label` için değil, sihirbazdaki TÜM gizli satırlar için
+   yazıldı — currency/percent/rating satırları bugün <div> oldukları için
+   şanseseri etkilenmiyordu, biri <label>'a dönerse sessizce aynı tuzağa
+   düşerdi. */
+.sp-page #new-field-details-step [hidden] {
+    display: none;
+}
+
 .sp-page #new-field-details-step input[type="text"],
 .sp-page #new-field-details-step input[type="number"],
 .sp-page #new-field-details-step textarea {

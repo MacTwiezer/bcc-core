@@ -421,9 +421,12 @@ try {
     check('H) REGRESYON percent: "%45"', $cellTxt($gh, $pctH) === '%45', 'bulunan: ' . $cellTxt($gh, $pctH));
     check('H) REGRESYON rating: 5 yildiz span', substr_count($gh, 'data-rating-star=') === 5, 'bulunan: ' . substr_count($gh, 'data-rating-star='));
     check('H) REGRESYON created_time: tarih gosteriyor', preg_match('/\d{2}\.\d{2}\.\d{4}/', $cellTxt($gh, $ctH)) === 1, 'bulunan: ' . $cellTxt($gh, $ctH));
-    check('H) REGRESYON created_by: kullanici adi', $cellTxt($gh, $cbH) === 'GrupC2 Test Owner', 'bulunan: ' . $cellTxt($gh, $cbH));
+    // Ad + SOLUNDA avatar (kullanici istegi, 2026-08-26): strip_tags ciktisinda
+    // avatarin bas harfi de bulundugu icin ESITLIK degil ICERME kontrolu.
+    check('H) REGRESYON created_by: kullanici adi', strpos($cellTxt($gh, $cbH), 'GrupC2 Test Owner') !== false, 'bulunan: ' . $cellTxt($gh, $cbH));
     check('H) REGRESYON last_modified_time: tarih gosteriyor', preg_match('/\d{2}\.\d{2}\.\d{4}/', $cellTxt($gh, $mtH)) === 1, 'bulunan: ' . $cellTxt($gh, $mtH));
-    check('H) REGRESYON last_modified_by: kullanici adi', $cellTxt($gh, $mbH) === 'GrupC2 Test Owner', 'bulunan: ' . $cellTxt($gh, $mbH));
+    check('H) REGRESYON last_modified_by: kullanici adi', strpos($cellTxt($gh, $mbH), 'GrupC2 Test Owner') !== false, 'bulunan: ' . $cellTxt($gh, $mbH));
+    check('H) kullanici hucrelerinde avatar var', substr_count($gh, 'cell-user-avatar') >= 2, 'bulunan: ' . substr_count($gh, 'cell-user-avatar'));
     check('H) autonumber "1" gosteriyor', $cellTxt($gh, $noH) === '1', 'bulunan: ' . $cellTxt($gh, $noH));
 
     // Filtre + siralama (ikinci kayit -> 2 almali)

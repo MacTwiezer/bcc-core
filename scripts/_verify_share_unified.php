@@ -157,10 +157,18 @@ try {
         strpos($ifCode, 'collab-popover-assign') === false);
     check('A) grid.php te de yonlendiren paylas baglantisi yok',
         preg_match('#<a[^>]*href="/team_members\.php#', $gridCode) === 0);
-    // Iki sayfada da katilimci satiri artik <button>.
+    // Katilimci satiri <button> (yonlendiren <a> DEGIL).
+    // ⚠️ ARTIK ORTAK PARTIAL'DA: popover govdesi grid.php ile interface.php'de
+    // 20 satir birebir ayniydi, src/partials/collab_popover_form.php'a alindi
+    // (denetim). Kontrol de oraya tasindi — kural degismedi, YERI degisti.
+    // Iki sayfanin partial'i GERCEKTEN require ettigi ayrica dogrulaniyor,
+    // yoksa "markup var ama sayfa basmiyor" durumu gozden kacardi.
+    $popoverPartial = file_get_contents(__DIR__ . '/../src/partials/collab_popover_form.php');
+    check('A) ortak popover: katilimci ozeti <button data-share-modal-open>',
+        preg_match('#<button[^>]*class="collab-popover-people"[^>]*data-share-modal-open#', $popoverPartial) === 1);
     foreach (array('grid.php' => $gridCode, 'interface.php' => $ifCode) as $name => $code) {
-        check("A) {$name}: katilimci ozeti <button data-share-modal-open>",
-            preg_match('#<button[^>]*class="collab-popover-people"[^>]*data-share-modal-open#', $code) === 1);
+        check("A) {$name}: ortak popover partial'i require ediyor",
+            strpos($code, 'partials/collab_popover_form.php') !== false);
     }
 
     // =====================================================================

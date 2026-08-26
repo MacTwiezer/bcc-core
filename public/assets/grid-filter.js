@@ -25,6 +25,16 @@
         var opsByType = window.BCC_FILTER_OPS || {};
         var noValueOps = window.BCC_FILTER_NO_VALUE_OPS || [];
         var teamMembers = window.BCC_TEAM_MEMBERS || [];
+        // Değeri bir KULLANICI olan tipler ('user', 'created_by',
+        // 'last_modified_by') — değer kutusu bu tiplerde takım üyesi açılır
+        // listesine döner. Liste sunucudan geliyor (src/schema.php
+        // BCC_USER_VALUE_FIELD_TYPES); burada ikinci bir kopya tutulmuyor,
+        // yedek olarak yalnızca eski davranış ('user') bırakıldı.
+        var userValueTypes = window.BCC_USER_VALUE_FIELD_TYPES || ['user'];
+
+        function isUserValueType(type) {
+            return userValueTypes.indexOf(type) !== -1;
+        }
         var maxSlots = parseInt(window.BCC_FILTER_MAX_SLOTS, 10) || 5;
 
         var rowsWrap = form.querySelector('[data-filter-rows]');
@@ -66,7 +76,7 @@
             }
 
             function ensureValueInputKind(type) {
-                var wantSelect = (type === 'user');
+                var wantSelect = isUserValueType(type);
                 var isSelect = valueInput.tagName === 'SELECT';
 
                 if (wantSelect === isSelect) {
@@ -122,7 +132,9 @@
                     valueInput.type = 'date';
                 } else if (type === 'time') {
                     valueInput.type = 'time';
-                } else if (type !== 'user') {
+                } else if (!isUserValueType(type)) {
+                    // Kullanıcı tiplerinde değer kutusu bir <select>; ona .type
+                    // yazmak anlamsız (ve 'text' atamak select'i bozardı).
                     valueInput.type = 'text';
                 }
             }
@@ -310,7 +322,8 @@
             c.innerHTML = '<option value="">— önce alan seçin —</option>';
             c.disabled = true;
             if (v.tagName === 'SELECT') {
-                // Şablon 'user' tipindeyse metin girdisine döndür.
+                // Şablon satırı kullanıcı tipindeyse (user/created_by/
+                // last_modified_by) metin girdisine döndür.
                 var input = document.createElement('input');
                 input.type = 'text';
                 input.className = 'filter-value-input';

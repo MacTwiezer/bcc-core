@@ -15,28 +15,14 @@
     // gerçek kapı sunucudaki require_role('editor').
 
     document.addEventListener('DOMContentLoaded', function () {
-        function post(url, data) {
-            var body = new URLSearchParams();
-            Object.keys(data).forEach(function (k) {
-                if (Array.isArray(data[k])) {
-                    data[k].forEach(function (v) { body.append(k + '[]', v); });
-                    return;
-                }
-                body.append(k, data[k]);
-            });
-
-            return fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: body.toString(),
-            }).then(function (res) {
-                return res.json().then(function (json) {
-                    return { httpOk: res.ok, data: json };
-                }).catch(function () {
-                    return { httpOk: false, data: null };
-                });
-            });
-        }
+        // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
+        // Bu dosyanin kopyasi dizileri "k[]" olarak gonderiyordu; o yetenek
+        // ortak yardimciya TASINDI, davranis ayni.
+        // TEK FARK: JSON gelmeyen yanitta eski kopya {httpOk:false,data:null}
+        // donuyordu ve cagiran taraf genel bir mesaj gosteriyordu; ortak surum
+        // {ok:false,error:"Sunucu beklenmeyen bir yanit dondurdu."} donuyor,
+        // yani kullanici artik gercek sebebi goruyor.
+        var post = window.bcc_post;
 
         // ---- Sütunlama ayarları paneli --------------------------------------
         // ⚠️ TAHTADAN ÖNCE ve TAHTADAN BAĞIMSIZ bağlanır.

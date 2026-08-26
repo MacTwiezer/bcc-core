@@ -59,7 +59,16 @@ function is_logged_in()
 // Hesap menüsü avatarında gösterilen tek harfli baş harf (UTF-8 güvenli — ör. "İ", "Ö").
 function bcc_user_initial($user)
 {
-    return mb_strtoupper(mb_substr((string) $user['full_name'], 0, 1, 'UTF-8'), 'UTF-8');
+    return bcc_name_initial($user['full_name']);
+}
+
+// AYNI kural, elinde kullanıcı DİZİSİ değil yalnızca AD olan çağıranlar için
+// (ilk tüketici: grid'deki kullanıcı hücrelerinin avatarı — orada değer
+// id→ad haritasından çözülmüş düz bir string olarak geliyor). Baş harf mantığı
+// iki yerde ayrı yazılsaydı biri "İ"yi doğru büyütürken diğeri bozabilirdi.
+function bcc_name_initial($name)
+{
+    return mb_strtoupper(mb_substr((string) $name, 0, 1, 'UTF-8'), 'UTF-8');
 }
 
 function is_platform_admin()
@@ -88,6 +97,23 @@ function require_admin()
 }
 
 function current_user_team_ids()
+{
+    // İkinci bir üyelik sorgusu YOK: kimlikler rol haritasının anahtarlarıdır
+    // (bkz. current_user_team_roles). Anahtarlar (int) yazıldığı için
+    // array_keys() int döndürür — çağıranların in_array((int) $teamId, ..., true)
+    // KATI karşılaştırması bozulmaz.
+    return array_keys(current_user_team_roles());
+}
+
+// Kullanıcının HER ekipteki rolü: team_id => 'owner'|'editor'|'commenter'|'viewer'.
+//
+// NEDEN VAR: current_user_role_in_team() ekip BAŞINA bir sorgu açar; "tüm
+// ekiplerdeki rolüm ne?" sorusunu soran yerler (ilk tüketici: bildirim panelinin
+// rol süzgeci, bkz. src/audit.php bcc_notification_scope_clause) bu yüzden N
+// sorgu açmak zorunda kalırdı. Burası TEK sorguyla aynı bilgiyi verir ve
+// current_user_team_ids() de bunun üzerine oturur — "kullanıcının takımları"
+// sorgusu hâlâ TEK yerde, iki ayrı kaynak oluşmadı.
+function current_user_team_roles()
 {
     static $cache = null;
 
@@ -119,20 +145,23 @@ function current_user_team_ids()
     // ⚠️ İZ BIRAKIR: admin'in başka bir ekibin verisine dokunduğu her işlem
     // log_audit()'e o ekibin team_id'siyle düşmeye devam eder — erişim
     // genişledi, denetlenebilirlik azalmadı.
+    //
+    // Admin'in rolü her ekipte SANAL olarak 'owner'dır — current_user_role_in_team()
+    // ile BİREBİR aynı kural (orada da team_members satırı okunmaz).
     if (is_platform_admin()) {
-        $rows = bcc_fetch_all('SELECT id AS team_id FROM teams');
+        $rows = bcc_fetch_all("SELECT id AS team_id, 'owner' AS role FROM teams");
     } else {
-        $rows = bcc_fetch_all('SELECT team_id FROM team_members WHERE user_id = :uid', array('uid' => $user['id']));
+        $rows = bcc_fetch_all('SELECT team_id, role FROM team_members WHERE user_id = :uid', array('uid' => $user['id']));
     }
 
-    $ids = array();
+    $map = array();
     foreach ($rows as $row) {
-        $ids[] = (int) $row['team_id'];
+        $map[(int) $row['team_id']] = $row['role'];
     }
 
-    $cache = $ids;
+    $cache = $map;
 
-    return $ids;
+    return $map;
 }
 
 function current_user_role_in_team($teamId)

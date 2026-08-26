@@ -5,19 +5,9 @@
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var CSRF = csrfMeta ? csrfMeta.content : '';
 
-        function post(url, params) {
-            return fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(params).toString(),
-            }).then(function (res) {
-                return res.json().catch(function () {
-                    return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
-                }).then(function (data) {
-                    return { httpOk: res.ok, data: data };
-                });
-            });
-        }
+        // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
+        // Ayni govde bes dosyada tekrar ediyordu, ucu birebir ayniydi.
+        var post = window.bcc_post;
 
         // ---- Ad Soyad / E-posta satırları — OpsFlow'daki "Edit name" deseni:
         // "Düzenle" tıklanınca görünüm satırı gizlenip inline form açılır, aynı

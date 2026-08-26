@@ -1622,18 +1622,9 @@ html.home-view-list .home-list-header,
     flex-shrink: 0;
 }
 
-/* "Paylaş" .ws-detail-btn'in disabled <button> hâli zaten cursor:default —
-   team_members.php'ye bağlanan aktif (owner) hâli <a> etiketi, ayrı kural gerekir. */
-a.ws-detail-btn {
-    cursor: pointer;
-    text-decoration: none;
-}
-
-a.ws-detail-btn:hover {
-    background: var(--bcc-accent);
-    color: var(--bcc-on-accent);
-    border-color: var(--bcc-accent);
-}
+/* a.ws-detail-btn KURALLARI KALDIRILDI (denetimde bulundu): .ws-detail-btn
+   sinifi kod tabaninda HIC uretilmiyor — workspaces.php yeniden yazilirken
+   .wsx-btn ailesine gecilmis, bu kurallar geride kalmisti. */
 
 /* ---------- team_members.php (owner'ın kendi takımı için sınırlı atama) ----------
    Üye listesi .ws-collab-* (yukarıda) ile AYNI, ikinci bir kopya YAZILMADI —
@@ -1975,7 +1966,39 @@ a.ws-detail-btn:hover {
 
 .home-notif-item[hidden] { display: none; }
 
-.home-notif-item.is-unread { background: var(--bcc-accent-soft); }
+/* OKUNMAMIŞ satırlar ARDIŞIKSA TEK BİR MAVİ BLOK olur (kullanıcı bildirdi):
+   eskiden her satır kendi 8px yuvarlatmasını taşıyordu ve satırlar dip dibe
+   olduğu için aradaki yuvarlak köşeler birbirine değip "kertikli" bir kenar
+   çiziyordu — ne ayrı kartlar ne de bütün bir blok gibi görünüyordu.
+   Şimdi yuvarlatma YALNIZCA bloğun ilk satırının üstünde ve son satırının
+   altında; aradaki satırlar köşesiz. Tek başına duran bir okunmamış satır
+   hem başlangıç hem bitiş olduğu için eski görünümünü aynen korur.
+
+   Satırlar blok içinde kaybolmasın diye aralarına 1px'lik bir çizgi girer;
+   rengi PANEL ZEMİNİ (--bcc-surface), yani gözle "ince bir boşluk" gibi
+   okunur ve iki temada da kendiliğinden doğru tonda çıkar.
+
+   ⚠️ SINIFLARI JS KOYAR (home.js applyNotifFilter), CSS kardeş seçicisi
+   (+ / :has) DEĞİL: sekme ve arama süzgeci satırları [hidden] ile GİZLİYOR,
+   DOM'dan çıkarmıyor. Kardeş seçicisi gizli satırı da komşu sayacağı için
+   "Okunmamış" sekmesinde araya giren gizli okunmuş satırlar bloğu yanlış
+   yerlerden böler; JS yalnızca GERÇEKTEN GÖRÜNEN satırlara bakar. */
+.home-notif-item.is-unread {
+    background: var(--bcc-accent-soft);
+    border-radius: 0;
+    border-top: 1px solid var(--bcc-surface);
+}
+
+.home-notif-item.is-unread.is-run-start {
+    border-top: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.home-notif-item.is-unread.is-run-end {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
 
 /* Tek tek "okundu işaretle" (göz ikonu) — satırın SAĞ ucunda.
    margin-left:auto: satır bir flex kutu (avatar + gövde + buton) ve gövde

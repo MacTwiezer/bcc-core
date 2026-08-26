@@ -24,9 +24,16 @@
 //
 //   * Reply-To (config/mail.php $MAIL_REPLY_TO) desteği bedava geldi.
 //
-// Elle yazılmış SMTP istemcisi (bcc_smtp_send, dosyanın altında) SİLİNMEDİ:
-// bağımlılıksız bir yedek olarak duruyor ve $MAIL_SMTP_* ile yapılandırılmış
-// eski bir kurulumda hâlâ devreye girer (bkz. bcc_smtp_config()).
+// ⚠️ ELLE YAZILMIŞ SMTP İSTEMCİSİ KALDIRILDI (denetimde bulundu).
+// Buradaki eski yorum "bağımsız bir yedek olarak duruyor ve $MAIL_SMTP_* ile
+// yapılandırılmış eski bir kurulumda HÂLÂ DEVREYE GİRER" diyordu — bu DOĞRU
+// DEĞİLDİ: bcc_smtp_send() hiçbir yerden çağrılmıyordu (225 fonksiyonluk
+// taramada tek çağrısız fonksiyon oydu), 'smtp' modu aşağıda tamamen
+// PHPMailer'dan geçiyor. Dört fonksiyon (read_line/read_response/command/send,
+// 164 satır, dosyanın %38'i) yalnızca birbirini çağırıyordu.
+// Yanlış yorum ölü koddan daha risikliydi: bakan kişi çalışan bir yedek
+// sanıyordu. $MAIL_SMTP_* değişkenleri hâlâ okunuyor — ama bcc_smtp_config()
+// üzerinden PHPMailer'a veriliyor, elle yazılmış istemciye değil.
 
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/mail_template.php';
@@ -271,166 +278,3 @@ function bcc_send_mail($toEmail, $subject, $bodyText, $bodyHtml = null)
     return file_put_contents($dir . '/' . $fileName, $content) !== false;
 }
 
-// --- Elle yazılmış SMTP istemcisi (STARTTLS + AUTH LOGIN) ---------------
-// Gmail gibi kimlik doğrulamalı/TLS'li sağlayıcılar için. Sadece bu dosya
-// içinde kullanılır, dışa açık bir API değildir.
-
-function bcc_smtp_read_line($socket)
-{
-    $line = fgets($socket, 515);
-
-    return $line === false ? '' : $line;
-}
-
-/**
- * Çok satırlı SMTP yanıtlarını (ör. "250-...\r\n250 ...\r\n") okur.
- *
- * @return array{0:int,1:string} [durum kodu, tam yanıt metni]
- */
-function bcc_smtp_read_response($socket, &$transcript)
-{
-    $full = '';
-    $code = 0;
-
-    do {
-        $line = bcc_smtp_read_line($socket);
-        $transcript .= $line;
-        $full .= $line;
-        $code = (int) substr($line, 0, 3);
-        $continues = isset($line[3]) && $line[3] === '-';
-    } while ($continues && $line !== '');
-
-    return array($code, $full);
-}
-
-function bcc_smtp_command($socket, $command, &$transcript)
-{
-    $transcript .= $command . "\r\n";
-    fwrite($socket, $command . "\r\n");
-
-    return bcc_smtp_read_response($socket, $transcript);
-}
-
-/**
- * @param string $transcript referansla doldurulur (hata ayıklama/log için)
- * @return bool
- */
-function bcc_smtp_send($host, $port, $user, $pass, $fromEmail, $fromName, $toEmail, $subject, $bodyText, &$transcript)
-{
-    $transcript = '';
-
-    $socket = @fsockopen($host, (int) $port, $errno, $errstr, 10);
-    if ($socket === false) {
-        $transcript .= "Bağlantı hatası: [{$errno}] {$errstr}\n";
-
-        return false;
-    }
-    stream_set_timeout($socket, 10);
-
-    $localHost = isset($_SERVER['HTTP_HOST']) ? preg_replace('/[^a-zA-Z0-9.\-]/', '', $_SERVER['HTTP_HOST']) : 'localhost';
-    if ($localHost === '') {
-        $localHost = 'localhost';
-    }
-
-    list($code) = bcc_smtp_read_response($socket, $transcript); // sunucu karşılama banner'ı
-    if ($code !== 220) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'EHLO ' . $localHost, $transcript);
-    if ($code !== 250) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'STARTTLS', $transcript);
-    if ($code !== 220) {
-        fclose($socket);
-
-        return false;
-    }
-
-    if (!@stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-        $transcript .= "STARTTLS: TLS el sıkışması başarısız\n";
-        fclose($socket);
-
-        return false;
-    }
-
-    // TLS sonrası EHLO tekrarlanmalı (RFC 3207).
-    list($code) = bcc_smtp_command($socket, 'EHLO ' . $localHost, $transcript);
-    if ($code !== 250) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'AUTH LOGIN', $transcript);
-    if ($code !== 334) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, base64_encode($user), $transcript);
-    if ($code !== 334) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, base64_encode($pass), $transcript);
-    if ($code !== 235) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'MAIL FROM:<' . $fromEmail . '>', $transcript);
-    if ($code !== 250) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'RCPT TO:<' . $toEmail . '>', $transcript);
-    if ($code !== 250 && $code !== 251) {
-        fclose($socket);
-
-        return false;
-    }
-
-    list($code) = bcc_smtp_command($socket, 'DATA', $transcript);
-    if ($code !== 354) {
-        fclose($socket);
-
-        return false;
-    }
-
-    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-    // Satır başındaki tek "." karakterleri SMTP'de mesaj sonu anlamına gelir
-    // (RFC 5321 dot-stuffing) — gövdede varsa kaçırılması gerekir.
-    $escapedBody = preg_replace('/^\./m', '..', $bodyText);
-    $message = 'From: ' . $fromName . ' <' . $fromEmail . ">\r\n"
-        . 'To: <' . $toEmail . ">\r\n"
-        . 'Subject: ' . $encodedSubject . "\r\n"
-        . "Content-Type: text/plain; charset=UTF-8\r\n"
-        . "\r\n"
-        . str_replace("\n", "\r\n", $escapedBody)
-        . "\r\n.";
-
-    list($code) = bcc_smtp_command($socket, $message, $transcript);
-    if ($code !== 250) {
-        fclose($socket);
-
-        return false;
-    }
-
-    bcc_smtp_command($socket, 'QUIT', $transcript);
-    fclose($socket);
-
-    return true;
-}

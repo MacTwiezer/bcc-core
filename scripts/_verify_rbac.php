@@ -351,8 +351,15 @@ foreach (array('owner@bcc.local' => true, 'commenter@bcc.local' => false,
         (strpos($html, 'Katılımcıları yönet') !== false) === $shouldSee);
     check($email . ': "Base oluştur" ' . ($shouldSee ? 'var' : 'YOK'),
         (strpos($html, 'Base oluştur') !== false) === $shouldSee);
-    check($email . ': "Ayarlar" ' . ($shouldSee ? 'var' : 'YOK'),
-        (strpos($html, '>Ayarlar<') !== false || strpos($html, "\n                                    Ayarlar") !== false) === $shouldSee);
+    // "Ayarlar" KONTROLU TERSINE CEVRILDI: o buton kalici olarak disabled
+    // basiliyordu, arkasinda ne bir ozellik ne de JS vardi — denetimde olu UI
+    // olarak silindi. Testin asil olctugu sey (uye yonetme yetkisinin
+    // gorunurlugu) yukaridaki "Katilimcilari yonet" ve asagidaki
+    // "wsx-member-manage" kontrolleriyle ZATEN kapsaniyor. Tiklanamayan bir
+    // dugmenin VARLIGINI dogrulamak, olu kodu yerinde tutmayi zorunlu kilardi;
+    // artik YOKLUGU dogrulaniyor ki geri sizmasin.
+    check($email . ': olu "Ayarlar" dugmesi ARTIK YOK',
+        strpos($html, '>Ayarlar<') === false);
     check($email . ': satir ici "yonet" kisayolu ' . ($shouldSee ? 'var' : 'YOK'),
         (strpos($html, 'wsx-member-manage') !== false) === $shouldSee);
 

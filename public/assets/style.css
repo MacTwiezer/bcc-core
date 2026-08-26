@@ -1476,6 +1476,38 @@ td.editable {
     white-space: nowrap;
 }
 
+/* Kullanıcı hücresi (user / created_by / last_modified_by): adın SOLUNDA profil
+   avatarı. Yerleşim .cell-view-linkified ile AYNI kalıp (flex + taşan metin
+   kırpma), avatarın KENDİSİ ise home.css'teki paylaşılan .ws-collab-avatar —
+   burada yalnızca hücreye uygun boyut veriliyor (grid-shell.css'teki
+   .gs-share-avatar ile aynı desen, ikinci bir avatar bileşeni yazılmadı). */
+.cell-user-view {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ⚠️ SEÇİCİ İKİ SINIFLI (.cell-user-view .cell-user-avatar) — ÖLÇÜLDÜ: çıplak
+   .cell-user-avatar (0,1,0), .ws-collab-avatar'ın (0,1,0) 30px'ini YENEMİYOR
+   çünkü home.css style.css'ten SONRA yükleniyor ve eşit özgüllükte sıra
+   kazanıyor; daire 30px kalıp 32px'lik satırı dolduruyordu. */
+.cell-user-view .cell-user-avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
+    /* Satır yüksekliği kısa modda 32px; 20px'lik daire hücreyi büyütmesin diye
+       kendi satır yüksekliğini dayatmıyor. */
+    line-height: 1;
+}
+
+.cell-user-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* visibility (display DEĞİL): ikon gizliyken de yer kaplar, böylece hover'da
    metin yana KAYMAZ — rating yıldızlarındaki "genişlik kaymasın" kararıyla aynı. */
 .cell-link-icon {
@@ -2028,73 +2060,99 @@ td.cell-flash-error {
     animation: cellFlashError 0.7s ease-out;
 }
 
-/* ---- Hücre seçimi: yapıştırma çapası ve hedef alanı -------------------- */
-/* Amaç: kullanıcı NEREYE yapıştıracağını yapıştırmadan ÖNCE görsün. Çapa
-   kesik çizgiyle, hedef alan hafif tonla işaretlenir; işlem bitince ikisi de
-   kalkar (grid-cell-select.js clearSelection). Renkler tema token'larından —
-   sabit renk yazılırsa koyu temada okunmaz olur. */
+/* ---- Hücre seçimi: seçili alan ve çapa -------------------------------- */
+/* Amaç: kullanıcı NE seçtiğini ve yapıştırmanın NEREDEN başlayacağını
+   görsün. İşlem bitince ikisi de kalkar (grid-cell-select.js clearSelection).
+   Renkler tema token'larından — sabit renk yazılırsa koyu temada okunmaz olur.
+ *
+ * ⚠️ ESKİ GÖRÜNÜM VE NEDEN DEĞİŞTİ (kullanıcı "çok kaba duruyor" dedi):
+ *   1. Seçili alan yalnızca DOLGUYLA gösteriliyordu — dikdörtgenin nerede
+ *      bittiği belirsizdi, kenarı olmayan bir mavi leke gibi duruyordu.
+ *   2. Çapa "yürüyen karınca" olsun diye outline-offset'i -2px ↔ -6px arasında
+ *      animasyonluyordu. Bu ANTS DEĞİL: karınca çizgisi kenar boyunca AKAR,
+ *      burada ise kutunun kendisi büyüyüp küçülüyordu (nefes alan kesik
+ *      çizgi) — hem huzursuz hem de her karede outline yeniden çizildiği için
+ *      boşuna boyama maliyeti.
+ * Yeni model Excel/Airtable'daki gibi: seçili alanın DIŞ SINIRINDA tek parça
+ * ince çerçeve + yarı saydam dolgu, çapa hücresi ise DOLGUSUZ kalır (çok
+ * hücreli seçimde "aktif hücre" olarak kendini belli eder). Animasyon YOK. */
 
-td.grid-cell.is-paste-range {
-    background: var(--bcc-accent-soft);
+/* Dört kenar ayrı ayrı değişken; kutu gölgeleri TEK bildirimde birleşir.
+   Neden box-shadow: border hücre genişliğini değiştirip tüm sütunu kaydırırdı
+   (bu dosyadaki column-resize kuralları piksel hassas), outline ise dört kenarı
+   birden çizer — dikdörtgenin ORTASINDAKİ hücrelerde kenar İSTEMİYORUZ.
+   inset gölge yerleşimi etkilemez ve kenar kenar kontrol edilebilir.
+   Kenar sınıflarını (is-sel-t/r/b/l) yalnızca sınırdaki hücrelere
+   grid-cell-select.js paintSelection() koyar. */
+/* ⚠️ SEÇİCİ ÖNEKİ ("table.grid tbody") ŞART — bulunan gerçek bug: kurallar
+   çıplak "td.grid-cell.is-paste-range" (0,2,1) iken satır hover'ı
+   ("table.grid tbody tr:hover td", 0,2,4) ve seçili satır zemini
+   (tr.is-row-selected td) bunları YENİYORDU. Yani fare seçimin İÇİNDEN
+   geçerken o satırın dolgusu kayboluyordu; tam da sürükleme sırasında,
+   kullanıcının seçimi izlediği anda. Önekli hâl (0,3,3) sınıf sayısıyla
+   kazanır.
+   ⚠️ DOLGU background-color DEĞİL background-image (düz renk gradyan):
+   böylece hover/seçili-satır zemininin ÜSTÜNE binen bir katman olur, onu
+   SİLMEZ — hangi satırın seçili olduğu seçim boyanınca da okunur kalır. */
+table.grid tbody td.grid-cell.is-paste-range {
+    --sel-t: 0px;
+    --sel-r: 0px;
+    --sel-b: 0px;
+    --sel-l: 0px;
+    background-image: linear-gradient(var(--bcc-cell-select-fill), var(--bcc-cell-select-fill));
+    box-shadow:
+        inset 0 var(--sel-t) 0 0 var(--bcc-accent),
+        inset calc(-1 * var(--sel-r)) 0 0 0 var(--bcc-accent),
+        inset 0 calc(-1 * var(--sel-b)) 0 0 var(--bcc-accent),
+        inset var(--sel-l) 0 0 0 var(--bcc-accent);
 }
 
-/* Kesik çizgi: outline kullanılıyor, border DEĞİL — border hücre genişliğini
-   değiştirip tüm sütunu kaydırırdı (bu dosyada column-resize kuralları
-   piksel hassas). outline yerleşimi etkilemez. */
-td.grid-cell.is-paste-anchor {
-    outline: 2px dashed var(--bcc-accent);
-    outline-offset: -2px;
-    /* Komşu hücrelerin kenarlığı çizginin üstüne binmesin. */
-    position: relative;
-    z-index: 1;
+table.grid tbody td.grid-cell.is-sel-t { --sel-t: 2px; }
+table.grid tbody td.grid-cell.is-sel-r { --sel-r: 2px; }
+table.grid tbody td.grid-cell.is-sel-b { --sel-b: 2px; }
+table.grid tbody td.grid-cell.is-sel-l { --sel-l: 2px; }
+
+/* Dikdörtgenin dört köşesi hafif yuvarlatılır — kaba "blok" hissini alan asıl
+   ayrıntı bu. table.grid'de border-collapse:separate olduğu için hücrede
+   border-radius GEÇERLİ (collapse olsaydı yok sayılırdı). */
+table.grid tbody td.grid-cell.is-sel-t.is-sel-l { border-top-left-radius: 3px; }
+table.grid tbody td.grid-cell.is-sel-t.is-sel-r { border-top-right-radius: 3px; }
+table.grid tbody td.grid-cell.is-sel-b.is-sel-l { border-bottom-left-radius: 3px; }
+table.grid tbody td.grid-cell.is-sel-b.is-sel-r { border-bottom-right-radius: 3px; }
+
+/* Çapa = yapıştırmanın başlayacağı hücre. Çok hücreli seçimde DOLGUSUZ kalarak
+   kendini belli eder (Excel'in "aktif hücre"si) — altındaki zemin (hover,
+   seçili satır ya da düz yüzey) olduğu gibi görünür.
+   ⚠️ box-shadow BURADA YENİDEN TANIMLANMAZ: çapa her zaman dikdörtgenin bir
+   KÖŞESİDİR, yani kenar çizgilerini taşır — bu kural onları ezseydi çerçevede
+   köşe eksik kalırdı. Yalnızca dolgu katmanı kalkar. */
+table.grid tbody td.grid-cell.is-paste-anchor {
+    background-image: none;
 }
 
-/* ⚠️ DONMUŞ SÜTUNDA "position: relative" HÜCREYİ KAYDIRIYOR.
-   Donmuş hücreler .grid-frozen-cell ile position:sticky ve
-   grid-freeze-columns.js'ten satır içi "left: <ofset>px" alır. Yukarıdaki
-   kural (0,3,1) .grid-frozen-cell'i (0,1,0) ezip position'ı relative yapınca
-   o left artık STICKY OFSETİ değil GÖRELİ KAYDIRMA anlamına geliyor ve hücre
-   tam ofset kadar SAĞA kayıyordu (ölçüm: 44px — satır no sütununun genişliği).
-   Çapa tıklamayla kurulduğu için düzenlenen hücre de aynı kaymayı alıyordu.
-   sticky zaten konumlandırılmış bir öğedir; z-index yığını çalışmaya devam eder. */
-td.grid-cell.is-paste-anchor.grid-frozen-cell {
-    position: sticky;
-}
-
-/* AYNI TUZAK, AYNI ÇÖZÜM: bu iki kural da hücreye position:relative veriyor
-   (popover'ları konumlandırmak için) ve donmuş sütunda satır içi left'i göreli
-   kaydırmaya çevirip hücreyi sağa itiyordu. Bu kural DOSYADA SONRA gelmeli —
-   özgüllükleri eşit (0,2,1), kazanan sıraya göre belirleniyor. */
+/* AYNI TUZAK, AYNI ÇÖZÜM (tarihsel not): bu iki kural hücreye
+   position:relative veriyor (popover'ları konumlandırmak için) ve donmuş
+   sütunda satır içi left'i (grid-freeze-columns.js) sticky ofsetinden GÖRELİ
+   KAYDIRMAYA çevirip hücreyi tam ofset kadar sağa itiyordu (ölçüm: 44px).
+   Bu kural DOSYADA SONRA gelmeli — özgüllükleri eşit (0,2,1), kazanan sıraya
+   göre belirleniyor.
+   Not: eskiden .is-paste-anchor da position:relative veriyordu (kesik çizgi
+   komşu kenarlıkların üstünde kalsın diye) ve AYNI kaymayı üretiyordu; yeni
+   çizim iç gölgeye dayandığı için o kural — ve onun için yazılmış
+   ".is-paste-anchor.grid-frozen-cell { position: sticky }" yaması — artık
+   gereksiz olduğu için kaldırıldı. */
 td.grid-frozen-cell.richtext-editing,
 td.grid-frozen-cell.attachment-editing {
     position: sticky;
 }
 
-/* Düzenleme açıkken çapa çizgisi (kesikli + yürüyen karınca) düzenleme
-   göstergesiyle çakışıyor — biri kazanmalı, düzenleme kazanır.
-   ⚠️ ESKİDEN BURASI "outline: none" İDİ. O dönemde düzenleme göstergesi
-   box-shadow olduğu için outline'ı silmek zararsızdı. Gösterge de outline'a
-   taşınınca bu kural (0,3,1) düzenleme kuralını (0,2,1) EZİP TEK göstergeyi
-   de siliyordu; tıklamak hem düzenlemeyi açıp hem çapayı kurduğu için bu
-   neredeyse HER düzenlenen hücrede olurdu. Silmek yerine düzenleme çizgisi
-   açıkça tekrar yazılıyor. */
-td.grid-cell.is-paste-anchor.editing {
-    outline: 2px solid var(--bcc-accent-strong);
-    outline-offset: -2px;
-    animation: none;
-}
-
-/* "Yürüyen karınca": kopyalanan alanın canlı olduğunu belli eder. Hareketi
-   kapatanlarda (prefers-reduced-motion) çizgi sabit kalır — bilgi kaybolmaz,
-   yalnızca animasyon durur. */
-@keyframes pasteAnchorAnts {
-    to { outline-offset: -6px; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    td.grid-cell.is-paste-anchor {
-        animation: pasteAnchorAnts 0.9s linear infinite alternate;
-    }
+/* Düzenleme açıkken çapa göstergesi düzenleme göstergesiyle çakışıyor — biri
+   kazanmalı, düzenleme kazanır. Düzenlenen hücre kendi çizgisini (td.editable.
+   editing, 2px solid) zaten çiziyor; burada yalnızca seçim çerçevesi ve dolgu
+   susturulur, yoksa girdi kutusunun içinde ikinci bir mavi kenar görünürdü. */
+table.grid tbody td.grid-cell.is-paste-range.editing {
+    box-shadow: none;
+    background-image: none;
 }
 
 /* ---- Grid araç çubuğu: arama + sıralama (Faz 4) ----------------------- */
@@ -2299,18 +2357,10 @@ td.grid-cell.is-paste-anchor.editing {
     border-bottom: 1px solid var(--bcc-border);
 }
 
-.collab-popover-field select {
-    font: inherit;
-    font-size: 0.82rem;
-    padding: 0.4rem 0.55rem;
-    border: 1px solid var(--bcc-border-strong);
-    border-radius: 6px;
-    background: var(--bcc-surface-sunken);
-    color: var(--bcc-text);
-}
-
-.collab-popover-field { flex: 1; min-width: 150px; }
-.collab-popover-field-role { flex: 0 0 auto; min-width: 130px; }
+/* .collab-popover-field / -field-role / -field select KURALLARI KALDIRILDI
+   (denetimde bulundu): popover'daki hizli rol atama formu team_members.php'ye
+   tam sayfa POST ediyordu ve paylasim modaline tasinirken markup silinmisti;
+   stiller geride kalmisti. Uc secici de kod tabaninda HIC gecmiyor. */
 
 .collab-popover-note {
     font-size: 0.8rem;

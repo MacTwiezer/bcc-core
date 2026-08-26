@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS users (
     -- migrations/011). Doğrulama tamamlanınca NULL'a döner.
     email_verify_token           VARCHAR(64) NULL,
     email_verify_expires_at      DATETIME NULL,
+    -- Şifre sıfırlama token'ı (forgot-password.php / reset-password.php,
+    -- bkz. migrations/016). Kullanıldıktan ya da süresi dolduktan sonra NULL'a
+    -- döner. ⚠️ Bu iki kolon ve aşağıdaki password_reset_attempts tablosu
+    -- migrations/016 ile canlıya eklenmişti ama BU DOSYAYA YANSITILMAMIŞTI —
+    -- yani schema.sql'den kurulan temiz bir veritabanında şifre sıfırlama
+    -- ölümcül hata veriyordu (denetimde bulundu).
+    password_reset_token         VARCHAR(64) NULL,
+    password_reset_expires_at    DATETIME NULL,
     last_seen_notifications_at  DATETIME NULL,
     -- Son etkinlik damgası (çevrimiçi göstergesi, bkz. migrations/017).
     -- src/auth.php:bcc_touch_user_activity() en fazla 60 saniyede bir tazeler.
@@ -43,6 +51,9 @@ CREATE TABLE IF NOT EXISTS users (
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
     KEY idx_users_email_verify_token (email_verify_token),
+    -- reset-password.php token'ı e-postayla DEĞİL token'ın kendisiyle arıyor;
+    -- index olmadan bu, users tablosunun tamamını tarardı (migrations/016).
+    KEY idx_users_password_reset_token (password_reset_token),
     KEY idx_users_last_activity (last_activity_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -98,6 +109,34 @@ CREATE TABLE IF NOT EXISTS bases (
     CONSTRAINT fk_bases_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     CONSTRAINT fk_bases_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT fk_bases_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- password_reset_attempts — IP BAZLI HIZ SINIRI (migrations/016)
+-- ---------------------------------------------------------------------------
+-- ⚠️ BU TABLO BU DOSYADA EKSİKTİ (denetimde bulundu): canlı veritabanında ve
+-- public/forgot-password.php'de (üç sorgu) vardı ama schema.sql'e hiç
+-- yansıtılmamıştı — yani buradan kurulan temiz bir veritabanında "şifremi
+-- unuttum" akışı ölümcül hata veriyordu.
+--
+-- Neden AYRI TABLO: sınır kullanıcı başına değil İSTEK KAYNAĞI başına.
+-- Denenen adreslerin çoğu sistemde yok, ilişkilendirilecek bir users satırı
+-- bile bulunmuyor. audit_log'da IP kolonu yok, türetilebilecek mevcut veri de.
+--
+-- KVKK: IP kişisel veridir — burada YALNIZCA ip + zaman tutulur (e-posta,
+-- kullanıcı id'si, User-Agent YOK) ve satırlar pencere dolar dolmaz
+-- forgot-password.php tarafından silinir. Kalıcı ziyaretçi günlüğü DEĞİL.
+--
+-- attempted_at'in DEFAULT'u YOK: değer PHP'den açıkça yazılır, çünkü pencere
+-- hesabı da PHP saatiyle yapılıyor — iki taraf aynı saat kaynağını kullansın.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS password_reset_attempts (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address   VARCHAR(45) NOT NULL,
+    attempted_at DATETIME NOT NULL,
+    -- Sorgu HER ZAMAN (ip_address, attempted_at) ikilisiyle geliyor: bileşik
+    -- index hem sayımı hem temizliği tek taramada bitirir.
+    KEY idx_ip_attempt (ip_address, attempted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

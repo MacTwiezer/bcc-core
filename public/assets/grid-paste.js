@@ -432,20 +432,19 @@
 
         // ---- Hedef alanı boya ------------------------------------------------
         // Onay penceresi açıkken kullanıcı ARKADA nereye yazılacağını görür.
-        // Mevcut seçim boyamasıyla AYNI sınıflar (style.css) — ikinci bir stil
-        // icat edilmedi.
+        // Boyamayı seçimin KENDİ fonksiyonu yapar (SELECT.paintRect) — ikinci
+        // bir stil/çizim yolu icat edilmedi. Eskiden sınıf burada elle
+        // ekleniyordu; seçim tarafı boyanan hücreleri listeyle temizlemeye
+        // geçince bu, temizlik listesinin DIŞINDA kalıp ekranda takılı kalacak
+        // bir boyama demek olurdu. Ayrıca artık hedef alan da seçimle aynı
+        // çerçeveyi (dış kenar çizgisi) alıyor.
         function paintTarget(plan) {
-            var rows = SELECT.visibleRows();
-            for (var r = 0; r < plan.rowsUsed; r++) {
-                var tr = rows[plan.anchorRow + r];
-                if (!tr) { break; } // yeni satırlar henüz DOM'da yok
-                var cells = SELECT.rowCells(tr);
-                for (var c = 0; c < plan.colsUsed; c++) {
-                    if (cells[plan.anchorCol + c]) {
-                        cells[plan.anchorCol + c].classList.add('is-paste-range');
-                    }
-                }
-            }
+            SELECT.paintRect(
+                plan.anchorRow,
+                plan.anchorCol,
+                plan.anchorRow + plan.rowsUsed - 1,
+                plan.anchorCol + plan.colsUsed - 1
+            );
         }
 
         // ---- Onay penceresi --------------------------------------------------

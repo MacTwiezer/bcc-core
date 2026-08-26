@@ -389,10 +389,16 @@ try {
         check("REGRESYON: {$ftype} salt-okunur (editable class YOK)",
             isset($cells[0]) && strpos($cells[0], 'grid-cell editable') === false);
     }
+    // Kullanici hucreleri: ad + SOLUNDA avatar (kullanici istegi, 2026-08-26).
+    // Beklenti "metin tam olarak ad" DEGIL: avatarin bas harfi de metne dahil
+    // oldugu icin (strip_tags "G" + "GrupC1 Test Owner" verir) ad ICERIYOR
+    // seklinde kontrol edilir, avatar da AYRICA aranir.
     foreach (array('Olusturan' => 'created_by', 'SonDegistiren' => 'last_modified_by') as $fname => $ftype) {
         $cells = extract_field_cell_html($gridHtml, $fieldIds[$fname]);
-        $txt = isset($cells[0]) ? trim(strip_tags($cells[0])) : '';
-        check("REGRESYON: {$ftype} kullanici adini gosteriyor", $txt === 'GrupC1 Test Owner', 'bulunan: ' . $txt);
+        $html = isset($cells[0]) ? $cells[0] : '';
+        $txt = trim(strip_tags($html));
+        check("REGRESYON: {$ftype} kullanici adini gosteriyor", strpos($txt, 'GrupC1 Test Owner') !== false, 'bulunan: ' . $txt);
+        check("{$ftype}: adin solunda avatar var", strpos($html, 'cell-user-avatar') !== false, 'bulunan: ' . $html);
     }
 
     // =======================================================================

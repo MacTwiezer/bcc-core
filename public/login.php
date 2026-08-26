@@ -37,22 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $info = 'Hesabınız etkinleştirildi. Şimdi giriş yapabilirsiniz.';
 }
 ?>
-<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_tab_title('Giriş'), ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
-<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
-<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
-<link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
-</head>
-<body class="login-page">
-<div class="login-card">
-    <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
-    </div>
-    <div class="login-card-body">
+<?php
+// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
+// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
+$authPageTitle = 'Giriş';
+require __DIR__ . '/../src/partials/auth_shell_top.php';
+?>
         <h1 class="login-title">Hoş geldiniz</h1>
 
         <?php if ($error !== null): ?>
@@ -128,15 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p class="login-demo-note" id="login-demo-note">Bir rol seçin, alanlar dolsun — sonra “Giriş yap”.</p>
             </div>
         <?php endif; ?>
-
-        <div class="login-legal">
-            <p class="login-tagline"><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, "UTF-8"); ?> — ekiplerin verilerini güvenle yönettiği iç platform.</p>
-        </div>
-    </div>
-</div>
-<script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
-<?php if (bcc_demo_login_enabled()): ?>
-<script src="<?php echo bcc_asset_url('demo-login.js'); ?>" defer></script>
-<?php endif; ?>
-</body>
-</html>
+<?php
+// Ortak kapanış (src/partials/auth_shell_bottom.php): marka satırı, kart
+// kapanışı ve </body></html> BEŞ sayfada aynıydı.
+// Demo giriş betiği KOŞULLU kalır: yalnızca $BCC_DEMO_LOGIN açıkken listeye girer.
+$authScripts = array('password-toggle.js');
+if (bcc_demo_login_enabled()) {
+    $authScripts[] = 'demo-login.js';
+}
+require __DIR__ . '/../src/partials/auth_shell_bottom.php';

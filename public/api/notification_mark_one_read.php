@@ -11,8 +11,11 @@
 // satırının id'si gönderilirse reddedilir. Kabul edilseydi veri sızmazdı ama
 // "bu id var mı" sorusu yanıt koduyla cevaplanabilir hâle gelirdi; ayrıca
 // başka takımların satırlarıyla dolu bir okundu tablosu anlamsız olurdu.
-// Kontrol bcc_fetch_notifications()'ın kullandığı AYNI iki koşula dayanır
-// (takım üyeliği + whitelist'teki action), o yüzden ikinci bir kural yazılmadı.
+// Kontrol bcc_fetch_notifications()'ın kullandığı AYNI ifadeye dayanır
+// (bcc_notification_scope_clause: takım üyeliği + O EKİPTEKİ ROLÜN gördüğü
+// action'lar), o yüzden ikinci bir kural yazılmadı. Rol süzgeci eklendikten
+// sonra bu daha da kritik: viewer'ın panelinde HİÇ görünmeyen bir bildirimin
+// id'siyle "okundu" isteği gönderilirse artık burada da reddedilir.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -28,20 +31,18 @@ if ($notificationId <= 0) {
 }
 
 try {
-    $teamIds = current_user_team_ids();
-    if (empty($teamIds)) {
+    $scope = bcc_notification_scope_clause();
+    if ($scope === null) {
         json_fail(403, 'Bu bildirime erişim yetkiniz yok.');
     }
 
-    $actions = $GLOBALS['BCC_NOTIFICATION_ACTIONS'];
-    $teamPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $actionPlaceholders = implode(',', array_fill(0, count($actions), '?'));
-
+    // Tablo takma adı 'al': koşul bcc_notification_scope_clause() içinde
+    // "al.team_id"/"al.action" olarak yazılı (panelin listesiyle AYNI ifade).
     $row = bcc_fetch_one(
-        "SELECT id FROM audit_log
-         WHERE id = ? AND team_id IN ($teamPlaceholders) AND action IN ($actionPlaceholders)
+        "SELECT al.id FROM audit_log al
+         WHERE al.id = ? AND {$scope['sql']}
          LIMIT 1",
-        array_merge(array($notificationId), $teamIds, $actions)
+        array_merge(array($notificationId), $scope['params'])
     );
 
     if (!$row) {

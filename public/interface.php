@@ -247,44 +247,13 @@ if (!empty($shareExistingIds)) {
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="5" cy="10" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="15" cy="15" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><path d="M6.9 8.8l6.2-2.6M6.9 11.2l6.2 2.6" stroke="#5a4a00" stroke-width="1.4"/></svg>
                     <span class="if-nav-bottom-label">Paylaş</span>
                 </summary>
-                <div class="collab-popover-form">
-                    <div class="collab-popover-title">"<?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?>" paylaş</div>
-
-                    <?php if ($canManageMembers): ?>
-                        <?php // grid.php ile AYNI: tam sayfa POST eden kullanıcı
-                              // seçici + rol <select>'i KALDIRILDI. Aynı iş
-                              // (e-posta + rol + Davet Et) modalın davet
-                              // kutusunda, sayfadan çıkmadan yapılıyor. ?>
-                        <button type="button" class="collab-popover-add-btn" data-share-modal-open>Katılımcı ekle</button>
-                    <?php else: ?>
-                        <?php // Owner değil: ekleme yolu HİÇ basılmaz (sunucu
-                              // tarafı gate, CSS ile gizlenmiş bir form değil).
-                              // Katılımcı listesi görünür kalır — kimin erişimi
-                              // olduğunu görmek yetki gerektirmez. ?>
-                        <p class="collab-popover-note">Katılımcı eklemek için Owner yetkisi gerekir.</p>
-                    <?php endif; ?>
-
-                    <?php // ARTIK YÖNLENDİRME YOK: eskiden bu satır
-                          // team_members.php'ye giden bir <a> idi ve Duyuru
-                          // ekranından çıkarıyordu. Şimdi grid.php ile AYNI
-                          // <button data-share-modal-open> — aynı sayfada modalı
-                          // açıyor. Tam yönetim ekranı kaybolmadı: modalın
-                          // altındaki "Tüm üye ayarları →" hâlâ oraya gidiyor. ?>
-                    <button type="button" class="collab-popover-people" data-share-modal-open>
-                        <div class="collab-popover-avatars">
-                            <?php // 'name' / 'initial' anahtarları payload'da
-                                  // hazırlanmış (modaldakiyle AYNI kaynak). ?>
-                            <?php foreach ($shareCollaboratorPreview as $c): ?>
-                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($c['initial'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                        <?php // data-share-people-label: modalda biri eklenip
-                              // çıkarıldığında share-modal.js bu özeti tazeliyor. ?>
-                        <span class="collab-popover-people-label" data-share-people-label>
-                            <?php echo count($shareCollaborators); ?> kişinin erişimi var<?php echo $shareCollaboratorExtraCount > 0 ? ' (+' . (int) $shareCollaboratorExtraCount . ')' : ''; ?>
-                        </span>
-                    </button>
-                </div>
+                <?php
+                // grid.php ile AYNI gövde, tek partial'dan (collab_popover_form.php).
+                // Dış <details> ve ikonlu <summary> burada kalıyor: bu ekranda
+                // sağa açılıyor ve farklı konumlanıyor (interface.css).
+                $collabPopoverTitle = $base['name'];
+                require __DIR__ . '/../src/partials/collab_popover_form.php';
+                ?>
             </details>
 
             <?php // Sıralama `order` ile sürülüyor (daraltılmış hâlde satır

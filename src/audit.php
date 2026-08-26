@@ -58,37 +58,122 @@ function log_base_open($baseId, $teamId)
 // filtrelenir, yalnızca bu whitelist'teki action'lar bildirim sayılır — user.login
 // (368 satırın %66'sı) ve cell.update (%7'si) gibi gürültülü/kişisel olaylar
 // KASITLI olarak DIŞARIDA (bkz. PROJE-DURUM.md analiz notu).
+// Değer = bildirimin İZLEYİCİ KİTLESİ (aşağıdaki bcc_notification_audience_*
+// kapıları). Eskiden düz bir action listesiydi ve ekipteki HERKES hepsini
+// görüyordu; bulunan gerçek sorun buydu — viewer rolündeki bir kullanıcıya
+// "Slack bildirimi gönderilemedi" (yalnızca owner'ın açabildiği bir entegrasyon
+// ayarının hatası) ve "ekibe yeni bir üye ekledi" (yalnızca owner'ın
+// yapabildiği işlem) düşüyordu. İkisi de o kullanıcının ne görebildiği ne de
+// hakkında bir şey yapabildiği olaylar.
 $GLOBALS['BCC_NOTIFICATION_ACTIONS'] = array(
-    'record.create',
-    'view.rename',
-    'slack.notify_sent',
-    'slack.notify_failed',
-    'team_member.assign',
-    'team_member.role_change',
+    // VERİ olayları: dört rol de bu verinin kendisini zaten görüyor
+    // (require_team_access üyelikle geçer), dolayısıyla değiştiğini bilmek de
+    // dört rolün hakkı.
+    'record.create' => 'data',
+    'view.rename' => 'data',
+    // ENTEGRASYON: Slack ayarları owner-only (public/slack_settings.php ->
+    // require_role('owner') + bcc_can_manage_schema). "Gönderildi/gönderilemedi"
+    // yalnızca o ayarı açıp düzeltebilen kişiye anlamlı.
+    'slack.notify_sent' => 'integration',
+    'slack.notify_failed' => 'integration',
+    // ÜYELİK: ekleme/rol değiştirme owner-only (bcc_can_manage_members).
+    'team_member.assign' => 'members',
+    'team_member.role_change' => 'members',
 );
 
-// current_user_team_ids() (src/auth.php) ile AYNI kaynaktan — ikinci bir
+// Bir rolün göreceği action'lar. EŞİKLER BURADA YENİDEN YAZILMAZ: her kitle,
+// ilgili işlemi yapmaya yetkili kılan src/auth.php yeteneğinin TA KENDİSİNE
+// sorulur. Böylece "üye yönetimi editor'a da açılsın" gibi bir karar tek yerde
+// (bcc_can_manage_members) verilince bildirim görünürlüğü de kendiliğinden
+// onunla birlikte kayar — panelin ayrı bir rol listesi tutmasına gerek yok.
+function bcc_notification_actions_for_role($role)
+{
+    $actions = array();
+
+    foreach ($GLOBALS['BCC_NOTIFICATION_ACTIONS'] as $action => $audience) {
+        $visible = false;
+
+        switch ($audience) {
+            case 'data':
+                // Ekibin üyesi olmak yeter — rol farkı gözetilmez.
+                $visible = $role !== null;
+                break;
+            case 'integration':
+                $visible = bcc_can_manage_schema($role);
+                break;
+            case 'members':
+                $visible = bcc_can_manage_members($role);
+                break;
+        }
+
+        if ($visible) {
+            $actions[] = $action;
+        }
+    }
+
+    return $actions;
+}
+
+// Bildirim GÖRÜNÜRLÜK koşulu — audit_log satırlarını hem panelin listesi hem de
+// "tek tek okundu" uçnoktasının yetki kontrolü bu TEK ifadeyle süzer
+// (public/api/notification_mark_one_read.php). Kural iki yere kopyalanırsa
+// biri değişince diğeri sessizce eski davranışta kalırdı — nitekim rol süzgeci
+// eklenmeden önceki hâlde ikisi de aynı düz listeyi ayrı ayrı kuruyordu.
+//
+// ⚠️ ROL EKİP BAŞINA DEĞİŞİR: aynı kullanıcı A ekibinde owner, B ekibinde viewer
+// olabilir. Bu yüzden tek bir "team_id IN (...) AND action IN (...)" YETMEZ —
+// her ekip kendi rolünün action kümesiyle ayrı bir OR grubu olur.
+//
+// Dönüş: array('sql' => '(...)', 'params' => array(...)) veya görünür hiçbir
+// şey yoksa null.
+function bcc_notification_scope_clause()
+{
+    $teamRoles = current_user_team_roles();
+    if (empty($teamRoles)) {
+        return null;
+    }
+
+    $groups = array();
+    $params = array();
+
+    foreach ($teamRoles as $teamId => $role) {
+        $actions = bcc_notification_actions_for_role($role);
+        if (empty($actions)) {
+            continue;
+        }
+
+        $actionPlaceholders = implode(',', array_fill(0, count($actions), '?'));
+        $groups[] = "(al.team_id = ? AND al.action IN ($actionPlaceholders))";
+        $params[] = (int) $teamId;
+        foreach ($actions as $action) {
+            $params[] = $action;
+        }
+    }
+
+    if (empty($groups)) {
+        return null;
+    }
+
+    return array('sql' => '(' . implode(' OR ', $groups) . ')', 'params' => $params);
+}
+
+// current_user_team_roles() (src/auth.php) ile AYNI kaynaktan — ikinci bir
 // "kullanıcının takımları" sorgusu YAZILMADI.
 function bcc_fetch_notifications($limit = 30)
 {
-    $teamIds = current_user_team_ids();
-    if (empty($teamIds)) {
+    $scope = bcc_notification_scope_clause();
+    if ($scope === null) {
         return array();
     }
-
-    $actions = $GLOBALS['BCC_NOTIFICATION_ACTIONS'];
-    $teamPlaceholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $actionPlaceholders = implode(',', array_fill(0, count($actions), '?'));
 
     $sql = "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at, u.full_name AS actor_name
             FROM audit_log al
             LEFT JOIN users u ON u.id = al.user_id
-            WHERE al.team_id IN ($teamPlaceholders)
-              AND al.action IN ($actionPlaceholders)
+            WHERE {$scope['sql']}
             ORDER BY al.created_at DESC
             LIMIT " . (int) $limit;
 
-    return bcc_fetch_all($sql, array_merge($teamIds, $actions));
+    return bcc_fetch_all($sql, $scope['params']);
 }
 
 // TEK TEK "okundu" işaretlenmiş bildirimlerin id kümesi (migrations/021).

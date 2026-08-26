@@ -521,6 +521,38 @@
                 if (notifNoMatch) {
                     notifNoMatch.hidden = visibleCount !== 0 || notifItems.length === 0;
                 }
+
+                markNotifRuns();
+            };
+
+            // Ardışık OKUNMAMIŞ satırları tek bir mavi blok gibi göstermek için
+            // bloğun ilk/son satırını işaretler (yuvarlatma yalnızca uçlarda —
+            // bkz. home.css .home-notif-item.is-run-start/.is-run-end).
+            //
+            // NEDEN JS: süzgeç satırları [hidden] ile gizliyor ama DOM'dan
+            // ÇIKARMIYOR; CSS kardeş seçicisi (+ veya :has) gizli satırı da
+            // komşu sayardı ve blok görünmeyen bir satırın hizasından bölünürdü.
+            // Burada YALNIZCA görünen satırlar sıraya konur, o yüzden sekme
+            // değişse de aramada satır elense de sınırlar doğru çıkar.
+            var markNotifRuns = function () {
+                var visible = notifItems.filter(function (item) {
+                    return !item.hidden;
+                });
+
+                visible.forEach(function (item, i) {
+                    var unread = item.classList.contains('is-unread');
+                    var prev = i > 0 ? visible[i - 1] : null;
+                    var next = i < visible.length - 1 ? visible[i + 1] : null;
+
+                    item.classList.toggle(
+                        'is-run-start',
+                        unread && (prev === null || !prev.classList.contains('is-unread'))
+                    );
+                    item.classList.toggle(
+                        'is-run-end',
+                        unread && (next === null || !next.classList.contains('is-unread'))
+                    );
+                });
             };
 
             notifTabs.forEach(function (tab) {

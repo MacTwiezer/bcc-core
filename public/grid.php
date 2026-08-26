@@ -658,45 +658,13 @@ $gridUser = current_user();
             ?>
             <details class="gs-tool-details collab-popover-trigger" name="gs-table-tab-menu">
                 <summary class="gs-btn-ghost">Paylaş</summary>
-                <div class="collab-popover-form">
-                    <div class="collab-popover-title">"<?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?>" paylaş</div>
-
-                    <?php if ($canManageMembers): ?>
-                        <?php // Eskiden burada team_members.php'ye tam sayfa POST eden bir
-                              // kullanıcı seçici + rol <select> vardı; gönderim sayfayı
-                              // TERK EDİYORDU. Aynı iş (e-posta + rol + Davet Et) artık
-                              // modalın davet kutusunda, yönlendirme olmadan. ?>
-                        <button type="button" class="collab-popover-add-btn" data-share-modal-open>Katılımcı ekle</button>
-                    <?php else: ?>
-                        <?php // Owner değil: ekleme yolu HİÇ basılmaz. Katılımcı
-                              // listesi (aşağıdaki satır) görünür kalır — kimin
-                              // erişimi olduğunu görmek yetki gerektirmez, modal da
-                              // salt-okunur açılır. ?>
-                        <p class="collab-popover-note">Katılımcı eklemek için Owner yetkisi gerekir.</p>
-                    <?php endif; ?>
-
-<?php // ARTIK YÖNLENDİRME YOK: bu satır team_members.php'ye gitmek yerine
-                          // sayfa üstünde "Paylaş" modalını açıyor (src/partials/share_modal.php
-                          // + assets/share-modal.js). <a href> yerine <button>: yönlendirme
-                          // kaldırıldığına göre gidilecek bir adresi olmayan bir bağlantı
-                          // bırakmak (href="#" ya da tıklaması engellenen bir <a>) yanlış
-                          // olurdu. Tam yönetim ekranı kayboldu DEĞİL — modalın altındaki
-                          // "Tüm üye ayarları →" bağlantısı hâlâ oraya gidiyor. ?>
-                    <button type="button" class="collab-popover-people" data-share-modal-open>
-                        <div class="collab-popover-avatars">
-                            <?php // Satırlar bcc_share_modal_payload()'dan geliyor: 'name' /
-                                  // 'initial' anahtarları orada hazırlanmış (modaldakiyle AYNI). ?>
-                            <?php foreach ($shareCollaboratorPreview as $c): ?>
-                                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($c['initial'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                        <?php // data-share-people-label: modalda biri eklenip çıkarıldığında
-                              // share-modal.js bu özeti de tazeliyor (arkadaki sayı bayatlamasın). ?>
-                        <span class="collab-popover-people-label" data-share-people-label>
-                            <?php echo count($shareCollaborators); ?> kişinin erişimi var<?php echo $shareCollaboratorExtraCount > 0 ? ' (+' . (int) $shareCollaboratorExtraCount . ')' : ''; ?>
-                        </span>
-                    </button>
-                </div>
+                <?php
+                // Popover GÖVDESİ ortak partial'da: interface.php ile 20 satır
+                // birebir aynıydı (denetimde bulundu). Dış <details>/<summary>
+                // burada kalır — iki sayfada gerçekten farklı.
+                $collabPopoverTitle = $table['base_name'];
+                require __DIR__ . '/../src/partials/collab_popover_form.php';
+                ?>
             </details>
             <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
                 <summary class="gs-btn-ghost">Bağlantı</summary>
@@ -1205,7 +1173,10 @@ $gridUser = current_user();
                             // üyelerinden bir <select> ile seçilir (grid-filter.js alan
                             // değişince aynı düğümü inşa eder) — id yazmak insan için
                             // anlamsız olurdu, diğer tüm tipler <input> olarak kalır.
-                            $isUserFilter = ($currentFieldType === 'user');
+                            // 'user' YANINDA 'created_by' ve 'last_modified_by' de
+                            // buraya girer: üçünün de değeri users.id'dir (tek kaynak:
+                            // src/schema.php BCC_USER_VALUE_FIELD_TYPES).
+                            $isUserFilter = bcc_is_user_value_field_type($currentFieldType);
                         ?>
                             <div class="filter-row" data-filter-row data-slot="<?php echo $slot; ?>">
                                 <?php // ---- Bağlaç sütunu: 1. satır etiket, 2. satır GERÇEK
@@ -1986,6 +1957,10 @@ $gridUser = current_user();
     // 'user' alanı filtre değeri: takım üyeleri (KVKK — yalnızca bu takım), hücre
     // editöründeki data-options ile AYNI [{"id":..,"name":..}] şekli.
     var BCC_TEAM_MEMBERS = <?php echo json_encode(bcc_user_choices_from_map($usersById), JSON_UNESCAPED_UNICODE); ?>;
+    // Hangi alan tiplerinde o açılır listenin çıkacağı — sunucudaki $isUserFilter
+    // ile AYNI kaynak (src/schema.php BCC_USER_VALUE_FIELD_TYPES). İstemcide
+    // ikinci bir tip listesi YOK.
+    var BCC_USER_VALUE_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_USER_VALUE_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
     // Kayıt ekleme (Shift+Enter): sort/group aktifken "araya ekleme" görsel olarak
     // anlamsızlaşır (satır zaten sort/group kolonlarına göre yeniden sıralanır) —
     // bu yüzden istemci after_record_id'yi göndermeyip "sona ekle" davranışına

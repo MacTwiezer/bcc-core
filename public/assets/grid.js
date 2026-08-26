@@ -4,19 +4,9 @@
     var meta = document.querySelector('meta[name="csrf-token"]');
     var CSRF = meta ? meta.content : '';
 
-    function post(url, params) {
-        return fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(params).toString(),
-        }).then(function (res) {
-            return res.json().catch(function () {
-                return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
-            }).then(function (data) {
-                return { httpOk: res.ok, data: data };
-            });
-        });
-    }
+    // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
+    // Ayni govde bes dosyada tekrar ediyordu, ucu birebir ayniydi.
+    var post = window.bcc_post;
 
     // post()'un multipart/form-data hâli — yalnızca dosya yükleme için (attachment_
     // upload.php). URLSearchParams değil FormData kullanır, Content-Type header'ı
@@ -215,6 +205,32 @@
         });
     }
 
+    // Sunucudaki bcc_render_user_cell() (src/schema.php) ile AYNI DOM'u kurar:
+    // .cell-user-view > .ws-collab-avatar.cell-user-avatar + .cell-user-name.
+    // İki taraf ayrışırsa hücre kaydettikten sonra sayfa yenilenene kadar
+    // FARKLI görünürdü.
+    function renderUserCell(view, display) {
+        view.textContent = '';
+        view.classList.toggle('cell-user-view', display !== '');
+
+        if (display === '') {
+            return;
+        }
+
+        var avatar = document.createElement('span');
+        avatar.className = 'ws-collab-avatar cell-user-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        // bcc_name_initial() ile aynı kural: adın ilk karakteri, büyük harf.
+        avatar.textContent = display.charAt(0).toLocaleUpperCase('tr');
+
+        var name = document.createElement('span');
+        name.className = 'cell-user-name';
+        name.textContent = display;
+
+        view.appendChild(avatar);
+        view.appendChild(name);
+    }
+
     function applyCellResultToTd(td, data) {
         td.setAttribute('data-value', data.raw);
         var view = td.querySelector('.cell-view');
@@ -233,6 +249,14 @@
                 view.innerHTML = data.display;
             } else if (td.getAttribute('data-field-type') === 'rating') {
                 updateRatingStars(view, parseInt(data.raw, 10) || 0);
+            } else if (td.getAttribute('data-field-type') === 'user') {
+                // Kullanıcı hücresi: adın solunda avatar. Düz textContent
+                // yazılsaydı kaydettikten sonra avatar KAYBOLUR, sayfa
+                // yenilenince geri gelirdi (sunucu bcc_render_user_cell ile
+                // basıyor) — bu dal o ayrışmayı engelliyor.
+                // created_by/last_modified_by burada YOK: onlar salt-okunur,
+                // bu fonksiyona hiç girmezler.
+                renderUserCell(view, data.display);
             } else {
                 view.textContent = data.display;
             }

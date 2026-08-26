@@ -139,22 +139,12 @@ if (!$done && $user && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_tab_title('Yeni şifre belirle'), ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
-<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
-<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
-<link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
-</head>
-<body class="login-page">
-<div class="login-card">
-    <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
-    </div>
-    <div class="login-card-body">
+<?php
+// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
+// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
+$authPageTitle = 'Yeni şifre belirle';
+require __DIR__ . '/../src/partials/auth_shell_top.php';
+?>
         <h1 class="login-title"><?php echo $done ? 'Şifreniz güncellendi' : 'Yeni şifre belirle'; ?></h1>
 
         <?php if ($error !== null): ?>
@@ -203,12 +193,6 @@ if (!$done && $user && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="/forgot-password.php">Yeni sıfırlama bağlantısı iste</a>
             </p>
         <?php endif; ?>
-
-        <div class="login-legal">
-            <p class="login-tagline"><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, 'UTF-8'); ?> — ekiplerin verilerini güvenle yönettiği iç platform.</p>
-        </div>
-    </div>
-</div>
-<script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
-</body>
-</html>
+<?php
+$authScripts = array('password-toggle.js');
+require __DIR__ . '/../src/partials/auth_shell_bottom.php';

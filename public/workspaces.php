@@ -389,12 +389,12 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     Base oluştur
                                 </button>
                                 <?php endif; ?>
-                                <?php if ($canManageMembers): ?>
-                                <button type="button" class="wsx-btn" disabled title="Çalışma alanı ayarları henüz kullanılamıyor">
-                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m11.9-4.9l-1.4 1.4M6.5 13.5l-1.4 1.4m9.8 0l-1.4-1.4M6.5 6.5L5.1 5.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-                                    Ayarlar
-                                </button>
-                                <?php endif; ?>
+                                <?php // "Ayarlar" butonu KALDIRILDI (denetimde bulundu): kalıcı olarak
+                                      // disabled basılıyordu, arkasında ne bir özellik ne de JS vardı —
+                                      // yani hiçbir koşulda tıklanamayan bir düğmeydi. Çalışma alanı
+                                      // ayarları diye bir kavram bu projede YOK; özellik geldiğinde
+                                      // buton onunla birlikte gelir. (Kart menüsündeki ölü "Çoğalt"
+                                      // öğesiyle AYNI karar.) ?>
                                 <?php if (!$canManageMembers && !$canCreateBase): ?>
                                     <span class="wsx-role-note">
                                         Rolünüz: <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$selectedRole], ENT_QUOTES, 'UTF-8'); ?></strong>

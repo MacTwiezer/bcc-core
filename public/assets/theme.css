@@ -44,6 +44,13 @@
        EKLENDI: mevcut hicbir token degistirilmedi. */
     --bcc-role-owner: #6b3fa0;
     --bcc-role-owner-soft: #f1ebfa;
+    /* Grid'de SÜRÜKLEYEREK seçilen hücre alanının dolgusu — accent-soft'tan
+       AYRI bir token, çünkü accent-soft "seçili satır/aktif öğe" zemini olarak
+       DOLU (opak) bir ton ve hücre seçimi onun ÜSTÜNE de binebiliyor (seçili
+       bir satırdan hücre süründüğünde). Yarı saydam olması, altındaki satır
+       vurgusunun/hover'ın kaybolmamasını sağlıyor — üst üste iki opak zemin
+       "hangi satır seçiliydi" bilgisini siliyordu. */
+    --bcc-cell-select-fill: rgba(45, 127, 249, 0.12);
     /* Uyari (amber) — HATA degil DIKKAT anlami tasiyan kutular icin
        (ilk tuketici: form_edit.php "bu linke sahip herkes kayit
        ekleyebilir" uyarisi). danger kirmizisi burada yanlis olurdu:
@@ -85,6 +92,7 @@
     --bcc-role-owner-soft: #2b2140;
     --bcc-warning: #e0b25c;
     --bcc-warning-soft: #3a2f18;
+    --bcc-cell-select-fill: rgba(76, 148, 251, 0.18);
 }
 
 /* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
@@ -112,6 +120,7 @@
     --bcc-role-owner-soft: #2b2140;
     --bcc-warning: #e0b25c;
     --bcc-warning-soft: #3a2f18;
+    --bcc-cell-select-fill: rgba(76, 148, 251, 0.18);
     }
 }
 

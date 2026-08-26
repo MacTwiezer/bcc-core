@@ -175,22 +175,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<title><?php echo htmlspecialchars(bcc_tab_title('Kayıt ol'), ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
-<script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
-<link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
-<link rel="stylesheet" href="<?php echo bcc_asset_url('login.css'); ?>">
-</head>
-<body class="login-page">
-<div class="login-card">
-    <div class="login-logo">
-        <?php $brandLogoClass = 'login-logo-mark'; $brandLogoHeight = 44; require __DIR__ . '/../src/partials/brand_logo.php'; ?>
-    </div>
-    <div class="login-card-body">
+<?php
+// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
+// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
+$authPageTitle = 'Kayıt ol';
+require __DIR__ . '/../src/partials/auth_shell_top.php';
+?>
         <h1 class="login-title">Kayıt ol</h1>
 
         <?php if ($error !== null): ?>
@@ -219,14 +209,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Zaten hesabın var mı? <a href="/login.php">Giriş yap</a>
         </p>
 
-        <div class="login-legal">
-            <?php // login.php'deki AYNI satır bcc_brand_full() kullanıyordu, burası
-                  // elle yazılmış literal marka taşıyordu — ad değişince ikisi
-                  // ayrışırdı. Tek kaynağa bağlandı (config/app.php). ?>
-            <p class="login-tagline"><?php echo htmlspecialchars(bcc_brand_full(), ENT_QUOTES, 'UTF-8'); ?> — ekiplerin verilerini güvenle yönettiği iç platform.</p>
-        </div>
-    </div>
-</div>
+<?php // Marka satırı ve kart kapanışı ARTIK ORTAK PARTIAL'DA
+      // (src/partials/auth_shell_bottom.php) — beş sayfada birebir aynıydı ve
+      // bu dosyadaki kopya bir dönem elle yazılmış literal markayı taşıyordu,
+      // yani tam da ayrışmanın örneğiydi. ?>
 <?php // Çift gönderim kilidi: form bir kez gönderildikten sonra düğme devre
       // dışı kalır ve ikinci submit iptal edilir. Sunucudaki bekleme kapısının
       // YERİNE değil, ÖNÜNE konan bir katman — ikisi de gerekli (bkz.
@@ -257,5 +243,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     });
 })();
 </script>
-</body>
-</html>
+<?php
+// Ortak kapanış (auth_shell_bottom.php). Satır içi gönderim kilidi betiği
+// BU require'dan ÖNCE kalıyor: formu DOM'da arıyor, yani formdan sonra
+// çalışmalı. Partial'a taşınsaydı "bazı sayfalarda çalışan gizli
+// davranış" olurdu.
+require __DIR__ . '/../src/partials/auth_shell_bottom.php';
+

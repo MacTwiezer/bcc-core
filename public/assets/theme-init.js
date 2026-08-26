@@ -62,3 +62,46 @@ window.bcc_uiScale = function () {
     var z = parseFloat(window.getComputedStyle(document.documentElement).zoom);
     return (z && isFinite(z) && z > 0) ? z : 1;
 };
+
+// ---------------------------------------------------------------------------
+// ORTAK POST YARDIMCISI — window.bcc_post(url, params) -> Promise<{httpOk,data}>
+//
+// NEDEN BURADA (denetimde bulundu): aynı fetch sarmalayıcısı BEŞ ayrı dosyada
+// tanımlıydı; üçü (account-page.js, grid-view-manage.js, grid.js) BİREBİR
+// aynıydı. Tek yere alındı.
+//
+// Neden theme-init.js: bu dosya HER sayfada ve <head>'de SENKRON yükleniyor,
+// yani tüketicilerden (hepsi defer) önce çalışacağı GARANTİ. Yeni bir paylaşılan
+// dosya açmak, onu doğru sırayla beş sayfaya eklemeyi gerektirirdi — sıra
+// hatası da sessiz bir "fonksiyon tanımsız" olurdu.
+//
+// DİZİ DESTEĞİ: kanban.js'in kendi kopyası dizileri "k[]" olarak gönderiyordu;
+// bu yetenek buraya taşındı — dizi kullanmayan çağıranlar için davranış aynı.
+//
+// share-modal.js'in post()'u BİLEREK DIŞARIDA: o bir HTTP sarmalayıcısı değil,
+// durum makinesi — busy bayrağı tutuyor, params'a CSRF/team_id ekliyor ve
+// overlay'e sınıf basıyor. Ortaklaştırmak onu bozardı.
+window.bcc_post = function (url, params) {
+    var body = new URLSearchParams();
+    Object.keys(params || {}).forEach(function (k) {
+        if (Array.isArray(params[k])) {
+            params[k].forEach(function (v) { body.append(k + '[]', v); });
+            return;
+        }
+        body.append(k, params[k]);
+    });
+
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+    }).then(function (res) {
+        // JSON gelmezse (500 HTML sayfası, proxy hatası) çağıran taraf yine
+        // okunabilir bir mesaj görsün — sessiz "undefined" yerine.
+        return res.json().catch(function () {
+            return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
+        }).then(function (data) {
+            return { httpOk: res.ok, data: data };
+        });
+    });
+};

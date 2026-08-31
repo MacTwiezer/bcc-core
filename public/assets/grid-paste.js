@@ -478,8 +478,34 @@
             if (e.key === 'Escape' && !modal.hidden) { closeModal(); }
         });
 
+        // Yapıştırma METİN YAZILAN bir yere mi gidiyor? (zengin metin
+        // düzenleyicisi, hücre içi <input>/<textarea>, satır detayı, arama
+        // kutusu…) Öyleyse bu dosya KARIŞMAZ, tarayıcının kendi yapıştırması
+        // çalışır.
+        //
+        // ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): uzun metin hücresinin
+        // zengin metin penceresine Ctrl+V ile metin yapıştırılamıyordu —
+        // "Yapıştırmayı onaylayın · Önce yapıştırmak istediğiniz hücreye
+        // tıklayın" penceresi çıkıyordu. Sebep: aşağıdaki dinleyici içinde
+        // satır sonu/sekme olan HER yapıştırmayı "tablo" sayıp
+        // preventDefault() ediyordu; hücreye tıklanmış olduğu için çapa da
+        // doluydu, yani "grid dışına yapıştırıyorsa karışma" kontrolü de
+        // devreye girmiyordu. Görsel yapıştırma çalışıyordu çünkü onun
+        // text/plain'inde satır sonu yok — kullanıcı da tam bunu fark etti.
+        // Aynı kusur arama kutusuna çok satırlı metin yapıştırmayı da
+        // engelliyordu.
+        function pasteTargetIsTextEditor(e) {
+            var el = (e.target && e.target.nodeType === 1) ? e.target : document.activeElement;
+            if (!el || !el.tagName) { return false; }
+            if (el.isContentEditable) { return true; }
+            var tag = el.tagName.toLowerCase();
+            return tag === 'input' || tag === 'textarea';
+        }
+
         // ---- Yapıştırma olayı ------------------------------------------------
         document.addEventListener('paste', function (e) {
+            if (pasteTargetIsTextEditor(e)) { return; }
+
             var cd = e.clipboardData || window.clipboardData;
             if (!cd) { return; }
 
@@ -520,6 +546,10 @@
             // Açık düzenleyici varsa İPTAL et — grid.js'in kendi Escape yolunu
             // kullanıyoruz, ikinci bir iptal mekanizması yazılmadı. (commit()
             // çağırmak değişmemiş değeri boşuna kaydederdi.)
+            // NOT: metin yazılan düzenleyiciler (input/textarea/contenteditable)
+            // yukarıdaki pasteTargetIsTextEditor() kapısında zaten elendi; bu
+            // satır artık yalnızca METİN OLMAYAN düzenleyiciler (ör. tekli
+            // seçim/kullanıcı hücresinin <select>'i) için çalışır.
             var active = document.activeElement;
             if (active && active.closest && active.closest('td.editing')) {
                 active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

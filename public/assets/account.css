@@ -265,7 +265,9 @@
     max-width: 420px;
 }
 
-.sp-page .account-row-form-inline { max-width: 420px; }
+/* .sp-page .account-row-form-inline kuralı KALDIRILDI: sınıfın kendisi artık
+   hiçbir yerde kullanılmıyor (bkz. public/account.php ve home.css'teki not) ve
+   verdiği max-width zaten yukarıdaki .account-row-form'da var. */
 
 .sp-page .account-field-label {
     display: flex;

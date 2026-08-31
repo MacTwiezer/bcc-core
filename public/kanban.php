@@ -268,7 +268,36 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <span class="kanban-column-title"><?php echo htmlspecialchars($col['label'], ENT_QUOTES, 'UTF-8'); ?></span>
                         <span class="kanban-column-count" data-kanban-count><?php echo count($col['cards']); ?></span>
                     </header>
+                    <?php /* Kart arama — SÜTUNUN İÇİNDE, başlığın hemen altında
+                             (kullanıcı isteği: "sağa ekleme, Atanmamış'ın yanına
+                             ekle"). Süzme YALNIZCA bu sütunun kartlarında:
+                             kutu sütunun içinde duruyorken başka sütunları
+                             süzmek şaşırtıcı olurdu.
+                             ⚠️ HER sütunda değil, yalnızca kart YIĞILAN
+                             sütunlarda basılır (eşik: 8). Kullanıcının derdi
+                             147 kayıtlık "Atanmamış" yığınıydı; tek kartlık bir
+                             sütuna arama kutusu koymak yalnızca gürültü olurdu.
+                             Eşik sütuna özel değil, sayıya bağlı — yarın başka
+                             bir sütun şişerse kutu orada da kendiliğinden çıkar.
+                             Süzme tamamen istemcide ve HER TUŞ VURUŞUNDA
+                             (kullanıcı isteği): veri zaten DOM'da, ağ isteği
+                             yok, debounce gerekmiyor. */ ?>
+                    <?php if (count($col['cards']) > 8): ?>
+                        <div class="kanban-search">
+                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/>
+                                <path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            </svg>
+                            <input type="search" data-kanban-search autocomplete="off"
+                                   placeholder="Bu sütunda ara…"
+                                   aria-label="<?php echo htmlspecialchars($col['label'], ENT_QUOTES, 'UTF-8'); ?> sütununda ara">
+                        </div>
+                    <?php endif; ?>
                     <div class="kanban-column-body" data-kanban-dropzone>
+                        <?php /* Aramada bu sütunda hiç eşleşme kalmazsa görünür
+                                 (kanban.js açar) — boş bir sütun gövdesi "kart
+                                 yok" mu "hepsi süzüldü" mü belli olmuyordu. */ ?>
+                        <p class="kanban-column-nomatch" data-kanban-nomatch hidden>Eşleşme yok</p>
                         <?php foreach ($col['cards'] as $card): ?>
                             <article class="kanban-card<?php echo $canEdit ? ' is-draggable' : ''; ?>"
                                      data-kanban-card

@@ -3892,3 +3892,62 @@ a.sort-btn:hover {
     min-height: 0;
     overflow-y: auto;
 }
+
+/* Ardışık sütun ekleme: eklenenlerin listesi + "Tabloyu görüntüle" satırı.
+   İkisi de formun DIŞINDA (pencerenin dibinde) duruyor — form kayarken bunlar
+   sabit kalsın ve "bitir" düğmesi her zaman görünür olsun diye (flex: 0 0 auto,
+   başlık satırıyla AYNI teknik). */
+.gs-empty-fields-added,
+.gs-empty-fields-done-row {
+    flex: 0 0 auto;
+    padding: 0 1.1rem;
+}
+
+.gs-empty-fields-added {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--bcc-border);
+    margin-top: 0.2rem;
+}
+
+/* ⚠️ ŞART: yukarıdaki `display: flex` tarayıcının `[hidden] { display: none }`
+   varsayılanını ezer ve iki blok da sayfa açılır açılmaz görünürdü. Bu projede
+   AYNI tuzağa daha önce üç kez düşüldü (home.css .home-notif-item[hidden],
+   account.css .sp-page [hidden], table-fields.css #new-field-details-step
+   [hidden]) — her yeni display kuralında tekrar düşünmemek için hemen yanına
+   yazılıyor. */
+.gs-empty-fields-added[hidden],
+.gs-empty-fields-done-row[hidden] {
+    display: none;
+}
+
+.gs-empty-fields-added-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bcc-text-muted);
+}
+
+.gs-empty-fields-added-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.gs-empty-fields-added-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--bcc-accent-soft);
+    color: var(--bcc-accent-strong);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.gs-empty-fields-done-row {
+    padding-top: 0.8rem;
+    padding-bottom: 1.1rem;
+}

@@ -83,15 +83,99 @@
         var columnFieldId = board.getAttribute('data-column-field-id');
         var canEdit = board.getAttribute('data-can-edit') === '1';
 
+        // Rozet: süzme YOKKEN sütundaki kart sayısı, süzme VARKEN "eşleşen/toplam"
+        // (ör. "3/147"). Yalnızca eşleşeni yazmak, kullanıcıya sütunda gerçekte
+        // kaç kart olduğunu KAYBETTİRİRDİ.
         function refreshCounts() {
             Array.prototype.forEach.call(board.querySelectorAll('[data-kanban-column]'), function (col) {
-                var count = col.querySelectorAll('[data-kanban-card]').length;
+                var cards = Array.prototype.slice.call(col.querySelectorAll('[data-kanban-card]'));
+                var shown = cards.filter(function (c) { return !c.hidden; }).length;
                 var badge = col.querySelector('[data-kanban-count]');
                 if (badge) {
-                    badge.textContent = count;
+                    badge.textContent = (shown === cards.length) ? cards.length : (shown + '/' + cards.length);
+                }
+
+                var noMatch = col.querySelector('[data-kanban-nomatch]');
+                if (noMatch) {
+                    noMatch.hidden = !(cards.length > 0 && shown === 0);
                 }
             });
         }
+
+        // ---- Fare tekerleği ile YATAY kaydırma -------------------------------
+        // Kullanıcı bildirdi: "touchpad'de iki parmakla kayıyor ama fareyle
+        // erişemiyorum". İki ayrı sebep vardı:
+        //   1. Tahta ekrandan uzun olduğu için yatay çubuk ekranın altında
+        //      kalıyordu -> sütun gövdesine yükseklik sınırı konularak çözüldü
+        //      (home.css).
+        //   2. Tarayıcı BİNDİRMELİ (overlay) kaydırma çubuğu kullanıyorsa çubuk
+        //      yalnızca kaydırırken beliriyor; fareyle tutulacak bir şey yok.
+        //      ::-webkit-scrollbar biçimlendirmesi her yapıda bunu klasik
+        //      çubuğa çevirmiyor (ölçüldü: bu makinede çubuk hâlâ 0 piksel yer
+        //      kaplıyor). Bu yüzden tekerlek de yatay kaydırmaya bağlanıyor —
+        //      Trello/Airtable davranışı, ve çubuktan bağımsız çalışır.
+        //
+        // Sütun İÇİNDE hâlâ kaydırılacak yer varsa karışılmaz: kart listesinde
+        // aşağı inmek isteyen kullanıcı tahtayı yana kaydırmış olmaz.
+        board.addEventListener('wheel', function (e) {
+            if (e.deltaY === 0 || e.ctrlKey || e.shiftKey) {
+                return; // yakınlaştırma / zaten yatay olan hareket
+            }
+            if (board.scrollWidth <= board.clientWidth) {
+                return; // taşma yok
+            }
+
+            var body = e.target && e.target.closest ? e.target.closest('.kanban-column-body') : null;
+            if (body && body.scrollHeight > body.clientHeight) {
+                var atTop = body.scrollTop <= 0;
+                var atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
+                var wantsUp = e.deltaY < 0;
+                if ((wantsUp && !atTop) || (!wantsUp && !atBottom)) {
+                    return; // sütun daha kayabilir — dikey kaydırma onun hakkı
+                }
+            }
+
+            board.scrollLeft += e.deltaY;
+            e.preventDefault();
+        }, { passive: false });
+
+        // ---- Kart arama (her tuş vuruşunda, SÜTUN İÇİNDE) --------------------
+        // Kutu hangi sütunun içindeyse YALNIZCA o sütunu süzer (bkz. kanban.php
+        // içindeki gerekçe). Aranan metin kartın TÜM görünen metnidir (birincil
+        // alan + kartta gösterilmesi seçilmiş ek alanlar) — kullanıcı ekranda ne
+        // okuyorsa onu arayabilsin diye.
+        //
+        // Metin bir kez okunup kartın kendisinde saklanır: her tuşta 147 kartın
+        // textContent'ini yeniden toplamak boşuna iş olurdu. Kart sürüklenip
+        // başka sütuna geçse bile damga üstünde taşındığı için geçerli kalır.
+        // toLocaleLowerCase('tr'): "İ/I" ayrımı doğru çalışsın (assets/
+        // table-fields.js'teki alan tipi aramasıyla AYNI kural).
+        function cardHaystack(card) {
+            var cached = card.getAttribute('data-search-text');
+            if (cached === null) {
+                cached = (card.textContent || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('tr');
+                card.setAttribute('data-search-text', cached);
+            }
+            return cached;
+        }
+
+        Array.prototype.forEach.call(board.querySelectorAll('[data-kanban-search]'), function (input) {
+            var col = input.closest('[data-kanban-column]');
+            if (!col) {
+                return;
+            }
+
+            input.addEventListener('input', function () {
+                var q = input.value.trim().toLocaleLowerCase('tr');
+
+                Array.prototype.forEach.call(col.querySelectorAll('[data-kanban-card]'), function (card) {
+                    card.hidden = (q !== '' && cardHaystack(card).indexOf(q) === -1);
+                });
+
+                col.classList.toggle('is-filtering', q !== '');
+                refreshCounts();
+            });
+        });
 
         // ---- Kart tıklaması -> kayıt detayı ---------------------------------
         // KARAR: DERİN LİNK (grid.php?table_id=N&record_id=M), modali burada

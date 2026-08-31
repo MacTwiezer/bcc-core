@@ -202,7 +202,17 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             Düzenle
                         </button>
                     </div>
-                    <form class="account-row-form account-row-form-inline" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
+                    <?php // ⚠️ "account-row-form-inline" SINIFI KALDIRILDI (kullanıcı bildirdi:
+                          // "Düzenle"ye basınca ad kutusu sola dayanmıyor, içerik kayıyor).
+                          // O sınıf home.css'te flex-direction:row + align-items:center
+                          // veriyordu ("input ve butonlar aynı satırda" eski tasarımı), AMA
+                          // account.css'teki `.sp-page .account-row-form` (0,2,0) yönü
+                          // column'a çeviriyor ve o kuralı (0,1,0) yeniyor. Geriye YALNIZCA
+                          // align-items:center kalıyordu — sütun yönlü bir flex kutuda bu
+                          // YATAY ORTALAMA demek: kutu 420px'lik formun ortasına kayıyor,
+                          // üstelik max-width:220px ile de daralıyordu. Sınıf çıkınca form,
+                          // e-posta/şifre formlarıyla BİREBİR aynı kuralları kullanıyor. ?>
+                    <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
                         <input type="text" name="full_name" class="account-input" data-account-input maxlength="150" required value="<?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="account-row-actions">
                             <button type="submit" class="account-btn-primary">Kaydet</button>

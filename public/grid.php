@@ -1848,6 +1848,8 @@ $gridUser = current_user();
                                             // AYNI davranış — table_fields.php'de zaten var).
                                             $fieldTypeLabels = $typeLabels;
                                             $fieldWizardShowRequired = false;
+                                            // Grid bağlamında eklenen şey bir SÜTUN (kullanıcı isteği).
+                                            $fieldWizardSubmitLabel = 'Sütun ekle';
                                             require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
                                             ?>
                                         </form>
@@ -2196,16 +2198,34 @@ $gridUser = current_user();
               // düzgün görünüyor. ?>
         <?php // home-modal-form ŞART: iç boşluğu (padding) o veriyor. Yalnızca
               // "stacked" verilmişti ve içerik pencerenin kenarına yapışıyordu. ?>
-        <form class="stacked home-modal-form" data-grid-add-field>
+        <form class="stacked home-modal-form" data-grid-add-field data-grid-add-field-keep-open>
             <?php echo csrf_field(); ?>
             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
             <input type="hidden" name="field_type" id="new-field-type-input" required>
             <?php
             $fieldTypeLabels = $typeLabels;
             $fieldWizardShowRequired = false;
+            $fieldWizardSubmitLabel = 'Sütun ekle';
             require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
             ?>
         </form>
+        <?php /* ARDIŞIK SÜTUN EKLEME (kullanıcı isteği): boş tabloda ilk sütunu
+                 ekledikten sonra sayfa YENİLENMİYOR — pencere açık kalıp tip
+                 seçme adımına dönüyor, böylece kullanıcı arka arkaya sütun
+                 ekleyebiliyor. Aşağıdaki iki parça o akışın görünen yüzü:
+                 eklenenlerin listesi ve "bitti" düğmesi. İkisi de yalnızca EN AZ
+                 BİR sütun eklendikten sonra görünür (grid-add-field.js açar).
+                 "Tabloyu görüntüle" sayfayı yeniler; tablo artık sütunlu olduğu
+                 için grid basılır. Pencereyi X/Esc ile kapatmak da AYNI şeyi
+                 yapar — aksi hâlde kullanıcı arkada hâlâ "bu tabloda alan yok"
+                 kartını görür ve eklediği sütunlar kaybolmuş sanırdı. */ ?>
+        <div class="gs-empty-fields-added" id="gs-empty-fields-added" hidden>
+            <span class="gs-empty-fields-added-label">Eklenen sütunlar:</span>
+            <span class="gs-empty-fields-added-list" id="gs-empty-fields-added-list"></span>
+        </div>
+        <div class="gs-empty-fields-done-row" id="gs-empty-fields-done-row" hidden>
+            <button type="button" class="gs-btn-primary" id="gs-empty-fields-done">Tabloyu görüntüle</button>
+        </div>
     </div>
 </div>
 <?php endif; ?>

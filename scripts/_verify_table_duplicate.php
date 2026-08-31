@@ -19,7 +19,6 @@
 //      kopyayi ETKILEMIYOR (iki yonlu)
 //   C) views.config'teki ALAN-ID referanslari YENIDEN ESLENIYOR
 //      (column_widths / grid_state sort-group-filter-hidden / kanban / form)
-//   D) Form gorunumu: YENI form_token (paylasilmiyor), form_enabled KAPALI
 //   E) Dosya ekleri: DISKTE de kopyalaniyor (stored_name PAYLASILMIYOR)
 //   F) autonumber_next tasiniyor (kopyada numaralar cakismasin)
 //   G) "Kayitlari kopyalama" secenegi: sema gelir, veri gelmez
@@ -220,11 +219,7 @@ try {
         array(':t' => $srcTable, ':n' => 'Tablo görünümü', ':vt' => 'grid', ':c' => $gridConfig, ':u' => $ownerId));
     $srcGridView = (int) bcc_last_insert_id();
 
-    bcc_execute('INSERT INTO views (table_id, name, view_type, position, config, form_token, form_enabled, created_by)
-                 VALUES (:t, :n, :vt, 1, :c, :tok, 1, :u)',
-        array(':t' => $srcTable, ':n' => 'FORM 1', ':vt' => 'form', ':c' => $gridConfig,
-              ':tok' => bin2hex(random_bytes(16)), ':u' => $ownerId));
-    $srcFormView = (int) bcc_last_insert_id();
+    // Form gorunumu fiksturu KALDIRILDI (ayni gerekce).
 
     // =====================================================================
     echo "\n--- A) Sema kopyalaniyor ---\n";
@@ -295,22 +290,9 @@ try {
     // Hicbir ESKI id kalmamali
     check('C) config te ESKI alan id si KALMADI',
         strpos($dupGrid['config'], '"f' . $srcFields['Ad'] . '"') === false);
-
-    // =====================================================================
-    echo "\n--- D) Form gorunumu: yeni token, KAPALI ---\n";
-    // =====================================================================
-    $dupForm = bcc_fetch_one("SELECT form_token, form_enabled FROM views WHERE table_id = :t AND view_type = 'form'",
-        array('t' => $dupTable));
-    $srcForm = bcc_fetch_one('SELECT form_token FROM views WHERE id = :id', array('id' => $srcFormView));
-    check('D) form gorunumu kopyalandi', $dupForm !== null && $dupForm !== false);
-    check('D) form_token DOLU (bos birakilirsa link asla eslesmez)',
-        !empty($dupForm['form_token']), var_export($dupForm['form_token'], true));
-    // ⚠️ Token PAYLASILAMAZ: iki gorunum ayni herkese acik adrese cevap verir
-    // ve kopya, asil forma gonderilen kayitlari toplardi.
-    check('D) form_token ASLINKINDEN FARKLI', $dupForm['form_token'] !== $srcForm['form_token']);
-    eq('D) form KAPALI basliyor (fail-closed)', (int) $dupForm['form_enabled'], 0);
-    eq('D) asil formun durumu DEGISMEDI',
-        (int) bcc_fetch_column('SELECT form_enabled FROM views WHERE id = :id', array('id' => $srcFormView)), 1);
+    // D) bolumu (form gorunumu kopyalama: yeni token + fail-closed) KALDIRILDI —
+    // herkese acik form ozelligi ve views.form_token / form_enabled kolonlari
+    // migrations/023_drop_form_view.sql ile tamamen silindi.
 
     // =====================================================================
     echo "\n--- E) Dosya ekleri: DISKTE de kopyalandi ---\n";
@@ -345,8 +327,9 @@ try {
         count($fieldDefs));
     eq('G) KAYIT gelmedi',
         (int) bcc_fetch_column('SELECT COUNT(*) FROM records WHERE table_id = :t', array('t' => $schemaOnly)), 0);
+    // 2 -> 1: form gorunumu fiksturu kaldirildi, geriye yalnizca grid kaldi.
     eq('G) gorunumler yine geldi',
-        (int) bcc_fetch_column('SELECT COUNT(*) FROM views WHERE table_id = :t', array('t' => $schemaOnly)), 2);
+        (int) bcc_fetch_column('SELECT COUNT(*) FROM views WHERE table_id = :t', array('t' => $schemaOnly)), 1);
     // Kayit yoksa sayac 1'den baslamali — tasimanin anlami yok.
     $soNo = (int) bcc_fetch_column("SELECT autonumber_next FROM fields WHERE table_id = :t AND name = 'No'",
         array('t' => $schemaOnly));

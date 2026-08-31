@@ -23,8 +23,7 @@ require_role($teamId, 'viewer');
 
 $team = bcc_fetch_one('SELECT id, name FROM teams WHERE id = :id', array('id' => $teamId));
 if (!$team) {
-    http_response_code(404);
-    die('Ekip bulunamadı.');
+    bcc_error_page('Ekip bulunamadı', 'Aradığınız ekip silinmiş ya da adresi değişmiş olabilir.', 404);
 }
 
 $myRole = current_user_role_in_team($teamId);
@@ -60,8 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // burada durur — "gizleme != yetkilendirme". 403 döndürülür ve sayfanın
     // geri kalanı HİÇ çalıştırılmaz (die), yani hiçbir yazma yoluna girilmez.
     if (!$canManageMembers) {
-        http_response_code(403);
-        die('Üye yönetimi için Owner yetkisi gerekir.');
+        bcc_error_page('Yetkiniz yok', 'Üye yönetimi için Owner yetkisi gerekir.', 403);
     }
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';

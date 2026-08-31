@@ -69,8 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
 
                 if (!$existing) {
-                    http_response_code(403);
-                    die('Bu alan bu tabloya ait değil.');
+                    bcc_error_page('Alan bulunamadı', 'Bu alan bu tabloya ait değil.', 404);
                 }
 
                 // Aynı tabloda başka bir alan bu adı kullanıyor mu? KAYDIN
@@ -128,8 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if (!$field) {
-            http_response_code(403);
-            die('Bu alan bu tabloya ait değil.');
+            bcc_error_page('Alan bulunamadı', 'Bu alan bu tabloya ait değil.', 404);
         }
 
         if ($action === 'delete_field') {

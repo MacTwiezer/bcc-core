@@ -292,9 +292,20 @@
     function renumberRows() {
         var rows = document.querySelectorAll('table.grid tbody tr[data-record-id]');
         rows.forEach(function (tr, idx) {
-            var cell = tr.querySelector('.grid-rownum');
-            if (cell) {
-                cell.textContent = idx + 1;
+            // BULUNAN GERCEK BUG: burada eskiden <td class='grid-rownum'>'un
+            // KENDISINE textContent yaziliyordu. textContent atamasi hucrenin TUM
+            // cocuklarini siler — yani .grid-rownum-inner sarmalayicisini, satir
+            // secme kutusunu (.grid-row-select) ve genislet butonunu
+            // (.grid-row-expand) yok edip yerine duz bir metin dugumu koyuyordu.
+            // Sonuc: bir silme (veya ekleme) sonrasi renumberRows() cagrilinca
+            // KALAN tum satirlarin secim kutusu kayboluyordu; kullanici satir
+            // numarasinin ustune gelse de checkbox cikmadigi icin IKINCI bir
+            // silme yapamiyordu. Sayfa yenilenince sunucu dogru HTML'i bastigi
+            // icin sorun kendiliginden duzelmis gorunuyordu.
+            // Artik YALNIZCA numara span'i yaziliyor, kardes kontroller yerinde kalir.
+            var numberEl = tr.querySelector('.grid-rownum-number');
+            if (numberEl) {
+                numberEl.textContent = idx + 1;
             }
         });
 
@@ -331,17 +342,25 @@
         }, 4000);
     }
 
-    function addRecord(afterRecordId, targetRow) {
+    // count: kac bos kayit acilacagi (varsayilan 1). "+" satiri, yuvarlak +
+    // butonu ve Shift+Enter hep 1 gonderir; yalnizca satir sonundaki toplu
+    // ekleme kutusu >1 gonderir - ikinci bir ekleme mekanizmasi YOK.
+    function addRecord(afterRecordId, targetRow, count) {
         if (addingRecord) {
             return;
         }
         addingRecord = true;
+        count = parseInt(count, 10);
+        if (!count || count < 1) {
+            count = 1;
+        }
 
         var tableId = new URLSearchParams(window.location.search).get('table_id') || '';
         var params = {
             csrf_token: CSRF,
             table_id: tableId,
             state_query_string: window.location.search.replace(/^\?/, ''),
+            count: count,
         };
 
         // Sort/group aktifken after_record_id kasıtlı olarak GÖNDERİLMEZ — sunucu
@@ -353,6 +372,10 @@
 
         post('/api/record_add.php', params).then(function (result) {
             addingRecord = false;
+            var bulkBtn2 = document.querySelector('[data-grid-add-bulk-btn]');
+            if (bulkBtn2) {
+                bulkBtn2.disabled = false;
+            }
 
             if (!(result.httpOk && result.data && result.data.ok)) {
                 var message = (result.data && result.data.error) ? result.data.error : 'Kayıt eklenemedi.';
@@ -360,12 +383,18 @@
                 return; // DOM'a satır eklenmez.
             }
 
+            // Sunucu tek satirda da toplu eklemede de AYNI alani doner: rows_html.
+            // row_html yalnizca geriye donuk uyumluluk icin duruyor.
+            var rowsHtml = (result.data.rows_html && result.data.rows_html.length)
+                ? result.data.rows_html
+                : (result.data.row_html ? [result.data.row_html] : []);
             var temp = document.createElement('tbody');
-            temp.innerHTML = result.data.row_html;
-            var newRow = temp.querySelector('tr[data-record-id]');
-            if (!newRow) {
+            temp.innerHTML = rowsHtml.join('');
+            var newRows = Array.prototype.slice.call(temp.querySelectorAll('tr[data-record-id]'));
+            if (!newRows.length) {
                 return;
             }
+            var newRow = newRows[0];
 
             // "Bu tabloda henüz kayıt yok." satırı sunucu tarafında basılıyor
             // (grid.php, empty($records)). Kayıt AJAX ile eklenince sayfa
@@ -379,16 +408,24 @@
                 emptyCell.parentNode.parentNode.removeChild(emptyCell.parentNode);
             }
 
+            // Tum yeni satirlar TEK fragment ile eklenir: 500 satirda da DOM'a
+            // tek reflow'luk dokunus olur (tek tek insert etmek sunumda gozle
+            // gorulur sekilde takiliyordu).
+            var frag = document.createDocumentFragment();
+            for (var r = 0; r < newRows.length; r++) {
+                frag.appendChild(newRows[r]);
+            }
+
             if (targetRow && targetRow.parentNode) {
-                targetRow.insertAdjacentElement('afterend', newRow);
+                targetRow.parentNode.insertBefore(frag, targetRow.nextSibling);
             } else {
                 var addRowEl = document.querySelector('[data-grid-add-row]');
                 if (addRowEl && addRowEl.parentNode) {
-                    addRowEl.insertAdjacentElement('beforebegin', newRow);
+                    addRowEl.parentNode.insertBefore(frag, addRowEl);
                 } else {
                     var tbody = document.querySelector('table.grid tbody');
                     if (tbody) {
-                        tbody.appendChild(newRow);
+                        tbody.appendChild(frag);
                     }
                 }
             }
@@ -402,9 +439,17 @@
                 window.BCC_reapplyFreeze();
             }
 
-            var firstCell = newRow.querySelector('td.editable');
-            if (firstCell) {
-                startEdit(firstCell);
+            // Tek satir eklendiyse imlec dogrudan ilk hucreye girer. Toplu
+            // eklemede GIRMEZ: acilan editor, kullanicinin gormek istedigi
+            // satir yiginini kaydirip kapatirdi.
+            if (newRows.length === 1) {
+                var firstCell = newRow.querySelector('td.editable');
+                if (firstCell) {
+                    startEdit(firstCell);
+                }
+            } else {
+                showToast(newRows.length + ' satır eklendi.');
+                newRow.scrollIntoView({ block: 'nearest' });
             }
 
             if (window.BCC_SORT_OR_GROUP_ACTIVE || window.BCC_FILTER_ACTIVE) {
@@ -412,6 +457,10 @@
             }
         }).catch(function () {
             addingRecord = false;
+            var bulkBtn2 = document.querySelector('[data-grid-add-bulk-btn]');
+            if (bulkBtn2) {
+                bulkBtn2.disabled = false;
+            }
             window.alert('Kayıt eklenemedi (bağlantı hatası).');
         });
     }
@@ -1351,9 +1400,58 @@
         // Tablo tabanı "+" satırı: addRecord() fonksiyonunu tetikler.
         var addRow = document.querySelector('[data-grid-add-row]');
         if (addRow) {
-            addRow.addEventListener('click', function () {
-                addRecord(null, null);
+            addRow.addEventListener('click', function (e) {
+                // Satırın SAĞINDAKİ toplu ekleme kutusu bu satırın içinde duruyor:
+                // oraya yapılan tıklama "tek satır ekle"yi TETİKLEMEMELİ (yoksa
+                // sayıyı yazarken kazara boş satır açılırdı).
+                if (e.target && e.target.closest && e.target.closest('[data-grid-add-bulk]')) {
+                    return;
+                }
+                addRecord(null, null, 1);
             });
+        }
+
+        // Toplu ekleme: sayı gir, o kadar boş satır TEK istekte açılsın.
+        // "+" satırıyla AYNI addRecord() çağrılır — ikinci bir yol yok.
+        var bulkWrap = document.querySelector('[data-grid-add-bulk]');
+        if (bulkWrap) {
+            var bulkInput = bulkWrap.querySelector('[data-grid-add-bulk-count]');
+            var bulkBtn = bulkWrap.querySelector('[data-grid-add-bulk-btn]');
+
+            var runBulk = function () {
+                var n = parseInt(bulkInput ? bulkInput.value : '', 10);
+                if (!n || n < 1) {
+                    n = 1;
+                }
+                if (n > 500) {
+                    n = 500;
+                    if (bulkInput) {
+                        bulkInput.value = '500';
+                    }
+                }
+
+                // İstek sürerken buton kilitlenir: çift tıklama iki kat satır açardı
+                // (addingRecord bayrağı zaten sessizce yutuyordu ama kullanıcı
+                // "olmadı" sanıp tekrar basıyordu).
+                if (bulkBtn) {
+                    bulkBtn.disabled = true;
+                }
+                addRecord(null, null, n);
+            };
+
+            if (bulkBtn) {
+                bulkBtn.addEventListener('click', runBulk);
+            }
+            if (bulkInput) {
+                // Enter: kutunun içindeyken doğrudan ekler (butona uzanmaya gerek yok).
+                bulkInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        runBulk();
+                    }
+                });
+            }
         }
 
         // Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea VE

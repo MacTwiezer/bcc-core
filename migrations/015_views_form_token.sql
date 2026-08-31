@@ -1,3 +1,7 @@
+-- ⚠️ BU MIGRATION GERİ ALINDI: bkz. migrations/023_drop_form_view.sql.
+-- Form özelliği tamamen kaldırıldı; aşağıdaki kolonlar artık şemada yok.
+-- Dosya, migration geçmişi bozulmasın diye olduğu gibi duruyor.
+--
 -- Form görünümü (Grup View-Form): herkese açık form linki için tahmin edilemez
 -- token + formu kapatma anahtarı.
 --

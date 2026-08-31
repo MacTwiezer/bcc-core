@@ -285,9 +285,14 @@ try {
     // (soru soruyor) -- parcalar tek tek dogrulaniyor.
     check('B) grid-export-png.js onay metni Turkce ve bicim adini DEGISKEN aliyor',
         strpos($pngJs, "'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?'") !== false);
-    check('B) uyari SERT ENGEL degil (confirm ile soruluyor, reddedilince cikiliyor)',
-        strpos($pngJs, 'window.confirm(') !== false
+    // ⚠️ Kontrol eskimisti: onay artik native window.confirm DEGIL, sayfa ici
+    // modal (assets/confirm-modal.js -> window.bcc_confirm). Korunan guvence
+    // AYNI: soru soruluyor ve reddedilince islem iptal ediliyor.
+    check('B) uyari SERT ENGEL degil (sayfa ici onay, reddedilince cikiliyor)',
+        strpos($pngJs, 'window.bcc_confirm(') !== false
         && strpos($pngJs, 'return Promise.resolve(null);') !== false);
+    check('B) native window.confirm ARTIK kullanilmiyor (tek onay deseni)',
+        strpos($pngJs, 'window.confirm(') === false);
     check('B) bicim adi cagiran tarafindan veriliyor (PNG ve PDF ayni yerden)',
         strpos($pngJs, "captureCanvas('PNG')") !== false
         && strpos(file_get_contents($assetsDir . '/grid-export-pdf.js'), "captureCanvas('PDF')") !== false);
@@ -315,7 +320,8 @@ try {
     // C) KAPSAM SINIRI: Kanban/Form'a dokunulmadi
     // =====================================================================
     echo "\n--- C) Kapsam siniri (yalnizca Grid) ---\n";
-    foreach (array('kanban.php', 'form.php') as $other) {
+    // form.php SILINDI (form ozelligi kaldirildi, migrations/023) — listeden cikti.
+    foreach (array('kanban.php') as $other) {
         $src = file_get_contents(__DIR__ . '/../public/' . $other);
         check("C) {$other} PNG/html2canvas iceRMIYOR",
             stripos($src, 'html2canvas') === false && stripos($src, 'download-png') === false);

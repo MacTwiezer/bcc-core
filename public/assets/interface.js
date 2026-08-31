@@ -262,6 +262,34 @@
         var auditEmpty = auditEl ? auditEl.querySelector('[data-audit-empty]') : null;
         var auditError = auditEl ? auditEl.querySelector('[data-audit-error]') : null;
         var auditCount = auditEl ? auditEl.querySelector('[data-audit-count]') : null;
+        var auditExport = auditEl ? auditEl.querySelector('[data-audit-export]') : null;
+
+        // Excel indirme bağlantısı AÇIK NOTA bağlıdır: seçim değişince href de
+        // değişmeli, yoksa kullanıcı başka bir notun raporunu indirirdi.
+        // Not seçili değilken bağlantı devre dışı (aria-disabled + tıklama iptali).
+        function syncAuditExport() {
+            if (!auditExport) {
+                return;
+            }
+            var recordId = currentDetailRow ? currentDetailRow.getAttribute('data-record-id') : null;
+            if (recordId) {
+                auditExport.href = '/api/note_view_export_xlsx.php?record_id=' + encodeURIComponent(recordId);
+                auditExport.removeAttribute('aria-disabled');
+            } else {
+                auditExport.href = '#';
+                auditExport.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        if (auditExport) {
+            // aria-disabled TEK BAŞINA tıklamayı engellemez (<a> için 'disabled'
+            // yoktur) — devre dışıyken olay burada durdurulur.
+            auditExport.addEventListener('click', function (e) {
+                if (auditExport.getAttribute('aria-disabled') === 'true') {
+                    e.preventDefault();
+                }
+            });
+        }
         // Yüklenen geçmişin hangi kayda ait olduğu — aynı notta paneli kapatıp
         // açmak ikinci bir istek atmasın diye.
         var auditLoadedFor = null;
@@ -277,6 +305,7 @@
             auditError.hidden = true;
             auditCount.hidden = true;
             auditCount.textContent = '';
+            syncAuditExport();
         }
 
         function renderAuditRows(views) {
@@ -330,6 +359,8 @@
                 if (!auditEl.open || !currentDetailRow) {
                     return;
                 }
+
+                syncAuditExport();
 
                 var recordId = currentDetailRow.getAttribute('data-record-id');
                 if (!recordId || auditLoadedFor === recordId) {

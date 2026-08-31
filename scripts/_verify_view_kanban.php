@@ -147,7 +147,8 @@ try {
     // =======================================================================
     echo "\n--- A) Ortak temel ---\n";
     check('A) BCC_VIEW_TYPES kanban iceriyor', isset($GLOBALS['BCC_VIEW_TYPES']['kanban']));
-    check('A) BCC_VIEW_ROUTES haritasi var', isset($GLOBALS['BCC_VIEW_ROUTES']) && count($GLOBALS['BCC_VIEW_ROUTES']) === 3,
+    // 3 -> 2: 'form' rotasi form ozelligiyle birlikte kaldirildi (migrations/023).
+    check('A) BCC_VIEW_ROUTES haritasi var', isset($GLOBALS['BCC_VIEW_ROUTES']) && count($GLOBALS['BCC_VIEW_ROUTES']) === 2,
         isset($GLOBALS['BCC_VIEW_ROUTES']) ? implode(',', array_keys($GLOBALS['BCC_VIEW_ROUTES'])) : 'YOK');
     check('A) route(kanban) -> kanban.php', bcc_view_route_for('kanban', 1, 2) === '/kanban.php?table_id=1&view_id=2');
     check('A) bilinmeyen tur grid e duser', bcc_view_route_for('calendar', 1, 2) === '/grid.php?table_id=1&view_id=2');
@@ -372,8 +373,8 @@ try {
     check('J) bcc_config_field_id_list ortak yardimcisi var', strpos($schemaSrc, 'function bcc_config_field_id_list') !== false);
     $vcu = file_get_contents(__DIR__ . '/../public/api/view_config_update.php');
     check('J) view_config_update ortak yardimciya bagli', strpos($vcu, 'bcc_update_view_config(') !== false);
-    $fe = file_get_contents(__DIR__ . '/../public/form_edit.php');
-    check('J) form_edit ortak yardimciya bagli', strpos($fe, 'bcc_update_view_config(') !== false);
+    // form_edit.php SILINDI (form ozelligi kaldirildi, migrations/023) —
+    // ortak yardimcinin tek kalan tuketicisi view_config_update.php, o da yukarida.
 
     check('J) DDL YOK: views semasi degismedi',
         bcc_fetch_one("SELECT COLUMN_NAME FROM information_schema.COLUMNS

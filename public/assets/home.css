@@ -563,10 +563,22 @@ button.home-search-result {
 
 /* ---------- Body layout ---------- */
 
+/* Sol panel ve ana içerik AYRI kaydırılır (kullanıcı bildirdi: sağdaki
+   içerik alanında tekerleği çevirince sol panel de birlikte kayıyordu, çünkü
+   kaydıran GÖVDEYDİ — iki sütun tek bir uzun sayfanın parçasıydı).
+   Çözüm burada: gövde kaydırması BİTER. .home-body üst bardan sonra kalan
+   yüksekliği TAM olarak kaplar (min-height DEĞİL height) ve taşmaz; aşağıda
+   .home-sidebar ile .home-main kendi overflow-y kutularını açar, böylece her
+   biri yalnızca imleç kendi üzerindeyken kayar.
+   56px = .home-topbar yüksekliği (global box-sizing:border-box, kenarlık dahil).
+   min-height: 0 — flex çocuklarının (özellikle .home-main) içerik boyuna göre
+   şişip kabı taşırmasını engelleyen standart flex kilidi. */
 .home-body {
     display: flex;
     align-items: stretch;
-    min-height: calc(var(--bcc-vh) - 56px);
+    height: calc(var(--bcc-vh) - 56px);
+    min-height: 0;
+    overflow: hidden;
     position: relative;
 }
 
@@ -579,7 +591,26 @@ button.home-search-result {
     border-right: 1px solid var(--bcc-border);
     padding: 1rem 0.75rem;
     transition: width 0.15s ease;
+    /* KENDİ kaydırma kutusu — sağdaki içerik alanında tekerlek çevirmek artık
+       sol paneli oynatmaz; panel yalnızca imleç ÜZERİNDEYKEN kayar.
+       overflow-x: hidden — daraltma/açma sırasındaki width geçişinde yatay
+       çubuk parlamasın. overscroll-behavior: contain — panelin sonuna gelince
+       kaydırma gövdeye ZİNCİRLENMESİN. */
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    /* Çubuk GİZLİ, kaydırma AÇIK (kullanıcı isteği: panelde çubuk görünmesin).
+       scrollbar-width: none — Firefox; ::-webkit-scrollbar aşağıda — Chromium/
+       Safari. İkisi de yalnızca ÇİZİMİ kapatır: tekerlek, touchpad, klavye ve
+       scrollIntoView aynen çalışır. Yer kaplayan çubuk kalkınca panel 240px'in
+       tamamını kullanır, yani içerik de sıçramaz. */
+    scrollbar-width: none;
 }
+
+/* Chromium/Safari tarafı — yukarıdaki scrollbar-width'in karşılığı.
+   ::-webkit-scrollbar'a width:0 DEĞİL display:none: bazı sürümlerde width:0
+   çubuğu yine de bir katman olarak bırakıp tekerleği yutabiliyor. */
+.home-sidebar::-webkit-scrollbar { display: none; }
 
 /* Daraltılmış hal: tamamen kaybolmak yerine ikon şeridi (OpsFlow davranışı).
    Menü yazıları ve yıldızlı base alt listesi gizlenir, yalnızca ikonlar kalır. */
@@ -605,7 +636,11 @@ button.home-search-result {
    kalan kartların üzerine biniyordu). */
 .home-sidebar.is-collapsed:hover {
     width: 240px;
-    overflow: visible;
+    /* Daraltılmış haldeki overflow:hidden burada geri açılır — ama artık
+       "visible" DEĞİL "auto": panel kendi kaydırma kutusu olmayı sürdürmeli,
+       yoksa hover ile açılan uzun liste kesilir ve kaydırılamaz. */
+    overflow-y: auto;
+    overflow-x: hidden;
     z-index: 20;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.12);
 }
@@ -700,6 +735,10 @@ button.home-search-result {
     flex: 1;
     padding: 1.75rem 2.25rem 3rem;
     min-width: 0;
+    /* Sayfa içeriği BURADA kayar, gövdede değil (bkz. .home-body). Üst bar
+       ve sol panel yerinde kalır. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .home-main-header h1 {
@@ -2155,19 +2194,18 @@ html.home-view-list .home-list-header,
 .account-row-form { display: flex; flex-direction: column; gap: 0.5rem; }
 .account-row-form[hidden] { display: none; }
 
-/* Ad Soyad/E-posta gibi TEK alanlı formlar — OpsFlow davranışı: input +
-   Kaydet/İptal AYNI satırda, tek input veya alt alta 3 alanlı Şifre
-   formunun (.account-row-form, DEĞİŞMEDİ) aksine ayrı bir "form" hissi
-   vermez. Şifre/Hesap Sil formları bu class'ı KULLANMAZ, sütun kalır. */
-.account-row-form-inline {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.account-row-form-inline .account-input { width: auto; max-width: 220px; }
-.account-row-form-inline .account-row-actions { margin: 0; }
-.account-row-form-inline .account-row-error { flex-basis: 100%; }
+/* .account-row-form-inline KURALLARI BURADAN KALDIRILDI.
+ *
+ * Ne yapıyorlardı: "input + Kaydet/İptal AYNI satırda" (tek alanlı Ad Soyad
+ * formu için). O tasarım hesap sayfası .sp-page düzenine geçirilirken ÖLDÜ:
+ * account.css'teki `.sp-page .account-row-form` (0,2,0) yönü column'a çeviriyor
+ * ve buradaki (0,1,0) `flex-direction: row`u eziyor. Geriye yalnızca
+ * `align-items: center` kalıyordu ve SÜTUN yönlü bir flex kutuda bu YATAY
+ * ORTALAMA anlamına geliyor: kullanıcı "Düzenle"ye bastığında ad kutusu
+ * formun ortasına kayıyor, `max-width: 220px` yüzünden de e-posta/şifre
+ * kutularından dar duruyordu (kullanıcı bildirdi).
+ * Sınıf tek kullanıcısı olan account.php'den de çıkarıldı, yani bu blok artık
+ * hiçbir öğeye denk gelmiyordu. */
 
 .account-field-label {
     display: flex;
@@ -2788,6 +2826,11 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 .choice-color-picker { margin-top: 0.5rem; }
 
 .choice-color-row {
+    /* position: relative — .choice-color-input (position:absolute, top/left yok)
+       bu satıra bağlansın. Aynı gerekçe: settings-page.css `.sp-toggle`.
+       table_fields.php'nin renk seçicisi .home-main'in İÇİNDE, yani kaydırılan
+       kabın içinde. */
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -2880,14 +2923,62 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 
 .kanban-settings-row:hover { background: var(--bcc-surface-hover); border-radius: 4px; }
 
-/* Tahta: yatay kaydırma, sütunlar sabit genişlikte. */
+/* Tahta: yatay kaydırma, sütunlar sabit genişlikte.
+ *
+ * ⚠️ YATAY KAYDIRMA ÇUBUĞU GÖRÜNMÜYORDU (kullanıcı bildirdi: "touchpad'le iki
+ * parmakla kayıyor ama fareyle erişemiyorum"). Sebep overflow-x DEĞİL: çubuk
+ * her zaman kaydıran ELEMANIN ALT KENARINDA çizilir ve "Atanmamış" sütunu 147
+ * kartla binlerce piksel uzadığı için tahtanın alt kenarı ekranın çok altında
+ * kalıyordu — çubuk vardı, ulaşılamıyordu. Çözüm sütun gövdesini ekran
+ * yüksekliğine göre sınırlayıp KENDİ İÇİNDE kaydırmak (aşağıda
+ * .kanban-column-body): tahta artık ekrana sığdığı için çubuk hep görünür.
+ * Aynı düzeltme kullanıcının ikinci isteğini de karşılıyor ("atanmamışı bu
+ * kadar uzatma"). */
 .kanban-board {
     display: flex;
     gap: 0.85rem;
     align-items: flex-start;
     overflow-x: auto;
     padding: 0.25rem 0 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bcc-border-strong) transparent;
 }
+
+/* ⚠️ ASIL SEBEP BURADAYDI (ölçüldü): tahtanın yatay kaydırma çubuğu
+   0 PİKSEL yer kaplıyordu — yani tarayıcı BİNDİRMELİ (overlay) çubuk
+   kullanıyor ve çubuk yalnızca kaydırırken beliriyordu. Touchpad'de iki
+   parmak kaydırma çalıştığı hâlde fareyle tutulacak bir şey olmamasının
+   sebebi buydu. ::-webkit-scrollbar'ı biçimlendirmek Chromium'u o eleman
+   için KLASİK (yer kaplayan, her zaman görünür) çubuğa geçirir.
+   Görsel dil grid'in kendi çubuğuyla (style.css .grid-wrap::-webkit-scrollbar)
+   AYNI — ikinci bir çubuk tasarımı icat edilmedi. */
+.kanban-board::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.kanban-board::-webkit-scrollbar-track { background: transparent; }
+
+.kanban-board::-webkit-scrollbar-thumb {
+    background-color: var(--bcc-border-strong);
+    border-radius: 999px;
+    border: 2px solid var(--bcc-surface);
+}
+
+.kanban-board::-webkit-scrollbar-thumb:hover { background-color: var(--bcc-text-muted); }
+
+/* Sütun gövdesinin DİKEY çubuğu da aynı sebeple biçimlendiriliyor: 147
+   kartlık sütunun içinde kaydırmak da fareyle yapılabilmeli. */
+.kanban-column-body::-webkit-scrollbar { width: 10px; }
+.kanban-column-body::-webkit-scrollbar-track { background: transparent; }
+
+.kanban-column-body::-webkit-scrollbar-thumb {
+    background-color: var(--bcc-border-strong);
+    border-radius: 999px;
+    border: 2px solid var(--bcc-surface-hover);
+}
+
+.kanban-column-body::-webkit-scrollbar-thumb:hover { background-color: var(--bcc-text-muted); }
 
 .kanban-column {
     flex: 0 0 260px;
@@ -2935,7 +3026,55 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     padding: 0.05rem 0.45rem;
 }
 
-.kanban-column-body { min-height: 2.5rem; }
+/* Sütun gövdesi ekran yüksekliğinin bir oranıyla SINIRLI ve kendi içinde
+   kaydırılır (bkz. .kanban-board notu). Sabit piksel yerine oran: kanban
+   sayfasının üstündeki başlık/araç yüksekliği temaya ve zoom'a göre değişiyor.
+   min-height: boş sütun da bırakma hedefi olarak kalabilsin diye DEĞİŞMEDİ. */
+.kanban-column-body {
+    min-height: 2.5rem;
+    max-height: calc(var(--bcc-vh) * 0.62);
+    overflow-y: auto;
+    /* Dikey çubuk çıkınca kartlar sıçramasın. */
+    scrollbar-gutter: stable;
+}
+
+.kanban-column-nomatch {
+    margin: 0.35rem 0.1rem;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+
+/* Kart arama kutusu — SÜTUNUN İÇİNDE, başlığın hemen altında (kullanıcı
+   isteği). Bildirim panelinin arama kutusuyla (.home-notif-search) AYNI görsel
+   dil; sütun zemini zaten gri olduğu için kutu beyaz yüzeyde duruyor, aksi
+   hâlde arka planda kaybolurdu. */
+.kanban-search {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+    padding: 0.3rem 0.55rem;
+    background: var(--bcc-surface);
+    border: 1px solid var(--bcc-border);
+    border-radius: 7px;
+    color: var(--bcc-text-muted);
+}
+
+.kanban-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--bcc-text);
+    /* min-width:0 + flex: uzun placeholder kutuyu sütundan taşırmasın. */
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Arama kutusunun kendi "x" düğmesi (Chromium) tema dışı kalıyor; kutunun
+   içinde ikinci bir gri çarpı gürültü yapıyordu. */
+.kanban-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
 .kanban-card {
     background: var(--bcc-surface);
@@ -3316,8 +3455,88 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 
 /* Dar ekranda yalnızca nokta + sayı kalır: üst bar zaten arama kutusuyla
    yarışıyor, "çevrimiçi" kelimesi ilk feda edilecek parça. */
+/* ---------- Dar ekran (pencere küçültüldüğünde) ----------
+ *
+ * SORUN (kullanıcı bildirdi): "tam ekran değilken sayfa düzensiz görünüyor".
+ * Ölçüldü: 480px genişlikte sol panel sabit 240px, yani ekranın YARISI; içerik
+ * alanına da 240px kalıyordu ve arama kutusu 118px'e düşüyordu. Yatay taşma
+ * YOKTU (o yüzden gözle "bozuk" değil "sıkışık" görünüyordu) — sorun taşma
+ * değil, alan paylaşımıydı.
+ *
+ * ÇÖZÜM, MEVCUT BİLEŞENİ YENİDEN KULLANIR: panelin daraltılmış hâli (ikon
+ * şeridi) zaten var (.home-sidebar.is-collapsed, hamburger düğmesi onu açıp
+ * kapatıyor). Dar ekranda AYNI görünüm bu kez CSS ile zorlanıyor — ikinci bir
+ * "mobil menü" bileşeni YAZILMADI. Hamburger düğmesi çalışmaya devam eder;
+ * kullanıcı isterse üzerine gelerek (hover-peek) tam paneli görür.
+ *
+ * EŞİKLER, ÖLÇÜLEN İHTİYAÇTAN:
+ *   1024px — panel ikon şeridine iner. 1024'te içeriğe 240px yerine 424px
+ *            kalıyor; kart ızgarası bu genişlikten itibaren rahatlıyor.
+ *    860px — arama kutusundaki "Ctrl K" rozeti düşer (kutu daralınca metnin
+ *            üstüne biniyordu).
+ *    720px — "çevrimiçi" kelimesi düşer (nokta + sayı kalır). BU KURAL
+ *            ZATEN VARDI, korundu.
+ *    600px — arama kutusu tamamen düşer; Ctrl+K kısayolu çalışmaya devam eder.
+ *            Bu genişlikte kutu okunaklı bir yer tutamıyor.
+ */
+
+@media (max-width: 1024px) {
+    /* .is-collapsed ile AYNI ölçüler — o kuralın kopyası değil, onunla aynı
+       değerleri kullanan ikinci bir tetikleyici. Sınıf hâlâ JS'ten gelebilir,
+       burada ekran genişliği tetikliyor. */
+    .home-sidebar {
+        width: 56px;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        overflow: hidden;
+    }
+
+    .home-sidebar .home-sidenav-item { justify-content: center; }
+
+    .home-sidebar .home-sidenav-item span,
+    .home-sidebar .home-starred-list,
+    .home-sidebar .home-sidenav-label span { display: none; }
+
+    /* Hover-peek dar ekranda da çalışsın: üzerine gelince tam panel açılır.
+       Akışta genişlediği için içeriği sağa iter, üstüne binmez — geniş
+       ekrandaki .is-collapsed:hover davranışının aynısı. */
+    .home-sidebar:hover {
+        width: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 20;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.12);
+    }
+
+    .home-sidebar:hover .home-sidenav-item { justify-content: flex-start; }
+    .home-sidebar:hover .home-sidenav-item span,
+    .home-sidebar:hover .home-sidenav-label span { display: inline; }
+    .home-sidebar:hover .home-starred-list { display: flex; }
+
+    /* Üst barın sol bloğu 240px'e sabitlenmişti (panel genişliğiyle hizalı
+       olsun diye); panel 56px'e inince o hizalama anlamını yitiriyor ve
+       ortadaki aramayı gereksiz yere sıkıştırıyor. */
+    .home-topbar-left { width: auto; }
+
+    /* İçerik kenar boşlukları da daralsın — 2.25rem dar ekranda kartlara
+       kalan yeri yiyor. */
+    .home-main { padding-left: 1.25rem; padding-right: 1.25rem; }
+}
+
+@media (max-width: 860px) {
+    .home-search-kbd { display: none; }
+}
+
 @media (max-width: 720px) {
     .home-online-label { display: none; }
+}
+
+@media (max-width: 600px) {
+    /* Arama kutusu bu genişlikte okunaklı bir yer tutamıyor. Ctrl+K kısayolu
+       ETKİLENMEZ (global-search.js belge düzeyinde dinliyor). */
+    .home-topbar-center { display: none; }
+    .home-main { padding-left: 0.85rem; padding-right: 0.85rem; }
+    .home-main-header h1 { font-size: 1.3rem; }
 }
 
 /* --- Admin panelindeki çevrimiçi kullanıcı listesi --- */

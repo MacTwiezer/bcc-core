@@ -55,8 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $existing = $existing !== false ? $existing : null;
 
             if (!$existing) {
-                http_response_code(403);
-                die('Bu webhook bu tabloya/ekibe ait değil.');
+                bcc_error_page('Webhook bulunamadı', 'Bu webhook bu tabloya ya da ekibe ait değil.', 404);
             }
         } elseif ($scope === 'team') {
             // Bulunan gerçek bug: webhook_id boş/0 gönderilirse (form state'i bayatlamış
@@ -132,8 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $webhook = bcc_fetch_one('SELECT id FROM slack_webhooks WHERE id = :id AND team_id = :team_id LIMIT 1', array('id' => $webhookIdRaw, 'team_id' => $table['team_id']));
 
         if (!$webhook) {
-            http_response_code(403);
-            die('Bu webhook bu ekibe ait değil.');
+            bcc_error_page('Webhook bulunamadı', 'Bu webhook bu ekibe ait değil.', 404);
         }
 
         // Bu webhook'a bağlı bir yönlendirme kuralı varsa silme ENGELLENİR (sessiz
@@ -159,8 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $webhook = bcc_fetch_one('SELECT id FROM slack_webhooks WHERE id = :id AND team_id = :team_id LIMIT 1', array('id' => $webhookIdRaw, 'team_id' => $table['team_id']));
 
         if (!$field || !$webhook) {
-            http_response_code(403);
-            die('Bu alan ya da webhook bu tabloya/ekibe ait değil.');
+            bcc_error_page('Kayıt bulunamadı', 'Bu alan ya da webhook bu tabloya/ekibe ait değil.', 404);
         }
 
         $choices = select_choices_from_options($field['options']);
@@ -246,8 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rule = bcc_fetch_one('SELECT id, is_active FROM slack_routing_rules WHERE id = :id AND table_id = :table_id LIMIT 1', array('id' => $ruleIdRaw, 'table_id' => $table['id']));
 
         if (!$rule) {
-            http_response_code(403);
-            die('Bu kural bu tabloya ait değil.');
+            bcc_error_page('Kural bulunamadı', 'Bu kural bu tabloya ait değil.', 404);
         }
 
         if ($action === 'delete_routing_rule') {

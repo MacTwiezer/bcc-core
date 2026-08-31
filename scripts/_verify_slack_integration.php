@@ -80,7 +80,6 @@ $coverage = array(
     array('public/api/record_add.php', 'bcc_notify_slack_new_record(', 'satir ekleme (AJAX)'),
     array('public/grid.php', 'bcc_notify_slack_new_record(', 'satir ekleme (JS-siz form)'),
     array('public/api/record_duplicate.php', 'bcc_notify_slack_new_record(', 'satir cogaltma'),
-    array('public/api/form_submit.php', 'bcc_notify_slack_new_record(', 'genel form gonderimi'),
     array('public/base_tables.php', 'bcc_notify_slack_new_table(', 'TABLO olusturma'),
     array('src/schema.php', 'bcc_notify_slack_new_field(', 'ALAN olusturma (ortak yol)'),
 );

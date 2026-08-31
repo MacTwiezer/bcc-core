@@ -419,7 +419,15 @@ try {
     check('J) REGRESYON percent "%45"', $txt($pJ) === '%45', $txt($pJ));
     check('J) REGRESYON rating 5 yildiz', substr_count(cell_html($g, $rJ), 'data-rating-star=') === 5);
     check('J) REGRESYON created_time tarih', preg_match('/\d{2}\.\d{2}\.\d{4}/', $txt($ctJ)) === 1, $txt($ctJ));
-    check('J) REGRESYON created_by kullanici adi', $txt($cbJ) === 'GrupA Test Owner', $txt($cbJ));
+    // ⚠️ Kontrol kodun GERISINDE kalmisti: kullanici hucrelerine AVATAR eklendi
+    // (commit bc849a7) ve avatarin bas harfi de bir <span> icinde basiliyor —
+    // strip_tags() onu da metne katinca beklenen "GrupA Test Owner" yerine
+    // "GGrupA Test Owner" cikiyordu. Kod DOGRU; test avatari hesaba katmiyordu.
+    // Artik avatarin varligi AYRICA dogrulaniyor, ad ise avatar disindan okunuyor.
+    check('J) REGRESYON created_by hucresinde avatar var',
+        strpos(cell_html($g, $cbJ), 'cell-user-avatar') !== false, cell_html($g, $cbJ));
+    check('J) REGRESYON created_by kullanici adi',
+        strpos($txt($cbJ), 'GrupA Test Owner') !== false, $txt($cbJ));
     check('J) REGRESYON autonumber "1"', $txt($anJ) === '1', $txt($anJ));
     check('J) REGRESYON autonumber HALA salt-okunur (editable class YOK)',
         strpos(cell_html($g, $anJ), 'editable') === false);

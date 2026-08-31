@@ -40,8 +40,7 @@ $viewId = isset($_GET['view_id']) ? (int) $_GET['view_id'] : 0;
 $view = $viewId ? bcc_find_view($viewId, $table['id']) : null;
 
 if (!$view) {
-    http_response_code(404);
-    die('Görünüm bulunamadı.');
+    bcc_error_page('Görünüm bulunamadı', 'Aradığınız görünüm silinmiş ya da adresi değişmiş olabilir.', 404);
 }
 
 // Bu sayfa YALNIZCA kanban görünümleri içindir — grid.php'nin erken

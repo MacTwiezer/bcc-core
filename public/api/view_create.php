@@ -78,18 +78,11 @@ try {
 
     $newViewId = bcc_last_insert_id();
 
-    // Form görünümü: herkese açık linkin SIRRI burada üretilir (migrations/015).
-    // AYNI transaction'da — ayrı commit edilseydi araya düşen bir hata
-    // "form görünümü var ama token'ı yok, linki hiç üretilemez" durumu bırakırdı.
-    // random_bytes: CSPRNG (csrf_token() ile AYNI kaynak). 16 bayt = 32 hex.
-    // form_enabled = 1: yeni form doğrudan açık gelir (OpsFlow davranışı);
-    // kolonun DEFAULT'u 0 (fail-closed), burada AÇIKÇA 1 yapılıyor.
-    if ($viewType === 'form') {
-        bcc_execute(
-            'UPDATE views SET form_token = :token, form_enabled = 1 WHERE id = :id',
-            array(':token' => bin2hex(random_bytes(16)), ':id' => $newViewId)
-        );
-    }
+    // ⚠️ BURADA ESKİDEN FORM GÖRÜNÜMÜNE ÖZEL BİR DAL VARDI: yeni bir form
+    // oluşturulduğunda herkese açık linkin sırrı (form_token) üretilip
+    // form_enabled = 1 yazılıyordu. Form özelliği tamamen kaldırıldı
+    // (migrations/023) — $viewType artık 'form' olamaz, çünkü yukarıdaki
+    // BCC_VIEW_TYPES whitelist'inde o anahtar yok.
 
     // Kanban: tablodaki İLK single_select alanı varsayılan sütunlama alanı olur —
     // kullanıcı görünümü açar açmaz çalışan bir tahta görsün, önce ayar paneline

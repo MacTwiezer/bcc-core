@@ -30,7 +30,6 @@ function csrf_require_valid()
     $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
 
     if (!csrf_verify($token)) {
-        http_response_code(403);
-        die('Geçersiz istek (CSRF). Sayfayı yenileyip tekrar deneyin.');
+        bcc_error_page('Geçersiz istek', 'Güvenlik doğrulaması başarısız oldu. Sayfayı yenileyip tekrar deneyin.', 403);
     }
 }

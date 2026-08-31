@@ -349,10 +349,16 @@ try {
     // Giris/kayit/dogrulama sayfalari da AYNI marka partial ini kullanir —
     // eskiden ucu de assets/logo.png'yi ayri ayri basiyordu; marka degisince
     // uc yer birden guncellenmek zorundaydi. Artik tek kaynak.
+    // ⚠️ Kontrol eskimisti: bu uc sayfa marka partial'ini artik DOGRUDAN degil,
+    // ortak oturumsuz kabuk (auth_shell_top.php) uzerinden aliyor — tek kaynak
+    // ilkesi GUCLENDI, test onu gormuyordu. Marka partial'inin gercekten
+    // kabukta oldugu da ayrica dogrulaniyor.
+    check('E) auth kabugu marka partial ini kullaniyor (tek kaynak)',
+        strpos(file_get_contents(__DIR__ . '/../src/partials/auth_shell_top.php'), "require __DIR__ . '/brand_logo.php'") !== false);
     foreach (array('login.php', 'register.php', 'verify_email.php') as $authPage) {
         $src = file_get_contents(__DIR__ . '/../public/' . $authPage);
-        check("E) {$authPage} marka partial ini kullaniyor (tek kaynak)",
-            strpos($src, "partials/brand_logo.php") !== false
+        check("E) {$authPage} markayi ortak kabuktan aliyor (logo.png basmiyor)",
+            strpos($src, "partials/auth_shell_top.php") !== false
             && strpos($src, '/assets/logo.png') === false);
     }
 

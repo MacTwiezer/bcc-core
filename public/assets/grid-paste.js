@@ -314,18 +314,34 @@
         // Öyleyse değerler kanonik biçimdedir ve dönüştürülmez.
         function buildPlan(data, isRaw) {
             var anchor = SELECT.getAnchor();
-            if (!anchor) {
-                return { error: 'Önce yapıştırmak istediğiniz hücreye tıklayın.' };
-            }
-
             var rows = SELECT.visibleRows();
             var cols = columnMap();
-            var anchorTr = anchor.closest('tr[data-record-id]');
-            var anchorRow = rows.indexOf(anchorTr);
-            var anchorCol = SELECT.rowCells(anchorTr).indexOf(anchor);
+            var anchorRow, anchorCol;
 
-            if (anchorRow === -1 || anchorCol === -1) {
-                return { error: 'Seçili hücre bulunamadı. Tekrar tıklayıp deneyin.' };
+            if (anchor) {
+                var anchorTr = anchor.closest('tr[data-record-id]');
+                anchorRow = rows.indexOf(anchorTr);
+                anchorCol = anchorTr ? SELECT.rowCells(anchorTr).indexOf(anchor) : -1;
+
+                if (anchorRow === -1 || anchorCol === -1) {
+                    return { error: 'Seçili hücre bulunamadı. Tekrar tıklayıp deneyin.' };
+                }
+            } else if (rows.length === 0 && cols.length > 0) {
+                // BOŞ TABLO — tıklanacak hücre YOK: "Bu tabloda henüz kayıt yok"
+                // satırı bir veri satırı değil (tr[data-record-id] taşımaz), o
+                // yüzden çapa da olamaz.
+                //
+                // ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): boş bir tabloya
+                // yapıştırma "Önce yapıştırmak istediğiniz hücreye tıklayın"
+                // hatası veriyordu; kullanıcı panodaki SATIR SAYISI KADAR satırı
+                // önce ELİYLE açmak zorunda kalıyordu. Oysa taşan satırlar zaten
+                // yeni kayıt olarak açılıyor (aşağıdaki isNew dalı) — eksik olan
+                // tek şey başlangıç noktasıydı. Çapa yoksa yapıştırma sol üst
+                // köşeden (0,0) başlar ve GEREKEN SATIRLARI kendisi açar.
+                anchorRow = 0;
+                anchorCol = 0;
+            } else {
+                return { error: 'Önce yapıştırmak istediğiniz hücreye tıklayın.' };
             }
 
             // Kullanıcı Shift ile bir ALAN çizdiyse yapıştırma o alana KIRPILIR
@@ -537,9 +553,14 @@
             if (!modal.hidden) { e.preventDefault(); return; }
 
             // Grid'in dışına (ör. arama kutusuna) yapıştırıyorsa karışma.
+            // İSTİSNA: tablo BOŞSA tıklanabilecek hücre yoktur, dolayısıyla çapa
+            // da olamaz — o hâlde odak nerede olursa olsun yapıştırma grid'e
+            // gider (metin kutuları yukarıdaki pasteTargetIsTextEditor kapısında
+            // zaten elendi).
             var anchor = SELECT.getAnchor();
             var inGrid = e.target && e.target.closest && e.target.closest('.grid');
-            if (!anchor && !inGrid) { return; }
+            var emptyGrid = !anchor && SELECT.visibleRows().length === 0;
+            if (!anchor && !inGrid && !emptyGrid) { return; }
 
             e.preventDefault();
 

@@ -89,8 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $table = find_table_or_404($tableId);
 
         if ((int) $table['base_id'] !== (int) $base['id']) {
-            http_response_code(403);
-            die('Bu tablo bu base\'e ait değil.');
+            bcc_error_page('Tablo bulunamadı', 'Bu tablo bu base\'e ait değil.', 404);
         }
 
         if ($action === 'rename_table') {

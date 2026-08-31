@@ -91,8 +91,7 @@ function require_admin()
     require_login();
 
     if (!is_platform_admin()) {
-        http_response_code(403);
-        die('Bu sayfaya erişim yetkiniz yok (admin gerekli).');
+        bcc_error_page('Yetkiniz yok', 'Bu sayfa yalnızca platform yöneticilerine açık.', 403);
     }
 }
 
@@ -303,8 +302,7 @@ function require_team_access($teamId)
     require_login();
 
     if (!in_array((int) $teamId, current_user_team_ids(), true)) {
-        http_response_code(403);
-        die('Bu ekibin verisine erişim yetkiniz yok.');
+        bcc_error_page('Yetkiniz yok', 'Bu ekibin verisine erişim yetkiniz yok.', 403);
     }
 }
 
@@ -316,8 +314,7 @@ function require_role($teamId, $minRole)
     $ranks = $GLOBALS['BCC_ROLE_RANK'];
 
     if ($role === null || !isset($ranks[$role]) || !isset($ranks[$minRole]) || $ranks[$role] < $ranks[$minRole]) {
-        http_response_code(403);
-        die('Bu işlem için yetkiniz yeterli değil.');
+        bcc_error_page('Yetkiniz yok', 'Bu işlem için yetkiniz yeterli değil.', 403);
     }
 }
 

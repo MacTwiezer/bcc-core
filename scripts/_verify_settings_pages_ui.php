@@ -5,7 +5,7 @@
 // Bu isin asil riski gorsel degil YAYILMA riskiydi: bu sayfalar
 // .settings-card / .settings-table / .settings-btn / .settings-breadcrumb
 // sinifllarini SEKIZ baska sayfayla paylasiyor (admin/index, admin/create_user,
-// admin/create_team, admin/assign_team, bases, form_edit, kanban,
+// admin/create_team, admin/assign_team, bases, kanban,
 // slack_settings); alan tipi grid'i ise src/partials/field_type_wizard_fields.php'den
 // gelip grid.php'nin "+" POPUP'IYLA paylasiliyor. Yeni kurallarin bir gun
 // home.css'e/theme.css'e tasinmasi o sayfalari sessizce yeniden tasarlardi.
@@ -38,9 +38,6 @@ $slCss = file_get_contents($root . '/public/assets/slack-settings.css');
 $wsCss = file_get_contents($root . '/public/assets/workspaces.css');
 $wsPage = file_get_contents($root . '/public/workspaces.php');
 $wsJs = file_get_contents($root . '/public/assets/workspaces.js');
-$feCss = file_get_contents($root . '/public/assets/form-edit.css');
-$fePage = file_get_contents($root . '/public/form_edit.php');
-$feJs = file_get_contents($root . '/public/assets/form-edit.js');
 $shareJs = file_get_contents($root . '/public/assets/share-popover.js');
 $slPage = file_get_contents($root . '/public/slack_settings.php');
 $routingJs = file_get_contents($root . '/public/assets/slack-routing.js');
@@ -49,7 +46,11 @@ $acJs = file_get_contents($root . '/public/assets/account-page.js');
 $tfJs = file_get_contents($root . '/public/assets/table-fields.js');
 $fieldsPage = file_get_contents($root . '/public/table_fields.php');
 $basePage = file_get_contents($root . '/public/base_tables.php');
-$homeCss = file_get_contents($root . '/public/assets/home.css');
+// ⚠️ css_rules() ile YORUMLAR SOYULUR. Ham metinde arayinca home.css'in
+// "...hesap sayfasi .sp-page duzenine gecirilirken..." diye ANLATAN yorumu
+// gercek bir sizma sanilip yanlis KALDI veriyordu (dosyanin basindaki
+// php_code_only notunda anlatilan AYNI tuzak, dorduncu kez).
+$homeCss = css_rules(file_get_contents($root . '/public/assets/home.css'));
 $themeCss = file_get_contents($root . '/public/assets/theme.css');
 $partial = file_get_contents($root . '/src/partials/field_type_wizard_fields.php');
 $wizardJs = file_get_contents($root . '/public/assets/field-type-wizard.js');
@@ -91,7 +92,6 @@ $tfRules = css_rules($tfCss);
 $acRules = css_rules($acCss);
 $slRules = css_rules($slCss);
 $wsRules = css_rules($wsCss);
-$feRules = css_rules($feCss);
 
 // =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
@@ -121,7 +121,7 @@ function unscoped_selectors($rules, $allowed = array())
 // Ikisi de yalnizca bu sayfanin JS'i tarafindan uretilen sinif adlari, cakisma yok.
 $tfAllowedUnscoped = array('.tf-modal-backdrop', 'body.tf-modal-open');
 
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules, 'form-edit.css' => $feRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
     $bad = unscoped_selectors($rules, $name === 'table-fields.css' ? $tfAllowedUnscoped : array());
     check("A) {$name}: TUM selector'lar .sp-page ile basliyor", empty($bad),
         implode(' | ', array_slice($bad, 0, 5)));
@@ -214,7 +214,7 @@ check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.
 
 // =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
-foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules, 'form-edit.css' => $feRules) as $name => $rules) {
+foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
     check("G) {$name} icinde sabit HEX renk YOK", empty($hex[0]), implode(' ', array_unique($hex[0])));
 }
@@ -284,7 +284,12 @@ check('I) .sp-page sarmalayicisi aciyor',
 // dosyada TEKRARLANMAMALI.
 foreach (array('.sp-status', '.sp-toggle', '.sp-note', '.sp-code') as $shared) {
     check("I) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
-    check("I) '{$shared}' slack-settings.css'te TEKRARLANMIYOR", strpos($slRules, $shared) === false);
+    // "TEKRARLANMIYOR" = bilesenin KENDI tanimi ikinci kez yazilmamis demek.
+    // Sayfaya ozel bir BAGLAMDA kullanmak (ör. slack-settings.css teki
+    // ".sp-page .sl-watch-item input:focus-visible ~ .sp-toggle-track") tekrar
+    // DEGILDIR — ortak gorseli aynen kullanip o listeye ozel bir durum ekler.
+    check("I) {$shared} slack-settings.css te KENDI tanimi TEKRARLANMIYOR",
+        preg_match('/^\s*' . preg_quote($shared, '/') . '[\s,{]/m', $slRules) === 0);
 }
 
 // Eski "chunky" butonlar tamamen gitmis olmali.
@@ -424,9 +429,11 @@ check('J) tetikleyicinin actigi modal GERCEKTEN var (ortak partial uzerinden)',
 check('J) bases.php duruyor (modalin JS siz yedegi oraya POST ediyor)',
     is_file($root . '/public/bases.php')
     && strpos(file_get_contents($root . '/src/partials/create_base_modal.php'), 'action="/bases.php"') !== false);
-// "Ayarlar" ozelligi YOK -> calisiyormus gibi gosterilmemeli.
-check('J) "Ayarlar" hala disabled (olmayan ozellik aktif gibi gosterilmiyor)',
-    preg_match('/<button type="button" class="wsx-btn" disabled title="[^"]*"/', $wsPage) === 1);
+// ⚠️ TERSINE CEVRILDI: "Ayarlar" dugmesi devre disi birakilmakla kalmayip
+// TAMAMEN KALDIRILDI (workspaces.php icindeki nota bakiniz) — olmayan bir
+// ozelligi gri bir dugmeyle ima etmek de gereksizdi.
+check('J) "Ayarlar" dugmesi tamamen KALDIRILDI (olmayan ozellik ima edilmiyor)',
+    strpos($wsPage, 'wsx-btn\" disabled') === false);
 
 // Uye listesi artik cok sutunlu izgara (sonsuz dikey liste degil).
 check('J) katilimci listesi cok sutunlu izgara',
@@ -442,85 +449,10 @@ check('J) --bcc-role-owner uc tema blogunda da tanimli',
     substr_count($themeCss, '--bcc-role-owner:') . ' / ' . substr_count($themeCss, '--bcc-role-owner-soft:'));
 
 // =====================================================================
-echo "\n--- K) form_edit.php ---\n";
-$feCode = php_code_only($root . '/public/form_edit.php');
-
-check('K) ortak + sayfaya ozel CSS bagliyor',
-    strpos($fePage, "array('settings-page.css', 'form-edit.css')") !== false);
-check('K) .sp-page sarmalayicisi aciyor',
-    substr_count($fePage, '<div class="sp-page fe-page">') === 1);
-
-// PAYLASILAN share-popover.js'e DOKUNULMADI (baska sayfalar kullaniyor).
-check('K) share-popover.js DEGISMEDI (fe-*/sp-* bilmiyor)',
-    strpos($shareJs, 'fe-') === false && strpos($shareJs, 'sp-') === false);
-
-// ⚠️ TERSINE CEVRILDI: "Form baglantisi" karti form_edit.php'den KALDIRILDI.
-// Testler silinmedi, kaldirmanin KALICI oldugunu dogruluyor. Kancalarin
-// kendisi hala paylasilan dosyalarda yasiyor; burada YALNIZCA form_edit.php'de
-// olmadiklari kontrol ediliyor.
-foreach (array('share-popover-form', 'data-share-url-input', 'data-share-copy-btn') as $hook) {
-    check("K) paylasim karti KALDIRILDI: {$hook} form_edit.php'de YOK", strpos($feCode, $hook) === false);
-}
-check('K) paylasim karti KALDIRILDI: .fe-copy-btn markup YOK',
-    strpos($fePage, 'fe-copy-btn') === false);
-check('K) paylasim karti KALDIRILDI: olu .fe-copy-btn/.fe-share-* CSS temizlendi',
-    preg_match('/^\s*\.sp-page \.fe-(copy-btn|share-[a-z]+)/m', $feRules) === 0);
-check('K) form-edit.js: olu kopyalandi-parlamasi temizlendi',
-    strpos($feJs, "classList.add('is-copied')") === false
-    && strpos($feJs, 'clipboard') === false && strpos($feJs, 'execCommand') === false);
-check('K) form-edit.js: secili alan sayaci KORUNDU',
-    strpos($feJs, 'fe-field-count') !== false);
-// share-popover.js bu sayfada artik yuklenmemeli: yukleyecek kancasi kalmadi.
-check('K) form_edit.php share-popover.js YUKLEMIYOR',
-    preg_match('/bcc_asset_url\(\s*[\'"]share-popover\.js[\'"]\s*\)/', $feCode) === 0);
-
-// SECILI DURUM :has() ILE DEGIL kardes seciciyle. Gerekce: /browse'da olculdu —
-// :has() eslesiyor ve onceligi yeterli ama `checked` degisiminde stil
-// gecersizlestirme TETIKLENMIYOR (eleman DOM'dan cikarilip geri konunca
-// uygulaniyordu). Dinamik durum icin guvenilir degil.
-check('K) form-edit.css KURALLARINDA :has() YOK',
-    strpos($feRules, ':has(') === false);
-check('K) secili durum kardes seciciyle okunuyor',
-    strpos($feRules, 'input:checked + .fe-field-inner') !== false);
-/* [^>]* KULLANILMAZ: girdi etiketinin icinde bir PHP echo blogu var ve o blok
-   ">" iceriyor, kalip orada duruyordu (dogru markup'ta bile KALDI veriyordu).
-   NOT: bu aciklama BLOK yorum — tek satirlik "//" yorumunun ICINDE bile bir
-   PHP kapanis etiketi yazmak PHP modunu KAPATIR ve dosyanin kalani duz metin
-   olarak basilir (ilk yazimda tam olarak bu oldu). */
-check('K) markup girdiden SONRA .fe-field-inner kardesini iceriyor',
-    preg_match('/name="form_fields\[\]".{0,240}?<span class="fe-field-inner">/s', $fePage) === 1);
-
-// Alan tipi ikonu: .field-badge style.css'te tanimli ve bu sayfa style.css
-// YUKLEMIYOR -> devralinan markup'ta ikonlar GORUNMUYORDU. theme.css'te
-// tanimli .field-type-badge kullaniliyor.
-check('K) alan ikonu .field-type-badge (theme.css) kullaniyor, .field-badge DEGIL',
-    strpos($feCode, 'field-type-badge field-type-badge--') !== false
-    && preg_match('/class="field-badge/', $feCode) === 0);
-check('K) .field-type-badge gercekten theme.css\'te tanimli',
-    strpos($themeCss, '.field-type-badge {') !== false);
-
-// Form alan adlari DEGISMEDI (sunucu tarafi ayni).
-foreach (array('form_enabled', 'form_title', 'form_description', 'form_success_message', 'form_slack_notify') as $n) {
-    check("K) form alani korundu: {$n}", strpos($fePage, 'name="' . $n . '"') !== false);
-}
-check('K) form_fields[] korundu', strpos($fePage, 'name="form_fields[]"') !== false);
-check('K) TEK <form> (iki sutun onun icinde)',
-    substr_count($fePage, '<form method="post"') === 1);
-
-// ⚠️ TERSINE CEVRILDI: form linki uretimi ($publicFormUrl) kartla birlikte
-// KALDIRILDI. Korunan asil guvence, HTTP_HOST'a GERI DONULMEMESI — link geri
-// eklenirse bcc_app_base_url() ile eklenmeli (host-header enjeksiyonu).
-check('K) form_edit.php HTTP_HOST kullanMIYOR',
-    strpos($feCode, 'HTTP_HOST') === false);
-check('K) form linki uretimi KALDIRILDI (kartla birlikte)',
-    strpos($feCode, '/form.php?t=') === false);
-
-// theme.css'e EKLENEN uyari (amber) tonu: uc blokta da tanimli.
-check('K) --bcc-warning uc tema blogunda da tanimli',
-    substr_count($themeCss, '--bcc-warning:') === 3 && substr_count($themeCss, '--bcc-warning-soft:') === 3,
-    substr_count($themeCss, '--bcc-warning:') . ' / ' . substr_count($themeCss, '--bcc-warning-soft:'));
-check('K) uyari kutusu ORTAK dosyada, sayfaya ozelde TEKRARLANMIYOR',
-    strpos($spRules, '.sp-note--warn') !== false && strpos($feRules, '.sp-note--warn') === false);
+// K bolumu (form_edit.php arayuz denetimi) KALDIRILDI: herkese acik form
+// ozelligi ve public/form_edit.php migrations/023 ile tamamen silindi.
+// Paylasilan bilesenlerin (sp-*/field-type-badge/--bcc-warning) kendi
+// kontrolleri B, C ve I bolumlerinde duruyor.
 
 $passed = count(array_filter($results));
 $total = count($results);

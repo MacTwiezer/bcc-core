@@ -144,14 +144,21 @@ try {
     // yer acildiginda dar KALIRDI.
     check('A) max-height her cagride SIFIRLANIYOR',
         preg_match("/panel\.style\.maxHeight = '';[\s\S]{0,200}offsetHeight/", $panelJs) === 1);
+    // ⚠️ Bu kontrol kodun GERISINDE kalmisti: konum matematigi UI olcegine
+    // (--bcc-zoom / uiScale) gecince "window.innerWidth" yerine olcege bolunmus
+    // "viewportW" kullanilmaya baslandi. Kod DOGRUYDU, test eskimisti.
     check('A) YATAY tasma korumasi korundu (sag + sol kenar)',
-        strpos($panelJs, 'window.innerWidth - margin - panelWidth') !== false
-        && strpos($panelJs, 'window.innerWidth - margin - pw') !== false);
+        strpos($panelJs, 'viewportW = window.innerWidth / uiScale') !== false
+        && strpos($panelJs, 'viewportW - margin - panelWidth') !== false
+        && strpos($panelJs, 'viewportW - margin - pw') !== false);
     check('A) bindFloatingPanel matematigi KOPYALAMIYOR, yardimciya deleg ediyor',
         preg_match('/function position\(\) \{\s*window\.bcc_positionFloating\(panel, anchor\.getBoundingClientRect\(\), options\);\s*\}/', $panelJs) === 1);
     // Regresyon: eski surumde konum matematigi bindFloatingPanel govdesindeydi.
+    // ⚠️ Ayni eskime: olcege gecisle birlikte window.innerWidth yerine viewportW.
+    // Korunan guvence AYNI — konum matematigi TEK yerde (yardimci fonksiyonda),
+    // bindFloatingPanel govdesinde kopyasi YOK.
     check('A) eski satir-ici matematik bindFloatingPanel den KALKTI',
-        substr_count($panelJs, 'var rightOffset = window.innerWidth - rect.right;') === 1);
+        substr_count($panelJs, 'var rightOffset = viewportW - rect.right;') === 1);
 
     // =====================================================================
     // B) grid.js — IKI HUCRE POPOVER'I DA YARDIMCIYI KULLANIYOR

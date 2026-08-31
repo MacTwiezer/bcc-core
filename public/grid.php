@@ -101,7 +101,6 @@ $allViews = bcc_list_table_views($table['id'], $user ? $user['id'] : null);
 $bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
 $bccShareOrigin = $bccShareScheme . '://' . $bccShareHost;
-$interfaceShareUrl = $bccShareOrigin . '/interface.php?base_id=' . (int) $table['base_id'];
 $gridViewShareUrl = $bccShareOrigin . '/grid.php?table_id=' . (int) $table['id'] . '&view_id=' . (int) $view['id'];
 
 // Kaydedilebilir görünümler (docs/PROJE-DURUM.md #8): URL'de HİÇ grid state
@@ -567,6 +566,7 @@ $gridUser = current_user();
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <title><?php echo htmlspecialchars(bcc_page_title($table['base_name'], $table['name']), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
@@ -664,16 +664,6 @@ $gridUser = current_user();
                 // burada kalır — iki sayfada gerçekten farklı.
                 $collabPopoverTitle = $table['base_name'];
                 require __DIR__ . '/../src/partials/collab_popover_form.php';
-                ?>
-            </details>
-            <details class="gs-tool-details share-popover-trigger" name="gs-table-tab-menu">
-                <summary class="gs-btn-ghost">Bağlantı</summary>
-                <?php
-                // Kutu gövdesi PAYLAŞILAN partial'dan — aynı blok bu dosyada bir
-                // kez daha ("Paylaş ve Senkronize Et") ve interface.php'de geçiyor.
-                $shareLinkUrl = $interfaceShareUrl;
-                $shareLinkLabel = 'Bağlantıyı paylaş';
-                require __DIR__ . '/../src/partials/share_link_popover.php';
                 ?>
             </details>
             <a href="/interface.php?base_id=<?php echo (int) $table['base_id']; ?>" class="gs-btn-ghost">Başlat</a>
@@ -1549,6 +1539,9 @@ $gridUser = current_user();
                     Paylaş ve Senkronize Et
                 </summary>
                 <?php
+                // Kutu gövdesi PAYLAŞILAN partial'dan (src/partials/share_link_popover.php).
+                // Bu artık TEK kullanım yeri: üst başlıktaki "Bağlantı" butonu ve
+                // interface.php'deki zincir ikonu KALDIRILDI (işe yaramıyordu).
                 $shareLinkUrl = $gridViewShareUrl;
                 $shareLinkLabel = 'Şu görünüme bağlantı paylaş';
                 require __DIR__ . '/../src/partials/share_link_popover.php';
@@ -1893,6 +1886,16 @@ $gridUser = current_user();
                                          max(1,...): tüm alanlar gizlenmişse colspan="0" geçersiz olurdu. */ ?>
                                 <td colspan="<?php echo max(1, count($visibleFields)); ?>" class="grid-add-row-hint">
                                     <span class="gs-kbd-tooltip gs-kbd-tooltip-light">Shift-Enter'a basarak herhangi bir yere yeni kayıt da ekleyebilirsiniz</span>
+                                    <?php /* Toplu ekleme: satırı tek tek eklemek yerine bir sayı girilip
+                                             o kadar boş kayıt AÇILIR. Satırın kendi tıklamasıyla (tek kayıt
+                                             ekler) çakışmasın diye kontrol kendi tıklamasını yutar —
+                                             assets/grid.js, .grid-add-row-bulk. */ ?>
+                                    <span class="grid-add-row-bulk" data-grid-add-bulk>
+                                        <input type="number" min="1" max="500" step="1" value="10"
+                                               class="grid-add-row-bulk-input" data-grid-add-bulk-count
+                                               aria-label="Eklenecek satır sayısı" title="Eklenecek satır sayısı">
+                                        <button type="button" class="grid-add-row-bulk-btn" data-grid-add-bulk-btn>satır ekle</button>
+                                    </span>
                                 </td>
                                 <?php if ($isOwner): ?>
                                     <td class="grid-add-row-spacer"></td>

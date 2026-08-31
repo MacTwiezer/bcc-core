@@ -119,9 +119,20 @@ $GLOBALS['BCC_READONLY_FIELD_TYPES'] = array(
 // Yan fayda: yeni grid görünümleri artık "Tablo görünümü 2" olarak adlandırılıyor
 // (view_create.php ad sayacı bu etiketi kullanır) — varsayılan görünümün adı
 // zaten "Tablo görünümü" idi, isimlendirme tutarsızlığı da kapandı.
+// ⚠️ 'form' BU LİSTEDEN ÇIKARILDI — ürün kararı: "kullanıcılarımızın zaten
+// kayıtlı hesabı olacak", yani herkese açık form toplama ihtiyacı yok.
+//
+// BU LİSTE, YENİ GÖRÜNÜM OLUŞTURMANIN TEK KAPISI: view_create.php gelen
+// view_type'ı bu diziye karşı doğruluyor (whitelist). Satır kalkınca hem
+// arayüzdeki tür seçicisinden "Form" kaybolur hem de elle POST edilen
+// view_type='form' isteği sunucuda reddedilir.
+//
+// TAMAMEN KALDIRILDI (migrations/023_drop_form_view.sql): form sayfaları,
+// api/form_submit.php, src/form_security.php, form_token/form_enabled kolonları
+// ve view_type='form' satırları gitti. BCC_VIEW_ROUTES'ta da 'form' YOK.
+// Geri istenirse: git geçmişi + migration 015.
 $GLOBALS['BCC_VIEW_TYPES'] = array(
     'grid' => 'Tablo görünümü',
-    'form' => 'Form',
     'kanban' => 'Kanban',
 );
 
@@ -130,9 +141,12 @@ $GLOBALS['BCC_VIEW_TYPES'] = array(
 // üçüncü tür ile ternary zinciri okunaksızlaşacaktı. Harita hem BCC_VIEW_TYPES
 // ile aynı "whitelist" felsefesini sürdürüyor hem de dördüncü türü (Calendar)
 // saf veri eklemesine indiriyor — fonksiyon gövdesine bir daha dokunulmaz.
+// 'form' ARTIK YOK: herkese açık form özelliği kaldırıldı (form_edit.php dosyası
+// da silindi). DB'de kalmış bir view_type='form' satırı olsaydı bu haritada
+// karşılığı bulunmadığı için aşağıdaki fail-safe ile grid.php'ye düşerdi —
+// ama öyle bir satır da bırakılmadı (migrations/023).
 $GLOBALS['BCC_VIEW_ROUTES'] = array(
     'grid' => '/grid.php',
-    'form' => '/form_edit.php',
     'kanban' => '/kanban.php',
 );
 
@@ -152,75 +166,17 @@ function bcc_view_route_for($viewType, $tableId, $viewId)
     return $page . '?table_id=' . (int) $tableId . '&view_id=' . (int) $viewId;
 }
 
-// Form görünümünde GÖSTERİLEBİLECEK alanlar. Üç katmanlı filtrenin BİRİNCİ
-// katmanı (tip bazlı) — tasarımcının bile açamayacağı tipler.
-// Salt-okunur tiplere EK olarak BİLEREK kapsam dışı bırakılanlar:
-//   * attachment — anonim dosya yükleme AYRI ve çok daha riskli bir iş
-//   * long_text  — sanitize edilmiş HTML saklıyor; anonim girdiden gelen içerik
-//                  ekip üyelerinin gridine düşeceği için depolanmış XSS yüzeyi
-//   * user       — KVKK: değeri bir users.id ve normalize_cell_value() onu
-//                  EKİBİN ÜYE LİSTESİNE karşı doğruluyor. Anonim bir doldurucuya
-//                  seçenek sunmak, ekip üyelerinin adlarını ve id'lerini
-//                  kimliği doğrulanmamış birine SIZDIRMAK olurdu. Bu proje
-//                  ekip izolasyonu üzerine kurulu; form bunu delmemeli.
-// Üçü de ileride ayrı bir turda, kendi güvenlik tasarımlarıyla açılabilir.
-function bcc_field_allowed_in_form($fieldType)
-{
-    if (in_array($fieldType, $GLOBALS['BCC_READONLY_FIELD_TYPES'], true)) {
-        return false;
-    }
-
-    return !in_array($fieldType, array('attachment', 'long_text', 'user'), true);
-}
-
-// Form ayarlarını views.config JSON'undan güvenli varsayılanlarla çözer.
-// ÜÇ okuyucu paylaşır (form_edit.php, form.php, form_submit.php) — üçü ayrı ayrı
-// json_decode edip kendi varsayılanını uydurursa biri değiştiğinde diğerleri
-// sessizce ayrışırdı.
+// ⚠️ bcc_field_allowed_in_form() ve bcc_form_config_from_view() KALDIRILDI.
 //
-// ⚠️ form_fields her zaman int dizisi olarak döner: form_submit.php'nin
-// whitelist'i BUNA güveniyor, yani buradaki tip zorlaması bir güvenlik
-// kontrolüdür — config elle kurcalanmış olsa bile string/nested değer geçmez.
-function bcc_form_config_from_view($view)
-{
-    $config = array();
-    if (isset($view['config']) && $view['config'] !== null && $view['config'] !== '') {
-        $decoded = json_decode($view['config'], true);
-        $config = is_array($decoded) ? $decoded : array();
-    }
-
-    // Alan-id listesi çözümü ortak yardımcıya taşındı (bcc_config_field_id_list)
-    // — Kanban'ın kanban_card_fields'ı AYNI çözümü gerektirince, ikinci kopya
-    // yazmak yerine tek yere alındı. Davranış birebir aynı (is_scalar süzgeci
-    // dahil, bu bir güvenlik kontrolü).
-    $fieldIds = bcc_config_field_id_list($config, 'form_fields');
-
-    $str = function ($key, $default) use ($config) {
-        return (isset($config[$key]) && is_string($config[$key]) && trim($config[$key]) !== '')
-            ? $config[$key]
-            : $default;
-    };
-
-    return array(
-        'form_fields' => $fieldIds,
-        'form_title' => $str('form_title', ''),
-        'form_description' => $str('form_description', ''),
-        'form_success_message' => $str('form_success_message', 'Teşekkürler, kaydınız alındı.'),
-        // Slack bildirimi VARSAYILAN AÇIK (ürün kararı: bildirim kaçırmamak
-        // spam riskinden önce geliyor). Kapatmak kullanıcıda.
-        //
-        // ⚠️ "!empty($config[...]) ? 1 : 0" YAZILAMAZ, array_key_exists ŞART:
-        // anahtar YOKSA (form hiç kaydedilmemiş) varsayılan açık; anahtar VARSA
-        // kullanıcının açık tercihi aynen korunur. Düz bir varsayılan, daha önce
-        // bildirimi BİLEREK kapatmış her formu sessizce yeniden açardı — form
-        // anonim olduğu için bu, spam'i doğrudan ekibin Slack kanalına salmak
-        // demekti. save_form bu anahtarı HER kaydetmede yazdığı için (0 ya da 1)
-        // "anahtar yok" gerçekten yalnızca "hiç yapılandırılmadı" anlamına gelir.
-        'form_slack_notify' => array_key_exists('form_slack_notify', $config)
-            ? (!empty($config['form_slack_notify']) ? 1 : 0)
-            : 1,
-    );
-}
+// İkisi de yalnızca herkese açık form özelliğine aitti (form.php, form_edit.php,
+// api/form_submit.php) ve o özellik bu turda tamamen kaldırıldı — ürün kararı:
+// "kullanıcılarımızın zaten kayıtlı hesabı olacak", dışarıdan anonim kayıt
+// toplamaya ihtiyaç yok.
+//
+// bcc_config_field_id_list() KALIYOR (aşağıda): Kanban'ın kanban_card_fields'ı
+// da onu kullanıyor, forma özel değil.
+//
+// Geri istenirse: git geçmişinde bu satırın olduğu commit.
 
 // views.config'ten SAF int dizisi cikarir — bcc_form_config_from_view() ve
 // bcc_kanban_config_from_view() ORTAK yardimcisi (ikisinde de ayni alan-id
@@ -733,8 +689,7 @@ function find_base_or_404($baseId)
     );
 
     if (!$base) {
-        http_response_code(404);
-        die('Base bulunamadı.');
+        bcc_error_page('Base bulunamadı', 'Aradığınız base silinmiş ya da adresi değişmiş olabilir.', 404);
     }
 
     return $base;
@@ -755,8 +710,7 @@ function find_table_or_404($tableId)
     );
 
     if (!$table) {
-        http_response_code(404);
-        die('Tablo bulunamadı.');
+        bcc_error_page('Tablo bulunamadı', 'Aradığınız tablo silinmiş ya da adresi değişmiş olabilir.', 404);
     }
 
     return $table;
@@ -779,7 +733,7 @@ function bcc_get_or_create_default_view($tableId)
     // bcc_find_view() ile AYNI kolon listesi — grid.php ikisinden hangisi
     // dönerse dönsün $view['view_type']'a güvenebilmeli (erken yönlendirme).
     $sql = 'SELECT v.id, v.name, v.description, v.config, v.created_by, v.view_type,
-                   v.form_token, v.form_enabled, u.full_name AS created_by_name
+                   u.full_name AS created_by_name
             FROM views v
             LEFT JOIN users u ON u.id = v.created_by
             WHERE v.table_id = :table_id ORDER BY v.id ASC LIMIT 1';
@@ -820,7 +774,7 @@ function bcc_find_view($viewId, $tableId)
         // yönlendirmesi ve form_edit.php bu kolonları okur — ikinci bir sorgu
         // yazmak yerine zaten var olan tekil view sorgusu genişletildi.
         'SELECT v.id, v.name, v.description, v.config, v.created_by, v.view_type,
-                v.form_token, v.form_enabled, u.full_name AS created_by_name
+                   u.full_name AS created_by_name
          FROM views v
          LEFT JOIN users u ON u.id = v.created_by
          WHERE v.id = :id AND v.table_id = :table_id LIMIT 1',
@@ -3937,34 +3891,25 @@ function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
 
         // ---- Görünümler (config'teki alan id'leri YENİDEN EŞLENİR) ------
         foreach (bcc_fetch_all(
-            'SELECT name, description, view_type, position, config, form_enabled
+            'SELECT name, description, view_type, position, config
              FROM views WHERE table_id = :t ORDER BY position, id',
             array('t' => $src['id'])
         ) as $v) {
-            // ⚠️ FORM GÖRÜNÜMÜ İKİ AYRI TUZAK TAŞIYOR:
-            //
-            // 1) form_token KOPYALANAMAZ. Kopyalansaydı iki görünüm AYNI
-            //    herkese açık adrese cevap verirdi ve kopya, asıl forma
-            //    gönderilen kayıtları toplardı. Kolon UNIQUE olduğu için
-            //    zaten ikinci INSERT patlardı. Yeni bir sır üretiliyor —
-            //    view_create.php ile AYNI kaynak (random_bytes/CSPRNG).
-            // 2) Token'ı NULL bırakmak da olmaz: form_enabled sonradan
-            //    açıldığında link asla eşleşmez, sessiz bir çıkmaz sokak olur.
-            //
-            // form_enabled ise KOPYALANMAZ, her zaman KAPALI başlar: formu
-            // kopyayla birlikte otomatik açmak, kullanıcının haberi olmadan
-            // ikinci bir herkese açık kayıt toplama adresi yayınlamak olurdu
-            // (fail-closed, kolonun DEFAULT'uyla aynı yön).
-            $isForm = ($v['view_type'] === 'form');
-
+            // ⚠️ BURADA ESKİDEN FORM GÖRÜNÜMÜNE ÖZEL BİR DAL VARDI: kopyalanan
+            // form için yeni bir form_token üretiliyor (kopyalansaydı iki görünüm
+            // AYNI herkese açık adrese cevap verirdi) ve form_enabled her zaman
+            // 0 başlatılıyordu (kopyayla birlikte otomatik açmak, kullanıcının
+            // haberi olmadan ikinci bir anonim kayıt toplama adresi yayınlamak
+            // olurdu). Form özelliği tamamen kaldırıldığı ve views.form_token /
+            // form_enabled kolonları düşürüldüğü için (migrations/023) o dal da
+            // gitti — artık kopyalanacak form görünümü yok.
             bcc_execute(
-                'INSERT INTO views (table_id, name, description, view_type, position, config, form_token, form_enabled, created_by)
-                 VALUES (:t, :n, :d, :vt, :p, :c, :tok, 0, :u)',
+                'INSERT INTO views (table_id, name, description, view_type, position, config, created_by)
+                 VALUES (:t, :n, :d, :vt, :p, :c, :u)',
                 array(
                     't' => $newTableId, 'n' => $v['name'], 'd' => $v['description'],
                     'vt' => $v['view_type'], 'p' => $v['position'],
                     'c' => bcc_remap_view_config_fields($v['config'], $fieldMap),
-                    'tok' => $isForm ? bin2hex(random_bytes(16)) : null,
                     'u' => $userId ? (int) $userId : null,
                 )
             );

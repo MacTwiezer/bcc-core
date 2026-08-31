@@ -66,13 +66,6 @@ if ($tableId) {
     $attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 }
 
-// E1 — grid.php'deki D2/D3 "Share" popover'ıyla AYNI mekanizma/URL deseni
-// (src/slack.php'nin scheme+HTTP_HOST kullanımıyla da tutarlı) — bu sayfanın
-// kendi linkini gösterir, DDL/oturumsuz erişim YOK.
-$bccShareScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$bccShareHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-$interfaceSelfShareUrl = $bccShareScheme . '://' . $bccShareHost . '/interface.php?base_id=' . (int) $baseId . '&table_id=' . (int) $tableId;
-
 // D1 "Paylaş" — grid.php ile BİREBİR AYNI bileşen.
 //
 // ⚠️ ÖNCEKİ HÂLİ SAYFADAN ÇIKIYORDU: bu blok kendi katılımcı/aday
@@ -127,6 +120,7 @@ if (!empty($shareExistingIds)) {
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo htmlspecialchars(bcc_page_title($base['name'], $activeTableName), ENT_QUOTES, 'UTF-8'); ?></title>
 <?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
@@ -139,11 +133,12 @@ if (!empty($shareExistingIds)) {
      tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
      kopya YAZILMADI. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
-<!-- E3/E1: "opsflow.bcccrm.com ▾" menüsü + Share popover, grid.php'nin .gs-table-tab-menu-*/
-     .share-popover-* sınıflarını kullanıyor — ikinci bir kopya YAZILMADI,
-     grid-shell.css bu yüzden burada da yüklü (yalnızca .gs-*/.share-popover-*
-     kapsamlı kurallar geçerli olur, grid.php'ye özgü .gs-body/.gs-rail vb.
-     bu sayfada hiç eşleşmez). -->
+<!-- E3: "opsflow.bcccrm.com ▾" menüsü grid.php'nin .gs-table-tab-menu-*
+     sınıflarını kullanıyor — ikinci bir kopya YAZILMADI, grid-shell.css bu
+     yüzden burada da yüklü (yalnızca .gs-* kapsamlı kurallar geçerli olur,
+     grid.php'ye özgü .gs-body/.gs-rail vb. bu sayfada hiç eşleşmez).
+     NOT: "Bağlantıyı paylaş" popover'ı bu sayfadan KALDIRILDI (işe yaramıyordu),
+     .share-popover-* kuralları artık burada kullanılmıyor. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('interface.css'); ?>">
 <!-- Bildirim paneli + hesap menüsü partial'ları home.css'teki .home-notif-*/
@@ -266,22 +261,6 @@ if (!empty($shareExistingIds)) {
             ?>
             <div class="if-nav-spacer" aria-hidden="true"></div>
 
-            <!-- E1 — eski "Paylaş" (view-link kopyalama), grid.php'nin "Bağlantı"sıyla
-                 AYNI ad değişikliği — yukarıdaki YENİ collaborators "Paylaş"'ıyla
-                 karışmasın diye (share-popover.js + .share-popover-form, ikinci
-                 bir kopya YOK). -->
-            <details class="if-nav-share gs-tool-details share-popover-trigger" name="if-nav-share">
-                <summary class="if-nav-icon-btn if-nav-share-btn" aria-label="Bağlantı" title="Bağlantı">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#5a4a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span class="if-nav-bottom-label">Bağlantı</span>
-                </summary>
-                <?php
-                // grid.php'nin iki paylaşım kutusuyla PAYLAŞILAN partial.
-                $shareLinkUrl = $interfaceSelfShareUrl;
-                $shareLinkLabel = 'Bağlantıyı paylaş';
-                require __DIR__ . '/../src/partials/share_link_popover.php';
-                ?>
-            </details>
             <?php
             $notifUser = $user;
             $notifTriggerClass = 'if-nav-icon-btn';
@@ -504,7 +483,19 @@ if (!empty($shareExistingIds)) {
                         <svg class="if-audit-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </summary>
                     <div class="if-audit-panel">
-                        <p class="if-audit-note">Son 15 gün gösterilir, en yeni inceleme en üstte.</p>
+                        <div class="if-audit-head">
+                            <p class="if-audit-note">Son 15 gün gösterilir, en yeni inceleme en üstte.</p>
+                            <?php /* Excel indirme: <a download> DEĞİL, düz bir bağlantı — dosyayı
+                                     sunucu Content-Disposition: attachment ile gönderiyor
+                                     (api/note_view_export_xlsx.php), diğer export düğmeleriyle
+                                     AYNI desen. href'i interface.js açık nota göre günceller;
+                                     hiçbir not seçili değilken düğme devre dışı kalır. */ ?>
+                            <a class="if-audit-export" data-audit-export href="#" aria-disabled="true"
+                               title="Bu notun son 15 günlük inceleme kayıtlarını Excel olarak indir">
+                                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v9m0 0l-3.2-3.2M10 12l3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 13.5v2a1.5 1.5 0 001.5 1.5h10a1.5 1.5 0 001.5-1.5v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <span>Excel indir</span>
+                            </a>
+                        </div>
                         <div class="if-audit-list" data-audit-list></div>
                         <p class="if-audit-empty" data-audit-empty hidden>Bu notu henüz inceleyen temsilci yok.</p>
                         <p class="if-audit-error" data-audit-error hidden>Geçmiş yüklenemedi.</p>
@@ -532,7 +523,6 @@ if (!empty($shareExistingIds)) {
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
-<script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('interface.js'); ?>" defer></script>
 </body>

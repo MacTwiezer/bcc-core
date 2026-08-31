@@ -1538,13 +1538,20 @@ td:hover .cell-link-icon,
 
 /* Color: tekli/çoklu seçim hücrelerindeki renkli "chip"ler. */
 
+/* ⚠️ BULUNAN GERÇEK BUG (koyu temada "Durum" yazıları görünmüyordu):
+   rozetin ZEMİNİ tema-bağımsız SABİT bir pastel — src/schema.php'deki
+   BCC_CHOICE_COLORS paletinden inline style ile basılıyor ve on rengin HEPSİ
+   açık (#cfe2ff … #e6e6e9). Metin rengi ise var(--bcc-text) idi: koyu temada
+   bu değişken neredeyse beyaza (#f0f0f2) dönüyor ve açık pastel zeminin
+   üstünde OKUNMAZ hâle geliyordu (açık temada sorun yoktu, orada zaten koyu).
+   Zemin sabit olduğu için metin de sabit koyu olmalı — tema değişkeni DEĞİL. */
 .choice-chip {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 11px;
     line-height: 1.35;
-    color: var(--bcc-text);
+    color: #1d1d1f;
     margin: 0 0.25rem 0.15rem 0;
     white-space: nowrap;
 }

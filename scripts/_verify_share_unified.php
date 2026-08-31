@@ -249,10 +249,13 @@ try {
     }
     check('C) interface.php te modalin CSS i zaten yuklu (grid-shell.css)',
         strpos($ifHtml['body'], 'grid-shell.css') !== false);
-    // "Baglanti" (URL kopyalama) AYRI bir islev — o da tek partial'da birlesik.
-    check('C) URL kopyalama kutusu ORTAK partial dan (iki sayfada da)',
-        substr_count($gridHtml['body'], 'data-share-url-input') >= 1
-        && substr_count($ifHtml['body'], 'data-share-url-input') >= 1);
+    // "Baglanti" (URL kopyalama) kutusu interface.php'den KALDIRILDI (ise
+    // yaramayan link kutusuydu). grid.php'de "Paylas ve Senkronize Et" altinda
+    // duruyor ve hala ORTAK partial'dan geliyor.
+    check('C) URL kopyalama kutusu grid.php te ORTAK partial dan',
+        substr_count($gridHtml['body'], 'data-share-url-input') >= 1);
+    check('C) interface.php te URL kopyalama kutusu artik YOK',
+        substr_count($ifHtml['body'], 'data-share-url-input') === 0);
 
     // =====================================================================
     // D) CANLI: davet -> rol -> cikarma (hepsi AJAX, yonlendirme yok)

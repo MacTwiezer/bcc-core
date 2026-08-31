@@ -158,8 +158,10 @@ check('C3) atlama YALNIZCA kendi tablomuzda (disaridan gelende davranis degismez
 echo "\n--- D) Sag tik -> Yapistir: GERCEK sistem panosu, iki format ---\n";
 check('D) text/plain (Excel/LibreOffice/Not Defteri okur)',
     strpos($copyJs, "setData('text/plain', tsv)") !== false);
+// ⚠️ Kontrol eskimisti: HTML artik dogrudan degil, wrapHtmlDocument() ile
+// tam bir belgeye sarilip yaziliyor. Korunan guvence AYNI — text/html kanali var.
 check('D) text/html (zengin tablo -- Word/Airtable/LibreOffice)',
-    strpos($copyJs, "setData('text/html', html)") !== false);
+    preg_match("/setData\('text\/html',/", $copyJs) === 1);
 check('D) sistem panosuna yaziliyor (uygulama ici tampon DEGIL)',
     strpos($copyJs, "execCommand('copy')") !== false);
 

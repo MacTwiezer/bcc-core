@@ -40,9 +40,12 @@ function bcc_xlsx_escape($text)
     return htmlspecialchars($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
-function bcc_xlsx_sheet_xml(array $headers, array $rows)
+// $preamble: BASLIK SATIRININ DA USTUNE yazilan serbest satirlar (rapor adi,
+// donem araligi vb.). Varsayilani bos dizi — mevcut tum cagiricilar (view_export,
+// team_members_export) DEGISMEDEN calisir, ciktilari birebir ayni kalir.
+function bcc_xlsx_sheet_xml(array $headers, array $rows, array $preamble = array())
 {
-    $allRows = array_merge(array($headers), $rows);
+    $allRows = array_merge($preamble, array($headers), $rows);
 
     $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
@@ -83,7 +86,7 @@ function bcc_xlsx_sanitize_sheet_title($title)
  * $rows: her biri $headers ile aynı sırada değerler içeren düz diziler.
  * Dönüş: geçici bir .xlsx dosyasının tam yolu (çağıran taraf gönderip silmeli).
  */
-function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows)
+function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows, array $preamble = array())
 {
     $sheetTitle = bcc_xlsx_sanitize_sheet_title($sheetTitle);
 
@@ -124,7 +127,7 @@ function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows)
         . '<cellXfs count="1"><xf/></cellXfs>'
         . '</styleSheet>';
 
-    $sheetXml = bcc_xlsx_sheet_xml($headers, $rows);
+    $sheetXml = bcc_xlsx_sheet_xml($headers, $rows, $preamble);
 
     $tmpPath = tempnam(sys_get_temp_dir(), 'bcc_xlsx_');
 
@@ -145,9 +148,9 @@ function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows)
  * $headers/$rows bcc_xlsx_build_temp_file() ile aynı. HTTP başlıklarını
  * ayarlar, dosyayı tarayıcıya gönderir, geçici dosyayı temizler.
  */
-function bcc_send_xlsx($filename, $sheetTitle, array $headers, array $rows)
+function bcc_send_xlsx($filename, $sheetTitle, array $headers, array $rows, array $preamble = array())
 {
-    $tmpPath = bcc_xlsx_build_temp_file($sheetTitle, $headers, $rows);
+    $tmpPath = bcc_xlsx_build_temp_file($sheetTitle, $headers, $rows, $preamble);
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="' . $filename . '"');

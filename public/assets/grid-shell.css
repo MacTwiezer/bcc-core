@@ -26,10 +26,16 @@ body.gs-body a { text-decoration: none; color: inherit; }
 
 /* ---------- Sol dikey şerit ---------- */
 
+/* ⚠️ BULUNAN GERÇEK BUG: zemin "var(--bcc-text)" idi. Bu değişken KOYU temada
+   açık griye (#f0f0f2) dönüyor, yani şerit bembeyaz oluyordu ve üstündeki
+   beyaz ikonlar (ana sayfa, bildirim) görünmez hâle geliyordu. Şerit her iki
+   temada da koyu kalmalı — açık temadaki görünümüyle AYNI. Bu yüzden burada
+   bilerek SABİT bir değer var: rengin teması yok, her zaman koyu zemin +
+   beyaz ikon. */
 .gs-rail {
     width: 52px;
     flex-shrink: 0;
-    background: var(--bcc-text);
+    background: #1d1d1f;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1132,7 +1138,16 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
 
 .gs-view-drawer-row:hover { background: var(--bcc-surface-hover); }
 
-.gs-view-drawer-row.is-selected { background: var(--bcc-accent-soft); }
+/* Seçili görünüm satırı KOYU temada da AÇIK temadaki maviyi korur (kullanıcı
+   isteği). var(--bcc-accent-soft) koyu temada laciverte (#1c2b4d) dönüyordu;
+   burada sabit açık mavi kullanıldığı için metin de sabit koyu olmak ZORUNDA —
+   aksi hâlde koyu temanın beyaz metni bu açık zeminde okunmaz (aynı hata
+   .choice-chip'te vardı). color satır içindeki bağlantı/etiketlere de
+   inherit olur. */
+.gs-view-drawer-row.is-selected {
+    background: #e8f0fe;
+    color: #1d1d1f;
+}
 
 /* D1 — sürükle-bırak tutamacı: satır hover'lanmadıkça görünmez (yıldız/⋯
    ikonlarıyla AYNI opacity deseni), sürüklenirken bcc_bindColumnDrag()
@@ -2031,4 +2046,82 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
         overflow-wrap: anywhere;
         padding: 0.25rem 0.35rem;
     }
+}
+
+/* Toplu satır ekleme kontrolü ("+" satırının içinde, ipucu bandının solunda).
+   ⚠️ Satırın KENDİSİ tıklanabilir (tek kayıt ekler) ve hover'da imleci
+   "pointer" yapıyor — kutunun üstünde bu yanıltıcı olurdu, o yüzden burada
+   imleç normale döndürülüyor; asıl tıklama hedefleri (input/buton) kendi
+   imlecini getiriyor. Tıklamanın satıra yayılmaması JS tarafında
+   (grid.js, [data-grid-add-bulk] kontrolü) engelleniyor. */
+.grid-add-row-bulk {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: default;
+    /* Dikey hizayı satırın kendi satır yüksekliğinden ALMASIN: kontrol
+       kendi yüksekliğini dayatırsa "+" satırı veri satırlarından daha
+       kalın görünüyordu (ekran görüntüsündeki şişkin bant). */
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* ⚠️ ÖZGÜLLÜK NOTU: theme.css'te "input[type='number']" (0,1,1) taban kuralı
+   var — padding 0.4rem/0.6rem, border-radius 6px, font: inherit veriyor ve
+   düz ".grid-add-row-bulk-input" (0,1,0) onu EZEMİYORDU; kutu bu yüzden
+   satırı şişiriyordu. Seçici bilerek (0,2,1) yapıldı. */
+.grid-add-row-bulk input[type="number"].grid-add-row-bulk-input {
+    width: 2.9rem;
+    height: 1.5rem;
+    padding: 0 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    text-align: center;
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 4px;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    cursor: text;
+    box-sizing: border-box;
+    /* Sayı okları 2.9rem'lik kutuda rakamı sıkıştırıyordu; yazarak ve
+       yön tuşlarıyla artırma zaten çalışıyor. */
+    -moz-appearance: textfield;
+}
+
+.grid-add-row-bulk input[type="number"].grid-add-row-bulk-input::-webkit-outer-spin-button,
+.grid-add-row-bulk input[type="number"].grid-add-row-bulk-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.grid-add-row-bulk input[type="number"].grid-add-row-bulk-input:focus {
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 2px var(--bcc-accent-soft);
+}
+
+/* Buton .btn-sm DEĞİL: o sınıf gri dolgu + kalın padding veriyor ve grid
+   satırının içinde ağır bir blok gibi duruyordu. Burada metin ağırlıklı,
+   yalnızca hover'da zemin alan hafif bir eylem. */
+.grid-add-row-bulk-btn {
+    height: 1.5rem;
+    padding: 0 0.4rem;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    color: var(--bcc-accent);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.grid-add-row-bulk-btn:hover:not(:disabled) {
+    background: var(--bcc-accent-soft);
+    border-color: var(--bcc-accent-soft);
+}
+
+.grid-add-row-bulk-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
 }

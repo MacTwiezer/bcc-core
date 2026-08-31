@@ -426,7 +426,8 @@ try {
     check('E) genislik ayarliyken grid satir sayisi degismedi', count($rm[1]) === 4, 'satir=' . count($rm[1]));
 
     // Kapsam siniri
-    foreach (array('kanban.php', 'form.php') as $other) {
+    // form.php SILINDI (form ozelligi kaldirildi, migrations/023) — listeden cikti.
+    foreach (array('kanban.php') as $other) {
         $src = file_get_contents(__DIR__ . '/../public/' . $other);
         check("E) {$other} sutun genisligi kodu ICERMIYOR",
             stripos($src, 'col-resize') === false && stripos($src, 'column_widths') === false

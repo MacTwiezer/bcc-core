@@ -170,8 +170,6 @@ foreach (array('owner@bcc.local' => true, 'commenter@bcc.local' => false,
 // ---------------------------------------------------------------------------
 // C) team_members.php — ZORLAMA (asil kapi)
 // ---------------------------------------------------------------------------
-echo "\n--- C) team_members.php yetkisiz POST reddi ---\n";
-
 foreach (array('editor@bcc.local', 'viewer@bcc.local') as $email) {
     // 1) Uye EKLEME denemesi
     $r = post_as($uid[$email], 'team_members.php', 'team_id=' . $teamId, array(
@@ -420,8 +418,10 @@ foreach (array('bcc_can_manage_bases', 'bcc_can_manage_members', 'bcc_can_manage
 $tmSrc = file_get_contents(__DIR__ . '/../public/team_members.php');
 check('team_members.php POST kapisi bcc_can_manage_members() kullaniyor',
     strpos($tmSrc, 'bcc_can_manage_members(') !== false);
-check('team_members.php yetkisiz POST\'ta 403 + die',
-    strpos($tmSrc, 'http_response_code(403)') !== false);
+// Hata cikisi ortak sayfaya tasindi (src/errors.php): bcc_error_page() HTTP
+// kodunu KENDISI yaziyor, cagiran yerde ayrica http_response_code(403) YOK.
+check('team_members.php yetkisiz POST ta 403 donduruyor (ortak hata sayfasi)',
+    preg_match('/bcc_error_page\(.*403\)/', $tmSrc) === 1);
 
 // ---------------------------------------------------------------------------
 echo "\n";

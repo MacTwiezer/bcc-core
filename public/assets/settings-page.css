@@ -418,6 +418,22 @@
    sayfalar da buradan alsın diye.
    <label class="sp-toggle"><input type="checkbox" ...><span class="sp-toggle-track"></span><span>Etiket</span></label> */
 .sp-page .sp-toggle {
+    /* ⚠️ BULUNAN GERÇEK BUG (ölçülerek doğrulandı). Aşağıdaki gizli <input>
+       `position: absolute` ve top/left VERİLMEMİŞ. Bu durumda konumu, en yakın
+       KONUMLANDIRILMIŞ ataya göre çözülür. Bu satır yokken o ata `.home-body`
+       ({ position: relative }, home.css) oluyordu — ama kaydıran kap
+       `.home-main`. Sonuç: sayfa kaydırılınca görünen anahtar hareket ediyor,
+       gizli input YERİNDE KALIYORDU (ölçüm: .home-main 700px kaydırılınca ikisi
+       arasındaki mesafe 10px'ten 780px'e çıkıyor).
+       Kullanıcı anahtara bastığında tarayıcı o gizli input'a odaklanıp onu
+       "görünür kılmak için" .home-main'i uçuk bir konuma kaydırıyor; ekranın
+       yarısı boş kalıyordu (kullanıcı bildirdi, ekran görüntüsüyle).
+       position: relative — input artık KENDİ etiketine bağlı, kaydırmayla
+       birlikte hareket ediyor.
+       ⚠️ YENİ BİLEŞEN YAZARKEN: görsel olarak gizlenmiş (position:absolute +
+       opacity:0) bir girdi koyuyorsanız SARMALAYICISINA position: relative
+       verin — yoksa aynı hata tekrarlar. */
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;

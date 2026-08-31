@@ -175,16 +175,19 @@ try {
     check('B) "Paylas" .if-nav-util-row un ICINDE',
         preg_match('#<div class="if-nav-util-row">\s*(?:<!--.*?-->\s*)?<details class="if-nav-collab-share#s', $ifPhp) === 1);
     // Alt satirin BES ogesi + avatar: sira `order` ile suruluyor.
+    // "Baglanti" (.if-nav-share) KALDIRILDI — ise yaramayan link kopyalama kutusuydu.
     foreach (array('.if-account' => 1, '.if-nav-spacer' => 2, '.if-nav-collab-share' => 3,
-                   '.if-nav-share' => 4, '.if-nav-util-row .home-notif' => 5,
+                   '.if-nav-util-row .home-notif' => 5,
                    '.if-nav-collapse-btn' => 6, '.if-nav-expand-btn' => 7) as $sel => $ord) {
         check("B) {$sel} order: {$ord}",
             preg_match('#' . preg_quote($sel, '#') . ' \{ order: ' . $ord . ';#', $ifCss) === 1);
     }
     // ⚠️ TASMA KORUMASI: etiketler gorunur olsaydi alti oge 220px'e sigmazdi
     // (dosyanin gecmisinde tam olarak bu yasandi).
-    check('B) iki paylasim dugmesinin de METIN etiketi gizli (tasma korumasi)',
-        preg_match('#\.if-nav-share \.if-nav-bottom-label,\s*\.if-nav-collab-share \.if-nav-bottom-label \{ display: none; \}#s', $ifCss) === 1);
+    check('B) kalan paylasim dugmesinin METIN etiketi gizli (tasma korumasi)',
+        preg_match('#\.if-nav-collab-share \.if-nav-bottom-label \{ display: none; \}#s', $ifCss) === 1);
+    check('B) kaldirilan "Baglanti" dugmesinin CSS kurallari da GITTI',
+        strpos($ifCss, '.if-nav-share ') === false && strpos($ifCss, '.if-nav-share{') === false);
     check('B) "Paylas" artik tam genislikte buton DEGIL',
         preg_match('#\.if-nav-collab-share-btn \{[^}]*width: 100%#s', $ifCss) === 0);
     // Footer KABI: zemin + panelin yatay padding ini geri alan negatif margin.
@@ -195,9 +198,11 @@ try {
     // align-self: stretch olmadan footer 45px'lik bir ada olarak kaliyordu.
     check('B) daraltilmisken footer align-self: stretch ile geriliyor',
         preg_match('#\.if-nav\.is-collapsed \.if-nav-bottom \{[^}]*align-self: stretch;#s', $ifCss) === 1);
-    check('B) erisilebilirlik: iki dugmede de title + aria-label duruyor',
-        strpos($ifPhp, 'aria-label="Paylaş" title="Paylaş"') !== false
-        && strpos($ifPhp, 'aria-label="Bağlantı" title="Bağlantı"') !== false);
+    check('B) erisilebilirlik: kalan dugmede title + aria-label duruyor',
+        strpos($ifPhp, 'aria-label="Paylaş" title="Paylaş"') !== false);
+    check('B) "Baglanti" dugmesi markup tan TAMAMEN kalkti',
+        strpos($ifPhp, 'aria-label="Bağlantı"') === false
+        && strpos($ifPhp, 'if-nav-share-btn') === false);
 
     // =====================================================================
     // C) WORKSPACE IKONU
@@ -212,8 +217,12 @@ try {
         strpos($ifPhpCode, 'bcc_base_icon_color') === false);
     check('C) ikon span inda satir ici style KALMADI',
         preg_match('#home-base-icon"\s+style=#', $ifPhp) === 0);
+    // ⚠️ Cagri UCUNCU parametreyi (kullanicinin sectigi ikon, migrations/020)
+    // aldiktan sonra bu kontrol eskimisti: iki parametreli imzayi ariyordu ve
+    // kod dogru oldugu halde KALIYORDU. Artik fonksiyon adi + ilk iki argumana
+    // bakiliyor, ucuncu argumanin varligi testi kirmiyor.
     check('C) kategori glifi KORUNDU (base ler ayirt edilebilir kalsin)',
-        strpos($ifPhp, 'bcc_base_icon_svg(14, $base[\'name\'])') !== false);
+        preg_match('#bcc_base_icon_svg\(14,\s*\$base\[\'name\'\]#', $ifPhp) === 1);
     $iconRule = rule_body($ifCss, '.if-nav-back .home-base-icon');
     check('C) ikon kurali var', $iconRule !== null);
     check('C) zemin artik sakin (yari saydam beyaz)',
@@ -267,13 +276,15 @@ try {
     check('E) daraltilmisken "Paylas" ikon yiginin SONUNDA',
         strpos($ifCss, '.if-nav.is-collapsed .if-nav-collab-share { order: 5; }') !== false);
     // Paylasim mantigi ORTAK partial/JS te kalmali — ikinci kopya YOK.
-    check('E) "Baglanti" hala ortak share_link_popover partial ini kullaniyor',
-        strpos($ifPhp, "require __DIR__ . '/../src/partials/share_link_popover.php'") !== false);
+    check('E) share_link_popover artik bu sayfada KULLANILMIYOR ("Baglanti" kaldirildi)',
+        strpos($ifPhp, "partials/share_link_popover.php") === false);
+    check('E) share-popover.js de artik yuklenmiyor (olu script kalmadi)',
+        strpos($ifPhp, "share-popover.js") === false);
     check('E) profil/bildirim hala ortak partial lardan geliyor',
         strpos($ifPhp, "require __DIR__ . '/../src/partials/account_menu.php'") !== false
         && strpos($ifPhp, "require __DIR__ . '/../src/partials/notifications_panel.php'") !== false);
-    check('E) iki <details> de AYNI name ile (ayni anda yalnizca biri acik)',
-        substr_count($ifPhp, 'name="if-nav-share"') === 2);
+    check('E) geriye TEK paylasim <details> i kaldi',
+        substr_count($ifPhp, 'name="if-nav-share"') === 1);
 
     // CANLI: sayfa gercekten aciliyor ve yeni yapi HTML de var mi.
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
@@ -300,9 +311,9 @@ try {
     check('E) base ikonu satir ici background OLMADAN basiliyor',
         strpos($page['body'], '<span class="home-base-icon">') !== false
         && preg_match('#home-base-icon" style="background#', $page['body']) === 0);
-    check('E) her iki paylasim tetikleyicisi de sayfada',
+    check('E) "Paylas" tetikleyicisi sayfada, kaldirilan "Baglanti" YOK',
         strpos($page['body'], 'collab-popover-trigger') !== false
-        && strpos($page['body'], 'share-popover-trigger') !== false);
+        && strpos($page['body'], 'share-popover-trigger') === false);
     check('E) aktif tablo ogesi isaretli',
         strpos($page['body'], 'if-nav-item is-active') !== false);
 

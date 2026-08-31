@@ -386,26 +386,22 @@ CREATE TABLE IF NOT EXISTS views (
     description    VARCHAR(500) DEFAULT NULL,
     -- Geçerli değerler kod tarafında whitelist'lenir ($GLOBALS['BCC_VIEW_TYPES'],
     -- src/schema.php) — ENUM DEĞİL, yeni tür eklemek DDL gerektirmez
-    -- (fields.field_type ile AYNI ilke). Şu an 'grid' ve 'form' uygulandı;
-    -- Kanban/Calendar sıradaki adımlar, güncel liste her zaman BCC_VIEW_TYPES'tadır.
+    -- (fields.field_type ile AYNI ilke). Şu an 'grid' ve 'kanban' uygulandı;
+    -- güncel liste her zaman BCC_VIEW_TYPES'tadır.
+    --
+    -- ⚠️ 'form' TÜRÜ KALDIRILDI (migrations/023) ve onunla birlikte
+    -- form_token / form_enabled kolonları da düşürüldü. Herkese açık form
+    -- özelliği tamamen çıkarıldı; ürün kararı: kullanıcıların hepsinin kayıtlı
+    -- hesabı olacak, anonim kayıt toplamaya ihtiyaç yok. migrations/015 dosyası
+    -- geçmişte olduğu için duruyor, 023 onu geri alıyor.
     view_type      VARCHAR(30) NOT NULL DEFAULT 'grid',
-    -- form_token/form_enabled (migrations/015): YALNIZCA view_type='form' için
-    -- anlamlı. form_token herkese açık form linkinin SIRRIdır — views.id ardışık
-    -- olduğu için link olarak kullanılamaz (başka takımların formları tahmin
-    -- edilebilirdi, KVKK izolasyonu delinirdi). ascii_bin: hex zaten ASCII, ikili
-    -- karşılaştırma tam eşleşme verir. NULL serbest + UNIQUE: MySQL/MariaDB çoklu
-    -- NULL'a izin verdiği için form OLMAYAN görünümler çakışmaz.
-    -- form_enabled: linki iptal ETMEDEN formu acilen kapatma anahtarı; DEFAULT 0
-    -- (fail-closed). Ayrıntılı gerekçe migration dosyasında.
-    form_token     CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
-    form_enabled   TINYINT(1) NOT NULL DEFAULT 0,
     position       INT NOT NULL DEFAULT 0,
     config         JSON DEFAULT NULL,
     created_by     INT UNSIGNED DEFAULT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_views_form_token (form_token),
+
     -- İsim benzersizliği SCOPE'LU: aynı tabloda iki "Tablo 1" görünümü olamaz,
     -- başka tabloda serbest. api/view_create.php'nin COUNT tabanlı otomatik adı
     -- bu yüzden çakışana kadar ilerler. Bkz. migrations/019.
@@ -475,6 +471,27 @@ CREATE TABLE IF NOT EXISTS slack_routing_rules (
     CONSTRAINT fk_slack_routing_rules_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
     CONSTRAINT fk_slack_routing_rules_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE,
     CONSTRAINT fk_slack_routing_rules_webhook FOREIGN KEY (webhook_id) REFERENCES slack_webhooks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- slack_watched_fields — hücre DEĞİŞİKLİĞİNDE bildirim: hangi alanlar izlensin.
+-- Üç "oluşturma" olayının (yeni kayıt / tablo / alan) yanına eklenen DÖRDÜNCÜ
+-- olay. BOŞ tablo = özellik kapalı, mevcut davranış aynen korunur.
+-- Tam gerekçe: migrations/022_slack_watched_fields.sql.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS slack_watched_fields (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    team_id     INT UNSIGNED NOT NULL,
+    table_id    INT UNSIGNED NOT NULL,
+    field_id    INT UNSIGNED NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_slack_watched_fields (table_id, field_id),
+    KEY idx_slack_watched_fields_team (team_id),
+    KEY idx_slack_watched_fields_field (field_id),
+    CONSTRAINT fk_slack_watched_fields_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    CONSTRAINT fk_slack_watched_fields_table FOREIGN KEY (table_id) REFERENCES tables_meta(id) ON DELETE CASCADE,
+    CONSTRAINT fk_slack_watched_fields_field FOREIGN KEY (field_id) REFERENCES fields(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

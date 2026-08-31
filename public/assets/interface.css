@@ -244,7 +244,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 .if-account { order: 1; }
 .if-nav-spacer { order: 2; flex: 1; }
 .if-nav-collab-share { order: 3; }
-.if-nav-share { order: 4; }
 .if-nav-util-row .home-notif { order: 5; }
 .if-nav-collapse-btn { order: 6; }
 .if-nav-expand-btn { order: 7; }
@@ -266,10 +265,10 @@ body.if-page a { text-decoration: none; color: inherit; }
    EZİYOR — bu satır silindiğinde ≪ ve ≫ yan yana göründü (ekranda yakalandı). */
 .if-nav-expand-btn { display: none; }
 
-/* Alt satırdaki İKİ paylaşım düğmesi de ikon-yalnız: metin etiketleri altı
-   öğeyi 220px'e sığdırmayı imkânsız kılıyor. İkisinde de title + aria-label
-   var, yani ipucu ve erişilebilirlik korunuyor. */
-.if-nav-share .if-nav-bottom-label,
+/* Alt satırdaki paylaşım düğmesi ikon-yalnız: metin etiketi öğeleri
+   220px'e sığdırmayı imkânsız kılıyor. title + aria-label duruyor,
+   yani ipucu ve erişilebilirlik korunuyor. (Bu kural eskiden İKİ düğmeyi
+   kapsıyordu; "Bağlantı" düğmesi kaldırıldı.) */
 .if-nav-collab-share .if-nav-bottom-label { display: none; }
 
 /* ---------- Daraltılmış durum (.if-nav.is-collapsed) ---------- */
@@ -322,9 +321,8 @@ body.if-page a { text-decoration: none; color: inherit; }
     width: 100%;
 }
 
-/* Kapalıyken bildirim, Bağlantı'dan ÖNCE gelir (açıkken tam tersi). */
+/* Kapalıyken bildirim, "Paylaş"tan ÖNCE gelir (açıkken tam tersi). */
 .if-nav.is-collapsed .if-nav-util-row .home-notif { order: 3; }
-.if-nav.is-collapsed .if-nav-share { order: 4; }
 .if-nav.is-collapsed .if-nav-collab-share { order: 5; }
 .if-nav.is-collapsed .if-nav-spacer { display: none; }
 .if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
@@ -838,6 +836,41 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin: 0.55rem 0 0;
     font-size: 0.76rem;
     color: var(--bcc-text-muted);
+}
+
+/* Açıklama metni + "Excel indir" düğmesi aynı satırda, uçlara yaslı.
+   flex-wrap: dar panelde (kullanıcı sürükleyerek daraltabiliyor) düğme
+   metnin altına iner, taşmaz. */
+.if-audit-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.if-audit-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.55rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.74rem;
+    color: var(--bcc-accent);
+    background: transparent;
+    border: 1px solid var(--bcc-border);
+    border-radius: 5px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.if-audit-export:hover { background: var(--bcc-accent-soft); border-color: var(--bcc-accent); }
+
+/* Hiçbir not seçili değilken indirilecek rapor da yok. Tıklama ayrıca JS'te
+   iptal ediliyor (<a> etiketinin 'disabled' özniteliği yoktur). */
+.if-audit-export[aria-disabled="true"] {
+    opacity: 0.45;
+    pointer-events: none;
 }
 
 .if-audit-error { color: var(--bcc-danger); }

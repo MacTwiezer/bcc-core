@@ -403,3 +403,28 @@ body.home-page .home-main {
    (rol rozetinin liste modunda gizlenmesiyle AYNI gerekçe). */
 html.home-view-list .home-ws-members,
 .view-mode-list .home-ws-members { display: none; }
+
+/* ---------- Dar ekran: çalışma alanı grup başlığı ----------
+ * Ölçüldü (480px): ad + rol rozeti + "Katılımcılar" + sayaç TEK satıra
+ * sıkışmaya çalışıyor, ad üç satıra bölünüyor ve sayaç ("1 base") sağda
+ * ezik bir sütun hâline geliyordu. Taşma yoktu ama okunmuyordu.
+ *
+ * Çözüm: satır sarmaya açılır ve sayacın "margin-left:auto" ile sağa itilmesi
+ * kaldırılır — alt satıra düştüğünde sağa yaslanmasının anlamı kalmıyor.
+ * Geniş ekrandaki tek satırlık düzen DEĞİŞMEDİ. */
+@media (max-width: 700px) {
+    .home-section-head {
+        flex-wrap: wrap;
+        gap: 0.4rem 0.6rem;
+    }
+
+    .home-ws-head .home-section-meta {
+        margin-left: 0;
+        flex-basis: 100%;
+    }
+
+    .home-section-title {
+        font-size: 20px;
+        flex-basis: 100%;
+    }
+}

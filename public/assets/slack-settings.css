@@ -54,13 +54,94 @@
     .sp-page .sl-webhook-form { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Mevcut URL ipucu etiketin altına, sessiz. */
-.sp-page .sl-current-url {
+/* ---------- Alan ipuçları ----------
+ * ⚠️ `.sl-current-url` KALDIRILDI. Ne yapıyordu: "Mevcut: ••••••••PRmx — boş
+ * bırakırsanız korunur" satırı. O satır artık basılmıyor çünkü maskeli URL
+ * zaten üstteki satırda/tabloda duruyordu ve aynı ekranda iki kez görünüyordu
+ * (kullanıcı bildirdi). Yerine geçen `.sl-hint` aynı sessiz görünümü taşıyor
+ * ama tek satırlık bir etiket değil, TAM CÜMLE açıklama barındırıyor — bu
+ * yüzden `line-height` ve alt boşluk var, `white-space` kısıtı yok.
+ */
+.sp-page .sl-hint {
     display: block;
-    margin-top: 0.3rem;
+    margin: 0.25rem 0 0.4rem;
     font-weight: 400;
+    font-size: 0.76rem;
+    line-height: 1.45;
     text-transform: none;
     letter-spacing: 0;
+    color: var(--bcc-text-muted);
+}
+
+.sp-page .sl-hint em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--bcc-text);
+}
+
+.sp-page .sl-hint strong { color: var(--bcc-text); }
+
+/* Etiket satırı: metin + rozet AYNI satırda kalsın. `.settings-field` sütun
+   yönlü bir flex kutu olduğu için sarmalayıcı ŞART — sarmalayıcısız rozet
+   kendi başına bir flex öğesi olup satırı tam genişlik kaplıyordu. */
+.sp-page .sl-label {
+    display: block;
+    line-height: 1.3;
+}
+
+/* Etiketin yanındaki "zorunlu" / "isteğe bağlı" rozetleri. Kullanıcı hangi
+   alanı doldurmak ZORUNDA olduğunu etikete bakar bakmaz görsün diye — eskiden
+   bunu yalnızca sunucu hatası ("Webhook URL gerekli.") söylüyordu. */
+.sp-page .sl-req,
+.sp-page .sl-opt {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+}
+
+.sp-page .sl-req {
+    background: var(--bcc-danger-soft);
+    color: var(--bcc-danger);
+}
+
+.sp-page .sl-opt {
+    background: var(--bcc-surface-hover);
+    color: var(--bcc-text-muted);
+}
+
+/* ---------- Ekip-geneli satırı ---------- */
+
+/* Satırın sağ ucundaki test/sil ikonları. Eskiden satır içi
+   style="margin-left:auto" ile itiliyordu — tek CSS yerine taşındı. */
+.sp-page .sl-row-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+/* Fazlalık (invariant ihlali) satırlar: uyarı tonunda, "bu normal değil"
+   demek için. Üstlerindeki .sp-note--warn ile aynı renk ailesi. */
+.sp-page .sl-extra-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.25rem;
+}
+
+
+/* "Bağlı kanal" başlığı kartın hemen içinde duruyor; üstündeki bilgi
+   kutusundan sonra tam ayraç çizgisi fazla ağır kaçıyordu. */
+.sp-page .sl-subhead--tight {
+    margin-top: 0.25rem;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* ---------- Kural ekleme: SATIR İÇİ ---------- */
@@ -121,7 +202,7 @@
     color: var(--bcc-text);
 }
 
-/* Salt-okunur (viewer) takım webhook özeti. */
+/* Ekip-geneli webhook satırı (hem "Bağlı kanal" hem fazlalıklar). */
 .sp-page .sl-readonly-row {
     display: flex;
     align-items: center;
@@ -131,4 +212,83 @@
     border-radius: 10px;
     background: var(--bcc-surface-sunken);
     font-size: 0.88rem;
+}
+
+/* Fazlalık (invariant ihlali) satırlar: uyarı tonunda, "bu normal değil"
+   demek için — üstlerindeki .sp-note--warn ile aynı renk ailesi.
+   ⚠️ KONUM ÖNEMLİ: bu blok `.sl-readonly-row`dan SONRA olmalı. İkisi de
+   (0,2,0) özgüllükte; önce yazıldığında `background: var(--bcc-surface-sunken)`
+   onu eziyordu ve fazlalık satır normal satırdan ayırt edilemiyordu (ölçüldü). */
+.sp-page .sl-row-extra {
+    border-color: var(--bcc-warning);
+    background: var(--bcc-warning-soft);
+}
+
+/* ---------- Hücre değişikliği bildirimi: izlenen alanlar ---------- */
+
+/* Dördüncü Slack olayının ("hücre değişti") alan seçimi. Görsel dil
+   form_edit.php'nin .fe-field-list'iyle AYNI fikir (seçilebilir satır), ama o
+   dosyanın kuralları `.fe-page`e kapsanmış — buraya KOPYALANMADI, bu sayfanın
+   dar sütununa göre kendi (daha sıkı) sürümü yazıldı.
+   Anahtar görseli ORTAK: .sp-toggle-track (settings-page.css), ikinci bir
+   toggle tasarımı icat edilmedi. */
+.sp-page .sl-watch-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.4rem;
+    margin: 0.85rem 0;
+}
+
+/* ⚠️ position: relative — gizli <input> (position:absolute, top/left yok) KENDİ
+   satırına bağlansın. Bu satır olmadan `.home-body`ye bağlanır ve .home-main
+   kaydırılınca yerinde kalır; kutuya tıklamak sayfayı uçurur. Aynı hata
+   `.sp-toggle`da bulunup düzeltildi — gerekçesi settings-page.css'te. */
+.sp-page .sl-watch-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--bcc-border);
+    border-radius: 9px;
+    background: var(--bcc-surface);
+    cursor: pointer;
+    font-size: 0.85rem;
+    user-select: none;
+}
+
+.sp-page .sl-watch-item:hover { border-color: var(--bcc-border-strong); }
+
+/* Girdiyi gizleyen kural BURADA YOK: satır `sp-toggle` sınıfını da taşıyor,
+   yani `.sp-page .sp-toggle input` (settings-page.css) zaten hallediyor.
+   Kopyalansaydı iki ayrı gizleme tekniği oluşurdu. */
+
+.sp-page .sl-watch-item input:checked ~ .sl-watch-name { font-weight: 600; }
+
+/* İşaretli satır kendini belli etsin — "hangi alanlar izleniyor" sorusunun
+   cevabı listeye bakar bakmaz görünsün. */
+.sp-page .sl-watch-item:has(input:checked) {
+    border-color: var(--bcc-accent);
+    background: var(--bcc-accent-soft);
+}
+
+.sp-page .sl-watch-item input:focus-visible ~ .sp-toggle-track {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 2px;
+}
+
+.sp-page .sl-watch-name {
+    color: var(--bcc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Alan tipi — sessiz, sağa yaslı. Kullanıcı "Notlar (uzun metin)" görünce
+   işaretlemenin ne kadar gürültü üreteceğini tahmin edebilsin. */
+.sp-page .sl-watch-type {
+    margin-left: auto;
+    flex: none;
+    font-size: 0.72rem;
+    color: var(--bcc-text-muted);
 }

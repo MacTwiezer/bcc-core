@@ -58,6 +58,31 @@ try {
     $column = $result['column'];
     $value = $result['value'];
 
+    // ---- Slack "hücre değişti" bildirimi: ESKİ değeri YAZMADAN ÖNCE oku ----
+    // Dördüncü Slack olayı (bkz. bcc_notify_slack_cell_change, src/slack.php).
+    // Mesaj "Durum: Gorusuluyor → Kazanildi" diyebilsin diye eski değere
+    // ihtiyaç var; INSERT ... ON DUPLICATE KEY UPDATE onu ezeceği için okuma
+    // ZORUNLU OLARAK buraya, yazmadan önce giriyor.
+    //
+    // ⚠️ EK SORGU YALNIZCA İZLENEN ALANLARDA. Alan izlenmiyorsa (varsayılan:
+    // hiçbiri) tek bir ek sorgu bile açılmaz — her hücre kaydında bedel
+    // ödenmez. bcc_slack_watched_field_ids() istek başına önbellekli.
+    $bccSlackWatched = in_array((int) $fieldId, bcc_slack_watched_field_ids($field['table_id']), true);
+    $bccSlackOldDisplay = null;
+
+    if ($bccSlackWatched) {
+        $oldCellRow = bcc_fetch_one(
+            'SELECT value_text, value_number, value_date, value_json FROM cell_values WHERE record_id = :record_id AND field_id = :field_id LIMIT 1',
+            array(':record_id' => $recordId, ':field_id' => $fieldId)
+        );
+        $bccSlackOldDisplay = cell_display_text(
+            $field['field_type'],
+            $oldCellRow !== false ? $oldCellRow : null,
+            $usersById,
+            $field['options']
+        );
+    }
+
     // "Last modified time/by" (Grup B2): cell_values yazması + records'un
     // "son değişiklik" damgası + audit log AYNI transaction'da — view_save_state.php
     // ile AYNI gerekçe: ikisi ayrı olsaydı, ikinci yazma istisna atarsa ilki zaten
@@ -85,6 +110,33 @@ $response = array(
     'display' => cell_display_text($field['field_type'], $cellRow, $usersById, $field['options']),
     'raw' => cell_raw_value($field['field_type'], $cellRow),
 );
+
+// ---- Slack "hücre değişti" bildirimi: gönderim ----
+// COMMIT'TEN SONRA, yanıt üretildikten sonra. Sıra önemli: bildirim bir YAN
+// ETKİ, hücrenin kaydedilmesini hiçbir koşulda geciktirmemeli/engellememeli
+// (fonksiyonun kendisi de asla istisna sızdırmıyor, bkz. src/slack.php).
+//
+// long_text dönüşümünden ÖNCE okunuyor: aşağıdaki blok $response['display']'i
+// HTML'e çeviriyor, Slack'e ham metin gitmeli.
+//
+// DEĞER GERÇEKTEN DEĞİŞTİYSE gönderilir. Grid, hücreden çıkışta değer aynı
+// olsa da kaydedebiliyor; bu kontrol olmasaydı bir hücreye girip çıkmak bile
+// kanala mesaj basardı.
+if ($bccSlackWatched && $bccSlackOldDisplay !== $response['display']) {
+    $bccSlackUser = current_user();
+
+    bcc_notify_slack_cell_change(
+        (int) $field['table_id'],
+        $recordId,
+        // Alan TİPİ de gidiyor: zengin metin (long_text) HTML sakladığı için
+        // Slack'e giderken mrkdwn'a çevrilmeli (bkz. bcc_slack_cell_value_markup).
+        $field['field_type'],
+        $field['name'],
+        $bccSlackOldDisplay,
+        $response['display'],
+        isset($bccSlackUser['full_name']) ? $bccSlackUser['full_name'] : null
+    );
+}
 
 // long_text (zengin metin): 'display' doğrudan .cell-view'ın innerHTML'i olarak
 // yazılıyor (grid.js applyCellResultToTd) — yani KAPALI hücre görünümü. İlk

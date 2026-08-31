@@ -330,6 +330,45 @@ try {
     json_fail(500, 'Yapıştırma kaydedilemedi (veritabanı hatası).');
 }
 
+// ---- Slack "hücre değişti" bildirimi: TOPLU yol ----
+// COMMIT'TEN SONRA, yan etki olarak (cell_update.php ile AYNI konum ve gerekçe).
+//
+// ⚠️ HÜCRE BAŞINA DEĞİL, İŞLEM BAŞINA TEK MESAJ — log_audit'in hemen yukarıda
+// 'cell.bulk_paste' için verdiği kararla BİREBİR aynı gerekçe: tek yapıştırma
+// binlerce hücre yazabiliyor, hücre başına mesaj kanalı kullanılamaz hale
+// getirirdi. Ayrıntı (eski→yeni) bu yüzden yok; mesajdaki link tabloyu açar.
+//
+// Yalnızca İZLENEN alanlar sayılır; hiçbiri yapıştırmaya girmediyse
+// (varsayılan: hiç izlenen alan yok) tek bir sorgu bile açılmaz.
+$bccWatchedIds = bcc_slack_watched_field_ids($table['id']);
+
+if (!empty($bccWatchedIds)) {
+    $bccChangedNames = array();
+    $bccChangedCount = 0;
+
+    foreach ($pendingUpdates as $bccCell) {
+        if (in_array((int) $bccCell['field_id'], $bccWatchedIds, true)) {
+            $bccChangedCount++;
+            // Alan adı $fieldById'den — bu istekte zaten çekilmiş, yeni sorgu yok.
+            $bccFid = (int) $bccCell['field_id'];
+            if (isset($fieldById[$bccFid])) {
+                $bccChangedNames[$bccFid] = $fieldById[$bccFid]['name'];
+            }
+        }
+    }
+
+    if ($bccChangedCount > 0) {
+        $bccPasteUser = current_user();
+
+        bcc_notify_slack_bulk_cell_change(
+            (int) $table['id'],
+            array_values($bccChangedNames),
+            $bccChangedCount,
+            isset($bccPasteUser['full_name']) ? $bccPasteUser['full_name'] : null
+        );
+    }
+}
+
 echo json_encode(array(
     'ok' => true,
     'written_cells' => $written,

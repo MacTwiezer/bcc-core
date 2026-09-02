@@ -517,4 +517,27 @@ CREATE TABLE IF NOT EXISTS audit_log (
     CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------------------------------------------------------------------------
+-- login_attempts — başarısız giriş denemeleri (kaba kuvvet freni)
+-- ---------------------------------------------------------------------------
+-- Ayrıntılı gerekçe: migrations/024_login_attempts.sql. Özet: login.php'de
+-- deneme sınırı yoktu; tek fren bcrypt'in ~55 ms'iydi (günde ~1,5 milyon
+-- deneme). İki kural uygulanır — (ip,e-posta) için 5/15dk, (ip) için 20/15dk.
+-- Eşikler src/auth.php'deki BCC_LOGIN_* sabitlerinde, burada DEĞİL.
+--
+-- users(id)'ye FK YOK: var olmayan e-postalara yapılan denemeler de sayılmalı.
+-- ip VARBINARY(16) = inet_pton() çıktısı (IPv4 4 bayt, IPv6 16 bayt) — metin
+-- saklamak aynı adresin iki yazımını ayrı anahtar yapardı.
+-- Satırlar kalıcı değil: başarılı girişte ilgili çift silinir, ayrıca her ~50
+-- kayıtta bir pencere dışı satırlar temizlenir (cron gerekmez).
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ip           VARBINARY(16) NOT NULL,
+    email        VARCHAR(190) NOT NULL,
+    attempted_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_login_attempts_ip_email (ip, email, attempted_at),
+    KEY idx_login_attempts_ip (ip, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

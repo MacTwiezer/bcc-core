@@ -27,6 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } elseif ($status === 'inactive') {
             $error = 'Hesabınız henüz yönetici tarafından onaylanmadı.';
+        } elseif ($status === 'throttled') {
+            // Kalan süre attempt_login'den DEĞİL, buradan yeniden sorulur:
+            // attempt_login tek bir durum dizesi döndürüyor ve o sözleşmeyi
+            // (scripts/_verify_*.php dahil beş çağıran) bozmamak için imzası
+            // korundu. Ek sorgu YALNIZCA kilitli istekte çalışır.
+            $kalanDakika = (int) ceil(bcc_login_retry_after($email) / 60);
+            $error = 'Çok fazla başarısız giriş denemesi. '
+                . ($kalanDakika > 1 ? $kalanDakika . ' dakika' : 'Bir dakika')
+                . ' sonra tekrar deneyin.';
         } else {
             $error = 'E-posta veya şifre hatalı.';
         }

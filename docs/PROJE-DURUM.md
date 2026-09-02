@@ -415,6 +415,13 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 - **Form kaldırma turunun kalıntıları temizlendi.** `src/schema.php`'deki not hâlâ "form dosyaları ve kolonları DURUYOR" diyordu; oysa `migrations/023` uygulanmış, `views.form_token`/`form_enabled` düşürülmüş ve `view_type='form'` satırı kalmamıştı. Kodu okuyanı yanlış yönlendiren yorum güncellendi.
 
 
+### 2026-09-02 turu
+
+- **Giriş denemesi sınırı eklendi (`migrations/024_login_attempts.sql`, `src/auth.php`, `public/login.php`).** `login.php`'de hiçbir deneme sınırı yoktu; tek fren `attempt_login()`'deki bcrypt maliyetiydi — **ölçüldü: 55 ms**, yani saniyede ~18, günde ~1,5 milyon deneme. Yeni `login_attempts` tablosu ve iki kural: **(ip + e-posta) 5 hata / 15 dk** (tek hesabı kırmaya karşı), **(ip) 20 hata / 15 dk** (aynı kaynaktan çok hesap taramaya karşı). ⚠️ "Yalnızca e-postaya göre" global kilit **bilerek yok** — öyle olsaydı saldırgan, hedefinin adresine 5 yanlış parola göndererek o kişiyi sistemden kilitleyebilirdi (DoS); anahtarda IP'nin bulunması kilidi saldırganın kendi kaynağına hapseder. ⚠️ `X-Forwarded-For` **bilerek okunmuyor**: o başlık istemciden gelir, ona güvenmek saldırganın her istekte sahte IP yazıp sınırı tamamen atlaması demekti — ters vekil arkasına alınırsa doğru çözüm `mod_remoteip`. Kayan pencere kullanılıyor (kilit, penceredeki en eski hata düşünce kendiliğinden kalkar; cron/elle açma yok), satırlar başarılı girişte ve her ~50 kayıtta bir temizleniyor. `attempt_login()` yeni bir durum döndürüyor: `'throttled'`. **Zamanlama sabitliği korundu** — sınır kontrolü parola doğrulamasından ÖNCE olduğu için kilitli istek hızlı döner, ama bu sır değil (kullanıcıya zaten "çok fazla deneme" yazılıyor); kilit öncesi ölçüm: var olan vs. olmayan e-posta farkı **0,1 ms**.
+- **CSRF jetonu girişte yenileniyor (`src/auth.php`).** `session_regenerate_id()` oturum **verisini** yeni kimliğe kopyalar, yani giriş ÖNCESİ üretilmiş CSRF jetonu kimlik değişse bile yaşamaya devam ediyordu. Yetki yükselmesi anında oturum kimliğinin yanı sıra oturumla ilişkili tüm sırlar da tazelenmeli — `unset($_SESSION['csrf_token'])` eklendi, `csrf_token()` bir sonraki çağrıda yenisini üretiyor. HTTP üzerinden doğrulandı (giriş öncesi/sonrası jeton farklı).
+- **"Çevrimiçi" koşulu tek kaynağa alındı (`src/auth.php`, `bcc_online_where_sql()`).** `is_active = 1 AND last_activity_at IS NOT NULL AND last_activity_at >= NOW() - INTERVAL :mins MINUTE` üçlüsü `bcc_online_user_count()` ve `bcc_online_users()` içinde aynen iki kez yazılıydı. İkisi aynı ekranda yan yana kullanılıyor (sayı + liste); biri değiştirilip diğeri unutulsaydı kullanıcı "5 kişi çevrimiçi" yazısının altında 4 kişi görürdü.
+- **Test:** `scripts/_verify_login_throttle.php` 17/17 (eşiğe değme, kilitliyken doğru şifrenin de reddi, kilidin hesaba değil ip+e-posta çiftine ait olması, zamanlama sabitliği, başarılı girişte geçmişin silinmesi, CSRF rotasyonu, çevrimiçi sayı/liste tutarlılığı). Mevcut süitler bozulmadı: `_verify_demo_roles.php` 72/72, `_verify_account_deactivate.php` 30/30. Ayrıca Apache üzerinden uçtan uca curl testi: 5. denemeye kadar "E-posta veya şifre hatalı", 6. denemede "Çok fazla başarısız giriş denemesi. 15 dakika sonra tekrar deneyin."
+
 ---
 
 ## 6. Kalan İşler
@@ -539,16 +546,21 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
    ile ezilmeli. Dosya `.gitignore`'da.
 2. **`config/app.local.php` oluştur** (e-posta bağlantılarının taban URL'i) —
    şablonu `config/app.local.php.example`.
-3. **`migrations/` sırayla uygulanmalı** (`001` → `023`). `schema.sql` sıfırdan
+3. **`migrations/` sırayla uygulanmalı** (`001` → `024`). `schema.sql` sıfırdan
    kurulum içindir; ikisini birlikte çalıştırma.
 4. **`storage/` yazılabilir olmalı** (dosya ekleri orada, `public/` dışında).
 5. **PHP:** `display_errors=Off`, `log_errors=On`. Uygulama `display_errors`'ı
    kendi de kapatıyor (`src/error_handler.php`) ama sunucu tarafında da kapalı
    olmalı.
-6. **Bilinen eksik: giriş denemesi sınırlaması yok.** `attempt_login()`
-   zamanlama saldırısına karşı sabit süreli (kullanıcı yoksa da sahte hash
-   doğrulanır) ama deneme sayısı sınırlı DEĞİL. Canlıda ya uygulama katmanında
-   bir sayaç ya da sunucu tarafında (fail2ban / WAF) bir kural eklenmeli.
+6. **Giriş denemesi sınırı ARTIK VAR** (2026-09-02, `migrations/024`) — ama ters
+   vekil kullanılacaksa dikkat: sınır `$_SERVER['REMOTE_ADDR']`'e dayanır ve
+   `X-Forwarded-For` bilerek okunmaz. nginx/Cloudflare arkasına alınırsa TÜM
+   istekler tek bir vekil IP'sinden geliyor görünür ve (ip) kuralı (20 hata/15
+   dk) tüm kullanıcıları birlikte kilitler. Çözüm: Apache'de `mod_remoteip` +
+   `RemoteIPTrustedProxy` ile REMOTE_ADDR'i gerçek istemciye çevirin.
+   Eşikleri değiştirmek için migration gerekmez — `src/auth.php`'deki
+   `BCC_LOGIN_MAX_PER_ACCOUNT` / `BCC_LOGIN_MAX_PER_IP` /
+   `BCC_LOGIN_WINDOW_MINUTES` sabitleri.
 
 ---
 

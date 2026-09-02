@@ -18,6 +18,21 @@ function bcc_error_page($title, $message = '', $status = 403)
 
     http_response_code($status);
 
+    // src/auth.php'deki require_team_access()/require_role()/require_admin()
+    // HEM sayfalardan HEM public/api/*.php'den çağrılıyor ve koşulsuz buraya
+    // düşüyordu — API'ye "Content-Type: application/json" başlığıyla HTML gövde
+    // dönüyor, istemcinin res.json()'ı ayrıştırma hatası veriyordu (canlı
+    // doğrulandı). Doğru durum kodu (403) zaten geliyordu, eksik olan gövdenin
+    // biçimiydi; yukarıdaki kuralın uygulanması bu blok.
+    if (bcc_is_api_request()) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(
+            array('ok' => false, 'error' => $message !== '' ? $message : $title),
+            JSON_UNESCAPED_UNICODE
+        );
+        exit;
+    }
+
     $errorTitle = $title;
     $errorMessage = $message;
     $errorStatus = $status;

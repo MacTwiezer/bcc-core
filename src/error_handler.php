@@ -18,6 +18,17 @@
 // log'una yine düşüyor), yalnızca TARAYICIYA basılması kapatılıyor.
 ini_set('display_errors', '0');
 
+// İstek public/api/ altındaki bir uçnoktaya mı geldi? Hata yollarının HTML mi
+// JSON mu döneceğini bu belirler (bkz. src/errors.php'deki "API'ye HTML,
+// sayfaya JSON dönmemeli" kuralı). SCRIPT_NAME çalışan dosyanın yolu — sorgu
+// dizesinde "/api/" geçen bir SAYFA isteğini yanlışlıkla API sanmaz.
+function bcc_is_api_request()
+{
+    $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+
+    return strpos($script, '/api/') !== false;
+}
+
 // Argümansız yığın izi. getTraceAsString() çağrı argümanlarını da basar ve
 // mysqli_connect() başarısız olduğunda DB şifresi düz metin olarak log'a düşer.
 function bcc_safe_trace(Throwable $e)
@@ -44,9 +55,7 @@ set_exception_handler(function (Throwable $e) {
         http_response_code(500);
     }
 
-    $isApiRequest = isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/api/') !== false;
-
-    if ($isApiRequest) {
+    if (bcc_is_api_request()) {
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=utf-8');
         }

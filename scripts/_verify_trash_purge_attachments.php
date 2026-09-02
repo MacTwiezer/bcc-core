@@ -103,7 +103,7 @@ check('B) cagri DELETE ten ONCE geliyor (sonra olsaydi okuyacak satir kalmazdi)'
 // =====================================================================
 echo "\n--- C) Aile regresyonu: TUM silme yollari temizliyor ---\n";
 foreach (array(
-    'public/api/record_delete.php' => 'bcc_delete_attachment_files_by_record(',
+    'public/api/record_delete.php' => 'bcc_delete_attachment_files_by_records(',
     'public/api/table_delete.php' => 'bcc_delete_attachment_files_by_table(',
     'public/api/table_clear_data.php' => 'bcc_delete_attachment_files_by_table(',
     'public/table_fields.php' => 'bcc_delete_attachment_files_by_field(',

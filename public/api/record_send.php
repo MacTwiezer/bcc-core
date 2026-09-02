@@ -1,23 +1,4 @@
 <?php
-// AJAX uçnoktası: "Kaydı gönder" modalının (grid-row-detail.js) Gönder butonu
-// çağırır. record_delete.php/comment_add.php ile AYNI desen: api_bootstrap +
-// api_require_post/login/csrf, team_id record_id üzerinden bcc_find_record()
-// ile DB'den türetilir (istekten değil, KVKK), require_role().
-//
-// İki güvenlik kuralı (yalnızca burada, frontend'deki gizleme/ön-doğrulama
-// UX'tir, son söz burada):
-//   1. Rol: yalnızca editor/owner gönderebilir (require_role — projedeki
-//      TEK rol-kontrol mekanizması, ikinci bir yetki deseni İCAT EDİLMEDİ).
-//   2. Alıcı: yalnızca @bcciletisim.com.tr, geçerli e-posta formatı, en
-//      fazla 15 — ilk ihlalde hangi adres/kural olduğu Türkçe belirtilir.
-//
-// Alan önizlemesi (mail gövdesindeki kayıt değerleri) SUNUCUDA YENİDEN
-// ÇIKARILMAZ — istemci zaten ekranda gösterdiği önizlemeyi (grid-row-detail.js
-// collectFieldPreviewData(), yazdırdaki fieldPrintText()'i çağırıyor)
-// preview_fields JSON'u olarak gönderir, burada yalnızca escape'lenip
-// biçimlendirilir (bkz. bcc_build_send_email_html()).
-//
-// DB YAZMASI YOK (DDL/INSERT/UPDATE yok, kapsam dışı bırakıldı).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -40,11 +21,6 @@ function bcc_send_recipient_error($email)
     return null;
 }
 
-// "Tablo düzenini kullan" AÇIK: tek satırlık bir tablo (başlık satırı =
-// etiketler, veri satırı = değerler) — OpsFlow'daki grid görünümünün
-// minimal karşılığı. KAPALI: alt alta liste (etiket kalın, değer altında).
-// İkisi de preview_fields'ı (istemcinin ÇIKARDIĞI, burada yeniden
-// üretilmeyen veri) yalnızca escape'leyip biçimlendirir.
 function bcc_build_send_email_html($message, $previewFields, $useGridLayout)
 {
     $html = '<p style="font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap;">'
@@ -96,22 +72,13 @@ if (!$record) {
     json_fail(404, 'Kayıt bulunamadı.');
 }
 
-// 1) ROL KONTROLÜ — yalnızca editor/owner gönderebilir. commenter/viewer
-// require_role() içinde 403 ile reddedilir (mail HİÇ gönderilmez).
 require_role($record['team_id'], 'editor');
 
-// Adım 3c'nin tamamlayıcısı: silinmiş (çöp kutusundaki) bir kayıt
-// gönderilemez — cell_update.php/attachment_upload.php ile AYNI desen.
-// bcc_find_record()'a DOKUNULMADI (record_soft_delete.php deleted_at'i
-// "zaten silinmiş" 422'si için OKUYABİLMEK zorunda), burada YEREL kontrol.
 $recordStatus = bcc_fetch_one('SELECT deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
 if (!$recordStatus || $recordStatus['deleted_at'] !== null) {
     json_fail(404, 'Kayıt bulunamadı (silinmiş).');
 }
 
-// preview_fields: istemcinin çıkardığı {label, value} listesi — biçim
-// dışında GÜVENMİYORUZ, her ihtimale karşı şekli doğrulanıp string'e
-// zorlanıyor (htmlspecialchars zaten aşağıda XSS'e karşı koruyor).
 $previewFieldsRaw = isset($_POST['preview_fields']) ? (string) $_POST['preview_fields'] : '[]';
 $previewFieldsDecoded = json_decode($previewFieldsRaw, true);
 $previewFields = array();
@@ -126,15 +93,10 @@ if (is_array($previewFieldsDecoded)) {
 if ($subject === '') {
     json_fail(422, 'Konu boş olamaz.');
 }
-// Başlık enjeksiyonuna karşı: konu satır sonu/satır başı İÇEREMEZ.
 $subject = str_replace(array("\r", "\n"), ' ', $subject);
 
 $user = current_user();
 
-// 2) ALICI DOĞRULAMA — format + @bcciletisim.com.tr + en fazla 15.
-// "Bir kopyasını bana gönder": oturumdaki kullanıcının adresi OTURUMDAN
-// alınır (istekten değil) — ama listeye eklendikten SONRA aynı domain
-// kontrolünden geçer, istisna YOK (ör. @bcc.local test hesapları reddedilir).
 $recipients = array_values(array_filter(
     array_map('trim', explode(',', $rawRecipients)),
     function ($e) { return $e !== ''; }
@@ -195,7 +157,8 @@ try {
 
     $mail->send();
 } catch (\PHPMailer\PHPMailer\Exception $e) {
-    json_fail(502, 'Mail gönderilemedi: ' . $mail->ErrorInfo);
+    error_log('record_send SMTP hatasi: ' . $mail->ErrorInfo);
+    json_fail(502, 'Mail gönderilemedi.');
 }
 
 echo json_encode(array('ok' => true), JSON_UNESCAPED_UNICODE);

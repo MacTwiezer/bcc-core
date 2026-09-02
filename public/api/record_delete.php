@@ -1,18 +1,4 @@
 <?php
-// AJAX uçnoktası: seçili kayıt(lar)ı siler — checkbox'la seçilen satırlardaki
-// "Seçilenleri sil" butonu (grid.php / grid-row-detail.js) çağırır. record_add.php
-// ile AYNI desen: api_bootstrap + api_require_post/login/csrf, find_table_or_404
-// + require_role('editor'), transaction içinde audit log commit'ten ÖNCE.
-//
-// Bulunan gerçek bug'ın onarımı: grid.php'de daha önce bir "delete_record" POST
-// action'ı vardı ama satır render'ının bcc_render_grid_data_row()'a taşındığı
-// refactor'da o formun HTML'i kaldırılmış, handler hiçbir yerden tetiklenemez
-// hâle gelmişti (grid'de HİÇBİR satır silinemiyordu). Bu uçnokta o işlevi
-// AJAX'a taşıyarak yeniden kazandırıyor; eski ölü handler grid.php'den kaldırıldı.
-//
-// $record_ids[] birden fazla id kabul eder (toplu silme) — tabloya ait olmayan/
-// geçersiz id'ler sessizce elenir, hata döndürmez (kısmi seçim senaryosu değil,
-// istemci zaten yalnızca kendi render ettiği satırların id'lerini gönderir).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -47,11 +33,9 @@ try {
 
     bcc_begin_transaction();
 
+    bcc_delete_attachment_files_by_records($validIds);
+
     foreach ($validIds as $id) {
-        // DB satırı CASCADE ile silinir ama diskteki fiziksel dosyalar otomatik
-        // silinmez — bu yüzden DELETE'ten ÖNCE (record_add.php'nin dead-code
-        // öncülü delete_record handler'ıyla AYNI sıra, bkz. src/schema.php:671).
-        bcc_delete_attachment_files_by_record($id);
         log_audit('record.delete', 'record', $id, array('table_id' => $table['id']), $table['team_id']);
     }
 

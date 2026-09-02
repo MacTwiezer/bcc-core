@@ -1,11 +1,4 @@
 <?php
-// AJAX uçnoktası: Hesap menüsündeki "Çöp kutusu" — OpsFlow'un workspace
-// trash'i referans alınarak (bkz. docs/GEREKSINIMLER.md — çöp kutusu kuralları):
-// kullanıcının üye olduğu takımlardaki silinmiş base'ler listelenir (KVKK —
-// current_user_team_ids() ile AYNI kaynak, ikinci bir "kullanıcının takımları"
-// sorgusu YAZILMADI). "Geri Yükle" yalnızca o takımda 'owner' rolündeki
-// kullanıcıya gösterilir (istemci) — sunucu tarafında base_restore.php zaten
-// require_role('owner') ile ayrıca zorunlu kılıyor.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -27,18 +20,7 @@ if (!empty($teamIds)) {
         $teamIds
     );
 
-    // can_restore için kullanıcının bu takımlardaki rolü TEK sorguda toplu
-    // çekilir (bulunan gerçek fazlalık: eskiden her satır için ayrı ayrı
-    // current_user_role_in_team() çağrılıyordu — N silinmiş base için N ekstra
-    // sorgu; codebase'in başka her yerde kaçındığı N+1 deseni).
-    $roleByTeamId = array();
-    $roleRows = bcc_fetch_all(
-        "SELECT team_id, role FROM team_members WHERE user_id = ? AND team_id IN ($placeholders)",
-        array_merge(array($user['id']), $teamIds)
-    );
-    foreach ($roleRows as $r) {
-        $roleByTeamId[(int) $r['team_id']] = $r['role'];
-    }
+    $roleByTeamId = current_user_team_roles();
 
     foreach ($rows as $row) {
         $isSelf = $row['deleted_by'] !== null && (int) $row['deleted_by'] === (int) $user['id'];

@@ -4097,11 +4097,11 @@ function bcc_create_team($name, $creatorUserId)
         return array('ok' => false, 'error' => 'Ekip adı boş olamaz.', 'id' => null);
     }
 
-    // teams.name VARCHAR(150) — kontrol olmadan uzun ad, STRICT_TRANS_TABLES
+    // teams.name VARCHAR(100) — kontrol olmadan uzun ad, STRICT_TRANS_TABLES
     // kapalı olduğu için hatasız SESSİZCE kırpılıyordu (create_user.php'deki
     // email/full_name kontrolüyle aynı gerekçe).
-    if (mb_strlen($name, 'UTF-8') > 150) {
-        return array('ok' => false, 'error' => 'Ekip adı en fazla 150 karakter olabilir.', 'id' => null);
+    if (mb_strlen($name, 'UTF-8') > 100) {
+        return array('ok' => false, 'error' => 'Ekip adı en fazla 100 karakter olabilir.', 'id' => null);
     }
 
     // ⚠️ bcc_name_taken() BİLEREK KULLANILMADI: o yardımcı bir ÜST KAPSAM id'si
@@ -5537,19 +5537,28 @@ function bcc_audit_action_label($action)
         'table.delete' => 'tabloyu sildi',
         'table.reorder' => 'tabloları yeniden sıraladı',
         'table.import_xlsx' => 'Excel\'den veri aktardı',
+        'table.import_csv' => 'CSV\'den veri aktardı',
         'table.clear_data' => 'tablo verilerini temizledi',
+        'table.rename' => 'tabloyu yeniden adlandırdı',
+        'table.duplicate' => 'tabloyu çoğalttı',
         'field.create' => 'yeni alan ekledi',
         'field.update' => 'alanı güncelledi',
         'field.delete' => 'alanı sildi',
         'field.reorder' => 'alanları yeniden sıraladı',
         'record.create' => 'kayıt ekledi',
         'record.duplicate' => 'kaydı çoğalttı',
+        'record.create_bulk' => 'toplu kayıt ekledi',
+        'record.purge' => 'kaydı çöp kutusundan kalıcı sildi',
+        'note_view.export_xlsx' => 'inceleme raporunu Excel indirdi',
+        'view.export_csv' => 'görünümü CSV indirdi',
+        'team_member.export_csv' => 'katılımcı listesini CSV indirdi',
         'record.delete_soft' => 'kaydı çöpe taşıdı',
         'record.restore' => 'kaydı geri yükledi',
         'record.delete' => 'kaydı kalıcı sildi',
         'record.form_submit' => 'form üzerinden kayıt geldi',
         'record.send' => 'kaydı e-posta ile gönderdi',
         'cell.update' => 'hücre güncelledi',
+        'cell.bulk_paste' => 'toplu hücre yapıştırdı',
         'comment.add' => 'yorum ekledi',
         'comment.update' => 'yorumu düzenledi',
         'comment.delete' => 'yorumu sildi',
@@ -5567,12 +5576,20 @@ function bcc_audit_action_label($action)
         'team_member.assign' => 'çalışma alanına katılımcı ekledi',
         'team_member.role_change' => 'katılımcı rolünü değiştirdi',
         'team_member.remove' => 'katılımcıyı çıkardı',
+        'team.create' => 'yeni çalışma alanı oluşturdu',
         'attachment.upload' => 'dosya ekledi',
         'attachment.delete' => 'dosya ekini sildi',
         'slack.notify_sent' => 'Slack bildirimi gönderdi',
         'slack.notify_failed' => 'Slack bildirimi başarısız oldu',
         'slack.webhook_create' => 'Slack entegrasyonu ekledi',
         'slack.webhook_delete' => 'Slack entegrasyonunu kaldırdı',
+        'slack.webhook_update' => 'Slack entegrasyonunu güncelledi',
+        'slack.routing_rule_create' => 'Slack yönlendirme kuralı ekledi',
+        'slack.routing_rule_delete' => 'Slack yönlendirme kuralını sildi',
+        'slack.routing_rule_toggle' => 'Slack yönlendirme kuralını açtı/kapattı',
+        'slack.watched_fields_update' => 'Slack izlenen alanlarını değiştirdi',
+        'slack.test_sent' => 'Slack test bildirimi gönderdi',
+        'slack.test_failed' => 'Slack test bildirimi başarısız oldu',
         'slack.routing_rule_reorder' => 'Slack kurallarını sıraladı',
         'user.account_updated' => 'hesap bilgilerini güncelledi',
     );

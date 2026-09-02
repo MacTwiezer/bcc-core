@@ -1,22 +1,8 @@
 <?php
-// "Excel indir" — mevcut kayıtları AKTİF sort/filter/hidden-fields durumuyla
-// (grid.php'nin o an gösterdiği hâliyle BİREBİR) gerçek .xlsx olarak indirir.
-// src/xlsx_writer.php (dış kütüphane yok, ZipArchive ile elle inşa) — önceki
-// CSV sürümüyle AYNI veri/format mantığı, yalnızca çıktı formatı değişti.
-// Salt-okunur işlem (viewer'a da açık) — require_role('editor') YOK.
-//
-// Sorgu mantığı: grid.php'nin KULLANDIĞI AYNI parse_grid_*() + AYNI
-// bcc_build_grid_records_query() (src/schema.php) — paralel bir sorgu-kurma
-// mantığı YOK, URL'deki sort/filter/hidden_fields parametreleri grid.php'de
-// nasıl yorumlanıyorsa burada da AYNEN öyle yorumlanır.
 
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/xlsx_writer.php';
 
-// Formül-enjeksiyonu koruması (src/csv.php, bcc_csv_injection_guard) burada da
-// korunuyor — inlineStr hücreler Excel'de formül olarak yeniden yorumlanmaz
-// ama ucuz bir savunma katmanı olarak bırakıldı (team_members_export_xlsx.php
-// ile AYNI, ikinci bir kopya YOK).
 
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : 0;
 $table = find_table_or_404($tableId);
@@ -62,8 +48,6 @@ foreach ($records as $rec) {
     $cellsForRecord = isset($cellsByRecord[$rec['id']]) ? $cellsByRecord[$rec['id']] : array();
     $row = array();
     foreach ($visibleFields as $f) {
-        // 'attachment': değer cell_values'ta değil — dosya adları virgülle
-        // birleştirilir (multiple_select'in zaten yaptığı implode(', ', ...) ile AYNI).
         if ($f['field_type'] === 'attachment') {
             $files = isset($attachmentsByRecord[$rec['id']][$f['id']]) ? $attachmentsByRecord[$rec['id']][$f['id']] : array();
             $row[] = bcc_csv_injection_guard(implode(', ', array_column($files, 'name')));
@@ -72,8 +56,6 @@ foreach ($records as $rec) {
 
         $cellRow = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
         $displayText = cell_display_text($f['field_type'], $cellRow, $usersById, $f['options']);
-        // long_text'in salt-okunur çıktısı sanitize edilmiş HTML — düz metin
-        // istediği için strip_tags ile metne indirgeniyor.
         if ($f['field_type'] === 'long_text') {
             $displayText = strip_tags($displayText);
         }

@@ -1,13 +1,4 @@
 <?php
-// AJAX uçnoktası: tablo adını ve açıklamasını değiştirir (grid.php sekme
-// menüsü → "Ad veya açıklama değiştir"). Doğrulama kuralları ve mesajlar
-// base_tables.php'nin rename_table dalıyla BİREBİR AYNI — iki yol ayrışmasın.
-//
-// Neden yeni uçnokta: base_tables.php'nin tam sayfa POST'u kullanıcıyı grid'den
-// çıkarıyordu; artık aynı sayfadaki küçük pencereden yapılıyor.
-//
-// Güvenlik: CSRF + owner. base_tables.php ile AYNI eşik — ad/açıklama
-// değişikliği ŞEMA işidir.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -22,8 +13,6 @@ $description = isset($_POST['description']) ? trim((string) $_POST['description'
 $table = find_table_or_404($tableId);
 require_role($table['team_id'], 'owner');
 
-// Uzunluk kontrolleri şart: sql_mode'da STRICT_TRANS_TABLES kapalı, MySQL uzun
-// değeri hatasız SESSİZCE kırpar.
 if ($name === '') {
     json_fail(422, 'Tablo adı boş olamaz.');
 }
@@ -34,17 +23,11 @@ if (mb_strlen($description, 'UTF-8') > 500) {
     json_fail(422, 'Açıklama en fazla 500 karakter olabilir.');
 }
 
-// Aynı base'de aynı ad olamaz; KAYDIN KENDİSİ hariç tutulur (4. argüman) —
-// yoksa adı değiştirmeden yalnızca açıklamayı düzenlemek "zaten kullanılıyor"
-// hatası verirdi (bkz. src/schema.php bcc_name_taken()).
 if (bcc_name_taken('tables_meta', $table['base_id'], $name, $table['id'])) {
     json_fail(422, bcc_name_taken_error('tables_meta', 'tablo'));
 }
 
 try {
-    // UPDATE + log_audit AYNI transaction'da — base_tables.php'deki AYNI
-    // gerekçe: ikisi ayrı olsaydı log_audit() patladığında ad zaten değişmiş
-    // olurdu ama denetim kaydı düşmezdi.
     bcc_begin_transaction();
 
     bcc_execute(

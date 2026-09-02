@@ -1,8 +1,4 @@
 <?php
-// team_members.php'nin "Excel indir" ikonu — view_export_xlsx.php ile AYNI
-// desen (bcc_csv_injection_guard(), log_audit) farklı bir veri kaynağına
-// uygulanmış hâli. Salt-okunur işlem (viewer'a da açık) — require_role('editor')
-// YOK, team_members.php'nin kendisi de 'viewer' ile açık.
 
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/xlsx_writer.php';
@@ -18,8 +14,6 @@ if (!$team) {
     die('Ekip bulunamadı.');
 }
 
-// team_members.php'nin AYNI sorgusu — kod tekrarı değil, iki farklı çıktı
-// biçimi (HTML tablo / Excel) aynı satır kümesini paylaşıyor.
 $members = bcc_fetch_all(
     'SELECT u.id, u.full_name, u.email, tm.role, tm.created_at
      FROM team_members tm

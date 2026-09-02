@@ -1,22 +1,4 @@
 <?php
-// AJAX uçnoktası: Hesap menüsündeki Çöp kutusu modalının "Kayıtlar" bölümü —
-// trash_list.php (base'ler) ile AYNI desen: kullanıcının üye olduğu
-// takımlardaki silinmiş KAYITLAR listelenir (KVKK — current_user_team_ids()
-// ile AYNI kaynak). "Geri Yükle" editor+owner'a gösterilir (istemci) —
-// sunucu tarafında record_restore.php zaten require_role('editor') ile
-// ayrıca zorunlu kılıyor (bases'in owner-only kuralından BİLEREK farklı).
-//
-// Ebeveyn base zaten silinmişse (bases.deleted_at IS NOT NULL) o kaydın
-// kayıtları burada AYRICA listelenmez — o base zaten "Base'ler" bölümünde
-// görünüyor, karışık/tekrarlı görünüm olmasın.
-//
-// Adım 3d — 7 günlük otomatik temizlik ("ziyaret anında kontrol", cron YOK):
-// bu uçnokta zaten deleted_at IS NOT NULL satırları taradığı için, aynı
-// sonuç üzerinde 7 günü geçenleri ayıklayıp GERÇEK DELETE ile temizler —
-// ikinci bir sorgu YAZILMADI, listeleme sorgusunun sonucu yeniden kullanılır.
-// Tetikleme noktası BİLEREK grid.php DEĞİL, bu uçnokta (çöp kutusu açılışı)
-// — grid çok daha sık ziyaret ediliyor, gecikmeli temizlik kabul edilebilir
-// (OpsFlow'un kendisi de bunu "bir noktada" arka planda yapıyor).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -42,9 +24,6 @@ if (!empty($teamIds)) {
         $teamIds
     );
 
-    // 7 günü geçenler: aynı tarama sonucundan ayıklanır, ikinci bir SELECT
-    // YAZILMAZ. Gerçek DELETE burada DOĞRU ve BEKLENEN — OpsFlow'un 7 gün
-    // sonrası davranışı budur, bu noktadan sonra geri dönüş yok.
     $expiredRows = array();
     $activeRows = array();
     foreach ($rows as $row) {
@@ -58,15 +37,6 @@ if (!empty($teamIds)) {
     if (!empty($expiredRows)) {
         $expiredIds = array_map(function ($r) { return (int) $r['id']; }, $expiredRows);
 
-        // ⚠️ SIRA KRİTİK — DOSYALAR SİLME SORGUSUNDAN ÖNCE TEMİZLENİR.
-        // attachments satırları ON DELETE CASCADE ile gider; DELETE'ten SONRA
-        // çağırsaydık okuyacak satır kalmaz, dosyalar diskte öksüz kalırdı.
-        //
-        // BULUNAN GERÇEK SIZINTI: bu çağrı EKSİKTİ. Kayıt kalıcı siliniyor,
-        // DB satırı gidiyor ama fiziksel dosya sonsuza dek diskte kalıyordu —
-        // projede öksüz dosyaları süpüren başka bir mekanizma da yok. Yani
-        // kullanıcıya "kalıcı silindi" denen kaydın eki sunucuda duruyordu
-        // (depolama sınırsız büyür + "silindi" sözü tam tutulmaz).
         bcc_delete_attachment_files_by_records($expiredIds);
 
         $expPlaceholders = implode(',', array_fill(0, count($expiredIds), '?'));
@@ -79,23 +49,8 @@ if (!empty($teamIds)) {
     $rows = $activeRows;
 
     if (!empty($rows)) {
-        // can_restore: kullanıcının bu takımlardaki rolü TEK sorguda toplu
-        // çekilir — trash_list.php ile AYNI N+1'den kaçınma deseni.
-        $roleByTeamId = array();
-        $roleRows = bcc_fetch_all(
-            "SELECT team_id, role FROM team_members WHERE user_id = ? AND team_id IN ($placeholders)",
-            array_merge(array($user['id']), $teamIds)
-        );
-        foreach ($roleRows as $r) {
-            $roleByTeamId[(int) $r['team_id']] = $r['role'];
-        }
+        $roleByTeamId = current_user_team_roles();
 
-        // Birincil alan değeri: N+1 yok. (1) her table_id için MIN(position,id)
-        // alanı TEK sorguda ("greatest-n-per-group" deseni — $fields[0]/
-        // ORDER BY position,id LIMIT 1'in projedeki HER yerdeki AYNI mantığı),
-        // (2) o alan id'leriyle cell_values TEK sorguda, (3) cell_display_text()
-        // (grid'in KENDİSİNİN kullandığı fonksiyon) her satıra uygulanır —
-        // yeni bir "değeri okunur metne çevir" mantığı YAZILMADI.
         $tableIds = array_values(array_unique(array_map(function ($r) { return (int) $r['table_id']; }, $rows)));
         $tablePlaceholders = implode(',', array_fill(0, count($tableIds), '?'));
 
@@ -109,8 +64,6 @@ if (!empty($teamIds)) {
         );
         $primaryFieldByTable = array();
         foreach ($primaryFieldRows as $pf) {
-            // 'options': Currency/Percent/Rating (Grup C1) formatı için — birincil
-            // alan bu tiplerden biriyse cell_display_text() doğru formatlasın diye.
             $primaryFieldByTable[(int) $pf['table_id']] = array('id' => (int) $pf['field_id'], 'type' => $pf['field_type'], 'options' => $pf['options']);
         }
 
@@ -131,10 +84,8 @@ if (!empty($teamIds)) {
             }
         }
 
-        // Birincil alan 'user' tipindeyse ad çözümü için — takım başına TEK
-        // sorgu (takım sayısı küçük, kayıt sayısına göre N+1 DEĞİL).
         $usersByTeam = array();
-        foreach ($teamIds as $tid) {
+        foreach (array_unique(array_map(function ($r) { return (int) $r['team_id']; }, $rows)) as $tid) {
             $usersByTeam[$tid] = bcc_team_users_by_id($tid);
         }
 

@@ -18,20 +18,19 @@ try {
 
     require_team_access($view['team_id']);
 
-    $existing = bcc_fetch_one(
-        'SELECT id FROM user_favorite_views WHERE user_id = :uid AND view_id = :vid LIMIT 1',
+    $deleted = bcc_execute(
+        'DELETE FROM user_favorite_views WHERE user_id = :uid AND view_id = :vid',
         array(':uid' => $user['id'], ':vid' => $view['id'])
     );
 
-    if ($existing) {
-        bcc_execute('DELETE FROM user_favorite_views WHERE id = :id', array(':id' => $existing['id']));
-        $favorited = false;
-    } else {
+    if ((int) $deleted === 0) {
         bcc_execute(
-            'INSERT INTO user_favorite_views (user_id, view_id) VALUES (:uid, :vid)',
+            'INSERT IGNORE INTO user_favorite_views (user_id, view_id) VALUES (:uid, :vid)',
             array(':uid' => $user['id'], ':vid' => $view['id'])
         );
         $favorited = true;
+    } else {
+        $favorited = false;
     }
 } catch (Throwable $e) {
     json_fail(500, 'Veritabanı hatası.');

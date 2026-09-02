@@ -1,12 +1,4 @@
 <?php
-// AJAX uçnoktası: "Paylaş" modalından (assets/share-modal.js) bir katılımcıyı
-// ekipten çıkarma. team_members.php'nin action=remove POST'unun AJAX karşılığı —
-// mantık kopyalanmadı, ikisi de bcc_team_member_remove_many() (src/schema.php)
-// çağırıyor; "kendini çıkaramama", "son owner", hiyerarşi kuralları ve audit
-// action adı oradan gelir.
-//
-// Güvenlik zinciri team_member_assign.php ile BİREBİR AYNI (aynı sıra, aynı
-// eşikler) — oradaki yorumun kopyası yazılmadı.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 require __DIR__ . '/../../src/share_modal_payload.php';
@@ -33,9 +25,6 @@ if ($targetUserId <= 0) {
 
 try {
     $user = current_user();
-    // Modal her zaman TEK kişi çıkarır; toplu çıkarma team_members.php'nin
-    // onay kutulu ekranında kalıyor. Yine de tek elemanlı liste olarak AYNI
-    // fonksiyondan geçiyor — ikinci bir kod yolu yok.
     $result = bcc_team_member_remove_many($teamId, array($targetUserId), (int) $user['id'], $myRank);
     $messages = bcc_team_member_remove_message($result);
 

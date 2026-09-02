@@ -1,15 +1,4 @@
 <?php
-// AJAX uçnoktası: "+ Yeni oluştur..." — sol Görünüm panelinde boş (config=NULL)
-// yeni bir view oluşturur. Ekleme deseni: tablonun EN SONUNA
-// (position = mevcut MAX + 1), config BOŞ bırakılır.
-// Güvenlik deseni diğer view_*.php uçnoktalarıyla AYNI.
-//
-// ⚠️ AYNI VERİYE BAKAN İKİNCİ BİR GÖRÜNÜM İSTEYENİN TEK YOLU ARTIK BURASI:
-// "Görünümü çoğalt" (api/view_duplicate.php) KALDIRILDI — kullanıcı üç kez
-// "kopyadan yaptığım değişiklik orijinali etkiliyor" diye bildirdi ve o
-// kalem artık api/table_duplicate.php'yi çağırıyor ("Bağımsız kopya
-// oluştur"). Buradan üretilen görünüm AYNI table_id'ye bağlıdır, yani veri
-// PAYLAŞILIR — bu bir hata değil, görünümün tanımıdır.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -24,29 +13,17 @@ try {
     $table = find_table_or_404($tableId);
     require_role($table['team_id'], 'editor');
 
-    // Görünüm TÜRÜ artık istemciden geliyor ("+ Yeni oluştur..." tip seçici) —
-    // eskiden sabit 'grid' yazılıyordu. Whitelist'e karşı doğrulanır; uymayan
-    // her değer reddedilir (SQL'e ASLA doğrudan gömülmez, prepared statement'a
-    // yalnızca whitelist'ten GEÇMİŞ bir anahtar bağlanır).
     $viewType = isset($_POST['view_type']) ? (string) $_POST['view_type'] : 'grid';
     if (!isset($GLOBALS['BCC_VIEW_TYPES'][$viewType])) {
         json_fail(422, 'Geçersiz görünüm türü.');
     }
 
-    // Ad, TÜRE göre numaralanır ("Form 1", "Tablo 2") — eskiden tüm görünümler
-    // tek sayaçtan "Görünüm N" alıyordu. Tür etiketi BCC_VIEW_TYPES'tan gelir,
-    // elle yazılmaz.
     $sameTypeCount = (int) bcc_fetch_column(
         'SELECT COUNT(*) FROM views WHERE table_id = :table_id AND view_type = :vt',
         array(':table_id' => $table['id'], ':vt' => $viewType)
     );
     $newName = $GLOBALS['BCC_VIEW_TYPES'][$viewType] . ' ' . ($sameTypeCount + 1);
 
-    // COUNT tabanlı numara TEK BAŞINA benzersiz DEĞİL: "Tablo 1" ve "Tablo 2"
-    // varken "Tablo 1" silinirse sayaç 1'e döner ve üretilen ad yine "Tablo 2"
-    // olur — mevcut görünümle çakışır. Aynı tabloda benzersiz ad bulunana kadar
-    // ilerlenir (table_duplicate.php'deki AYNI döngü deseni). Kullanıcı adı
-    // değiştirdikten sonra da çakışabileceği için sayı değil, ÇAKIŞMA sorulur.
     $nameSuffix = $sameTypeCount + 1;
     while (bcc_name_taken('views', $table['id'], $newName)) {
         $nameSuffix++;
@@ -58,10 +35,6 @@ try {
         array(':table_id' => $table['id'])
     );
 
-    // INSERT + log_audit AYNI transaction'da — record_add.php/table_clear_data.php'de
-    // bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit() istisna atarsa
-    // (nadir ama mümkün) INSERT zaten commit edilmiş olurdu, istemci yine de
-    // "Veritabanı hatası" görürdü.
     bcc_begin_transaction();
 
     bcc_execute(
@@ -78,22 +51,6 @@ try {
 
     $newViewId = bcc_last_insert_id();
 
-    // ⚠️ BURADA ESKİDEN FORM GÖRÜNÜMÜNE ÖZEL BİR DAL VARDI: yeni bir form
-    // oluşturulduğunda herkese açık linkin sırrı (form_token) üretilip
-    // form_enabled = 1 yazılıyordu. Form özelliği tamamen kaldırıldı
-    // (migrations/023) — $viewType artık 'form' olamaz, çünkü yukarıdaki
-    // BCC_VIEW_TYPES whitelist'inde o anahtar yok.
-
-    // Kanban: tablodaki İLK single_select alanı varsayılan sütunlama alanı olur —
-    // kullanıcı görünümü açar açmaz çalışan bir tahta görsün, önce ayar paneline
-    // gitmek zorunda kalmasın (OpsFlow'un "hemen kullanılabilir" hissi).
-    //
-    // Hiç single_select yoksa kanban_field_id HİÇ yazılmaz (bcc_kanban_config_from_view
-    // 0 döndürür = "seçilmemiş") — bu HATA DEĞİL, tasarlanmış bir boş durum:
-    // kanban.php yönlendirici bir ekran gösterip alan oluşturmaya çağırır.
-    // Görünümün oluşturulmasını ENGELLEMİYORUZ; tip seçiciyi tablo durumuna göre
-    // gri yapmak menüye tablo bilgisi taşımak demek olurdu ve kullanıcıyı
-    // "Kanban istiyorum ama neden yok?" çıkmazına sokardı.
     if ($viewType === 'kanban') {
         $firstSelect = bcc_fetch_one(
             "SELECT id FROM fields WHERE table_id = :tid AND field_type = 'single_select'
@@ -105,8 +62,6 @@ try {
             bcc_execute(
                 'UPDATE views SET config = :config WHERE id = :id',
                 array(
-                    // Yeni görünüm, config'i NULL — read-modify-write gerekmez,
-                    // ezilecek başka anahtar yok.
                     ':config' => json_encode(array('kanban_field_id' => (int) $firstSelect['id']), JSON_UNESCAPED_UNICODE),
                     ':id' => $newViewId,
                 )
@@ -122,9 +77,6 @@ try {
     json_fail(500, 'Veritabanı hatası.');
 }
 
-// redirect_url SUNUCUDAN gelir — istemci artık '/grid.php?...' dizgisini kendi
-// birleştirmiyor. Yeni bir görünüm türü eklendiğinde JS'e dokunmak gerekmesin
-// diye tek yönlendirme noktası (bcc_view_route_for) kullanılıyor.
 echo json_encode(array(
     'ok' => true,
     'view_id' => $newViewId,

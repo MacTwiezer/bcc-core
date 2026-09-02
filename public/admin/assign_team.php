@@ -21,35 +21,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
     $role = isset($_POST['role']) ? $_POST['role'] : '';
 
-    if ($userId <= 0 || $teamId <= 0 || !in_array($role, $roles, true)) {
+    if ($teamId <= 0) {
         $error = 'Geçersiz seçim.';
-    } elseif (!bcc_fetch_one('SELECT id FROM users WHERE id = :id AND is_active = 1', array('id' => $userId))) {
-        $error = 'Kullanıcı bulunamadı.';
     } elseif (!bcc_fetch_one('SELECT id FROM teams WHERE id = :id', array('id' => $teamId))) {
         $error = 'Ekip bulunamadı.';
     } else {
-        // INSERT ... ON DUPLICATE KEY UPDATE hem yeni üyeliği hem de mevcut bir
-        // üyenin rol değişikliğini AYNI sorguyla yapar — hangisi olduğunu ancak
-        // önceden bakarak biliriz (bulunan gerçek bug: bu ayrım yapılmadığı için
-        // salt rol değişikliğinde bile bildirim "ekibe yeni bir üye ekledi"
-        // diyordu, bkz. src/audit.php'deki team_member.role_change case'i).
-        $existingMember = bcc_fetch_one(
-            'SELECT id FROM team_members WHERE team_id = :team_id AND user_id = :user_id',
-            array('team_id' => $teamId, 'user_id' => $userId)
-        );
+        // team_members.php ve paylaşım modalı ile AYNI fonksiyon. Burada eskiden
+        // aynı doğrulama + upsert + audit üçlüsü elle tekrar yazılıydı; ikisi
+        // ayrışırsa yalnızca birinde düzelen bir hata diğerinde yaşamaya devam
+        // ederdi (audit_log.team_id'nin NULL kalması tam olarak böyle oldu).
+        // Platform admini her ekipte sanal owner'dır, rütbe buna göre veriliyor.
+        $result = bcc_team_member_assign($teamId, $userId, $role, $GLOBALS['BCC_ROLE_RANK']['owner'], $roles);
 
-        bcc_execute(
-            'INSERT INTO team_members (team_id, user_id, role) VALUES (:team_id, :user_id, :role)
-             ON DUPLICATE KEY UPDATE role = VALUES(role)',
-            array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role)
-        );
-        // $teamId 5. parametre olarak GEÇİLMELİ — audit_log.team_id kolonu bu
-        // olmadan NULL kalır (bulunan gerçek bug: team_member.assign zaten
-        // bildirim beyaz listesinde ama team_id NULL olduğu için `WHERE team_id
-        // IN (...)` filtresine hiçbir zaman uymuyordu, bildirim hiç görünmüyordu).
-        $auditAction = $existingMember ? 'team_member.role_change' : 'team_member.assign';
-        log_audit($auditAction, 'team_member', null, array('team_id' => $teamId, 'user_id' => $userId, 'role' => $role), $teamId);
-        $success = 'Atama kaydedildi.';
+        if ($result['ok']) {
+            $success = 'Atama kaydedildi.';
+        } else {
+            $error = $result['error'];
+        }
     }
 }
 // Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk

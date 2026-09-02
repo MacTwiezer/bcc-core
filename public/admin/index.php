@@ -75,10 +75,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($teamId <= 0) {
             $error = 'Geçersiz ekip.';
         } else {
-            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-            bcc_execute("DELETE FROM team_members WHERE team_id = ? AND user_id IN ($placeholders)", array_merge(array($teamId), $userIds));
-            log_audit('team_member.remove', 'team', $teamId, array('user_ids' => $userIds));
-            $success = 'Ekipten çıkarıldı.';
+            // team_members.php ile AYNI fonksiyon. Burada eskiden çıplak bir
+            // DELETE vardı ve o yoldaki korumaların hiçbiri çalışmıyordu — en
+            // önemlisi "son owner çıkarılamaz": ekip owner'sız kalabiliyordu.
+            // Ayrıca log_audit'e team_id geçilmediği için kayıt hiçbir bildirim
+            // panelinde görünmüyordu (audit_log.team_id NULL kalıyordu).
+            // Platform admini her ekipte sanal owner'dır (bkz. auth.php),
+            // rütbe de buna göre veriliyor.
+            $result = bcc_team_member_remove_many(
+                $teamId,
+                $userIds,
+                $currentUserId,
+                $GLOBALS['BCC_ROLE_RANK']['owner']
+            );
+
+            $message = bcc_team_member_remove_message($result);
+            $error = $message['error'];
+            $success = $message['success'];
         }
     } else {
         $error = 'Geçersiz işlem.';

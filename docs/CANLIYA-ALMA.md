@@ -71,30 +71,31 @@ Sonra **ikisinden birini** yap — ikisini birden değil:
 
 - **Sıfırdan kurulum:** `schema.sql` dosyasını içe aktar.
 - **Mevcut veriyi taşıyorsan:** önce mevcut veritabanının yedeğini yükle, sonra
-  `migrations/` içindeki dosyaları **numara sırasıyla** (`001` → `023`) uygula.
+  `migrations/` içindeki dosyaları **numara sırasıyla** (`001` → `024`) uygula.
 
 ### 3.3 Yapılandırma dosyalarını oluştur
 
 Bu dosyalar git'e **girmez** (`.gitignore`), her sunucuda elle oluşturulur:
 
-| Dosya | İçerik | Şablon |
-|---|---|---|
-| `config/database.local.php` | Canlı DB kullanıcı adı/şifresi | — (aşağıdaki örnek) |
-| `config/app.local.php` | `$APP_BASE_URL` (e-postadaki bağlantıların adresi) | `config/app.local.php.example` |
-| `config/mail_record_send.local.php` | SMTP hesabı (Office 365) | `config/mail_record_send.local.php.example` |
+Her birinin yanında şifresiz bir `.example` şablonu var — kopyalayıp doldurun.
+**Dördü de zorunludur.**
 
-`config/database.local.php` örneği:
+| Dosya | İçerik |
+|---|---|
+| `config/database.local.php` | Canlı DB kullanıcı adı/şifresi |
+| `config/app.local.php` | `$APP_BASE_URL` (e-postadaki bağlantıların adresi) |
+| `config/mail.local.php` | `$MAIL_MODE = 'smtp';` — **atlanırsa hiç mail gitmez** |
+| `config/mail_record_send.local.php` | SMTP sunucu + hesap bilgileri |
 
-```php
-<?php
-$DB_HOST = '127.0.0.1';
-$DB_NAME = 'bcc_core';
-$DB_USER = 'bcc_app';          // root DEĞİL — sadece bu veritabanına yetkili kullanıcı
-$DB_PASS = 'buraya-guclu-bir-sifre';
+```bash
+cd config
+for f in database mail mail_record_send app; do cp $f.local.php.example $f.local.php; done
 ```
 
-> Takip edilen `config/database.php` XAMPP varsayılanlarını (`root`, boş şifre)
-> taşır; canlıda **mutlaka** `.local.php` ile ezilmelidir.
+> `config/database.php` XAMPP varsayılanlarını (`root`, boş şifre) taşır.
+> Canlıda `.local.php` oluşturulmazsa uygulama bağlanamaz ve her sayfa
+> "Bir şeyler ters gitti" döner. DB kullanıcısı **root olmamalı** — yalnızca
+> `bcc_core` veritabanına yetkili ayrı bir kullanıcı açın.
 
 `config/app.local.php` içinde `$APP_BASE_URL = 'https://opsflow.sirketiniz.com';`
 olmalı — boş bırakılırsa doğrulama e-postalarındaki bağlantı `localhost` çıkar
@@ -137,32 +138,36 @@ HTTPS açılınca uygulama oturum çerezini otomatik `secure` işaretler ve
 
 ---
 
-## 4. Canlıya almadan önce KAPATILMASI GEREKEN açık
+## 4. Ters vekil (reverse proxy) kullanacaksanız
 
-**Giriş denemesi sınırlaması yok.** Şifre sıfırlamada IP bazlı hız sınırı var
-(`password_reset_attempts` tablosu) ama giriş ekranında yok: saldırgan sınırsız
-şifre deneyebilir.
+Giriş denemesi sınırı uygulamada **var** (`migrations/024`, 2026-09-02):
+aynı IP + e-posta için 5 hata / 15 dk, aynı IP için 20 hata / 15 dk.
+Şifre sıfırlamanın kendi sınırı zaten vardı (`password_reset_attempts`).
 
-Seçenekler:
+Sınır `$_SERVER['REMOTE_ADDR']`'e dayanır; `X-Forwarded-For` bilerek
+okunmaz (istemciden gelen bir başlığa güvenmek sınırı tamamen atlatılabilir
+yapardı). Nginx/Cloudflare arkasına alırsanız tüm istekler tek bir vekil
+IP'sinden geliyor görünür ve 20 hata/15 dk kuralı **tüm kullanıcıları
+birlikte kilitler**.
 
-1. **Uygulama katmanında sayaç** — `password_reset_attempts` ile aynı desende
-   bir tablo + `attempt_login()` içinde kontrol. (Yapılmadı, DDL gerektiriyor.)
-2. **Sunucu katmanında** — fail2ban veya WAF kuralı.
-3. **Erişimi kısıtla** — sistem yalnızca şirket ağından/VPN üzerinden
-   erişilebiliyorsa risk büyük ölçüde düşer.
-
-En az bir tanesi canlıya çıkmadan uygulanmalı.
+Çözüm: Apache'de `mod_remoteip` + `RemoteIPTrustedProxy` ile `REMOTE_ADDR`'i
+gerçek istemciye çevirin. Eşikleri değiştirmek için migration gerekmez —
+`src/auth.php`'deki `BCC_LOGIN_MAX_PER_ACCOUNT` / `BCC_LOGIN_MAX_PER_IP` /
+`BCC_LOGIN_WINDOW_MINUTES` sabitleri.
 
 ---
 
 ## 5. İlk kullanıcıyı oluşturma
 
-Sistemde kayıt ekranı var ama ilk **platform admini** elle oluşturulur:
+Sistemde kayıt ekranı var ama ilk **platform admini** komut satırından
+oluşturulur:
 
-```sql
--- Önce normal kayıt ekranından (register.php) kaydolun, sonra:
-UPDATE users SET is_admin = 1, is_active = 1 WHERE email = 'sizin@adresiniz';
+```bash
+php scripts/create_admin.php
 ```
+
+E-posta / ad / şifre sorar, hesabı doğrudan aktif açar (doğrulama maili
+beklemez) ve zaten bir admin varsa çalışmayı reddeder.
 
 Bu kullanıcı `/admin/index.php` üzerinden diğer kullanıcıları ve ekipleri
 oluşturur. Roller: `owner` / `editor` / `commenter` / `viewer`
@@ -172,7 +177,14 @@ oluşturur. Roller: `owner` / `editor` / `commenter` / `viewer`
 
 ## 6. E-posta (doğrulama + kayıt gönderme)
 
-SMTP hesabı `config/mail_record_send.local.php`'de. Office 365 kullanılıyor.
+İki dosya birlikte gerekir:
+`config/mail.local.php` → `$MAIL_MODE = 'smtp';` **ve**
+`config/mail_record_send.local.php` → sunucu/hesap bilgileri.
+
+`$MAIL_MODE` varsayılanı `'log'`; bu modda SMTP bilgileri dolu olsa bile
+mail **gönderilmez**, `storage/mail/` altına dosya yazılır ve hata verilmez
+(`src/mailer.php:175`). Kurulumdan sonra gerçekten bir kayıt açıp mailin
+geldiğini doğrulayın.
 
 Maillerin spam'e düşmemesi için **DNS kayıtları gerekir** — bunlar kodla
 yapılamaz, alan adı yöneticisinin işidir:
@@ -208,7 +220,9 @@ Yedeklerin **başka bir makinede** de kopyası olmalı.
 - [ ] Excel dışa aktarma çalışıyor (`zip` eklentisi var)
 - [ ] `https://adres/../config/database.local.php` **404/403 veriyor** (DocumentRoot doğru)
 - [ ] Yanlış adresle `https://adres/grid.php?table_id=999999` → markalı "Tablo bulunamadı" sayfası, 404
-- [ ] Giriş denemesi sınırı (bkz. §4) uygulandı
+- [ ] 6 kez yanlış şifreyle giriş denendi → "Çok fazla başarısız giriş
+      denemesi" uyarısı çıkıyor (`migrations/024` uygulanmış demektir)
+- [ ] Ters vekil varsa `REMOTE_ADDR` gerçek istemciyi gösteriyor (bkz. §4)
 
 ---
 

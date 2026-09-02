@@ -541,13 +541,20 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
 
 ### Canlıya çıkarken yapılacaklar
 
+> Uçtan uca kurulum rehberi (sunucu seçimi, gereksinimler, HTTPS, yedekleme,
+> kurulum sonrası kontrol listesi): **`docs/CANLIYA-ALMA.md`**. Aşağıdaki liste
+> yalnızca bu depoya özgü teknik notlardır; ikisi çelişirse CANLIYA-ALMA.md
+> esas alınır.
+
 1. **`config/database.local.php` oluştur** — şablonu
    `config/database.local.php.example`. Takip edilen `config/database.php` XAMPP
    varsayılanlarını (`root`, boş şifre) taşıyor; canlıda ezilmeli. Oluşturulmazsa
    uygulama bağlanamaz ve her sayfa "Bir şeyler ters gitti" döner.
 2. **`config/app.local.php` oluştur** (e-posta bağlantılarının taban URL'i) —
-   şablonu `config/app.local.php.example`. Zorunlu değil: `config/app.php`
-   canlı adresi (`https://opsflow.bcccrm.com`) zaten varsayılan taşıyor.
+   şablonu `config/app.local.php.example`. `config/app.php` varsayılanı
+   `https://opsflow.bcccrm.com`; sunucu BAŞKA bir adreste yayınlanacaksa bu
+   dosya ZORUNLU — yoksa doğrulama e-postalarındaki bağlantılar yanlış alan
+   adına gider ve kullanıcılar hesaplarını etkinleştiremez.
 2b. **E-posta ZORUNLU — atlanırsa sessizce bozulur.** `config/mail.php`
    varsayılanı `$MAIL_MODE = 'log'`, yani mail gönderilmez, `storage/mail/`
    altına dosya yazılır ve hata verilmez. Kayıt doğrulama ve şifre sıfırlama

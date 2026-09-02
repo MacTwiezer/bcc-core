@@ -20,9 +20,6 @@
             return Array.prototype.slice.call(rowsBody.querySelectorAll('.tm-row'));
         }
 
-        // Arama + rol filtresi — home.js'in Ctrl+K popover'ındaki AYNI desen
-        // (substring eşleşme, hidden toggle, boş durum mesajı), yalnızca iki
-        // koşulun (isim/e-posta VE rol) AND'i.
         function applyFilters() {
             var q = searchInput ? searchInput.value.trim().toLowerCase() : '';
             var role = roleFilter ? roleFilter.value : '';
@@ -50,8 +47,6 @@
             roleFilter.addEventListener('change', applyFilters);
         }
 
-        // "Eklenme tarihi" sıralaması — tamamen client-side (veri zaten sayfada,
-        // DB'ye ikinci bir sorgu gerekmiyor). Tıklamada artan/azalan değişir.
         var sortAscending = true;
         if (sortHeader) {
             var doSort = function () {
@@ -73,9 +68,6 @@
             });
         }
 
-        // Toplu seçim — "form" özniteliğiyle #tm-bulk-remove-form'a bağlı
-        // checkbox'lar (tabloyu bir <form> ile SARMIYORUZ, aynı hücrede rol
-        // değişikliği için AYRI bir <form> zaten var — iç içe <form> geçersiz).
         function rowChecks() {
             return Array.prototype.slice.call(rowsBody.querySelectorAll('[data-tm-row-check]'));
         }
@@ -123,11 +115,6 @@
                     return;
                 }
 
-                // ⚠️ ONAY ARTIK ASENKRON: gönderim HER DURUMDA durdurulur,
-                // kullanıcı onaylarsa form JS'ten gönderilir. Native confirm
-                // senkron olduğu için eskiden "yalnızca iptalde preventDefault"
-                // yetiyordu; promise ile o kurgu formu onay gelmeden gönderirdi.
-                // form.submit() submit olayını yeniden tetiklemez, döngü olmaz.
                 e.preventDefault();
                 var form = bulkRemoveBtn.form;
                 window.bcc_confirm({

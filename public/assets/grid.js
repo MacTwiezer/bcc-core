@@ -4,13 +4,8 @@
     var meta = document.querySelector('meta[name="csrf-token"]');
     var CSRF = meta ? meta.content : '';
 
-    // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
-    // Ayni govde bes dosyada tekrar ediyordu, ucu birebir ayniydi.
     var post = window.bcc_post;
 
-    // post()'un multipart/form-data hâli — yalnızca dosya yükleme için (attachment_
-    // upload.php). URLSearchParams değil FormData kullanır, Content-Type header'ı
-    // BİLEREK elle set edilmez (tarayıcı boundary'yi kendisi ekler).
     function postFile(url, formData) {
         return fetch(url, {
             method: 'POST',
@@ -24,10 +19,6 @@
         });
     }
 
-    // Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
-    // görüntülenir. Kullanıcı verisi (chip.text) yalnızca textContent ile
-    // yazılır, innerHTML string birleştirme YOK — sunucudan gelen zaten
-    // htmlspecialchars'lı metnin DOM'daki düz hâli güvenle enjekte edilir.
     function renderChips(view, chips) {
         view.textContent = '';
         chips.forEach(function (chip) {
@@ -39,10 +30,6 @@
         });
     }
 
-    // Grup A (url/email/phone): "yeni sekmede aç" ikonu. Sunucudaki
-    // bcc_external_link_icon_svg() ile AYNI çizim — innerHTML KULLANILMAZ,
-    // createElementNS ile gerçek SVG düğümleri kurulur (bu turda güvenlik
-    // gözden geçirmesi yapıldığı için hiçbir yerde string->HTML yolu bırakılmadı).
     var SVG_NS = 'http://www.w3.org/2000/svg';
 
     function svgChild(tag, attrs) {
@@ -65,14 +52,6 @@
         return svg;
     }
 
-    // Grup A hücresini yeniden çizer. $link null ise (değer artık
-    // linkleştirilemiyor) ikon SİLİNİR — sunucu bu yüzden anahtarı null olarak
-    // da gönderiyor, hiç göndermeseydi eski ikon ekranda asılı kalırdı.
-    //
-    // GÜVENLİK: link.href sunucudaki whitelist'ten (bcc_cell_link_href +
-    // BCC_CELL_LINK_SCHEMES) geçmiş olarak gelir — "javascript:..." bu noktaya
-    // ASLA ulaşamaz, sunucu o değeri linkleştirilemez sayıp null döndürür.
-    // Metin her zaman textContent ile yazılır, innerHTML YOK.
     function renderLinkifiedCell(view, displayText, link) {
         view.textContent = '';
         view.classList.toggle('cell-view-linkified', !!link);
@@ -98,11 +77,6 @@
         view.appendChild(a);
     }
 
-    // Ek dosya listesini (küçük resim ya da rozet+ad "chip"leri, hepsi kendi
-    // dosyasına indirme linki) çizer — sunucu tarafındaki bcc_render_grid_data_row()
-    // ile AYNI DOM yapısı (aynı sınıf adları, style.css/grid-shell.css'teki
-    // .attachment-* kuralları ikisinde de geçerli olsun diye). Kullanıcı verisi
-    // (dosya adı) yalnızca title/textContent ile yazılır, innerHTML YOK.
     function renderAttachmentChips(view, files) {
         view.textContent = '';
         files.forEach(function (file) {
@@ -135,8 +109,6 @@
         });
     }
 
-    // bcc_attachment_type_badge() (src/schema.php) ile AYNI harita — yalnızca
-    // görüntü DIŞI dosya tiplerinde kullanılır (resimler zaten küçük resim olarak basılır).
     function fileTypeBadge(mime) {
         var map = {
             'application/pdf': 'PDF',
@@ -150,10 +122,6 @@
         return map[mime] || 'DOSYA';
     }
 
-    // uploadAttachment/deleteAttachment: grid.js (hücre popover'ı) VE
-    // grid-row-detail.js (satır genişletme paneli) window.BCC_GRID üzerinden AYNI
-    // iki fonksiyonu paylaşır — attachment_upload/delete.php'yi ikinci kez
-    // çağıran/yazan bir kod YOK.
     function uploadAttachment(recordId, fieldId, file) {
         var formData = new FormData();
         formData.append('csrf_token', CSRF);
@@ -173,18 +141,13 @@
 
     function flash(td, ok) {
         td.classList.remove('cell-flash-ok', 'cell-flash-error');
-        void td.offsetWidth; // reflow, animasyonu yeniden başlatmak için
+        void td.offsetWidth;
         td.classList.add(ok ? 'cell-flash-ok' : 'cell-flash-error');
         setTimeout(function () {
             td.classList.remove('cell-flash-ok', 'cell-flash-error');
         }, 700);
     }
 
-    // postCellValue/applyCellResultToTd: saveCell()'in iki katmana ayrılmış hâli —
-    // grid-row-detail.js (satır genişletme paneli) AYNI kaydetme/DOM-güncelleme
-    // mantığını window.BCC_GRID üzerinden yeniden kullanır, cell_update.php'yi
-    // ikinci kez çağıran/yazan bir kod YOK. Panelde <td> her zaman yok (gizli
-    // alanlar) — bu yüzden postCellValue tek başına da (td'siz) kullanılabilir.
     function postCellValue(recordId, fieldId, value) {
         return post('/api/cell_update.php', {
             csrf_token: CSRF,
@@ -194,10 +157,6 @@
         });
     }
 
-    // Rating hücresini yeniden çizmez (data.display "★★★☆☆" düz metnini
-    // view.textContent'e yazmak tıklanabilir <span data-rating-star>'ları
-    // YOK ederdi, sonraki tıklamalar çalışmazdı) — MEVCUT yıldız span'larının
-    // sadece .rating-star-filled class'ını günceller.
     function updateRatingStars(view, value) {
         Array.prototype.forEach.call(view.querySelectorAll('.rating-star'), function (star) {
             var idx = parseInt(star.getAttribute('data-rating-star'), 10);
@@ -205,10 +164,6 @@
         });
     }
 
-    // Sunucudaki bcc_render_user_cell() (src/schema.php) ile AYNI DOM'u kurar:
-    // .cell-user-view > .ws-collab-avatar.cell-user-avatar + .cell-user-name.
-    // İki taraf ayrışırsa hücre kaydettikten sonra sayfa yenilenene kadar
-    // FARKLI görünürdü.
     function renderUserCell(view, display) {
         view.textContent = '';
         view.classList.toggle('cell-user-view', display !== '');
@@ -220,7 +175,6 @@
         var avatar = document.createElement('span');
         avatar.className = 'ws-collab-avatar cell-user-avatar';
         avatar.setAttribute('aria-hidden', 'true');
-        // bcc_name_initial() ile aynı kural: adın ilk karakteri, büyük harf.
         avatar.textContent = display.charAt(0).toLocaleUpperCase('tr');
 
         var name = document.createElement('span');
@@ -238,24 +192,12 @@
             if (data.display_chips) {
                 renderChips(view, data.display_chips);
             } else if (Object.prototype.hasOwnProperty.call(data, 'display_link')) {
-                // Grup A: anahtarın VARLIĞINA bakılır, değerine değil —
-                // display_link null olabilir ("link yapılamaz" demek) ve o durumda
-                // da bu dala girip mevcut ikonun SİLİNMESİ gerekir.
                 renderLinkifiedCell(view, data.display, data.display_link);
             } else if (td.getAttribute('data-field-type') === 'long_text') {
-                // GÜVENLİ: data.display burada sunucuda bcc_sanitize_rich_text()
-                // ile temizlenmiş HTML — ham kullanıcı girdisi DEĞİL, innerHTML
-                // ile yazmak güvenlidir (bkz. src/schema.php).
                 view.innerHTML = data.display;
             } else if (td.getAttribute('data-field-type') === 'rating') {
                 updateRatingStars(view, parseInt(data.raw, 10) || 0);
             } else if (td.getAttribute('data-field-type') === 'user') {
-                // Kullanıcı hücresi: adın solunda avatar. Düz textContent
-                // yazılsaydı kaydettikten sonra avatar KAYBOLUR, sayfa
-                // yenilenince geri gelirdi (sunucu bcc_render_user_cell ile
-                // basıyor) — bu dal o ayrışmayı engelliyor.
-                // created_by/last_modified_by burada YOK: onlar salt-okunur,
-                // bu fonksiyona hiç girmezler.
                 renderUserCell(view, data.display);
             } else {
                 view.textContent = data.display;
@@ -284,25 +226,11 @@
         });
     }
 
-    // Kayıt ekleme: (a) yuvarlak + butonu, (b) tablo tabanı + satırı ve (c)
-    // Shift+Enter kısayolu ÜÇÜ DE bu TEK fonksiyonu çağırır (aşağıda wire edilir) —
-    // ikinci bir "kayıt ekle" mekanizması yok.
-    var addingRecord = false; // istek kilidi: hızlı tekrar tıklama/kısayol çoklu kayıt üretmesin
+    var addingRecord = false;
 
     function renumberRows() {
         var rows = document.querySelectorAll('table.grid tbody tr[data-record-id]');
         rows.forEach(function (tr, idx) {
-            // BULUNAN GERCEK BUG: burada eskiden <td class='grid-rownum'>'un
-            // KENDISINE textContent yaziliyordu. textContent atamasi hucrenin TUM
-            // cocuklarini siler — yani .grid-rownum-inner sarmalayicisini, satir
-            // secme kutusunu (.grid-row-select) ve genislet butonunu
-            // (.grid-row-expand) yok edip yerine duz bir metin dugumu koyuyordu.
-            // Sonuc: bir silme (veya ekleme) sonrasi renumberRows() cagrilinca
-            // KALAN tum satirlarin secim kutusu kayboluyordu; kullanici satir
-            // numarasinin ustune gelse de checkbox cikmadigi icin IKINCI bir
-            // silme yapamiyordu. Sayfa yenilenince sunucu dogru HTML'i bastigi
-            // icin sorun kendiliginden duzelmis gorunuyordu.
-            // Artik YALNIZCA numara span'i yaziliyor, kardes kontroller yerinde kalir.
             var numberEl = tr.querySelector('.grid-rownum-number');
             if (numberEl) {
                 numberEl.textContent = idx + 1;
@@ -315,10 +243,6 @@
         }
     }
 
-    // Toast: ikinci bir bildirim sistemi kurmak yerine projedeki mevcut .ok/.error
-    // metin deseni (src/partials/flash.php) yeniden kullanılır — burada tek fark,
-    // async bir fetch sonrası sayfa yenilenmediği için elemanın JS ile eklenip
-    // birkaç saniye sonra kendiliğinden kaldırılmasıdır.
     function showToast(message) {
         var footer = document.querySelector('.gs-grid-footer');
         if (!footer) {
@@ -342,9 +266,6 @@
         }, 4000);
     }
 
-    // count: kac bos kayit acilacagi (varsayilan 1). "+" satiri, yuvarlak +
-    // butonu ve Shift+Enter hep 1 gonderir; yalnizca satir sonundaki toplu
-    // ekleme kutusu >1 gonderir - ikinci bir ekleme mekanizmasi YOK.
     function addRecord(afterRecordId, targetRow, count) {
         if (addingRecord) {
             return;
@@ -363,9 +284,6 @@
             count: count,
         };
 
-        // Sort/group aktifken after_record_id kasıtlı olarak GÖNDERİLMEZ — sunucu
-        // sona ekler ((a)/(b) ile aynı davranış), çünkü görünen sıra zaten
-        // position'dan değil sort/group kolonlarından geliyor.
         if (!window.BCC_SORT_OR_GROUP_ACTIVE && afterRecordId) {
             params.after_record_id = afterRecordId;
         }
@@ -380,11 +298,9 @@
             if (!(result.httpOk && result.data && result.data.ok)) {
                 var message = (result.data && result.data.error) ? result.data.error : 'Kayıt eklenemedi.';
                 window.alert(message);
-                return; // DOM'a satır eklenmez.
+                return;
             }
 
-            // Sunucu tek satirda da toplu eklemede de AYNI alani doner: rows_html.
-            // row_html yalnizca geriye donuk uyumluluk icin duruyor.
             var rowsHtml = (result.data.rows_html && result.data.rows_html.length)
                 ? result.data.rows_html
                 : (result.data.row_html ? [result.data.row_html] : []);
@@ -396,21 +312,11 @@
             }
             var newRow = newRows[0];
 
-            // "Bu tabloda henüz kayıt yok." satırı sunucu tarafında basılıyor
-            // (grid.php, empty($records)). Kayıt AJAX ile eklenince sayfa
-            // yenilenmediği için o satır olduğu yerde kalıyordu ve yeni kaydın
-            // ÜSTÜNDE "henüz kayıt yok" yazıyordu (yeni satır, ekleme satırının
-            // hemen öncesine — yani boş-durum satırının ALTINA — giriyor).
-            // Ters yön için ek koda gerek yok: satır silme sayfayı yeniliyor,
-            // boş-durum satırını sunucu tekrar basıyor.
             var emptyCell = document.querySelector('table.grid tbody td.grid-empty');
             if (emptyCell && emptyCell.parentNode && emptyCell.parentNode.parentNode) {
                 emptyCell.parentNode.parentNode.removeChild(emptyCell.parentNode);
             }
 
-            // Tum yeni satirlar TEK fragment ile eklenir: 500 satirda da DOM'a
-            // tek reflow'luk dokunus olur (tek tek insert etmek sunumda gozle
-            // gorulur sekilde takiliyordu).
             var frag = document.createDocumentFragment();
             for (var r = 0; r < newRows.length; r++) {
                 frag.appendChild(newRows[r]);
@@ -432,16 +338,10 @@
 
             renumberRows();
 
-            // Sütun dondurma: yeni satır da mevcut dondurma durumunu almalı —
-            // ikinci bir pozisyonlama mekanizması yazmak yerine grid-freeze-columns.js'in
-            // kendi apply fonksiyonu çağrılır (o script her zaman yüklenir).
             if (window.BCC_reapplyFreeze) {
                 window.BCC_reapplyFreeze();
             }
 
-            // Tek satir eklendiyse imlec dogrudan ilk hucreye girer. Toplu
-            // eklemede GIRMEZ: acilan editor, kullanicinin gormek istedigi
-            // satir yiginini kaydirip kapatirdi.
             if (newRows.length === 1) {
                 var firstCell = newRow.querySelector('td.editable');
                 if (firstCell) {
@@ -486,31 +386,16 @@
         return opt;
     }
 
-    // choices: ÖNCEDEN PARSE EDİLMİŞ dizi (td'den data-options okunmuş VEYA
-    // grid-row-detail.js'de data-fields JSON'undan gelen .options — ikisi de
-    // aynı şekle sahip: select tipleri için string dizisi, 'user' için
-    // [{"id":..,"name":..}]). buildInput artık bir <td>'ye bağlı değil, bu
-    // yüzden gizli alanlar (satırda <td>'si olmayan) için de kullanılabilir.
     function buildInput(type, choices, raw) {
         var input;
         choices = choices || [];
 
         if (type === 'number' || type === 'currency' || type === 'percent') {
-            // currency/percent: number ile AYNI native <input type=number> —
-            // percent'in "45 yaz, DB'ye 0.45 yazılır" dönüşümü zaten raw'a
-            // (cell_raw_value() ×100'lü döndürür) ve normalize_cell_value()'a
-            // (÷100) uygulanıyor, burada ekstra bir şey yapılmaz.
             input = document.createElement('input');
             input.type = 'number';
             input.step = 'any';
             input.value = raw;
         } else if (type === 'url' || type === 'email' || type === 'phone') {
-            // Grup A: native input tipi YALNIZCA mobil klavyeyi doğru açmak için
-            // (url -> ".com" tuşu, email -> "@", phone -> tuş takımı). Tarayıcının
-            // KENDİ doğrulaması devreye GİRMEZ: bunlar <form> içinde değil,
-            // hücreye eklenen serbest input'lar — submit/validity kontrolü yok,
-            // değer blur'da olduğu gibi gönderilir. Doğrulamanın yumuşak kalması
-            // bilinçli (bkz. normalize_cell_value, src/schema.php).
             input = document.createElement('input');
             input.type = (type === 'phone') ? 'tel' : type;
             input.value = raw;
@@ -530,9 +415,6 @@
             });
             input.value = raw;
         } else if (type === 'user') {
-            // data-options burada [{"id":..,"name":..}] şeklinde (single_select'in
-            // düz string listesinden farklı — id ile görünen ad ayrı, bkz.
-            // bcc_user_choices_from_map, src/schema.php).
             input = document.createElement('select');
             addOption(input, '', '— boş —');
             choices.forEach(function (c) {
@@ -573,7 +455,7 @@
 
         var type = td.getAttribute('data-field-type');
         if (type === 'checkbox') {
-            return; // checkbox doğrudan tıklanır, edit moduna girmez
+            return;
         }
 
         var view = td.querySelector('.cell-view');
@@ -644,11 +526,6 @@
         });
     }
 
-    // Zengin metin (long_text — F6, "ilk aşama"): kalın/italik/link. Diğer
-    // tiplerin startEdit()/buildInput() akışını KULLANMAZ — araç çubuğu
-    // düğmeleri contenteditable'ın blur'unu tetikleyeceğinden ("blur = kaydet"
-    // deseni burada işe yaramaz), ayrı bir popover + açık Kaydet/İptal
-    // butonlarıyla çalışır.
     function startRichTextEdit(td) {
         if (td.classList.contains('editing')) {
             return;
@@ -668,10 +545,6 @@
         var editable = document.createElement('div');
         editable.className = 'richtext-editable';
         editable.contentEditable = 'true';
-        // GÜVENLİ: raw, data-value attribute'undan geliyor — sunucuda zaten
-        // bcc_sanitize_rich_text() ile temizlenmiş HTML'in tarayıcı
-        // tarafından otomatik decode edilmiş hâli (attribute'a
-        // htmlspecialchars ile yazılmıştı, ham kullanıcı girdisi değil).
         editable.innerHTML = raw;
 
         function makeToolbarButton(label, title, onClick, isIcon) {
@@ -684,9 +557,6 @@
                 btn.textContent = label;
             }
             btn.title = title;
-            // mousedown'da preventDefault: contenteditable'daki metin seçimi
-            // buton tıklamasıyla kaybolmasın — execCommand mevcut seçime
-            // uygulanır, seçim korunmalı.
             btn.addEventListener('mousedown', function (e) {
                 e.preventDefault();
             });
@@ -706,19 +576,12 @@
         });
         italicBtn.style.fontStyle = 'italic';
 
-        // Emoji (🔗) yerine SVG ikon — B/i metin glifleriyle (Google Docs/Notion
-        // davranışı, tanıdık bir konvansiyon) tutarlı olsun diye tarayıcıya/işletim
-        // sistemine göre renkli/farklı render olan emoji yerine, uygulamanın geri
-        // kalanındaki ince çizgili ikon diliyle (bkz. grid.php'deki diğer SVG'ler)
-        // aynı stil kullanılıyor.
         var linkIconSvg = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none">'
             + '<path d="M8.5 11.5a3 3 0 004.24 0l2.5-2.5a3 3 0 10-4.24-4.24l-1 1" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
             + '<path d="M11.5 8.5a3 3 0 00-4.24 0l-2.5 2.5a3 3 0 104.24 4.24l1-1" stroke="#5f6368" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
             + '</svg>';
 
         var linkBtn = makeToolbarButton(linkIconSvg, 'Link ekle', function () {
-            // Açıksa ikinci tıklama kapatır (araç çubuğu düğmelerinin geri kalanı
-            // gibi "aç/kapa" davranışı).
             if (linkBar.hidden) {
                 openLinkBar();
             } else {
@@ -730,11 +593,6 @@
         toolbar.appendChild(italicBtn);
         toolbar.appendChild(linkBtn);
 
-        // ---- Satır içi link çubuğu (araç çubuğunun HEMEN ALTINDA) ----
-        // window.prompt() KULLANILMAZ: native prompt sayfayı bloklar, uygulamanın
-        // temasına/diline uymaz ve —asıl sorun— contenteditable'ın seçimini
-        // tarayıcıya göre değişen biçimde bozar. Hata mesajı da window.alert
-        // değil, çubuğun İÇİNDE (aşağıdaki linkError).
         var linkBar = document.createElement('div');
         linkBar.className = 'richtext-link-bar';
         linkBar.hidden = true;
@@ -750,7 +608,6 @@
 
         var linkAddBtn = document.createElement('button');
         linkAddBtn.type = 'button';
-        // Kaydet/İptal ikilisiyle AYNI birincil buton sınıfı (grid-shell.css).
         linkAddBtn.className = 'gs-btn-primary richtext-link-add';
         linkAddBtn.textContent = 'Ekle';
 
@@ -771,12 +628,8 @@
         linkBar.appendChild(linkRow);
         linkBar.appendChild(linkError);
 
-        // Seçim URL girişine odaklanınca KAYBOLUR (contenteditable'ın seçimi
-        // yalnızca kendisi odaktayken korunur) — bu yüzden çubuk AÇILIRKEN Range
-        // saklanır ve ekleme anında geri yüklenir. prompt() döneminde bu gerekli
-        // değildi çünkü prompt odağı DOM'dan hiç almıyordu.
         var savedRange = null;
-        var editingAnchor = null; // imleç mevcut bir <a>'nın içindeyse: href güncellenir
+        var editingAnchor = null;
 
         function editableSelectionRange() {
             var sel = window.getSelection();
@@ -785,7 +638,6 @@
             }
             var range = sel.getRangeAt(0);
 
-            // Node.contains kendisini de kapsar (seçim doğrudan editable'daysa).
             return editable.contains(range.commonAncestorContainer) ? range : null;
         }
 
@@ -809,20 +661,14 @@
             savedRange = editableSelectionRange();
             editingAnchor = anchorAtRange(savedRange);
             linkError.hidden = true;
-            // Mevcut bir linkin üzerindeyken URL'si doldurulur ve buton "Kaydet"
-            // olur (düzenleme), aksi hâlde boş giriş + "Ekle".
             linkInput.value = editingAnchor ? editingAnchor.getAttribute('href') : '';
             linkAddBtn.textContent = editingAnchor ? 'Kaydet' : 'Ekle';
             linkBar.hidden = false;
-            // Popover büyüdü: aşağı sığmıyorsa yeniden konumlanmalı.
             positionPopover();
             linkInput.focus();
             linkInput.select();
         }
 
-        // Çubuğu kapatır ve odağı editöre geri verir. Seçimi GERİ YÜKLEMEZ —
-        // ekleme sonrası imleç zaten yeni linkin arkasındadır; iptalde geri
-        // yükleme cancelLinkBar()'ın işi.
         function closeLinkBar() {
             linkBar.hidden = true;
             linkError.hidden = true;
@@ -837,7 +683,7 @@
             var range = savedRange;
             closeLinkBar();
             if (range) {
-                selectRange(range); // kullanıcının vurgusu kaybolmasın
+                selectRange(range);
             }
         }
 
@@ -845,8 +691,6 @@
             var url = linkInput.value.trim();
 
             if (!/^https?:\/\//i.test(url)) {
-                // Sunucudaki whitelist (bcc_build_safe_link) ile AYNI kural —
-                // burada yalnızca kullanıcıya erken/anlaşılır geri bildirim için.
                 linkError.textContent = 'Link https:// veya http:// ile başlamalı.';
                 linkError.hidden = false;
                 linkInput.focus();
@@ -866,8 +710,6 @@
 
             var sel = window.getSelection();
             if (!editableSelectionRange()) {
-                // Seçim bir şekilde editable dışında kaldı: imleci sona al —
-                // link ASLA editörün dışına yazılmaz.
                 var endRange = document.createRange();
                 endRange.selectNodeContents(editable);
                 endRange.collapse(false);
@@ -875,31 +717,22 @@
             }
 
             if (sel.isCollapsed) {
-                // Seçili metin YOK: URL'nin kendisi link metni olur (Notion/
-                // Google Docs davranışı). execCommand('createLink') boş seçimde
-                // hiçbir şey yapmazdı, bu yüzden <a> elle kurulur.
                 var anchor = document.createElement('a');
                 anchor.href = url;
                 anchor.textContent = url;
                 sel.getRangeAt(0).insertNode(anchor);
 
-                // İmleç linkin ARKASINA alınır — yazmaya devam eden kullanıcı
-                // metni linkin İÇİNE eklemesin.
                 var afterRange = document.createRange();
                 afterRange.setStartAfter(anchor);
                 afterRange.collapse(true);
                 selectRange(afterRange);
             } else {
-                // Seçili metni <a> ile SARAR. DOM'u elle kurmak yerine
-                // execCommand: tarayıcının geri-al (undo) yığını korunur.
                 document.execCommand('createLink', false, url);
             }
 
             closeLinkBar();
         }
 
-        // mousedown'da preventDefault: araç çubuğu düğmeleriyle AYNI gerekçe —
-        // buton tıklaması URL girişinin/editörün odağını çalmasın.
         [linkAddBtn, linkCancelBtn].forEach(function (btn) {
             btn.addEventListener('mousedown', function (e) {
                 e.preventDefault();
@@ -913,8 +746,6 @@
                 e.preventDefault();
                 applyLink();
             } else if (e.key === 'Escape') {
-                // Yalnızca link çubuğunu kapatır — TÜM hücre düzenlemesini
-                // iptal ETMEZ (o, editable üzerindeki Escape'in işi).
                 e.preventDefault();
                 e.stopPropagation();
                 cancelLinkBar();
@@ -929,16 +760,13 @@
         cancelBtn.textContent = 'İptal';
         var saveBtn = document.createElement('button');
         saveBtn.type = 'button';
-        // gs-view-desc-save vb. diğer "Kaydet" butonlarıyla AYNI sınıf
-        // (grid-shell.css) — önceden İptal ile aynı nötr .btn-sm'ydi, birincil/
-        // ikincil aksiyon ayrımı yoktu.
         saveBtn.className = 'gs-btn-primary';
         saveBtn.textContent = 'Kaydet';
         actions.appendChild(cancelBtn);
         actions.appendChild(saveBtn);
 
         popover.appendChild(toolbar);
-        popover.appendChild(linkBar); // araç çubuğunun HEMEN ALTINDA açılır
+        popover.appendChild(linkBar);
         popover.appendChild(editable);
         popover.appendChild(actions);
 
@@ -947,35 +775,13 @@
         }
         td.appendChild(popover);
 
-        // .grid-wrap overflow:auto taşıyor — position:absolute popover satır
-        // tablonun alt/sağ kenarına yakınsa KIRPILIRDI (bkz. grid-shell.css'teki
-        // .gs-view-row-menu-panel / .grid-add-field-panel'de uygulanan AYNI ders).
-        // position:fixed + burada hesaplanan konum bunu atlıyor.
-        //
-        // Konum matematiği ORTAK yardımcıdan (bcc_positionFloating) geliyor —
-        // burada ikinci bir kopya YOK. Eskiden bu fonksiyon koşulsuz
-        // "tdRect.bottom + 4" yazıyordu; alt satırlardaki hücrelerde (8./9.)
-        // popover ekranın altından taşıyordu. Yardımcı aşağı sığmıyorsa YUKARI
-        // çeviriyor, sağa taşarsa içeri çekiyor.
         function positionPopover() {
             window.bcc_positionFloating(popover, td.getBoundingClientRect());
         }
-        // Donuk (sticky) bir sutunda bu <td> KENDI yigilma baglamini kurar;
-        // popover in z-index i ne olursa olsun o kutunun disina cikamaz --
-        // donuk kenar cizgisi ve sutun genisligi tutamaclari uzerine binerdi.
-        // Yukselmesi gereken panel degil, BARINDIRAN HUCRE (ortak yardimci,
-        // bkz. dismissable-panel.js -- sutun basligi menusuyle AYNI kok neden).
         window.bcc_raiseFloatingHost(popover, true);
         positionPopover();
 
-        // Bulunan gerçek bug: position:fixed konumu yalnızca AÇILIŞTA
-        // hesaplanıyordu — popover açıkken sayfa kaydırılırsa (grid uzun bir
-        // tabloda çok olağan) hücre kayarken popover ekranda SABİT kalıp
-        // hücresinden tamamen kopuyordu. Scroll'da yeniden konumlandırılır
-        // (capture: true — iç içe kaydırılabilir bir üst öğeden de yakalar).
         window.addEventListener('scroll', positionPopover, true);
-        // resize de gerekli: pencere küçülünce "aşağı sığıyor mu" kararı
-        // değişir, yeniden ölçülmezse popover yine ekran dışında kalırdı.
         window.addEventListener('resize', positionPopover);
 
         editable.focus();
@@ -1022,13 +828,8 @@
                 e.preventDefault();
                 cancel();
             }
-            // Enter: taslak satır sonu olarak bırakılır (tarayıcı varsayılanı) —
-            // kaydetme yalnızca "Kaydet" butonuyla, yanlışlıkla Enter'da
-            // erken kaydetme yok.
         });
 
-        // Dışarı tıklayınca İptal (kaydetmeden kapan) — aynı tetikleyici click'in
-        // hemen kendisini yakalamaması için bir sonraki turda bağlanır.
         function outsideClickHandler(e) {
             if (!popover.contains(e.target)) {
                 cancel();
@@ -1039,14 +840,6 @@
         }, 0);
     }
 
-    // Dosya listesi + "dosya seç" girişini içeren, tek başına kullanılabilir
-    // widget — grid.js'nin hücre popover'ı (startAttachmentEdit, aşağıda) VE
-    // grid-row-detail.js'nin genişletme paneli AYNI bu fonksiyonu window.BCC_GRID
-    // üzerinden çağırır, liste/yükle/sil mantığı iki yerde ayrı ayrı yazılmaz.
-    // Her yükleme/silme KENDİ AJAX isteğiyle ANINDA etkili (kayıt ekleme/silmeyle
-    // AYNI felsefe) — ayrı bir "Kaydet" adımı yok. onChange(files), çağıran
-    // tarafın kendi görünümünü (canlı <td> ise data-attachments + .cell-view,
-    // panelde ise yalnızca liveTd varsa) senkron tutması için her değişiklikte çağrılır.
     function buildAttachmentManager(recordId, fieldId, initialFiles, onChange) {
         var files = (initialFiles || []).slice();
         var container = document.createElement('div');
@@ -1115,15 +908,8 @@
         fileInput.type = 'file';
         fileInput.accept = '.png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
         fileInput.className = 'attachment-file-input';
-        // Bulunan gerçek bug: input DOĞRUDAN görünür eklendiğinde tarayıcının
-        // kendi native "Dosya Seç" butonu ÇOK küçük, dolgulu kesikli çerçevenin
-        // geri kalanı tıklanmıyordu. Artık gizli (hidden) — <label> ile sarmalanıp
-        // (aşağıda) kutunun HERHANGİ bir yerine tıklamak native olarak dosya
-        // diyaloğunu açıyor, ayrı bir onclick/.click() JS'i gerekmiyor.
         fileInput.hidden = true;
 
-        // change (native seçim) VE drop (sürükle-bırak) AYNI upload mantığını
-        // çağırır — uploadAttachment()'a HİÇ dokunulmadı, ikinci bir kopya yok.
         function handleFileSelected(file) {
             if (!file) {
                 return;
@@ -1146,11 +932,6 @@
             handleFileSelected(fileInput.files[0]);
         });
 
-        // OpsFlow'daki "Drop files here or click to browse" davranışı: TÜM kutu
-        // tıklanabilir (native <label> davranışı) + sürükle-bırak. Projede daha
-        // önce hiç drag/drop altyapısı yoktu (grep ile doğrulandı), burada
-        // eklendi — yalnızca preventDefault + görsel .is-dragover durumu,
-        // gerçek yükleme yine handleFileSelected() üzerinden.
         var dropzone = document.createElement('label');
         dropzone.className = 'attachment-dropzone';
         var dropzoneText = document.createElement('span');
@@ -1180,9 +961,6 @@
         return container;
     }
 
-    // Hücreye tıklayınca açılan popover — buildAttachmentManager()'ı kapatma
-    // çerçevesiyle (dışarı tık/Escape/Kapat butonu) sarar, td'nin
-    // data-attachments'ını VE görünür .cell-view'ını senkron tutar.
     function startAttachmentEdit(td) {
         if (td.classList.contains('editing')) {
             return;
@@ -1224,19 +1002,9 @@
         }
         td.appendChild(popover);
 
-        // Ek dosya popover'ı da AYNI kırpılma bugunu taşıyordu: CSS'te
-        // position:absolute idi, yani .grid-wrap { overflow:auto } kutusuna
-        // kırpılıyordu — alt satırlarda ve en sağdaki sütunlarda görünmez
-        // oluyordu. Richtext popover'ıyla AYNI çözüme bağlandı (CSS artık
-        // position:fixed; konum ortak yardımcıdan).
         function positionPopover() {
             window.bcc_positionFloating(popover, td.getBoundingClientRect());
         }
-        // Donuk (sticky) bir sutunda bu <td> KENDI yigilma baglamini kurar;
-        // popover in z-index i ne olursa olsun o kutunun disina cikamaz --
-        // donuk kenar cizgisi ve sutun genisligi tutamaclari uzerine binerdi.
-        // Yukselmesi gereken panel degil, BARINDIRAN HUCRE (ortak yardimci,
-        // bkz. dismissable-panel.js -- sutun basligi menusuyle AYNI kok neden).
         window.bcc_raiseFloatingHost(popover, true);
         positionPopover();
         window.addEventListener('scroll', positionPopover, true);
@@ -1292,18 +1060,13 @@
 
         grid.addEventListener('click', function (e) {
             if (e.target.matches('input[type="checkbox"].cell-checkbox')) {
-                return; // change olayı hallediyor
+                return;
             }
-            // Rating: checkbox İLE AYNI "girmeden doğrudan tıkla-kaydet" deseni —
-            // startEdit()'in input-aç/blur-ile-kaydet akışına HİÇ girmez. Aynı
-            // yıldıza TEKRAR tıklamak değerlendirmeyi TEMİZLER (0'a döner) —
-            // OpsFlow'un kendi davranışı, "yanlışlıkla verdiğim puanı nasıl
-            // sileceğim" sorusuna native bir cevap.
             var star = e.target.closest('.rating-star');
             if (star) {
                 var ratingView = star.closest('.rating-view-editable');
                 if (!ratingView) {
-                    return; // salt-okunur (canEdit=false) — .rating-view-editable class'ı yok
+                    return;
                 }
                 var ratingTd = ratingView.closest('td');
                 var clickedValue = parseInt(star.getAttribute('data-rating-star'), 10);
@@ -1312,25 +1075,12 @@
                 saveCell(ratingTd, String(nextValue));
                 return;
             }
-            // Grup A: "yeni sekmede aç" ikonuna tıklama düzenlemeyi AÇMAZ —
-            // tarayıcı <a>'nın kendi navigasyonunu yapar, biz sadece bu
-            // dinleyicinin devamını (startEdit) durdururuz. Hücrenin GERİ KALANINA
-            // tıklamak her zamanki gibi düzenlemeyi açar; bu yüzden metnin kendisi
-            // bilerek <a> DEĞİL (bkz. bcc_render_linkified_cell yorumu).
             if (e.target.closest('.cell-link-icon')) {
                 e.stopPropagation();
                 return;
             }
-            // Zengin metnin İÇİNE gömülü link (long_text): AYNI desen — tıklama
-            // düzenlemeyi AÇMAZ, tarayıcı linki kendi açar. Grup A'dan farkı,
-            // burada linkleşen şeyin metnin KENDİSİ olması (kullanıcı <a>'yı
-            // seçtiği metnin üzerine kuruyor); hücrenin link DIŞINDAKİ kısmına
-            // tıklamak her zamanki gibi düzenlemeyi açar.
             var richLink = e.target.closest('.rich-text-view a');
             if (richLink) {
-                // Sunucu (bcc_build_safe_link) zaten target/rel yazıyor; bu iki
-                // satır, o attribute'lar eklenmeden ÖNCE kaydedilmiş eski
-                // satırların da yeni sekmede açılmasını garantiler.
                 richLink.target = '_blank';
                 richLink.rel = 'noopener noreferrer';
                 e.stopPropagation();
@@ -1346,16 +1096,12 @@
             } else if (fieldType === 'attachment') {
                 startAttachmentEdit(td);
             } else if (fieldType === 'rating') {
-                return; // yıldızlara tıklama yukarıda ele alındı, boş alana tıklamak hiçbir şey yapmaz
+                return;
             } else {
                 startEdit(td);
             }
         });
 
-        // Rating hover-önizleme: fareyle üzerine gelince o yıldıza kadar
-        // GEÇİCİ olarak dolu gösterir (OpsFlow davranışı), fare ayrılınca
-        // GERÇEK değere (data-value) geri döner — mouseover/mouseout event
-        // delegation ile (grid'e TEK dinleyici, satır sayısına göre çoğalmaz).
         grid.addEventListener('mouseover', function (e) {
             var star = e.target.closest('.rating-star');
             if (!star) {
@@ -1397,13 +1143,9 @@
             });
         });
 
-        // Tablo tabanı "+" satırı: addRecord() fonksiyonunu tetikler.
         var addRow = document.querySelector('[data-grid-add-row]');
         if (addRow) {
             addRow.addEventListener('click', function (e) {
-                // Satırın SAĞINDAKİ toplu ekleme kutusu bu satırın içinde duruyor:
-                // oraya yapılan tıklama "tek satır ekle"yi TETİKLEMEMELİ (yoksa
-                // sayıyı yazarken kazara boş satır açılırdı).
                 if (e.target && e.target.closest && e.target.closest('[data-grid-add-bulk]')) {
                     return;
                 }
@@ -1411,8 +1153,6 @@
             });
         }
 
-        // Toplu ekleme: sayı gir, o kadar boş satır TEK istekte açılsın.
-        // "+" satırıyla AYNI addRecord() çağrılır — ikinci bir yol yok.
         var bulkWrap = document.querySelector('[data-grid-add-bulk]');
         if (bulkWrap) {
             var bulkInput = bulkWrap.querySelector('[data-grid-add-bulk-count]');
@@ -1430,9 +1170,6 @@
                     }
                 }
 
-                // İstek sürerken buton kilitlenir: çift tıklama iki kat satır açardı
-                // (addingRecord bayrağı zaten sessizce yutuyordu ama kullanıcı
-                // "olmadı" sanıp tekrar basıyordu).
                 if (bulkBtn) {
                     bulkBtn.disabled = true;
                 }
@@ -1443,7 +1180,6 @@
                 bulkBtn.addEventListener('click', runBulk);
             }
             if (bulkInput) {
-                // Enter: kutunun içindeyken doğrudan ekler (butona uzanmaya gerek yok).
                 bulkInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1454,10 +1190,6 @@
             }
         }
 
-        // Shift+Enter: herhangi bir hücredeyken (input/select/td, textarea VE
-        // zengin metin editörü HARİÇ — orada satır atlamalı) aktif kaydın hemen
-        // altına ekler — yukarıdaki "+" satırıyla AYNI addRecord() fonksiyonu,
-        // ikinci bir mekanizma yok.
         document.addEventListener('keydown', function (e) {
             if (!e.shiftKey || e.key !== 'Enter') {
                 return;
@@ -1480,10 +1212,6 @@
             addRecord(row.getAttribute('data-record-id'), row);
         });
 
-        // Kaydedilebilir görünümler: "Save view" menü öğesi, ekranda görünen
-        // sort/filter/group/hidden fields/row height/wrap headers durumunu
-        // views.config'e yazar (view_save_state.php). Sonraki ziyarette grid.php
-        // parametresiz açılırsa bu state'e otomatik yönlendirir (redirect).
         var saveViewBtn = document.getElementById('gs-view-save-state-btn');
         if (saveViewBtn) {
             saveViewBtn.addEventListener('click', function () {
@@ -1494,24 +1222,6 @@
                     state_query_string: window.location.search.replace(/^\?/, ''),
                 }).then(function (result) {
                     if (result.httpOk && result.data && result.data.ok) {
-                        // KAYDETME KORUNUYOR — kopyalama ONUN ÜSTÜNE eklendi.
-                        //
-                        // Neden ikisi birden: kaydetmenin görünür bir sonucu yok
-                        // (etkisi ancak sayfa yeniden açılınca ortaya çıkıyor),
-                        // bu yüzden buton "hiçbir şey yapmıyor" gibi okunuyordu.
-                        // Artık aynı tıklama tabloyu panoya da yazıyor: Excel /
-                        // Airtable / LibreOffice'e Ctrl+V VEYA sağ tık →
-                        // Yapıştır ile doğrudan geçiyor (gerçek sistem panosuna
-                        // yazılıyor, uygulama içi bir tampona değil).
-                        //
-                        // Pano mantığı BURADA DEĞİL: grid-copy.js'in
-                        // BCC_GRID_COPY yüzeyinden geliyor — Ctrl+C ile AYNI
-                        // biçim sözleşmesi (text/plain okunaklı, text/html'de
-                        // ham değer), ikinci bir uygulama yok.
-                        //
-                        // Kopyalama BAŞARISIZ olursa kaydetme yine BAŞARILIDIR;
-                        // mesaj bunu ayırt ediyor, yoksa kullanıcı kaydın da
-                        // gitmediğini sanardı.
                         var copy = window.BCC_GRID_COPY
                             ? window.BCC_GRID_COPY.copyWholeTable()
                             : null;
@@ -1535,10 +1245,6 @@
         }
     });
 
-    // grid-row-detail.js (satır genişletme paneli) için paylaşılan yüzey —
-    // cell_update.php'yi ikinci kez çağıran/yazan kod olmasın diye. grid.php'de
-    // bu script HER ZAMAN grid-row-detail.js'den ÖNCE yüklenir (defer sırası
-    // doküman sırasına uyar), bu yüzden window.BCC_GRID orada hazır olur.
     window.BCC_GRID = {
         postCellValue: postCellValue,
         applyCellResultToTd: applyCellResultToTd,
@@ -1549,9 +1255,6 @@
         renderAttachmentChips: renderAttachmentChips,
         buildAttachmentManager: buildAttachmentManager,
         renumberRows: renumberRows,
-        // grid-copy.js (kopyala/kes/temizle) geri bildirimi BU fonksiyonla
-        // veriyor — ikinci bir toast markup'ı/CSS'i yazılmasın diye dışa
-        // açıldı. Uygulaması değişmedi.
         showToast: showToast,
     };
 })();

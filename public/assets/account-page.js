@@ -5,20 +5,8 @@
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var CSRF = csrfMeta ? csrfMeta.content : '';
 
-        // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
-        // Ayni govde bes dosyada tekrar ediyordu, ucu birebir ayniydi.
         var post = window.bcc_post;
 
-        // ---- Ad Soyad / E-posta satırları — OpsFlow'daki "Edit name" deseni:
-        // "Düzenle" tıklanınca görünüm satırı gizlenip inline form açılır, aynı
-        // form hem Kaydet hem İptal'i yönetir. İkisi de AYNI genel davranışı
-        // paylaşır (data-account-field/data-account-endpoint) — ikinci bir kopya
-        // yazılmadı, yalnızca sunucu tarafı doğrulaması alan başına farklı.
-        // E-posta formunda AYRICA bir "current_password" alanı var (giriş
-        // kimliğini değiştirdiği için şifre/hesap-sil akışlarıyla AYNI mevcut-
-        // şifre doğrulaması gerekir) — Ad Soyad'da yok, bu yüzden formda
-        // input[name="current_password"] var mı diye bakılıp varsa gönderiliyor,
-        // genel döngü yine de tek kopya kalıyor.
         Array.prototype.forEach.call(document.querySelectorAll('.account-row[data-account-field]'), function (row) {
             var field = row.getAttribute('data-account-field');
             var display = row.querySelector('[data-account-display]');
@@ -87,8 +75,6 @@
             });
         });
 
-        // ---- Şifre güncelleme — ayrı akış (3 alan, ekranda gösterilecek bir
-        // "değer" yok, başarıdan sonra form sıfırlanıp kapanır).
         var pwRow = document.getElementById('account-password-trigger');
         var pwForm = document.getElementById('account-password-form');
         var pwCancel = document.getElementById('account-password-cancel');
@@ -141,14 +127,6 @@
             });
         }
 
-        // ---- Hesabı PASİFE AL — şifre güncelleme bloğuyla AYNI aç/kapa deseni,
-        // başarıda ise form sıfırlanmaz (sayfa zaten redirect ile terk edilir).
-        //
-        // ⚠️ Eskiden burası "Hesabı sil" idi ve /api/account_delete.php'ye POST
-        // atıyordu. Hesap silme TAMAMEN kaldırıldı (bkz. api/account_deactivate.php
-        // baş yorumu): hiçbir kullanıcı, rolü ne olursa olsun, kendi hesabını
-        // silemez. Bu blok yalnızca UX; asıl kural sunucuda — silme uçnoktası
-        // artık YOK, yani bu dosya değiştirilse bile silinecek bir yol kalmadı.
         var delTrigger = document.getElementById('account-deactivate-trigger');
         var delForm = document.getElementById('account-deactivate-form');
         var delCancel = document.getElementById('account-deactivate-cancel');

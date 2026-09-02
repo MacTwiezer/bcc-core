@@ -1,27 +1,6 @@
 (function () {
     'use strict';
 
-    // Ortak "dışarı tıklayınca / Escape ile kapan" yardımcısı — grid-table-tabs.js'teki
-    // .gs-table-tab-menu grubunun (Bölüm D'de merkezileştirilen, çoklu-eleman +
-    // karşılıklı-dışlama deseni) TEK-ELEMAN sürümü genelleştirilerek çıkarıldı.
-    // home.js/grid-view-manage.js/grid-row-detail.js'teki 6 AYRI kopya artık bunu
-    // ÇAĞIRIYOR — kapanma koşulları (davranış) AYNI kaldı, yalnızca kod tek yerde.
-    // (grid-table-tabs.js'in kendisi DOKUNULMADI: o zaten karşılıklı-dışlamalı bir
-    // GRUP yönetiyor, bu yardımcı tek elemanlık dismiss'i soyutluyor — grup mantığı
-    // gerektiren yerler, ör. home.js'teki .home-base-more-menu, bu yardımcıyı HER
-    // eleman için ayrı ayrı çağırıp kendi karşılıklı-dışlama mantığını üstte tutar.)
-    //
-    // el: varsayılan olarak native <details> (open özniteliği) varsayar. Başka bir
-    // açık/kapalı göstergesi olan elemanlar (ör. .hidden ile açılıp kapanan modal
-    // overlay'ler) isOpen/close override ederek de kullanabilir.
-    //
-    // options.isOpen()               - (opsiyonel) varsayılan: el.hasAttribute('open')
-    // options.close()                - (opsiyonel) varsayılan: el.removeAttribute('open')
-    // options.isClickOutside(target) - (opsiyonel) varsayılan: !el.contains(target);
-    //     tam ekran backdrop'lu overlay'ler (yalnızca backdrop'a tıklayınca kapanan,
-    //     modal içeriğine tıklayınca kapanmayan) target === el şeklinde override eder —
-    //     bkz. grid-view-manage.js / grid-row-detail.js.
-    // options.onClose()              - (opsiyonel) kapanınca ek temizlik
     window.bcc_bindDismissable = function (el, options) {
         options = options || {};
         var isOpen = options.isOpen || function () { return el.hasAttribute('open'); };
@@ -44,54 +23,6 @@
         });
     };
 
-    // Ortak YÜZEN panel konumlandırması. Bu blok daha önce grid-add-field.js ve
-    // grid-column-menu.js'de BİREBİR kopyalanmıştı (ikisinin de yorumu "AYNI
-    // teknik" diyordu); "+ Yeni oluştur..." menüsü üçüncü kopyayı gerektirince
-    // buraya çıkarıldı.
-    //
-    // Neden position:fixed: bu panellerin atası .grid-wrap { overflow: auto }
-    // taşıyor — absolute konumlandırma panelin o kaydırma kutusuna kırpılmasına
-    // yol açardı. fixed viewport'a göre konumlanır, kırpılmaz; bedeli, konumun
-    // JS'te hesaplanması ve scroll/resize'da tazelenmesi.
-    //
-    // menu   : <details> (open özniteliği izlenir)
-    // panel  : konumlanacak kutu
-    // anchor : konumun hesaplanacağı eleman (genellikle <summary>)
-    // options.align : 'left' (varsayılan) | 'right' — panelin hangi kenarının
-    //                 anchor'a hizalanacağı
-    // options.gap   : anchor ile panel arası dikey boşluk (varsayılan 4px)
-    // Yüzen bir kutuyu bir ANCHOR DİKDÖRTGENİNE göre konumlandırır ve viewport
-    // içinde tutar. bcc_bindFloatingPanel'in içinden çıkarıldı çünkü hücre
-    // düzenleme popover'ları (grid.js: richtext + ek dosya) <details> DEĞİL —
-    // zorunlu olarak yaratılıp yok ediliyorlar, yani toggle'a bağlı sarmalayıcıyı
-    // kullanamıyorlar ama AYNI konumlandırma matematiğine ihtiyaç duyuyorlar.
-    // Tek uygulama: buradaki bir düzeltme her iki çağrı yerine de gider.
-    //
-    // panel   : konumlanacak kutu (position: fixed olmalı)
-    // rect    : anchor'ın getBoundingClientRect()'i
-    // options : align ('left'|'right'), gap (px)
-    // ---------------------------------------------------------------------
-    // YÜZEN PANELİ BARINDIRAN HÜCREYİ YIĞINDA YÜKSELT
-    // ---------------------------------------------------------------------
-    // ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): sütun başlığındaki "▾" menüsü
-    // açıldığında donuk sütunun kenar çizgisi ve sütun genişliği tutamaçları
-    // menünün ÜSTÜNE biniyordu.
-    //
-    // KÖK NEDEN — panelin `z-index: 30`'u işe yaramıyor: panel bir <th>/<td>
-    // İÇİNDE duruyor ve grid'in hücreleri `position: sticky` + `z-index`
-    // taşıyor (sticky başlık 2, donuk hücreler 1/3). z-index'li konumlandırılmış
-    // her öğe KENDİ YIĞILMA BAĞLAMINI kurar, yani panelin 30'u yalnızca O
-    // hücrenin içinde geçerlidir — dışarıdaki `.grid-col-resize-layer`
-    // (z-index 4) ve komşu sticky hücrelerle yarışan şey panelin kendisi değil,
-    // BARINDIRAN HÜCREdir. Paneli daha yükseğe çekmek bu yüzden hiçbir işe
-    // yaramaz; yükselmesi gereken hücredir.
-    //
-    // position:fixed de kurtarmıyor: fixed öğeler viewport'a göre KONUMLANIR
-    // ama yığılma bağlamından ÇIKMAZ.
-    //
-    // Çözüm: panel açıkken barındıran hücreye bir sınıf eklenir, kapanınca
-    // kaldırılır (CSS: table.grid .grid-floating-host). Panel <th>/<td> içinde
-    // değilse hiçbir şey yapılmaz — grid dışındaki çağrı yerleri etkilenmez.
     window.bcc_raiseFloatingHost = function (panel, on) {
         if (!panel || !panel.closest) {
             return;
@@ -106,15 +37,8 @@
         options = options || {};
         var align = options.align === 'right' ? 'right' : 'left';
         var gap = typeof options.gap === 'number' ? options.gap : 4;
-        var margin = 8; // viewport kenarlarına bırakılan pay
+        var margin = 8;
 
-        // ⚠️ ÖNCE ÖLÇÜ BİRİMİ EŞİTLENİR (bkz. assets/theme-init.js
-        // bcc_uiScale): rect ve innerWidth/innerHeight GÖRSEL piksel, ama
-        // aşağıda onlarla birlikte kullanılan panel.offsetWidth/offsetHeight ve
-        // panel.style'a YAZILAN değerler YERLEŞİM pikseli. Büyük ekranda
-        // (:root { zoom } devrede) ikisi karışınca panel tam olarak zoom oranı
-        // kadar kayıyordu. Her şey burada yerleşim pikseline çevrilir; zoom 1
-        // olan ekranlarda bölme etkisizdir, yani eski davranış birebir korunur.
         var uiScale = window.bcc_uiScale ? window.bcc_uiScale() : 1;
         if (uiScale !== 1) {
             rect = {
@@ -127,14 +51,6 @@
         var viewportW = window.innerWidth / uiScale;
         var viewportH = window.innerHeight / uiScale;
 
-        // ---- DİKEY: aşağı sığmıyorsa YUKARI ÇEVİR ----
-        // Bulunan gerçek bug: konum koşulsuz "anchor'ın ALTI" idi. Alt
-        // satırlardaki (ör. 8./9. satır) hücrelerde popover ekranın altından
-        // taşıp kırpılıyordu. Önce ölçüp hangi tarafta daha çok yer varsa
-        // oraya koyuyoruz; hiçbir tarafa tam sığmıyorsa yüksekliği kırpıp
-        // içeriği kaydırılabilir yapıyoruz (kırpmak yerine).
-        // max-height her seferinde SIFIRLANIR: aksi halde bir kez daralan
-        // panel, yer açıldığında dar kalırdı.
         panel.style.maxHeight = '';
         var panelHeight = panel.offsetHeight || 0;
         var spaceBelow = viewportH - rect.bottom - gap - margin;
@@ -154,10 +70,7 @@
             panel.style.bottom = (viewportH - rect.top + gap) + 'px';
         }
 
-        // ---- YATAY ----
         if (align === 'right') {
-            // Sağ kenarı anchor'ın sağına hizala. Dar ekranda panel sola
-            // taşarsa sol kenardan margin kadar içeri çekilir.
             var rightOffset = viewportW - rect.right;
             var pw = panel.offsetWidth || 0;
             if (rightOffset + pw > viewportW - margin) {
@@ -171,9 +84,6 @@
             return;
         }
 
-        // Sol hizalama + taşma koruması: grid-column-menu.js'de bulunmuş
-        // gerçek bug (en sağdaki sütunlarda panel viewport'un sağından
-        // taşıyordu) burada TÜM yüzen paneller için geçerli.
         var left = rect.left;
         var panelWidth = panel.offsetWidth || 0;
         if (left + panelWidth > viewportW - margin) {
@@ -191,14 +101,6 @@
             window.bcc_positionFloating(panel, anchor.getBoundingClientRect(), options);
         }
 
-        // Bulunan gerçek bug (iki kopyada da vardı): konum yalnızca AÇILIŞTA
-        // hesaplanıyordu — panel açıkken sayfa kaydırılırsa anchor kayarken panel
-        // ekranda sabit kalıp butondan kopuyordu. scroll capture ile dinlenir
-        // (herhangi bir ATA kaydırma kutusu da yakalansın diye).
-        //
-        // ⚠️ resize dinleyicisi İKİ ESKİ KOPYADA DA YOKTU — pencere yeniden
-        // boyutlandırılınca panel yine kopuyordu. Ortak yardımcıya taşınırken
-        // eklendi, yani bu düzeltme her iki eski çağrı yerine de bedava geldi.
         function attach() {
             window.addEventListener('scroll', position, true);
             window.addEventListener('resize', position);
@@ -209,10 +111,6 @@
             window.removeEventListener('resize', position);
         }
 
-        // Barındıran hücreyi yükseltme de BURADA: bu yardımcıdan geçen ÜÇ menü
-        // de (sütun başlığı ▾, "+ alan ekle", "+ yeni görünüm") aynı düzeltmeyi
-        // tek yerden alıyor — hücre içinde olmayanlarda sessizce hiçbir şey
-        // yapmıyor (bkz. bcc_raiseFloatingHost).
         menu.addEventListener('toggle', function () {
             if (!menu.open) {
                 window.bcc_raiseFloatingHost(panel, false);
@@ -229,54 +127,20 @@
 (function () {
     'use strict';
 
-    // ---------------------------------------------------------------------
-    // GENEL (OTOMATİK) DIŞARI-TIK / ESCAPE KAPATMA
-    // ---------------------------------------------------------------------
-    // Yukarıdaki bcc_bindDismissable() TEK bir elemanı bağlar ve çağıran onu
-    // açıkça çağırmak zorundadır. Sorun tam olarak buydu: bir <details> popover
-    // eklenip bu çağrı UNUTULDUĞUNDA panel dışarı tıklayınca kapanmıyor,
-    // Escape'e cevap vermiyordu — sessiz bir kusur, çünkü panel diğer her
-    // açıdan çalışıyor görünüyor.
-    //
-    // Ölçülen gerçek durum (denetim): interface.php'deki ÜÇ popover'ın da
-    // (nav menüsü, "Paylaş" katılımcı popover'ı, "Bağlantı" popover'ı)
-    // dışarı-tık ve Escape davranışı YOKTU. Sebep: o davranış grid'e özel
-    // assets/grid-table-tabs.js içinde, YALNIZCA name="gs-table-tab-menu"
-    // grubu için yazılmıştı ve o dosya interface.php'de hiç yüklenmiyor.
-    //
-    // Çözüm, o mantığı ORTAK dosyaya taşımak ve KAYIT GEREKTİRMEZ hâle
-    // getirmek: sayfadaki HER <details> otomatik kapsanır. Böylece ileride
-    // eklenecek bir popover "listeye yazılmayı" unutamaz.
-    //
-    // KAPSAM: bu projedeki her <details> bir menü/popover'dır (denetlendi:
-    // araç çubuğu panelleri, sütun başlığı menüsü, paylaşım popover'ları,
-    // nav menüleri, bildirimler, arama). İleride içerik açar-kapar bir
-    // <details> gerekirse ona data-no-auto-dismiss eklemek yeterli.
-    //
-    // NEDEN pointerdown DEĞİL click: pointerdown, kullanıcı popover içindeki
-    // bir metni seçmek için dışarıda basıp içeride bırakırken (ya da tersi)
-    // erken kapatırdı. click yalnızca basma+bırakma AYNI hedefte olduğunda
-    // oluşur, yani seçim/sürükleme jestlerini bozmaz.
 
     function isAutoDismissable(details) {
         return !details.hasAttribute('data-no-auto-dismiss');
     }
 
     function openDetails() {
-        // Her olayda YENİDEN sorgulanıyor (önbelleğe alınmıyor): sonradan
-        // DOM'a eklenen popover'lar da kendiliğinden kapsansın.
         return Array.prototype.slice.call(document.querySelectorAll('details[open]'));
     }
 
-    // ---- Dışarı tıklama ----
     document.addEventListener('click', function (e) {
         openDetails().forEach(function (details) {
             if (!isAutoDismissable(details)) {
                 return;
             }
-            // İÇERİDEKİ tıklama kapatmaz (bağlantı kopyalama, input'a yazma,
-            // rol seçme...) — gereksinim 3. contains() summary'yi de kapsar,
-            // yani tetikleyiciye tıklamak da normal aç/kapa olarak çalışır.
             if (details.contains(e.target)) {
                 return;
             }
@@ -284,11 +148,6 @@
         });
     });
 
-    // ---- Escape ----
-    // capture:false ve stopPropagation'a SAYGILI: panel içindeki arama
-    // kutuları (grid "Alan ara", çalışma alanı araması...) ilk Escape'te
-    // yalnızca metni temizleyip olayı durduruyor; panel ikinci Escape'te
-    // kapanıyor. Bu, o kutuların bilinçli davranışı.
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') {
             return;
@@ -300,10 +159,6 @@
         });
     });
 
-    // ---- Aynı gruptan yalnızca biri açık kalsın ----
-    // <details name="X"> modern tarayıcılarda bunu KENDİSİ yapıyor; eski
-    // Firefox/Safari desteklemiyor. Aşağısı o tarayıcılar için yedek.
-    // 'toggle' olayı KABARMADIĞI için eleman başına bağlanmak zorunda.
     document.addEventListener('DOMContentLoaded', function () {
         var named = document.querySelectorAll('details[name]');
 

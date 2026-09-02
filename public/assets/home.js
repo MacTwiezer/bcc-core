@@ -2,38 +2,16 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Tarih filtresi (<details id="home-filter">): açma/kapama tamamen native
-        // (JS'siz de çalışır) — burada yalnızca projedeki ortak "dışarı tıklayınca /
-        // Escape ile kapanma" deseni ekleniyor (bkz. assets/dismissable-panel.js).
         var filterDetails = document.getElementById('home-filter');
         if (filterDetails) {
             window.bcc_bindDismissable(filterDetails);
         }
 
-        // Global arama (Ctrl+K / Cmd+K popover) ARTIK BURADA DEĞİL —
-        // assets/global-search.js'e taşındı ve TÜM sayfalarda (grid.php dahil)
-        // çalışıyor. Buradaki eski sürüm, kısayolu da dahil olmak üzere
-        // tamamen `#home-base-grid` var mı kontrolünün içindeydi; o yüzden
-        // workspaces.php / team_members.php / boş dashboard'da Ctrl+K ÖLÜYDÜ.
-        // Kart silindiğinde arama listesini güncelleme kancası:
-        // window.bcc_searchRemoveItem(baseId).
 
-        // Yıldız (favori) toggle — .home-base-card'ın sağ üst köşesindeki
-        // yıldız butonu. Sunucu: /api/star_base.php (CSRF + require_team_access,
-        // user_starred_bases'te INSERT/DELETE toggle). Sol paneldeki "Starred"
-        // listesi DOM'da anında güncellenir — ad/href zaten karttan okunur,
-        // ikinci bir sorgu YOK. JS yalnızca listenin SONUNA ekler (alfabetik
-        // sıralama yeniden yüklemede sunucudan gelir, kabul edilebilir küçük fark).
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var CSRF_TOKEN = csrfMeta ? csrfMeta.content : '';
         var starredList = document.getElementById('home-starred-list');
 
-        // ⋯ artık gerçek bir menü açıyor (Open > Interface / Duplicate) — bkz.
-        // aşağıdaki "..." menü bağlama bloğu. Eski dekoratif preventDefault()
-        // (⋯ bir <button> iken eklenmişti) KALDIRILDI: artık bir <summary>,
-        // preventDefault() native <details> açılmasını ENGELLERDİ. Kartın
-        // (bir <a>) navigasyonunu engelleme işini aşağıdaki blok zaten
-        // stopPropagation() ile (preventDefault OLMADAN) yapıyor.
 
         Array.prototype.forEach.call(document.querySelectorAll('.home-base-star-btn'), function (btn) {
             btn.addEventListener('click', function (e) {
@@ -88,12 +66,6 @@
                         nameSpan.textContent = name;
                         item.appendChild(nameSpan);
 
-                        // Liste artık ÇALIŞMA ALANINA göre gruplu (bkz.
-                        // home_shell_top.php + bcc_group_starred_bases_by_team):
-                        // öğe düz listenin sonuna DEĞİL, kendi ekibinin grubuna
-                        // eklenir. O ekibin ilk yıldızıysa grup burada kurulur —
-                        // aksi hâlde base, yeniden yükleyene kadar yanlış ekibin
-                        // altında görünürdü.
                         var teamId = card.getAttribute('data-team-id');
                         var group = teamId
                             ? starredList.querySelector('.home-starred-group[data-starred-team-id="' + teamId + '"]')
@@ -115,13 +87,8 @@
                             starredList.appendChild(group);
                         }
 
-                        // teamId yoksa (kart team_id basmamış) eski davranış:
-                        // listenin sonuna. Sıralama yeniden yüklemede sunucudan
-                        // gelir — kabul edilebilir küçük fark (eski notla aynı).
                         (group || starredList).appendChild(item);
                     } else if (!data.starred && existingItem) {
-                        // Grubun SON yıldızıysa başlık da gitmeli, yoksa altı boş
-                        // bir ekip adı kalırdı.
                         var oldGroup = existingItem.closest('.home-starred-group');
                         existingItem.remove();
                         if (oldGroup && !oldGroup.querySelector('.home-starred-item')) {
@@ -129,16 +96,7 @@
                         }
                     }
 
-                    // starred.php'de ana grid'in KENDİSİ "yıldızlı base'ler"
-                    // listesi — unstar edilen kart artık oraya ait değil, hemen
-                    // kaldırılır. Son kart kaldırılıyorsa boş-durum mesajını JS'de
-                    // yeniden inşa etmek yerine (sunucudaki tek doğruluk kaynağını
-                    // tekrar etmemek için) sayfa yeniden yüklenir.
                     if (!data.starred && window.location.pathname.indexOf('/starred.php') !== -1) {
-                        // Sayfada birden çok ızgara olabildiği için (bkz. görünüm
-                        // değiştiricideki not) kart sayısı TÜM ızgaralarda sayılır.
-                        // starred.php bugün gruplamıyor ama sayım yine de tek bir
-                        // kaba bağlı kalmasın.
                         if (document.querySelectorAll('.home-base-grid .home-base-card').length <= 1) {
                             window.location.reload();
                             return;
@@ -151,19 +109,9 @@
             });
         });
 
-        // "..." menüsü (Open > Interface / Duplicate) — grid-table-tabs.js'deki
-        // <details>+dışarı-tık+Escape deseninin AYNISI (birden fazla kart, her
-        // birinin kendi menüsü var; toggle olayı diğerlerini kapatır). Panel
-        // position:fixed olduğu için (bkz. home.css — liste modunun
-        // overflow:hidden'ından kaçınmak için) açılışta konumu JS hesaplıyor.
         var moreMenus = Array.prototype.slice.call(document.querySelectorAll('.home-base-more-menu'));
-        var menuEntries = []; // {menu, panel} — dışarı-tık/Escape kontrolü panel.contains() de bakmalı (aşağıya bkz.)
+        var menuEntries = [];
 
-        // ⚠️ uiScale ŞART (bkz. assets/theme-init.js bcc_uiScale): rect ve
-        // innerWidth GÖRSEL piksel, style'a yazdığımız değer YERLEŞİM pikseli.
-        // Büyük ekranda (:root { zoom }) bölme yapılmazsa panel tam olarak zoom
-        // oranı kadar aşağı-sola kayar — kullanıcının bildirdiği hata buydu,
-        // dizüstünde zoom 1 olduğu için orada görünmüyordu.
         function positionPanelBelow(panel, anchorEl) {
             var rect = anchorEl.getBoundingClientRect();
             var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
@@ -217,9 +165,6 @@
 
             menu.addEventListener('toggle', function () {
                 if (!menu.open) {
-                    // Kapanınca kendi alt menüsünü de sıfırla — tekrar açılışta
-                    // "Open" önceden genişlemiş görünmesin — VE panel'i (aşağıda
-                    // <body>'ye taşınmışsa) menünün içine geri koy.
                     if (subMenu && subMenu.open) {
                         subMenu.removeAttribute('open');
                     }
@@ -237,19 +182,8 @@
                 });
 
                 if (panel && summary) {
-                    // .home-base-card:hover { transform: translateY(-1px); }
-                    // (mevcut, önceki işten) position:fixed torunları için YENİ
-                    // bir containing block oluşturuyor — panel viewport'a göre
-                    // DEĞİL, dönüştürülmüş karta göre "fixed" oluyordu (yanlış
-                    // konum). Açılışta panel <body>'ye taşınır (alt menüsüyle
-                    // BİRLİKTE — appendChild tüm alt ağacı taşır), kapanışta
-                    // menünün içine geri döner.
                     document.body.appendChild(panel);
                     repositionPanel();
-                    // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —
-                    // grid-column-menu.js/grid-table-data.js/grid-view-manage.js'de
-                    // bulunan AYNI sorun. Sayfa kaydırılırsa kart kayarken panel
-                    // ekranda sabit kalıp kopuyordu. Scroll'da yeniden konumlandırılır.
                     window.addEventListener('scroll', repositionPanel, true);
                 }
             });
@@ -267,9 +201,6 @@
         });
 
         if (menuEntries.length) {
-            // Panel açılışta <body>'ye taşındığı için (yukarıda) "dışarısı" kontrolü
-            // hem menu hem panel'e bakmalı — bcc_bindDismissable'ın varsayılan
-            // el.contains() kontrolü tek başına yetmez, isClickOutside override edilir.
             menuEntries.forEach(function (entry) {
                 window.bcc_bindDismissable(entry.menu, {
                     isClickOutside: function (target) {
@@ -279,17 +210,6 @@
             });
         }
 
-        // "Duyuru" (Aç > Duyuru) ve kartın "Tabloya git" kısayolu: gerçek <a>
-        // DEĞİL (kartın kendisi zaten bir <a> — iç içe <a> HTML ayrıştırıcısı
-        // tarafından otomatik kapatılıp yapı bozulurdu, bkz. grid satır
-        // genişletme/Starred işlerindeki AYNI karar). Bu yüzden
-        // <button data-nav-href> + window.location.href.
-        //
-        // ⚠️ "⋯ menüsü var mı" (menuEntries.length) koşulunun DIŞINDA: artık
-        // menünün İÇİNDE olmayan bir data-nav-href de var ("Tabloya git",
-        // kartın aksiyon kümesinde). Koşulun içinde bıraksaydık kısayol,
-        // ilgisiz bir sebeple (ör. menü hiç basılmayan bir kart varyantı)
-        // sessizce ölürdü.
         document.querySelectorAll('[data-nav-href]').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -298,19 +218,11 @@
             });
         });
 
-        // Trash — "⋯" menüsündeki "Sil" (yalnızca owner rolünde render edilir,
-        // bkz. schema.php $canDelete). Soft-delete olduğu için (geri alınabilir,
-        // bkz. api/base_delete.php + hesap menüsündeki Çöp kutusu) kart burada
-        // sayfa yenilenmeden DOM'dan kaldırılır — sunucudaki tek doğruluk
-        // kaynağı (deleted_at) zaten bir sonraki sayfa yüklemesinde aynı sonucu verir.
         document.querySelectorAll('[data-base-delete]').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // Sayfa içi onay penceresi (assets/confirm-modal.js) — native
-                // window.confirm DEĞİL; o, tarayıcının kendi "localhost web
-                // sitesinin mesajı…" kutusunu açıyordu.
                 window.bcc_confirm({
                     title: 'Base\'i sil',
                     message: 'Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.',
@@ -335,12 +247,6 @@
                                 card.remove();
                             }
 
-                            // Bulunan gerçek bug: Ctrl+K arama popover'ı kartlardan
-                            // KLONLANMIŞ ayrı bir kopya listesi tutuyor — kart
-                            // silinince bu klon silinmiyordu, artık var olmayan bir
-                            // base'e giden tıklanabilir bir sonuç sayfa yenilenene
-                            // kadar aramada kalıyordu. Liste artık global-search.js'te
-                            // yaşadığı için temizlik onun açtığı kancadan yapılır.
                             if (typeof window.bcc_searchRemoveItem === 'function') {
                                 window.bcc_searchRemoveItem(baseId);
                             }
@@ -356,22 +262,6 @@
             });
         });
 
-        // "+ Yeni Base Oluştur" modalı. Tetikleyiciler ve modalın KENDİSİ
-        // sunucuda koşullu basılır (bkz. dashboard.php/workspaces.php
-        // $canCreateBase / src/auth.php bcc_can_manage_bases) — yetkisi olmayan
-        // kullanıcıda hiçbiri DOM'da yoktur, bu blok sessizce atlanır. Buradaki
-        // hiçbir kontrol yetki kontrolü DEĞİLDİR; asıl kapı api/base_create.php.
-        //
-        // ⚠️ TETİKLEYİCİ SEÇİMİ id DEĞİL data-* : eskiden
-        // getElementById('home-create-base-btn') ile TEK öğe bağlanıyordu.
-        // Artık aynı sayfada BİRDEN ÇOK tetikleyici olabiliyor (workspaces.php
-        // hem çalışma alanı başlığındaki "Base oluştur" hem "Base'ler"
-        // kartındaki "+ Yeni base" ile açıyor) — id ile yalnızca ilki çalışırdı.
-        // Zaten dashboard.php'de de ızgara kutucuğu ve boş durum butonu AYNI
-        // id'yi paylaşıyordu (yalnızca biri render edildiği için sorun
-        // çıkmıyordu, ama gizli bir kopya-id sorunuydu). id'ler GERİYE DÖNÜK
-        // UYUMLULUK için duruyor — mevcut testler onlara bakıyor.
-        // ([data-share-modal-open] ile AYNI desen.)
         var createModal = document.getElementById('home-create-base-modal');
         var createTriggers = Array.prototype.slice.call(
             document.querySelectorAll('[data-create-base-open]')
@@ -388,9 +278,6 @@
                 createError.hidden = false;
             };
 
-            // Odak, modalı AÇAN tetikleyiciye geri döner (hep aynı sabit
-            // butona değil) — birden çok tetikleyici olduğunda kullanıcı
-            // kaldığı yere dönmeli.
             var lastCreateTrigger = null;
 
             var closeCreateModal = function () {
@@ -417,10 +304,6 @@
             document.getElementById('home-create-base-close').addEventListener('click', closeCreateModal);
             document.getElementById('home-create-base-cancel').addEventListener('click', closeCreateModal);
 
-            // Dışarı tıklayınca kapanma — .home-modal'ın İÇİNE tıklandığında
-            // olay yukarı kabarıp backdrop'a ulaştığı için hedef kontrolü şart
-            // (e.target === backdrop), yoksa form alanlarına her tıklama modalı
-            // kapatırdı.
             createModal.addEventListener('click', function (e) {
                 if (e.target === createModal) {
                     closeCreateModal();
@@ -434,9 +317,6 @@
             });
 
             createForm.addEventListener('submit', function (e) {
-                // JS buraya kadar geldiyse AJAX yolunu kullanırız; formun kendi
-                // action="/bases.php" POST'u yalnızca bu dinleyici hiç
-                // bağlanamadıysa (JS kapalı/hatalı) devreye giren yedektir.
                 e.preventDefault();
 
                 if (createSubmitBtn.disabled) {
@@ -455,24 +335,6 @@
                     return res.json().catch(function () { return { ok: false }; });
                 }).then(function (data) {
                     if (data && data.ok && data.id) {
-                        // ⚠️ ARTIK BASE'E GİTMİYORUZ (kullanıcı isteği).
-                        // Eskiden '/base.php?base_id=...' açılıyordu; yeni
-                        // base'in HİÇ TABLOSU OLMADIĞI için base.php onu
-                        // base_tables.php'ye yönlendiriyordu, yani kullanıcı her
-                        // base oluşturuşunda istemediği bir ara ekrana düşüyordu
-                        // — oraya zaten karta tıklayarak ulaşılabiliyor.
-                        //
-                        // Bunun yerine bulunduğumuz sayfada kalınıp yeniden
-                        // yükleniyor: yeni kart SUNUCUDAN gelir, yani sıralama,
-                        // çalışma alanı gruplaması, "N tablo" rozeti, rol ve
-                        // seçilen ikon/renk kendiliğinden doğru olur. Kartı JS
-                        // ile elle kurmak bcc_render_home_base_card()'ın
-                        // TAMAMINI (başlık şeridi, aksiyonlar, menü, ipucu)
-                        // ikinci kez yazmak demekti — tek doğruluk kaynağı
-                        // sunucudaki o fonksiyon kalsın.
-                        //
-                        // Aynı davranış workspaces.php'de de doğru: orada da
-                        // sayfa yenilenince yeni base kendi listesinde çıkar.
                         closeCreateModal();
                         window.location.reload();
                         return;
@@ -486,12 +348,6 @@
             });
         }
 
-        // Bildirim paneli (zil ikonu) — #home-filter ile AYNI <details>+dışarı-tık
-        // deseni. Tab (Unread/Read) + arama TAMAMEN client-side (veri zaten DOM'da,
-        // Ctrl+K aramasıyla aynı gerekçe — network isteği yok, debounce gerekmiyor).
-        // "Mark all as read" TEK gerçek AJAX çağrısı — sunucudaki
-        // last_seen_notifications_at'i günceller (CSRF_TOKEN yukarıda zaten
-        // tanımlı, ikinci bir okuma YOK).
         var notifDetails = document.getElementById('home-notif');
         if (notifDetails) {
             var notifTabs = Array.prototype.slice.call(notifDetails.querySelectorAll('.home-notif-tab'));
@@ -525,15 +381,6 @@
                 markNotifRuns();
             };
 
-            // Ardışık OKUNMAMIŞ satırları tek bir mavi blok gibi göstermek için
-            // bloğun ilk/son satırını işaretler (yuvarlatma yalnızca uçlarda —
-            // bkz. home.css .home-notif-item.is-run-start/.is-run-end).
-            //
-            // NEDEN JS: süzgeç satırları [hidden] ile gizliyor ama DOM'dan
-            // ÇIKARMIYOR; CSS kardeş seçicisi (+ veya :has) gizli satırı da
-            // komşu sayardı ve blok görünmeyen bir satırın hizasından bölünürdü.
-            // Burada YALNIZCA görünen satırlar sıraya konur, o yüzden sekme
-            // değişse de aramada satır elense de sınırlar doğru çıkar.
             var markNotifRuns = function () {
                 var visible = notifItems.filter(function (item) {
                     return !item.hidden;
@@ -591,11 +438,6 @@
                             item.classList.remove('is-unread');
                             item.setAttribute('data-notif-unread', '0');
                         });
-                        // ⚠️ GÖZ İKONLARI DA KALKAR (kullanıcı bildirdi): satırlar
-                        // okunmuşa döndüğü hâlde "okundu işaretle" düğmeleri
-                        // duruyordu — tıklandığında hiçbir şey yapmayan, üstelik
-                        // satırın zaten okunduğunu yalanlayan bir düğme.
-                        // Sunucu tarafı zaten no-op'tu; sorun tamamen görseldi.
                         Array.prototype.forEach.call(
                             notifDetails.querySelectorAll('[data-notif-read]'),
                             function (b) {
@@ -614,19 +456,9 @@
                 });
             }
 
-            // ---- Tek tek "okundu" (göz ikonu) -------------------------------
-            // Sunucuda user_read_notifications'a bir satır yazar
-            // (api/notification_mark_one_read.php, migrations/021). "Tümünü
-            // okundu"dan farkı: o, damgayı NOW()'a çekip HEPSİNİ kapatıyor.
-            //
-            // Sayfa YENİLENMEZ: satır yerinde "okunmuş"a döner, rozet bir azalır
-            // ve aktif sekme süzgeci yeniden uygulanır — "Okunmamış" sekmesinde
-            // duran kullanıcı satırın listeden çıktığını anında görür.
             var notifBadgeEl = notifBadge;
             Array.prototype.forEach.call(notifDetails.querySelectorAll('[data-notif-read]'), function (btn) {
                 btn.addEventListener('click', function (e) {
-                    // Panel bir <details>; tıklama yukarı kabarırsa panel
-                    // kapanır ve kullanıcı sonucu göremezdi.
                     e.preventDefault();
                     e.stopPropagation();
 
@@ -657,8 +489,6 @@
                             item.classList.remove('is-unread');
                             item.setAttribute('data-notif-unread', '0');
                         }
-                        // Buton kaldırılır: satır artık okunmuş, ikinci kez
-                        // işaretlemek anlamsız (sunucu tarafında da no-op).
                         if (btn.parentNode) {
                             btn.parentNode.removeChild(btn);
                         }
@@ -688,13 +518,6 @@
             window.bcc_bindDismissable(notifDetails);
         }
 
-        // ---- Sol paneldeki "Katılımcılar" listesinde arama --------------------
-        // Platform yöneticisi TÜM ekipleri gördüğü için bu liste onlarca satır
-        // olabiliyor (kullanıcı bildirdi). Kutu SUNUCUDA koşullu basılır (6+ alan,
-        // bkz. home_shell_top.php) — burası kutu yoksa sessizce no-op olur.
-        //
-        // Filtre TAMAMEN istemcide: liste zaten DOM'da, ikinci bir istek YOK
-        // (bildirim panelindeki arama ile AYNI gerekçe ve AYNI desen).
         var membersSearch = document.querySelector('[data-members-search]');
         if (membersSearch) {
             var membersList = document.querySelector('[data-members-list]');
@@ -708,8 +531,6 @@
                 var gorunen = 0;
 
                 memberItems.forEach(function (item) {
-                    // Ad sunucuda küçük harfe indirgenmiş olarak basıldı
-                    // (data-members-name) — her tuşta yeniden lower() yok.
                     var eslesti = q === '' || (item.getAttribute('data-members-name') || '').indexOf(q) !== -1;
                     item.hidden = !eslesti;
                     if (eslesti) {
@@ -724,10 +545,6 @@
         }
 
         var STORAGE_KEY = 'bcc_home_view_mode';
-        // ⚠️ getElementById DEĞİL: Home artık çalışma alanına göre gruplanınca
-        // sayfada BİRDEN ÇOK .home-base-grid oluyor (her grup bir ızgara, bir de
-        // "Yeni Base Oluştur" kutucuğunu taşıyan kuyruk ızgarası). Tek id ile
-        // yalnızca ilk grup mod değiştirirdi, kalanlar kart modunda kalırdı.
         var grids = Array.prototype.slice.call(document.querySelectorAll('.home-base-grid'));
         var buttons = document.querySelectorAll('[data-view-mode-btn]');
 
@@ -735,10 +552,6 @@
             return;
         }
 
-        // İlk mod: <head>'teki senkron script sayfa boyanmadan önce zaten
-        // localStorage'ı okuyup doğrulamış ve sonucu <html class="home-view-list">
-        // olarak işaretlemişti (FOUC önleme, bkz. dashboard.php <head>). Burada
-        // localStorage TEKRAR okunmuyor/doğrulanmıyor — tek doğrulama kaynağı odur.
         var mode = document.documentElement.classList.contains('home-view-list') ? 'list' : 'card';
 
         function applyMode(newMode) {
@@ -766,8 +579,6 @@
                 try {
                     localStorage.setItem(STORAGE_KEY, newMode);
                 } catch (e) {
-                    // localStorage kapalı/dolu olabilir (gizli sekme vb.) — mod
-                    // yine de bu oturum için uygulanır, sadece kalıcı olmaz.
                 }
 
                 applyMode(newMode);

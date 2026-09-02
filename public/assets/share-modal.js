@@ -1,27 +1,6 @@
 (function () {
     'use strict';
 
-    // "Paylaş" modalı (src/partials/share_modal.php) — OpsFlow'un
-    // Collaborators diyaloğunun karşılığı. Önceden "N kişinin erişimi var"
-    // bağlantısı team_members.php'ye YÖNLENDİRİYORDU; artık sayfadan
-    // çıkılmadan aynı iş burada yapılıyor.
-    //
-    // TEK RENDERER: renderLists() hem ilk açılışta (sayfaya gömülü
-    // BCC_SHARE_MODAL) hem her mutasyondan sonra (uçnoktanın döndürdüğü AYNI
-    // yapı) çalışır. PHP tarafında ikinci bir liste şablonu YOK — olsaydı ilk
-    // render ile güncel render ilk değişiklikte ayrışırdı.
-    //
-    // YETKİ: satır başına "rolü değiştirilebilir / çıkarılabilir" kararları
-    // SUNUCUDAN bayrak olarak gelir (can_change_role / can_remove, bkz.
-    // src/share_modal_payload.php). Burada BCC_ROLE_RANK yeniden
-    // yorumlanmıyor. Bayraklar yalnızca görseldir; asıl kapı
-    // api/team_member_assign.php ve api/team_member_remove.php'de
-    // (bcc_can_manage_members + hiyerarşi) — "gizleme != yetkilendirme".
-    //
-    // KAPANMA: backdrop tıklaması ve Escape ortak yardımcıdan gelir
-    // (window.bcc_bindDismissable, assets/dismissable-panel.js) — grid'deki
-    // "Görünüm açıklaması"/"Veri içe aktar" modallarıyla AYNI davranış, ikinci
-    // bir dinleyici çifti yazılmadı.
 
     document.addEventListener('DOMContentLoaded', function () {
         var overlay = document.getElementById('gs-share-overlay');
@@ -52,7 +31,6 @@
             pending: overlay.querySelector('[data-share-count-pending]'),
         };
 
-        // ---- Durum satırı ---------------------------------------------------
         var statusTimer = null;
         function setStatus(message, isError) {
             if (statusTimer) {
@@ -74,7 +52,6 @@
             }
         }
 
-        // ---- Liste render (TEK yer) -----------------------------------------
         function roleSelect(member) {
             var select = document.createElement('select');
             select.className = 'gs-share-role-select';
@@ -91,11 +68,6 @@
                 select.appendChild(opt);
             });
 
-            // Hedefin MEVCUT rolü benim atayabileceklerim arasında değilse
-            // (ör. benden yüksek rütbe) select onu hiç göstermezdi ve ilk
-            // seçenek seçili görünürdü — yanlış bilgi. Sunucu bu durumda
-            // can_change_role=false gönderiyor, yani buraya hiç gelinmiyor;
-            // yine de savunmacı olarak rolü ekliyoruz.
             if (!select.value) {
                 var fallback = document.createElement('option');
                 fallback.value = member.role;
@@ -120,7 +92,6 @@
             btn.title = 'Ekipten çıkar';
             btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             btn.addEventListener('click', function () {
-                // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
                 window.bcc_confirm({
                     title: 'Ekipten çıkar',
                     message: member.name + ' ekipten çıkarılsın mı?',
@@ -162,9 +133,6 @@
             if (member.can_change_role && state.assignable_roles.length) {
                 actions.appendChild(roleSelect(member));
             } else {
-                // Salt-okunur: rol METİN olarak. Devre dışı bir <select>
-                // "buradan değiştirebilirdim" izlenimi veren ölü bir arayüz
-                // olurdu (team_members.php'deki .tm-role-readonly ile AYNI karar).
                 var readonlyRole = document.createElement('span');
                 readonlyRole.className = 'gs-share-role-readonly';
                 readonlyRole.textContent = member.role_label;
@@ -174,10 +142,6 @@
             if (member.can_remove) {
                 actions.appendChild(removeButton(member));
             } else {
-                // Butonun yerini tutan görsel boşluk: rol kutuları satırlar
-                // arasında hizalı kalsın (bkz. .gs-share-remove-spacer).
-                // Devre dışı bir buton KOYULMADI — tıklanamayan bir çöp
-                // kutusu simgesi "yetkim var ama şu an olmaz" derdi.
                 var spacer = document.createElement('span');
                 spacer.className = 'gs-share-remove-spacer';
                 spacer.setAttribute('aria-hidden', 'true');
@@ -218,8 +182,6 @@
             subtitleEl.textContent = state.collaborators.length + ' kişinin erişimi var'
                 + (state.pending.length ? ' · ' + state.pending.length + ' bekleyen' : '');
 
-            // "Paylaş" popover'ındaki özet etiketi de tazelensin — modalda
-            // biri çıkarıldığında arkadaki sayı bayatlamasın.
             var popoverLabel = document.querySelector('[data-share-people-label]');
             if (popoverLabel) {
                 popoverLabel.textContent = state.collaborators.length + ' kişinin erişimi var';
@@ -247,9 +209,6 @@
                 opt.textContent = r.label;
                 inviteRole.appendChild(opt);
             });
-            // OpsFlow varsayılanı gibi en dar yetki değil, listenin en
-            // alt rütbesi seçili gelsin: yanlışlıkla owner atamak yerine
-            // bilinçli bir yükseltme gerektirsin.
             if (state.assignable_roles.length) {
                 inviteRole.value = state.assignable_roles[0].value;
             }
@@ -261,18 +220,9 @@
             return div.innerHTML;
         }
 
-        // ---- Öneri kutusu (native <datalist> YERİNE) -----------------------
-        // Neden kendi kutumuz: datalist'in görünümü tarayıcıya ait — yüksekliği,
-        // konumu ve tipografisi ayarlanamıyordu. 35 aktif hesapla açılan yerleşik
-        // kutu sayfa boyunda bir şeride dönüşüp modalın üstüne taşıyordu
-        // (kullanıcı bildirdi). Buradaki kutu: yazdıkça süzer, EN FAZLA 8 sonuç
-        // gösterir, klavyeyle gezilir ve modalın diline uyar.
-        //
-        // Serbest metin girişi ENGELLENMEZ: kutu yalnızca bir yardımcıdır,
-        // listede olmayan bir e-posta da yazılabilir — sunucu onu yine çözer.
         var SUGGEST_LIMIT = 8;
-        var suggestItems = [];   // o an gösterilen adaylar
-        var suggestIndex = -1;   // klavyeyle seçili satır (-1 = yok)
+        var suggestItems = [];
+        var suggestIndex = -1;
 
         function hideSuggest() {
             if (!suggestBox) {
@@ -287,9 +237,6 @@
             }
         }
 
-        // Zaten üye/davetli olanlar öneriden düşer — popover'ın
-        // $shareCandidateUsers filtresiyle AYNI kural, burada istemci tarafında
-        // GÜNCEL listeye göre yeniden uygulanıyor (biri az önce eklenmiş olabilir).
         function availableCandidates() {
             var memberIds = {};
             state.collaborators.concat(state.pending).forEach(function (m) {
@@ -320,8 +267,6 @@
             }
 
             var q = inviteEmail.value.trim().toLowerCase();
-            // Ad VEYA e-posta üzerinden eşleşme: kullanıcı "Demo" yazıp da
-            // adresi hatırlamıyor olabilir.
             var matches = availableCandidates().filter(function (c) {
                 if (q === '') {
                     return true;
@@ -348,7 +293,6 @@
 
                 var name = document.createElement('span');
                 name.className = 'gs-share-suggest-name';
-                // textContent: ad ve e-posta kullanıcı verisidir, innerHTML YOK.
                 name.textContent = c.full_name;
                 row.appendChild(name);
 
@@ -357,8 +301,6 @@
                 mail.textContent = c.email;
                 row.appendChild(mail);
 
-                // mousedown: input'un blur'ünden ÖNCE çalışır — click'e bağlansaydı
-                // blur kutuyu kapatır ve tıklama boşluğa düşerdi.
                 row.addEventListener('mousedown', function (e) {
                     e.preventDefault();
                     chooseSuggestion(c);
@@ -374,17 +316,9 @@
         if (inviteEmail && suggestBox) {
             inviteEmail.addEventListener('input', renderSuggestions);
 
-            // ⚠️ 'focus' DEĞİL 'click' (kullanıcı bildirdi: "direkt liste
-            // açılmasın, ben basınca açılsın"). Modal açılırken alan KENDİLİĞİNDEN
-            // odaklanıyor; focus'a bağlıyken liste daha modal görünür görünmez
-            // açılıyor ve altındaki katılımcıları örtüyordu. click yalnızca
-            // GERÇEK bir tıklamada tetiklenir, programatik .focus()'ta değil.
             inviteEmail.addEventListener('click', renderSuggestions);
 
             inviteEmail.addEventListener('keydown', function (e) {
-                // Klavyeyle de açılabilmeli: kutu kapalıyken ↓ onu açar.
-                // (Fare kullanmayan kullanıcı için tek erişim yolu — 'focus'
-                // kaldırıldığı için liste artık kendiliğinden gelmiyor.)
                 if (suggestBox.hidden && e.key === 'ArrowDown') {
                     e.preventDefault();
                     renderSuggestions();
@@ -401,17 +335,7 @@
                     return;
                 }
                 if (e.key === 'Enter' && suggestIndex >= 0) {
-                    // Enter YALNIZCA listeden seçim yapılmışken yakalanır;
-                    // hiçbir satır seçili değilken davet akışına dokunulmaz.
                     e.preventDefault();
-                    // ⚠️ stopImmediatePropagation ŞART: bu input'ta ZATEN başka
-                    // bir keydown dinleyicisi var (aşağıda) ve Enter'da doğrudan
-                    // "Davet Et"e basıyor. preventDefault tek başına AYNI
-                    // elemandaki diğer dinleyiciyi durdurmaz — testte yakalandı:
-                    // listeden ok tuşuyla bir kişi seçip Enter'a basmak, rol
-                    // seçilmeden daveti ANINDA gönderiyordu (iki kişi yanlışlıkla
-                    // ekibe eklendi, geri alındı). Seçim ile gönderim ayrı iki
-                    // adım olmalı: Enter yalnızca alanı doldurur.
                     e.stopImmediatePropagation();
                     chooseSuggestion(suggestItems[suggestIndex]);
                     return;
@@ -422,8 +346,6 @@
             });
 
             inviteEmail.addEventListener('blur', function () {
-                // Gecikme: satıra tıklamak önce blur tetikler; mousedown yakalasa
-                // bile kutu anında kapanırsa tıklama hedefi kaybolur.
                 setTimeout(hideSuggest, 120);
             });
         }
@@ -431,19 +353,9 @@
         function renderAll() {
             renderInviteBox();
             renderLists();
-            // ⚠️ BURADA renderSuggestions() ÇAĞRILMAZ. Native <datalist>
-            // döneminde listeyi ÖNCEDEN doldurmak gerekiyordu (tarayıcı onu
-            // kendi açıyordu); artık aynı fonksiyon kutuyu AÇIYOR da — burada
-            // çağrılınca modal açılır açılmaz liste kendiliğinden geliyordu
-            // (kullanıcı bildirdi). Öneriler zaten her açılışta anlık üretiliyor
-            // (bkz. availableCandidates), önden doldurmaya gerek yok.
-            //
-            // Kapatmak ise ŞART: üye listesi değişmiş olabilir (biri az önce
-            // eklendi/çıkarıldı) ve ekranda duran eski liste artık yanlış olurdu.
             hideSuggest();
         }
 
-        // ---- Sunucu çağrıları -------------------------------------------------
         var busy = false;
 
         function post(url, params) {
@@ -469,8 +381,6 @@
                 overlay.classList.remove('is-busy');
 
                 if (!result.ok || !result.data || !result.data.ok) {
-                    // Reddedilen istekte liste DEĞİŞMEZ: sunucu hiçbir şey
-                    // yazmadı, ekrandaki durum hâlâ doğru.
                     setStatus((result.data && result.data.error) || 'İşlem tamamlanamadı.', true);
                     return;
                 }
@@ -515,7 +425,6 @@
             });
         }
 
-        // ---- Sekmeler ---------------------------------------------------------
         Array.prototype.forEach.call(overlay.querySelectorAll('[data-share-tab]'), function (tab) {
             tab.addEventListener('click', function () {
                 var name = tab.getAttribute('data-share-tab');
@@ -530,10 +439,6 @@
             });
         });
 
-        // ---- Açma / kapama ----------------------------------------------------
-        // mutated: bu açılış sırasında GERÇEKTEN bir yazma oldu mu (davet / rol
-        // değişikliği / çıkarma). Yalnızca başarılı bir yanıttan sonra true
-        // olur — reddedilen istek sayfayı bayatlatmaz, bu yüzden onu saymaz.
         var mutated = false;
 
         function open() {
@@ -549,19 +454,6 @@
         function close() {
             overlay.hidden = true;
 
-            // ⚠️ MODAL KENDİ LİSTESİNİ TAZELER AMA SAYFANIN GERİ KALANINI
-            // TAZELEYEMEZ. grid.php/interface.php için bu sorun değildi: oradaki
-            // tek özet etiketi renderLists() zaten güncelliyor. workspaces.php
-            // ise katılımcı kartını, "N katılımcı" başlığını ve sayaç şeridini
-            // SUNUCUDA basıyor — modalda biri eklenip çıkarıldığında arkadaki
-            // sayfa bayatlar.
-            //
-            // Bu yüzden modal ne yapılacağına KARAR VERMİYOR, yalnızca haber
-            // veriyor: dinleyen sayfa kendi tazeleme yolunu seçer (workspaces.js
-            // sayfayı yeniden yüklüyor — sunucu render'ının tek doğruluk
-            // kaynağı olduğu yerde JS'te üç ayrı bölümü elle güncellemek üç
-            // ayrışma riski demekti). Dinleyicisi olmayan sayfalarda olay
-            // sessizce düşer, davranışları DEĞİŞMEZ.
             if (mutated) {
                 document.dispatchEvent(new CustomEvent('bcc:share-modal-changed'));
                 mutated = false;
@@ -572,22 +464,15 @@
             closeBtn.addEventListener('click', close);
         }
 
-        // Backdrop tıklaması + Escape — ortak yardımcı (isClickOutside
-        // override'ı: yalnızca backdrop'un KENDİSİ, modal içeriği değil).
         window.bcc_bindDismissable(overlay, {
             isOpen: function () { return !overlay.hidden; },
             close: close,
             isClickOutside: function (target) { return target === overlay; },
         });
 
-        // Tetikleyiciler: "Paylaş" popover'ındaki "N kişinin erişimi var"
-        // satırı ve varsa başka [data-share-modal-open] öğeleri. Bunlar <a>
-        // DEĞİL <button> — yönlendirme kaldırıldığı için href'i olmayan bir
-        // bağlantı bırakmak yanlış olurdu.
         Array.prototype.forEach.call(document.querySelectorAll('[data-share-modal-open]'), function (trigger) {
             trigger.addEventListener('click', function (e) {
                 e.preventDefault();
-                // Popover bir <details>; modal açılırken kapansın.
                 var details = trigger.closest('details');
                 if (details) {
                     details.removeAttribute('open');

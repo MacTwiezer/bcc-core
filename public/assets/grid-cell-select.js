@@ -1,22 +1,3 @@
-// Grid hücre seçimi — kopyalama (grid-copy.js) ve yapıştırmanın
-// (grid-paste.js) ORTAK zemini: hangi hücreler seçili, çapa nerede.
-//
-// ⚠️ MEVCUT DÜZENLEME AKIŞI DEĞİŞMEDİ. Bu projede tek tıklama doğrudan
-// düzenleyiciyi açar (grid.js startEdit) — Excel/Airtable'ın "tıkla=seç,
-// çift tıkla=düzenle" modeline GEÇİLMEDİ, çünkü o, her kullanıcının günlük
-// düzenleme alışkanlığını bozardı. Üstüne SEÇİM yetenekleri eklendi:
-//   • normal tıklama       -> düzenleyici açılır (AYNEN) + hücre ÇAPA olur
-//   • Shift+tıklama        -> düzenleyici AÇILMAZ, çapadan buraya dikdörtgen
-//   • fareyle SÜRÜKLEME    -> dikdörtgen seçim (düzenleyici açılmaz)
-//   • ok tuşları           -> hücreden hücreye geçiş
-//   • Shift + ok           -> seçimi genişlet
-//   • Ctrl/Cmd + A         -> tüm grid
-//   • Delete / Backspace   -> seçili hücreleri temizle (grid-copy.js dinler)
-//   • Escape               -> seçim temizlenir
-//
-// Shift+tıklamayı YAKALAMA (capture) fazında kesiyoruz: grid.js'in kendi
-// dinleyicisi kabarma (bubble) fazında ve .grid tablosuna bağlı, bu yüzden
-// stopPropagation() ile ona hiç ulaşmadan durduruluyor. grid.js'e DOKUNULMADI.
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('.grid');
@@ -24,21 +5,9 @@
             return;
         }
 
-        // Çapa: seçimin sabit köşesi (yapıştırma buradan başlar).
-        // Odak: Shift/sürükleme/ok ile genişletilen karşı köşe.
-        // İkisi aynıysa seçim tek hücreliktir.
         var anchorTd = null;
         var focusTd = null;
 
-        // ---- Koordinat yardımcıları ---------------------------------------
-        // ⚠️ ÖLÇÜLEN MALİYET (sürükleme takılmasının asıl kaynağıydı):
-        // visibleRows() her satır için offsetParent OKUR ve bu okuma tarayıcıyı
-        // YERLEŞİMİ (layout) yeniden hesaplamaya zorlar. Fonksiyon tek bir
-        // boyamada üç kez çağrılıyordu (currentRange -> cellCoords x2, bir de
-        // paintSelection'ın kendisi), yani 500 satırlık bir tabloda fare her
-        // kıpırdadığında ~1500 zorlamalı okuma. Sonuç önbelleğe alınıyor;
-        // önbellek yalnızca SATIRLARI ilgilendiren bir DOM değişikliğinde
-        // (aşağıdaki MutationObserver) düşürülüyor.
         var rowsCache = null;
         var cellsCache = null;
 
@@ -48,9 +17,6 @@
         }
         invalidateRowCache();
 
-        // Satır sırası DOM sırasıdır. GİZLİ satırlar (istemci tarafı arama/
-        // filtre) atlanır — kullanıcı ekranda görmediği bir satıra
-        // yapıştırdığını/kopyaladığını sanmasın.
         function visibleRows() {
             if (rowsCache) {
                 return rowsCache;
@@ -62,8 +28,6 @@
             return rowsCache;
         }
 
-        // Bir satırdaki veri hücreleri (.grid-rownum HARİÇ). Sütun indeksi
-        // buradaki sıradır; gizli alanlar zaten DOM'da yoktur.
         function rowCells(tr) {
             if (cellsCache) {
                 var hit = cellsCache.get(tr);
@@ -78,11 +42,6 @@
             return cells;
         }
 
-        // Önbelleği düşüren tek yer. SATIR düzeyindeki değişiklikleri dinler:
-        // satır eklenip silinmesi (childList), arama/filtrenin satırı gizleyip
-        // göstermesi (tr'nin style/class/hidden'ı). HÜCRE sınıfı değişiklikleri
-        // BİLEREK dışarıda — seçimi boyamak da bir sınıf değişikliğidir, onu
-        // dinlersek her boyama kendi önbelleğini düşürürdü.
         if (typeof MutationObserver === 'function') {
             new MutationObserver(function (records) {
                 for (var i = 0; i < records.length; i++) {
@@ -131,10 +90,6 @@
             return cells[col];
         }
 
-        // ---- Görsel ---------------------------------------------------------
-        // Boyanmış hücreler LİSTE olarak tutulur: temizlemek için tabloyu
-        // yeniden taramak (querySelectorAll) gerekmiyor — sürüklerken bu tarama
-        // da her fare hareketinde tekrarlanıyordu.
         var painted = [];
         var SEL_CLASSES = ['is-paste-range', 'is-paste-anchor', 'is-sel-t', 'is-sel-r', 'is-sel-b', 'is-sel-l'];
 
@@ -151,11 +106,6 @@
             painted.length = 0;
         }
 
-        // Tam süpürme — listeye güvenmez, tabloyu tarar. Yalnızca seçim
-        // TAMAMEN bırakıldığında (clearSelection) çağrılır: tablo yeniden
-        // çizildiyse (tab değişimi, veri yenileme) listedeki hücreler artık
-        // DOM'da olmayabilir ve yerlerine gelen yeni satırlarda sınıf kalıntısı
-        // bulunabilirdi. Nadir çağrıldığı için maliyeti önemsiz.
         function sweepHighlight() {
             clearHighlight();
             Array.prototype.forEach.call(
@@ -179,13 +129,6 @@
             };
         }
 
-        // Bir dikdörtgeni boyar. TEK boyama yolu: hem kullanıcının seçimi hem
-        // de yapıştırma önizlemesinin hedef alanı (grid-paste.js paintTarget)
-        // buradan geçer — böylece ikisi AYNI görünür ve boyanan her hücre
-        // 'painted' listesine girdiği için temizlik de tek yerden çalışır.
-        // (Bulunan gerçek bug riski: grid-paste.js sınıfı kendi elleriyle
-        // ekleseydi, liste tabanlı temizlik onu göremez ve hedef boyaması
-        // ekranda takılı kalırdı.)
         function paintRect(row1, col1, row2, col2) {
             var rows = visibleRows();
             for (var r = row1; r <= row2; r++) {
@@ -195,10 +138,6 @@
                     var td = cells[c];
                     if (!td) { continue; }
 
-                    // Dolgu her hücreye; ÇİZGİ yalnızca dikdörtgenin dış
-                    // sınırındaki hücrenin ilgili kenarına. Böylece ortada
-                    // ızgara gibi kutucuklar değil, TEK bir çerçeve oluşur
-                    // (bkz. style.css .is-sel-t/r/b/l).
                     td.classList.add('is-paste-range');
                     if (r === row1) { td.classList.add('is-sel-t'); }
                     if (r === row2) { td.classList.add('is-sel-b'); }
@@ -218,20 +157,12 @@
 
             paintRect(rg.row1, rg.col1, rg.row2, rg.col2);
 
-            // Çapa ayrıca işaretlenir (dolgusuz kalır) — "yapıştırma buradan
-            // başlayacak" bilgisi seçim alanından AYRI bir sinyal.
             anchorTd.classList.add('is-paste-anchor');
             if (painted.indexOf(anchorTd) === -1) {
-                // Çapa görünür satırların dışında kalmış olabilir (satırı
-                // filtrelenmiş): sınıfı yine de temizlenebilsin diye listeye.
                 painted.push(anchorTd);
             }
         }
 
-        // Sürüklerken fare bir karede birden çok kez hareket edebilir; her
-        // hareket için ayrı boyama yapmak yerine kareye BİR boyama yapılır.
-        // (Klavye/tıklama yolları paintSelection'ı doğrudan çağırmaya devam
-        // eder — orada gecikme istenmez ve zaten kare başına tek olay gelir.)
         var paintQueued = false;
 
         function schedulePaint() {
@@ -251,19 +182,12 @@
             sweepHighlight();
         }
 
-        // Klavyeyle gezerken hedef hücre görüş alanının dışına çıkabilir.
-        // scrollIntoView({block:'nearest'}) sayfayı zıplatmadan yalnızca
-        // gerekiyorsa kaydırır.
         function reveal(td) {
             if (td && td.scrollIntoView) {
                 td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }
         }
 
-        // ---- Düzenleyici açıkken klavye grid'e AİT DEĞİL --------------------
-        // Bir hücre düzenleniyorsa ok tuşları metin imlecini oynatmalı, seçimi
-        // değil. Aynı şekilde arama kutusu/modal gibi grid dışı bir alana
-        // yazılıyorsa hiç karışılmaz.
         function keyboardBelongsToGrid() {
             var el = document.activeElement;
             if (!el) {
@@ -276,24 +200,17 @@
             if (tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable) {
                 return false;
             }
-            // Açık bir modal varsa (yapıştırma onayı vb.) klavye oraya ait.
             var openModal = document.querySelector('.home-modal-backdrop:not([hidden])');
             return !openModal;
         }
 
-        // ---- Olaylar: fare ---------------------------------------------------
-        // YAKALAMA fazı: grid.js'in kabarma fazındaki dinleyicisinden ÖNCE
-        // çalışır, böylece Shift+tıklamada düzenleyici hiç açılmaz.
         grid.addEventListener('click', function (e) {
             var td = e.target.closest('td.grid-cell');
 
             if (!td) {
-                // Satır numarası, checkbox, başlık vb. — seçimi bozma.
                 return;
             }
 
-            // Sürükleme bitişinden gelen "click" düzenleyiciyi AÇMAMALI:
-            // kullanıcı alan seçti, hücreye girmek istemedi.
             if (suppressNextClick) {
                 suppressNextClick = false;
                 e.preventDefault();
@@ -302,8 +219,6 @@
             }
 
             if (e.shiftKey && anchorTd) {
-                // Aralığı genişlet. preventDefault: Shift+tıklama tarayıcının
-                // metin seçimini başlatır, hücreler mavi boyanırdı.
                 e.preventDefault();
                 e.stopPropagation();
                 focusTd = td;
@@ -311,19 +226,11 @@
                 return;
             }
 
-            // Normal tıklama: grid.js düzenleyiciyi açmaya devam eder
-            // (stopPropagation YOK), biz sadece çapayı kaydederiz.
             anchorTd = td;
             focusTd = null;
             paintSelection();
         }, true);
 
-        // ---- Fareyle sürükleyerek alan seçme --------------------------------
-        // ⚠️ TIKLA-DÜZENLE İLE ÇAKIŞMAMALI. Bu yüzden mousedown'da HİÇBİR ŞEY
-        // yapılmaz; yalnızca başlangıç kaydedilir. Ancak imleç EŞİĞİ (3px)
-        // aşarsa "sürükleme" sayılır, seçim boyanır ve o hareketin sonundaki
-        // click BASTIRILIR — yoksa kullanıcı alan seçtiğinde bir de düzenleyici
-        // açılırdı. Eşik olmadan her minik titreme sürükleme sanılırdı.
         var DRAG_THRESHOLD = 3;
         var dragStartTd = null;
         var dragStartX = 0;
@@ -332,7 +239,6 @@
         var suppressNextClick = false;
 
         grid.addEventListener('mousedown', function (e) {
-            // Yalnızca sol tuş. Shift+tıklama kendi yolunda (click) işlenir.
             if (e.button !== 0 || e.shiftKey) {
                 return;
             }
@@ -340,8 +246,6 @@
             if (!td) {
                 return;
             }
-            // Hücre içindeki gerçek bir kontrole (checkbox, yıldız, dosya eki
-            // butonu) basılıyorsa sürükleme başlatma — o kontrol çalışsın.
             if (e.target.closest('input, button, a, select, textarea')) {
                 return;
             }
@@ -363,7 +267,6 @@
                 dragging = true;
                 anchorTd = dragStartTd;
                 focusTd = dragStartTd;
-                // Sürüklerken tarayıcının metin seçimi devreye girmesin.
                 document.body.style.userSelect = 'none';
             }
 
@@ -384,17 +287,14 @@
             dragging = false;
         });
 
-        // Grid DIŞINA tıklayınca seçim kalkar — kullanıcı başka bir işe geçti.
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.grid') && !e.target.closest('.home-modal')) {
                 clearSelection();
             }
         });
 
-        // ---- Olaylar: klavye -------------------------------------------------
         var ARROWS = {
             ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
-            // Eski tarayıcı adları — tek haritada tutuluyor, ikinci bir dal yok.
             Up: [-1, 0], Down: [1, 0], Left: [0, -1], Right: [0, 1]
         };
 
@@ -408,9 +308,6 @@
                 return;
             }
 
-            // Ctrl/Cmd + A: tüm grid. ⚠️ Yalnızca ZATEN bir seçim varken —
-            // kullanıcı grid'le hiç etkileşmediyse Ctrl+A tarayıcının "tüm
-            // sayfayı seç"i olarak kalmalı, sayfayı ele geçirmeyiz.
             if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
                 if (!anchorTd) {
                     return;
@@ -435,8 +332,6 @@
                 return;
             }
 
-            // Genişletirken hareket eden köşe ODAK, sabit kalan ÇAPA'dır —
-            // Excel'deki davranış. Genişletme yoksa ikisi birlikte taşınır.
             var moving = (e.shiftKey && focusTd) ? focusTd : (e.shiftKey ? anchorTd : (focusTd || anchorTd));
             var pos = cellCoords(moving);
             if (!pos) {
@@ -445,7 +340,6 @@
 
             var next = cellAt(pos.row + delta[0], pos.col + delta[1]);
             if (!next) {
-                // Kenara dayandı — olayı yine de tüketiyoruz ki sayfa kaymasın.
                 e.preventDefault();
                 return;
             }
@@ -461,19 +355,10 @@
             reveal(next);
         });
 
-        // ---- Kopyalama/yapıştırma için paylaşılan yüzey ----------------------
-        // window.BCC_GRID ile AYNI desen: seçim mantığının ikinci bir kopyası
-        // yazılmasın diye tek yerden dışa açılıyor.
         window.BCC_GRID_SELECT = {
-            // Yapıştırmanın başlayacağı hücre (yoksa null).
             getAnchor: function () { return anchorTd; },
-            // Seçili dikdörtgen: {row1,col1,row2,col2} ya da null.
             getRange: currentRange,
-            // Kullanıcı aralık ÇİZDİ mi (Shift/sürükleme), yoksa tek hücre mi?
             hasRange: function () { return anchorTd !== null && focusTd !== null && focusTd !== anchorTd; },
-            // Seçili dikdörtgendeki <td>'ler, satır satır. Kopyalama ve
-            // "seçimi temizle" bunun üzerinden çalışır — koordinat matematiği
-            // ikinci kez yazılmasın diye.
             getMatrix: function () {
                 var rg = currentRange();
                 if (!rg) {
@@ -495,8 +380,6 @@
             visibleRows: visibleRows,
             rowCells: rowCells,
             cellAt: cellAt,
-            // Dikdörtgen boyama (yapıştırma önizlemesi bunu kullanır) —
-            // boyanan hücreler temizlik listesine yazılır, bkz. paintRect.
             paintRect: paintRect,
             clear: clearSelection,
             repaint: paintSelection,

@@ -1,20 +1,6 @@
 (function () {
     'use strict';
 
-    // table_fields.php'ye ÖZEL: alan tipi seçicisine arama kutusu ekler.
-    //
-    // Neden burada, partial'da DEĞİL: arama kutusunun içine gireceği DOM
-    // (#new-field-type-step + .field-type-grid) src/partials/
-    // field_type_wizard_fields.php'den geliyor ve o partial grid.php'nin "+"
-    // POPUP'IYLA PAYLAŞILIYOR. Popup dar (~260px) ve zaten kısa bir liste
-    // gösteriyor; oraya bir arama kutusu koymak yer kazandırmaz, daraltır.
-    // Bu dosya yalnızca table_fields.php'de yükleniyor, yani paylaşılan
-    // partial'a ve grid.php'ye HİÇ dokunulmuyor.
-    //
-    // Kutu ÇALIŞMA ANINDA #new-field-type-step'in İÇİNE ekleniyor (grid'in
-    // hemen üstüne). Bilerek dışına değil: field-type-wizard.js tip seçilince
-    // `typeStep.hidden = true` yapıyor — kutu dışarıda kalsaydı ikinci adımda
-    // ekranda asılı kalırdı.
 
     document.addEventListener('DOMContentLoaded', function () {
         var typeStep = document.getElementById('new-field-type-step');
@@ -24,7 +10,6 @@
         }
 
         var options = Array.prototype.slice.call(grid.querySelectorAll('.field-type-option'));
-        // Kısa listede arama kutusu gürültüdür — yalnızca gerçekten uzunsa eklenir.
         if (options.length < 8) {
             return;
         }
@@ -50,8 +35,6 @@
         typeStep.insertBefore(wrap, grid);
         typeStep.appendChild(empty);
 
-        // Etiketler bir kez okunup küçük harfe çevriliyor; her tuş vuruşunda
-        // DOM'dan tekrar okunmuyor.
         var haystacks = options.map(function (btn) {
             var label = btn.getAttribute('data-field-type-label') || btn.textContent;
             return label.toLocaleLowerCase('tr');
@@ -63,9 +46,6 @@
 
             options.forEach(function (btn, i) {
                 var match = q === '' || haystacks[i].indexOf(q) !== -1;
-                // [hidden] DEĞİL ayrı bir sınıf: .field-type-grid display:grid,
-                // ve grid öğelerine uygulanan display kuralı [hidden]'ın
-                // display:none'ını ezer (projede daha önce yaşanan tuzak).
                 btn.classList.toggle('tf-hidden', !match);
                 if (match) {
                     visible++;
@@ -75,7 +55,6 @@
             empty.hidden = visible !== 0;
         });
 
-        // Escape aramayı temizler — listeye dönmenin en hızlı yolu.
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && input.value !== '') {
                 e.stopPropagation();
@@ -89,19 +68,6 @@
 (function () {
     'use strict';
 
-    // table_fields.php'ye ÖZEL: alan ekleme sihirbazının 2. ADIMINI (isim +
-    // seçenekler) sayfa içi bir PENCEREYE çevirir.
-    //
-    // Neden burada, paylaşılan yerlerde DEĞİL:
-    //   • src/partials/field_type_wizard_fields.php grid.php'nin "+" POPUP'ıyla
-    //     paylaşılıyor — orada 2. adım ZATEN yüzen bir panelin içinde, ikinci
-    //     bir pencereye sarmak anlamsız olurdu.
-    //   • assets/field-type-wizard.js de paylaşılıyor; adım geçişini o yapıyor
-    //     (detailsStep.hidden = false). Buradaki kod o davranışı DEĞİŞTİRMEZ,
-    //     yalnızca IZLER (MutationObserver) ve perdeyi ona göre açıp kapar.
-    //
-    // Yani gönderim, doğrulama ve "Tip değiştir" mantığı olduğu gibi kalıyor;
-    // bu dosya sadece görünümü ve kapatma yollarını ekliyor.
     document.addEventListener('DOMContentLoaded', function () {
         var detailsStep = document.getElementById('new-field-details-step');
         var changeBtn = document.getElementById('new-field-type-change');
@@ -111,19 +77,11 @@
             return;
         }
 
-        // Perde — <body>'nin sonuna, formun DIŞINA. Formun içinde olsaydı
-        // tıklama hedefi form alanlarıyla karışırdı.
         var backdrop = document.createElement('div');
         backdrop.className = 'tf-modal-backdrop';
         backdrop.hidden = true;
         document.body.appendChild(backdrop);
 
-        // --- Başlık satırı ---------------------------------------------------
-        // Paylaşılan partial burada "Seçilen tip: X · Tip değiştir" yazan bir
-        // <p class="hint"> basıyor. Pencerede bu bir BAŞLIK olmalı: seçilen tip
-        // pencerenin adı, "Tip değiştir" ise sağdaki ikincil eylem.
-        // Düğüm TAŞINIYOR (kopyalanmıyor): id'leri ve paylaşılan JS'in ona bağlı
-        // dinleyicileri korunur.
         var hint = detailsStep.querySelector('.hint');
         if (hint) {
             var head = document.createElement('div');
@@ -146,22 +104,14 @@
             head.appendChild(closeBtn);
             hint.parentNode.replaceChild(head, hint);
 
-            // Kapatma = "Tip değiştir": ikinci bir kapatma yolu YAZILMIYOR,
-            // paylaşılan JS'in kendi geri-dönüş mantığı tetikleniyor.
             closeBtn.addEventListener('click', function () {
                 changeBtn.click();
             });
         }
 
-        // --- Perde/gövde senkronu --------------------------------------------
-        // Pencereyi AÇAN kod paylaşılan dosyada (field-type-wizard.js) ve ona
-        // dokunulmuyor — bu yüzden 'hidden' özniteliği İZLENİYOR. Böylece hangi
-        // yoldan açılırsa açılsın perde doğru durumda kalır.
         function sync() {
             var open = !detailsStep.hidden;
             backdrop.hidden = !open;
-            // Arka planın kaymasını durdur: pencere açıkken sayfa kaydırılırsa
-            // kullanıcı içeriği kaybeder.
             document.body.classList.toggle('tf-modal-open', open);
         }
 

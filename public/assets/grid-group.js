@@ -2,25 +2,7 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // ---- "Grupla" paneli -------------------------------------------------
-        // Panel artık TAMAMEN BAĞLANTI TABANLI: seviye ekleme, yön çevirme,
-        // seviye kaldırma ve "Gruplamayı kaldır" birer <a> (sunucuda önceden
-        // kurulmuş group_field_N/group_dir_N URL'leri). Bu yüzden buradan
-        // KALDIRILANLAR:
-        //   - #group-form select'lerini dinleyip form.submit() eden blok
-        //   - "Uygula" butonunu gizleyen blok
-        //   - #group-add-subgroup ("+ Alt grup ekle") gizli satır açma bloğu
-        // Hepsi artık gereksiz: <select> ve <form> kalmadı, alan eklemek için
-        // listedeki alana tıklamak yeterli. JS'siz de tam çalışıyor.
-        //
-        // Panelde JS'in yaptığı TEK iş alan listesini filtrelemek; grid'deki
-        // grup başlıklarını aç/kapa işi (aşağısı) panelden bağımsız.
 
-        // "Alan ara": panel içi listeyi istemci tarafında filtreler.
-        // Eşleşme anahtarı SUNUCUDAN (data-group-field-name, küçük harfe
-        // çevrilmiş) — option.textContent kullanılmıyor, çünkü satır artık
-        // "N. seviye" rozetini de içeriyor ve arama sessizce onu da
-        // eşleştirirdi ("seviye" yazınca tüm gruplu alanlar çıkardı).
         var searchInput = document.querySelector('[data-group-search]');
         var fieldList = document.querySelector('[data-group-field-list]');
 
@@ -37,8 +19,6 @@
 
                 options.forEach(function (option, i) {
                     var match = q === '' || keys[i].indexOf(q) !== -1;
-                    // [hidden]/style.display DEĞİL ayrı sınıf: satırlar flex ve
-                    // flex öğesine uygulanan display, [hidden]'ı ezer.
                     option.classList.toggle('is-filtered-out', !match);
                     if (match) {
                         visible++;
@@ -54,9 +34,6 @@
 
             searchInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && searchInput.value !== '') {
-                    // stopPropagation: paneli kapatan ortak Escape dinleyicisi
-                    // bu tuşu ayrıca yorumlamasın — ilk Escape aramayı temizler,
-                    // ikincisi paneli kapatır.
                     e.stopPropagation();
                     searchInput.value = '';
                     applyGroupFilter();
@@ -64,17 +41,10 @@
             });
         }
 
-        // Bir yolun (path) verilen üst grubun içinde olup olmadığını kontrol eder:
-        // ya üst grubun ta kendisi (yaprak seviyenin kendi satırları için) ya da
-        // "üst-" önekiyle başlayan bir alt yol (iç içe alt gruplar/satırlar için).
         function isWithinGroup(path, parentPath) {
             return path === parentPath || path.indexOf(parentPath + '-') === 0;
         }
 
-        // Grup başlığına tıkla -> o grubun altındaki TÜM iç başlıkları ve satırları
-        // (kaç seviye iç içe olursa olsun) aç/kapa. Kapatılan bir dış grubun içindeki
-        // alt grup başlıkları da "genişletilmiş" durumuna sıfırlanır (aç/kapa
-        // hafızası seviye başına ayrı tutulmuyor — tek dış toggle basitçe kapsar).
         function setGroupCollapsed(headerRow, collapsed) {
             var toggle = headerRow.querySelector('[data-group-toggle]');
             var groupPath = headerRow.getAttribute('data-group-path');

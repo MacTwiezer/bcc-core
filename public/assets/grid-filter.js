@@ -1,19 +1,6 @@
 (function () {
     'use strict';
 
-    // Filtre paneli (grid.php .filter-form).
-    //
-    // SUNUCU MANTIĞI DEĞİŞMEDİ: form hâlâ filter_field_N / filter_cond_N /
-    // filter_value_N + tek bir filter_logic gönderiyor ve
-    // parse_grid_filter_rules() boş slotları atlıyor. Buradaki iş yalnızca
-    // PANELİN kendisi: satır ekleme/silme, alan tipine göre operatör/değer
-    // alanını tazeleme, bağlaç yansıtması ve alan tipi rozeti.
-    //
-    // SLOT NUMARALARI HER DEĞİŞİKLİKTE 1..N OLARAK YENİDEN YAZILIR (renumber):
-    // bir satır silinince aradaki slot boş kalsaydı sunucu onu atlar, sorun
-    // olmazdı — ama "+ Filtre ekle" bir sonraki numarayı seçerken boşluğa
-    // düşebilir ve iki satır aynı slotu paylaşabilirdi. Tek kural: DOM sırası
-    // = slot sırası.
 
     document.addEventListener('DOMContentLoaded', function () {
         var form = document.querySelector('[data-filter-form]');
@@ -25,11 +12,6 @@
         var opsByType = window.BCC_FILTER_OPS || {};
         var noValueOps = window.BCC_FILTER_NO_VALUE_OPS || [];
         var teamMembers = window.BCC_TEAM_MEMBERS || [];
-        // Değeri bir KULLANICI olan tipler ('user', 'created_by',
-        // 'last_modified_by') — değer kutusu bu tiplerde takım üyesi açılır
-        // listesine döner. Liste sunucudan geliyor (src/schema.php
-        // BCC_USER_VALUE_FIELD_TYPES); burada ikinci bir kopya tutulmuyor,
-        // yedek olarak yalnızca eski davranış ('user') bırakıldı.
         var userValueTypes = window.BCC_USER_VALUE_FIELD_TYPES || ['user'];
 
         function isUserValueType(type) {
@@ -45,10 +27,6 @@
             return Array.prototype.slice.call(rowsWrap.querySelectorAll('[data-filter-row]'));
         }
 
-        // ---- Tek satırın davranışı -----------------------------------------
-        // (alan -> operatör listesi -> değer alanı tipi) zinciri. Eski sürümdeki
-        // mantığın AYNISI; yalnızca bir fonksiyona alındı ki sonradan eklenen
-        // satırlara da bağlanabilsin.
         function bindRow(row) {
             var fieldSelect = row.querySelector('.filter-field-select');
             var condSelect = row.querySelector('.filter-cond-select');
@@ -63,10 +41,6 @@
                 return fieldTypesById[fieldSelect.value];
             }
 
-            // Alan tipi rozeti: native <option> içine ikon konulamadığı için
-            // (HTML sınırı) rozet select'in yanında duruyor ve SEÇİLİ alanın
-            // tipini gösteriyor. Sınıf adı sunucunun bastığıyla AYNI kalıp:
-            // .field-badge--<tip> (assets/theme.css).
             function refreshBadge() {
                 if (!badge) {
                     return;
@@ -133,8 +107,6 @@
                 } else if (type === 'time') {
                     valueInput.type = 'time';
                 } else if (!isUserValueType(type)) {
-                    // Kullanıcı tiplerinde değer kutusu bir <select>; ona .type
-                    // yazmak anlamsız (ve 'text' atamak select'i bozardı).
                     valueInput.type = 'text';
                 }
             }
@@ -166,10 +138,6 @@
                 });
 
                 updateValueInput();
-                // Bulunan gerçek bug (korunuyor): alan değişince önceki alan için
-                // girilmiş değer temizlenmiyordu — ör. "Durum içerir Tamamlandi"
-                // filtresi alan "Açıklama"ya çevrilince "Açıklama içerir
-                // Tamamlandi" olarak kalıyordu.
                 valueInput.value = '';
             }
 
@@ -178,10 +146,6 @@
             refreshBadge();
         }
 
-        // ---- Bağlaç (VE/VEYA) ----------------------------------------------
-        // Sunucuda TEK değer: filter_logic tüm kurallara birden uygulanır. Bu
-        // yüzden gerçek kontrol 2. satırdadır; 3+ satırlar onu YANSITIR (ada
-        // sahip değiller, forma girmezler).
         function logicValue() {
             var sel = form.querySelector('[data-filter-logic]');
             if (sel) {
@@ -206,12 +170,6 @@
             }
         }
 
-        // Bağlaç sütununu satırın SIRASINA göre kurar:
-        //   1. satır -> "Koşul" etiketi
-        //   2. satır -> gerçek <select name="filter_logic">
-        //   3+       -> yansıtma
-        // Satır eklendiğinde/silindiğinde yeniden çağrılır, çünkü hangi satırın
-        // "ikinci" olduğu değişebilir.
         function renderConjunctions() {
             var list = rows();
             var current = logicValue();
@@ -229,8 +187,6 @@
                 }
 
                 if (i === 1) {
-                    // Gerçek kontrol burada; formda filter_logic ADINDA tek bir
-                    // öğe kalması için gizli input varsa kaldırılır.
                     if (!cell.querySelector('[data-filter-logic]')) {
                         cell.innerHTML =
                             '<select name="filter_logic" class="filter-conj-select" data-filter-logic aria-label="Kurallar arası bağlaç">' +
@@ -248,8 +204,6 @@
                 }
             });
 
-            // Tek satır kaldıysa gerçek select yok olur; değer kaybolmasın diye
-            // gizli input geri konur.
             if (list.length < 2 && !form.querySelector('[data-filter-logic]') && !form.querySelector('[data-filter-logic-hidden]')) {
                 var h = document.createElement('input');
                 h.type = 'hidden';
@@ -263,7 +217,6 @@
             syncMirrors();
         }
 
-        // ---- Slot numaralarını DOM sırasına göre yeniden yaz ----------------
         function renumber() {
             rows().forEach(function (row, i) {
                 var slot = i + 1;
@@ -293,28 +246,18 @@
             refreshAddState();
         }
 
-        // ---- Satır ekle / sil ----------------------------------------------
         function addRow() {
             if (rows().length >= maxSlots) {
                 return;
             }
 
-            // Şablon: İLK satırın kopyası. Sunucu tarafındaki alan listesini
-            // (ve 'attachment' hariç tutma kuralını) JS'te YENİDEN üretmemek
-            // için — tek kaynak yine PHP.
             var template = rows()[0];
             var clone = template.cloneNode(true);
 
-            // cloneNode DİNLEYİCİLERİ kopyalamaz ama ÖZNİTELİKLERİ kopyalar.
-            // Bulunan gerçek bug: şablon satırın sil butonundaki data-bound="1"
-            // de kopyalanıyordu, bu yüzden bindRemove() "zaten bağlı" sanıp
-            // atlıyor ve EKLENEN satırların çöp kutusu HİÇBİR ŞEY YAPMIYORDU
-            // (ilk satır çalıştığı için gözden kaçıyordu). İşaret temizleniyor.
             Array.prototype.forEach.call(clone.querySelectorAll('[data-bound]'), function (el) {
                 el.removeAttribute('data-bound');
             });
 
-            // Kopyayı temizle: alan seçimi yok, operatör kilitli, değer boş.
             var f = clone.querySelector('.filter-field-select');
             var c = clone.querySelector('.filter-cond-select');
             var v = clone.querySelector('.filter-value-input');
@@ -322,8 +265,6 @@
             c.innerHTML = '<option value="">— önce alan seçin —</option>';
             c.disabled = true;
             if (v.tagName === 'SELECT') {
-                // Şablon satırı kullanıcı tipindeyse (user/created_by/
-                // last_modified_by) metin girdisine döndür.
                 var input = document.createElement('input');
                 input.type = 'text';
                 input.className = 'filter-value-input';
@@ -352,8 +293,6 @@
             var list = rows();
 
             if (list.length === 1) {
-                // SON satır silinmez, SIFIRLANIR: panel her zaman en az bir
-                // satır göstersin (boş panel "filtre eklenemiyor" gibi okunur).
                 var f = row.querySelector('.filter-field-select');
                 f.value = '';
                 f.dispatchEvent(new Event('change'));

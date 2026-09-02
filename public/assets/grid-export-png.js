@@ -1,42 +1,19 @@
 (function () {
     'use strict';
 
-    // "PNG olarak indir" — grid tablosunu istemci tarafında canvas'a çizip
-    // indirir. Sunucuda YENİ BİR UÇ NOKTA YOK: PNG, o an DOM'da ne varsa onu
-    // bastığı için filtre/sıralama/gizli sütun durumu ZATEN uygulanmış olarak
-    // gelir. Excel (view_export_xlsx.php) ve PDF (window.print()) ile veri
-    // kapsamı bu yüzden kendiliğinden tutarlı — üçü de aynı URL state'inden
-    // türeyen aynı kayıt kümesini gösterir, ikinci bir parse/sorgu YOK.
-    //
-    // Kapsam: YALNIZCA Grid görünümü. Kanban/Form dışa aktarma ayrı bir tur.
 
-    // ⚠️ YAKALAMA MANTIĞI ARTIK PAYLAŞILIYOR: "PDF olarak indir"
-    // (grid-export-pdf.js) AYNI canvas'ı kullanıyor. Aşağıdaki ölçüm/klon
-    // düzeltmeleri (sütun genişliklerinin klona sabitlenmesi, "+" sütun/satır
-    // payının düşülmesi, canvas kenar sınırı) tek yerde kaldı — PDF'e ikinci
-    // bir kopya çıkarılsaydı bu düzeltmelerden biri unutulunca yalnızca PDF
-    // sessizce bozuk çıkardı. Yüzey window.BCC_GRID_EXPORT olarak açılıyor
-    // (BCC_GRID / BCC_GRID_SELECT / BCC_GRID_COPY ile AYNI desen).
     document.addEventListener('DOMContentLoaded', function () {
         var item = document.getElementById('gs-view-download-png-item');
         if (!item) {
             return;
         }
 
-        // Eşikler SERT ENGEL DEĞİL — aşılınca yalnızca onay soruluyor.
         var ROW_WARN_THRESHOLD = 500;
         var HEIGHT_WARN_THRESHOLD = 12000;
-        // Chromium'da tek bir canvas kenarı ~16384px'te sessizce boş canvas
-        // döndürüyor; ölçek bu sınırın altında kalacak şekilde kısılıyor.
         var MAX_CANVAS_EDGE = 16000;
 
         var loadPromise = null;
 
-        // html2canvas YEREL bir dosyadan (assets/vendor/, MIT, sürüm 1.4.1) ve
-        // yalnızca İLK TIKLAMADA yükleniyor — CDN YOK, ve ~200KB'lık kütüphane
-        // her grid açılışının önüne konmuyor. Yol sunucudan geliyor
-        // (data-html2canvas-src, bcc_asset_url ile mtime cache-bust'lı), istemci
-        // '/assets/...' dizgisini kendi kurmuyor.
         function loadHtml2Canvas() {
             if (window.html2canvas) {
                 return Promise.resolve(window.html2canvas);
@@ -60,8 +37,6 @@
                     }
                 };
                 script.onerror = function () {
-                    // Başarısız yükleme önbelleğe alınmasın: kullanıcı tekrar
-                    // deneyebilsin.
                     loadPromise = null;
                     reject(new Error('yüklenemedi'));
                 };
@@ -71,15 +46,10 @@
         }
 
         function fileNameBase() {
-            // view_export_xlsx.php'deki dosya adı kuralının AYNISI
-            // (preg_replace('/[^a-zA-Z0-9_\-]+/', '_')) — .xlsx ile .png yan yana
-            // indirildiğinde adlar tutarlı olsun.
             var name = (window.BCC_TABLE_NAME || '').replace(/[^a-zA-Z0-9_-]+/g, '_');
             return name !== '' ? name : 'grid';
         }
 
-        // uzanti: '.png' | '.pdf' — PDF de AYNI ad kuralını kullansın diye
-        // parametreleştirildi (dosyalar yan yana indiğinde adlar tutarlı).
         function download(blob, ext) {
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
@@ -88,15 +58,9 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            // Hemen revoke etmek bazı tarayıcılarda indirmeyi yarıda kesiyor.
             setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
         }
 
-        // Tabloyu canvas'a çizer. PNG ve PDF akışlarının ORTAK adımı.
-        // label: kullanıcıya gösterilecek biçim adı ("PNG"/"PDF") — uyarı ve
-        // hata metinleri doğru biçimi söylesin diye.
-        // Söz (Promise) canvas ile çözülür; kullanıcı büyük-tablo onayını
-        // reddederse null ile çözülür (hata DEĞİL).
         function captureCanvas(label) {
             var table = document.querySelector('table.grid');
             if (!table) {
@@ -106,44 +70,21 @@
 
             var rowCount = table.querySelectorAll('tbody tr[data-record-id]').length;
 
-            // ÖLÇÜ, canlı tablodan OLDUĞU GİBİ alınamaz — bulunan gerçek bug:
-            // klonda sol şerit/görünüm paneli gizlendiği için .gs-main genişliyor
-            // ve table.grid'in `min-width:100%`i (style.css) tabloyu ekrandakinden
-            // GENİŞ yayıyordu (ölçüldü: canlı 926px -> klon 1240px). Canvas canlı
-            // ölçüyle açıldığı için sağdaki 314px KIRPILIYOR, altta da gizlenen
-            // "+" satırı kadar boşluk kalıyordu; metin bu yüzden "ortalanmış"
-            // görünüyordu (hiza her zaman left'ti, kayan şey sütun sınırlarıydı).
-            //
-            // Çözüm: sütun genişlikleri EKRANDAN ölçülüp klona `table-layout:fixed`
-            // ile birebir dayatılıyor. Böylece PNG ekrandaki tabloyla aynı
-            // yerleşimi koruyor — PNG'nin sözleşmesi zaten "ekranda ne varsa o".
             var addFieldTh = table.querySelector('thead th.grid-add-field-th');
             var addRow = table.querySelector('tr.grid-add-row');
 
             var colWidths = [];
             Array.prototype.forEach.call(table.querySelectorAll('thead th'), function (th) {
-                // "+" (yeni alan) sütunu çıktıda gizli (grid-export.css) — genişliğe
-                // de katılmamalı, yoksa sağda o kadar boşluk kalırdı.
                 if (th === addFieldTh) {
                     return;
                 }
-                // offsetWidth (rect DEĞİL): rect GÖRSEL piksel verir, aşağıdaki
-                // table.scrollHeight ise YERLEŞİM pikseli — büyük ekranda zoom
-                // devredeyken ikisi karışırsa PNG en-boy oranı bozulurdu
-                // (bkz. assets/theme-init.js bcc_uiScale).
                 colWidths.push(th.offsetWidth);
             });
 
             var width = 0;
             for (var ci = 0; ci < colWidths.length; ci++) { width += colWidths[ci]; }
-            // Taban "+" satırı da çıktıda gizli — yüksekliğinden düşülmezse PNG'nin
-            // altında boş bir şerit kalır.
             var height = Math.ceil(table.scrollHeight - (addRow ? addRow.offsetHeight : 0));
 
-            // Büyük görünüm uyarısı — sayfa içi onay (assets/confirm-modal.js),
-            // native confirm DEĞİL. Uyarı gerekmiyorsa hiç pencere açılmaz:
-            // Promise.resolve(true) ile akış aynı zincirde devam eder, ikinci bir
-            // kod yolu yazılmadı.
             var devamSozu = (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD)
                 ? window.bcc_confirm({
                     title: label + ' oluştur',
@@ -158,8 +99,6 @@
                     return null;
                 }
 
-                // Küçük tablolarda 2x (retina netliği), büyüklerde 1x — ve her
-                // durumda canvas kenar sınırına göre kısılır.
                 var scale = rowCount > 200 ? 1 : 2;
                 var longestEdge = Math.max(width, height);
                 if (longestEdge * scale > MAX_CANVAS_EDGE) {
@@ -173,28 +112,14 @@
                         logging: false,
                         width: width,
                         height: height,
-                        // Klonun yerleşim viewport'u tablodan DAR kalırsa tablo
-                        // yeniden sarılıp ekrandakinden farklı çıkardı — tablonun
-                        // kendi ölçüleri taban alınıyor.
                         windowWidth: Math.max(document.documentElement.clientWidth, width + 100),
                         windowHeight: Math.max(document.documentElement.clientHeight, height + 100),
                         onclone: function (clonedDoc) {
-                            // ORTAK dışa aktarma kuralları (assets/grid-export.css,
-                            // sayfaya media="print" ile bağlı). Klon `screen`
-                            // medyasında render edildiği için media "all"a
-                            // çevriliyor — kurallar böylece PDF ile TEK KAYNAKTAN
-                            // paylaşılıyor, PNG'ye özel ikinci bir gizleme/kırpma
-                            // listesi YOK. Değişiklik yalnızca KOPYADA: canlı
-                            // sayfada hiçbir şey oynamıyor (ekranda titreme yok).
                             var link = clonedDoc.querySelector('link[data-grid-export-css]');
                             if (link) {
                                 link.media = 'all';
                             }
 
-                            // Ekrandan ölçülen sütun genişliklerini klona sabitle
-                            // (bkz. yukarıdaki "ÖLÇÜ" notu). table-layout:fixed,
-                            // genişliği ilk satırın hücrelerinden aldığı için
-                            // sütunlar ekrandakiyle BİREBİR aynı kalıyor.
                             var clonedTable = clonedDoc.querySelector('table.grid');
                             if (!clonedTable) {
                                 return;
@@ -218,7 +143,6 @@
             });
         }
 
-        // Ortak meşgul durumu: hangi menü öğesi tetiklediyse o devre dışı kalır.
         function busy(el, on) {
             if (el) { el.disabled = !!on; }
             document.body.style.cursor = on ? 'progress' : '';
@@ -233,8 +157,6 @@
             busy(item, true);
             captureCanvas('PNG').then(function (canvas) {
                 if (canvas === null) {
-                    // Tablo yok ya da kullanıcı onayı reddetti — mesaj zaten
-                    // verildi/gerekmiyor.
                     busy(item, false);
                     return;
                 }
@@ -257,7 +179,6 @@
             });
         });
 
-        // PDF akışı bunları kullanıyor (grid-export-pdf.js).
         window.BCC_GRID_EXPORT = {
             captureCanvas: captureCanvas,
             download: download,

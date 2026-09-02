@@ -1,13 +1,3 @@
-// Görünüm panelinin (.gs-view-drawer) genişliğini sürükleyerek ayarlama.
-//
-// Genişlik <html> üzerindeki --gs-drawer-w CSS değişkeninde tutulur ve
-// localStorage'a yazılır (kullanıcı/tarayıcı tercihi; sunucuda saklanacak bir
-// VERİ değil — sütun genişliklerinden farkı bu: onlar görünümün parçası ve
-// views.config'e yazılıyor, bu ise kişisel bir arayüz ayarı).
-//
-// ⚠️ SATIR İÇİ width KULLANILMIYOR. Satır içi bir genişlik,
-// ".gs-view-drawer.is-collapsed { width: 0 }" kuralını ezer ve panel bir kez
-// sürüklendikten sonra hamburger düğmesiyle bir daha DARALMAZDI.
 (function () {
     'use strict';
 
@@ -24,19 +14,12 @@
         document.documentElement.style.setProperty('--gs-drawer-w', clamp(px) + 'px');
     }
 
-    // ---- Kaydedilmiş genişliği MÜMKÜN OLAN EN ERKEN anda uygula ------------
-    // Bu dosya <head>'de SENKRON yükleniyor (theme-init.js ile aynı gerekçe):
-    // defer edilseydi panel önce 260px çizilir, sonra kayıtlı genişliğe
-    // sıçrardı — görünür bir titreme (FOUC).
     try {
         var saved = parseInt(window.localStorage.getItem(STORAGE_KEY), 10);
         if (saved) {
             apply(saved);
         }
     } catch (e) {
-        // localStorage kapalı/dolu olabilir (gizli sekme vb.) — varsayılan
-        // genişlikle devam edilir, sürükleme yine çalışır (yalnızca kalıcı
-        // olmaz).
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -52,11 +35,7 @@
 
         function onMove(e) {
             if (!dragging) { return; }
-            // Sürükleme sırasında metin seçimi/otomatik kaydırma başlamasın.
             e.preventDefault();
-            // Fare koordinatları GÖRSEL piksel, yazdığımız genişlik YERLEŞİM
-            // pikseli (bkz. assets/theme-init.js bcc_uiScale) — büyük ekranda
-            // zoom devredeyken bölünmezse çekmece imleçten hızlı hareket eder.
             apply(startW + (e.clientX - startX) / (window.bcc_uiScale ? window.bcc_uiScale() : 1));
         }
 
@@ -73,7 +52,7 @@
                     10
                 );
                 if (w) { window.localStorage.setItem(STORAGE_KEY, String(w)); }
-            } catch (e) { /* yukarıdaki gerekçe */ }
+            } catch (e) {}
 
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
@@ -84,12 +63,6 @@
             e.preventDefault();
             dragging = true;
             startX = e.clientX;
-            // Başlangıç genişliği GERÇEK ölçümden alınır (değişkenden değil):
-            // kullanıcı hiç sürüklememişse değişken hiç tanımlı olmayabilir,
-            // o zaman CSS'teki varsayılan geçerlidir.
-            // offsetWidth (rect DEĞİL): rect GÖRSEL piksel verir, apply() ise
-            // YERLEŞİM pikseli yazar — zoom altında ikisi karışırsa çekmece
-            // sürüklemenin ilk anında sıçrar (bkz. theme-init.js bcc_uiScale).
             startW = drawer.offsetWidth;
 
             document.body.classList.add('gs-drawer-resizing');
@@ -98,16 +71,11 @@
             document.addEventListener('mouseup', onUp);
         });
 
-        // Çift tıklama varsayılana döndürür — sürükleyerek kullanılamaz hale
-        // getiren bir genişlikten çıkış yolu.
         handle.addEventListener('dblclick', function () {
             apply(DEFAULT);
             try { window.localStorage.setItem(STORAGE_KEY, String(DEFAULT)); } catch (e) {}
         });
 
-        // Klavyeyle de ayarlanabilmeli: tutamaç tabindex="0" ve
-        // role="separator" taşıyor, ok tuşlarıyla 16px adımlarla değişir.
-        // (Fare kullanamayan kullanıcı için tek erişim yolu.)
         handle.addEventListener('keydown', function (e) {
             var step = 0;
             if (e.key === 'ArrowLeft') { step = -16; }
@@ -122,7 +90,7 @@
             apply(next);
             try {
                 window.localStorage.setItem(STORAGE_KEY, String(clamp(next)));
-            } catch (err) { /* yukarıdaki gerekçe */ }
+            } catch (err) {}
         });
     });
 })();

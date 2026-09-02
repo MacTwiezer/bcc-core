@@ -1,21 +1,3 @@
-// Genel arama davranışı — TÜM sayfalarda AYNI dosya çalışır.
-//
-// Neyi çözüyor (bulunan gerçek kusurlar, canlı doğrulandı):
-//   1. Ctrl+K ÖLÜ kısayoldu. Eski kod home.js'te
-//      `if (searchDetails && searchInput && searchResults && searchGrid)`
-//      guard'ının İÇİNDEydi; #home-base-grid yalnızca dashboard/starred'da var.
-//      Sonuç: workspaces.php ve team_members.php'de tetikleyici görünüyordu ama
-//      Ctrl+K hiçbir şey yapmıyordu (ölçüldü: popover open=false) ve sonuç
-//      listesi HER ZAMAN boştu (0 sonuç). Base'i olmayan bir dashboard'da da
-//      aynı ölü durum oluşuyordu.
-//   2. grid.php bu bileşeni HİÇ almıyordu (kendi kabuğu var) — orada Ctrl+K yok.
-//   3. Arama yalnızca base kartlarını biliyordu; çalışma alanı, katılımcı ve
-//      kayıt aramak için ayrı ayrı kutular vardı.
-//
-// Tasarım: kısayol/açma-kapama/klavye gezinme SAYFADAN BAĞIMSIZ ve koşulsuz
-// bağlanır. "Ne aranıyor" sorusunu ise aşağıdaki COLLECTOR'lar cevaplar —
-// sayfanın DOM'una bakıp o bağlamın öğelerini üretirler. Yeni bir sayfa
-// eklemek = yeni bir collector; açma/kapama mantığına dokunulmaz.
 (function () {
     'use strict';
 
@@ -30,35 +12,12 @@
             return;
         }
 
-        // -------------------------------------------------------------------
-        // Bağlam toplayıcıları (collector)
-        // -------------------------------------------------------------------
-        // Her collector: { scope: 'etiket', items: [{label, meta, type, href,
-        // icon, onSelect}] }. İlk EŞLEŞEN collector kazanır — bir sayfada
-        // birden çok liste varsa (ör. workspaces: hem alanlar hem katılımcılar)
-        // collector ikisini de tek listede birleştirir, çünkü kullanıcı için
-        // tek bir arama kutusu var.
-        //
-        // text(): aranacak metin. label + meta + type birleşimi — böylece
-        // team_members'ta "editor" yazmak rolü de yakalar.
 
         function textOf(el, selector) {
             var found = el.querySelector(selector);
             return found ? found.textContent.trim().replace(/\s+/g, ' ') : '';
         }
 
-        // --- dashboard.php / starred.php: base kartları ---
-        //
-        // ⚠️ BULUNAN GERÇEK BUG: burası `getElementById('home-base-grid')`
-        // kullanıyordu ama o id ARTIK HİÇBİR YERDE BASILMIYOR. Home, base'leri
-        // ÇALIŞMA ALANINA göre gruplayınca sayfada BİRDEN ÇOK ızgara oluştu ve
-        // tek-id yaklaşımı bırakıldı (home.js aynı düzeltmeyi almıştı, burası
-        // ALMAMIŞTI). Sonuç sessizdi: `grid` her zaman null dönüyor, fonksiyon
-        // erken çıkıyor ve GENEL ARAMA dashboard'daki base'leri HİÇ
-        // indekslemiyordu — arama kutusuna base adı yazınca sonuç gelmiyordu.
-        //
-        // Artık TÜM ızgaralar geziliyor. null dönüşü korunuyor: base ızgarası
-        // olmayan sayfalarda (grid.php vb.) bu bölüm atlanmalı.
         function collectBases() {
             var grids = document.querySelectorAll('.home-base-grid');
             if (!grids.length) {
@@ -75,8 +34,6 @@
 
             var items = [];
             cards.forEach(function (card) {
-                // "+ Yeni Base Oluştur" kutucuğu bir <button>, veri DEĞİL —
-                // aranabilir öğe listesine girmemeli.
                 if (card.classList.contains('home-base-create')) {
                     return;
                 }
@@ -95,7 +52,6 @@
             return { scope: items.length + ' base', items: items };
         }
 
-        // --- workspaces.php: çalışma alanları + katılımcılar ---
         function collectWorkspaces() {
             var side = document.querySelector('.wsx-side');
             var collab = document.getElementById('wsx-collab-grid');
@@ -107,7 +63,6 @@
 
             if (side) {
                 Array.prototype.forEach.call(side.querySelectorAll('.wsx-card'), function (card) {
-                    // "Yeni çalışma alanı" kartı bir aksiyon, veri değil.
                     if (card.classList.contains('wsx-card-new')) {
                         return;
                     }
@@ -127,8 +82,6 @@
                         label: textOf(member, '.wsx-member-name'),
                         meta: textOf(member, '.wsx-member-mail') + (role ? ' · ' + role : ''),
                         type: 'Katılımcı',
-                        // Katılımcının kendi sayfası yok; seçilince ızgaradaki
-                        // kartına kaydırılıp vurgulanır.
                         onSelect: function () { flashTo(member); },
                     });
                 });
@@ -137,7 +90,6 @@
             return { scope: items.length + ' kayıt (alan + katılımcı)', items: items };
         }
 
-        // --- team_members.php: üye satırları ---
         function collectMembers() {
             var body = document.querySelector('[data-tm-rows]');
             if (!body) {
@@ -147,8 +99,6 @@
             var items = [];
             Array.prototype.forEach.call(body.querySelectorAll('.tm-row'), function (row) {
                 var roleSelect = row.querySelector('.tm-role-select');
-                // Rol ya bir <select>'te (owner görünümü) ya da düz metinde
-                // (salt-okunur görünüm) — ikisini de oku, aranabilir olsun.
                 var role = roleSelect
                     ? (roleSelect.options[roleSelect.selectedIndex] || {}).text || ''
                     : textOf(row, '.tm-role-readonly');
@@ -164,10 +114,7 @@
             return { scope: items.length + ' üye', items: items };
         }
 
-        // --- grid.php: kayıt satırları ve hücre içerikleri ---
         function collectRecords() {
-            // Tablo elemanının sınıfı "grid" (bkz. grid.php'deki <table class="grid ...">),
-            // satırlar data-record-id taşır (src/schema.php bcc_render_grid_data_row).
             var rows = document.querySelectorAll('table.grid tr[data-record-id]');
             if (!rows.length) {
                 return null;
@@ -175,9 +122,6 @@
 
             var items = [];
             Array.prototype.forEach.call(rows, function (row) {
-                // .grid-rownum ATLANIR: içinde satır numarası, seçim kutusu ve
-                // "genişlet" butonu var — veri değil. Aksi hâlde "3" yazınca
-                // 3. satır eşleşirdi.
                 var cells = Array.prototype.slice.call(row.querySelectorAll('td:not(.grid-rownum)'));
                 var texts = cells.map(function (td) {
                     return td.textContent.trim().replace(/\s+/g, ' ');
@@ -187,8 +131,6 @@
                     return;
                 }
 
-                // İlk dolu hücre birincil alandır (grid'in ilk veri sütunu) —
-                // başlık olarak o kullanılır, kalanı "eşleşen hücre" metni.
                 var label = texts[0];
                 var rest = texts.slice(1).join(' · ');
 
@@ -203,9 +145,6 @@
             return { scope: items.length + ' kayıt', items: items };
         }
 
-        // Sayfada kalınarak yapılan "git" davranışı: hedefi görünür alana
-        // kaydır ve kısa süre vurgula. Yeni bir kalıcı stil yerine tek bir
-        // sınıf (.bcc-search-flash) — CSS home.css'te.
         function flashTo(el) {
             el.scrollIntoView({ block: 'center', behavior: 'smooth' });
             el.classList.add('bcc-search-flash');
@@ -229,16 +168,9 @@
             context = { scope: '', items: [] };
         }
 
-        // -------------------------------------------------------------------
-        // Sonuç satırlarını bir kez kur (arama sırasında DOM yeniden ÜRETİLMEZ,
-        // yalnızca hidden toggle edilir — eski davranışla aynı, ucuz)
-        // -------------------------------------------------------------------
         var entries = [];
 
         context.items.forEach(function (item) {
-            // Gidilecek bir adres varsa <a>, sayfa içi atlama ise <button>:
-            // ikisi de klavyeyle erişilebilir olsun diye gerçek etkileşimli
-            // elemanlar kullanılır, tıklanabilir <div> DEĞİL.
             var row = document.createElement(item.href ? 'a' : 'button');
             row.className = 'home-search-result';
             row.setAttribute('role', 'option');
@@ -274,7 +206,7 @@
             if (item.onSelect) {
                 row.addEventListener('click', function (e) {
                     e.preventDefault();
-                    closeSearch(false); // odak hedefe gidecek, tetikleyiciye DEĞİL
+                    closeSearch(false);
                     item.onSelect();
                 });
             }
@@ -282,8 +214,6 @@
             resultsBox.appendChild(row);
             entries.push({
                 el: row,
-                // Ad + meta + tür birlikte aranır: "editor" yazınca rol,
-                // "@bcc.local" yazınca e-posta, "Istanbul" yazınca hücre eşleşir.
                 text: (item.label + ' ' + item.meta + ' ' + item.type).toLowerCase(),
             });
         });
@@ -293,14 +223,9 @@
             scopeBox.hidden = false;
         }
 
-        // -------------------------------------------------------------------
-        // Açma / kapama — SAYFADAN BAĞIMSIZ, koşulsuz bağlanır
-        // -------------------------------------------------------------------
         var lastFocused = null;
 
         function openSearch() {
-            // Odağı geri verebilmek için nereden geldiğimizi sakla (Escape
-            // sonrası odak kaybolup <body>'ye düşmesin — erişilebilirlik).
             lastFocused = document.activeElement;
             details.setAttribute('open', '');
             input.focus();
@@ -320,9 +245,6 @@
             lastFocused = null;
         }
 
-        // Ctrl+K / Cmd+K — HER sayfada, aramada içerik olup olmadığından
-        // BAĞIMSIZ. (Eski kusur tam buradaydı: kısayol, sonuç kaynağı bulunma
-        // koşuluna bağlıydı.)
         document.addEventListener('keydown', function (e) {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
                 e.preventDefault();
@@ -334,29 +256,15 @@
             }
         });
 
-        // Escape + dışarı tıklama: projenin ORTAK yardımcısı (assets/
-        // dismissable-panel.js) — burada ikinci bir kopya yazılmaz.
-        //
-        // isClickOutside ZORUNLU olarak override ediliyor. Bulunan gerçek bug
-        // (eski kodda da vardı, ölçüldü: popover açıkken sayfaya tıklamak onu
-        // KAPATMIYORDU): yardımcının varsayılanı `!el.contains(target)` ve
-        // .home-search-overlay (tam ekran backdrop, position:fixed inset:0)
-        // <details>'in İÇİNDE yaşıyor — yani popover açıkken ekranın herhangi
-        // bir yerine yapılan tıklama teknik olarak "elemanın içi" sayılıyor ve
-        // koşul HİÇBİR ZAMAN sağlanmıyordu. Doğru ölçüt "backdrop'a mı yoksa
-        // panelin kendisine mi tıklandı".
         var popover = details.querySelector('.home-search-popover');
         var trigger = details.querySelector('.home-search-trigger');
 
         window.bcc_bindDismissable(details, {
             close: function () { closeSearch(true); },
             isClickOutside: function (target) {
-                // Panelin içi: kapatma (girdiye/sonuca tıklanıyor).
                 if (popover && popover.contains(target)) {
                     return false;
                 }
-                // Tetikleyici: native <details> zaten toggle ediyor; burada da
-                // kapatırsak açılır-açılmaz kapanırdı.
                 if (trigger && trigger.contains(target)) {
                     return false;
                 }
@@ -364,8 +272,6 @@
             },
         });
 
-        // Tetikleyiciye (summary) tıklandığında native <details> açılır;
-        // odak/seçim bu kancadan gelir.
         details.addEventListener('toggle', function () {
             if (details.open) {
                 input.focus();
@@ -373,9 +279,6 @@
             }
         });
 
-        // -------------------------------------------------------------------
-        // Süzme + klavyeyle gezinme
-        // -------------------------------------------------------------------
         var activeIndex = -1;
 
         function visibleEntries() {
@@ -436,10 +339,6 @@
             }
         });
 
-        // Bir sonuç DOM'dan silindiğinde (ör. dashboard'da base silinince)
-        // arama listesi de güncellensin diye home.js'in kullandığı kanca.
-        // Eski kodda bu, home.js'in kendi resultItems dizisiydi; bileşen ayrı
-        // dosyaya taşınınca dışarıya açık tek bir fonksiyona dönüştü.
         window.bcc_searchRemoveItem = function (baseId) {
             for (var i = entries.length - 1; i >= 0; i--) {
                 if (entries[i].el.getAttribute('data-base-id') === String(baseId)) {

@@ -1,10 +1,6 @@
 (function () {
     'use strict';
 
-    // grid.js'deki fileTypeBadge/renderAttachmentChips ile AYNI harita/DOM yapısı
-    // (.attachment-chip/.attachment-thumb/.attachment-badge/.attachment-name,
-    // style.css'teki AYNI kurallar) — burada window.BCC_GRID yok (grid.js hiç
-    // yüklenmiyor), bu yüzden küçük bir kopya, ama salt-okunur (yükleme/silme YOK).
     function fileTypeBadge(mime) {
         var map = {
             'application/pdf': 'PDF',
@@ -51,10 +47,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Sol nav daralt/genişlet (« / ») — dashboard.php'nin #home-sidebar-toggle
-        // deseniyle AYNI fikir (class toggle), burada yalnızca iki ayrı buton
-        // (daralt/genişlet) görünürlüğü de birlikte değişiyor (CSS bu ikisini
-        // .if-nav.is-collapsed altında otomatik gösterip/gizliyor).
         var nav = document.getElementById('if-nav');
         var collapseBtn = document.getElementById('if-nav-collapse');
         var expandBtn = document.getElementById('if-nav-expand');
@@ -85,20 +77,7 @@
         var rows = Array.prototype.slice.call(recordList.querySelectorAll('.if-record-row'));
         var currentDetailRow = null;
 
-        // E4 — grid.php'nin getAllDataRows() ile AYNI fikir, ama yalnızca GÖRÜNÜR
-        // satırlar (grid.php arama sırasında satır GİZLEMEZ, sadece <mark> ekler —
-        // burada arama gerçekten row.hidden yaptığı için (aşağıda applyVisibility)
-        // gizli satırlar arasında ▲▼ atlama yapmamalı).
         function getVisibleRows() {
-            // DOM'dan TAZE okunuyor, önbellekteki `rows` dizisinden DEĞİL.
-            // Bulunan gerçek bug: filtre/sıralama/gruplama satırları DOM'da
-            // yeniden SIRALIYOR (renderItems), ama `rows` sayfa yüklenirken
-            // yakalanmış ESKİ sırayı taşıyor. Ondan türetilen liste yüzünden
-            // ▲▼ düğmeleri ve ok tuşları ekranda görünenden BAŞKA bir sırada
-            // geziyordu (canlı testte: gruplanmış listede ilk ok "Beta
-            // Yazilim" yerine "Ceta Lojistik"e gidiyordu).
-            // querySelectorAll belge sırasını döndürür — yeniden sıralamadan
-            // sonra bu, kullanıcının GÖRDÜĞÜ sıradır.
             return Array.prototype.filter.call(
                 recordList.querySelectorAll('.if-record-row'),
                 function (r) { return !r.hidden; }
@@ -135,36 +114,15 @@
             nextBtn.addEventListener('click', function () { navigateDetail(1); });
         }
 
-        // ---- Temsilci not inceleme takibi ---------------------------------
-        // api/note_view_start.php + note_view_end.php. Tek bağlanma noktası
-        // selectRow(): notu açmanın ÜÇ yolu da (fare, ▲▼ düğmeleri, ↑↓ ok
-        // tuşları) oradan geçtiği için ikinci bir kopya YAZILMADI.
-        //
-        // Rol kararı SUNUCUDAN gelir (BCC_IF_TRACK_VIEWS, interface.php) —
-        // burada rol mantığı ÇÖZÜLMEZ. Bayrak yoksa (bu betiği yükleyen başka
-        // bir sayfa) izleme tamamen kapalıdır.
         var trackViews = (typeof BCC_IF_TRACK_VIEWS !== 'undefined') && BCC_IF_TRACK_VIEWS === true;
         var auditCsrfMeta = document.querySelector('meta[name="csrf-token"]');
         var auditCsrf = auditCsrfMeta ? auditCsrfMeta.content : '';
 
-        // Açık incelemenin sunucudaki satır id'si (yoksa null).
         var currentViewId = null;
-        // "Açılış" isteği GECİKMELİ gönderilir (aşağıya bakın); bekleyen zamanlayıcı.
         var viewStartTimer = null;
 
-        // Ok tuşuyla listede hızlı gezinmek saniyede birkaç selectRow tetikler.
-        // Eşik olmasaydı her basış bir INSERT olurdu ve "inceleme" sayılmayacak
-        // 200 ms'lik geçişler tabloyu doldururdu. 2 saniyeden kısa bakışlar
-        // HİÇ kaydedilmez — istek bile atılmaz.
         var VIEW_START_DELAY_MS = 2000;
 
-        // ---- Nabız ----------------------------------------------------------
-        // Not AÇIK KALDIĞI sürece süreyi sunucuda tazeler (api/note_view_ping.php).
-        // NEDEN: süre eskiden YALNIZCA kapanışta yazılıyordu; kapanış olayı
-        // ulaşmazsa (tarayıcı çökmesi, makinenin uykuya alınması, sekmenin
-        // process olarak öldürülmesi, ağ kopması) satır sonsuza dek açık kalıyor
-        // ve listede "süre kaydedilmedi" yazıyordu — kullanıcı bunu bildirdi.
-        // Artık en kötü ihtimalle süre son nabızda donar (gerçeğe ≤15 sn uzak).
         var VIEW_PING_MS = 15000;
         var viewPingTimer = null;
 
@@ -185,8 +143,6 @@
                 var body = new FormData();
                 body.append('view_id', currentViewId);
                 body.append('csrf_token', auditCsrf);
-                // keepalive: nabız sırasında sayfa kapanmaya başlarsa istek
-                // yine de teslim edilir.
                 fetch('/api/note_view_ping.php', { method: 'POST', body: body, keepalive: true })
                     .catch(function () {});
             }, VIEW_PING_MS);
@@ -207,14 +163,10 @@
             body.append('csrf_token', auditCsrf);
             currentViewId = null;
 
-            // sendBeacon: sayfa KAPANIRKEN de teslim edilir (fetch iptal edilir).
-            // FormData ile gönderildiği için istek multipart/form-data olur ve
-            // PHP $_POST'u doldurur — mevcut api_require_csrf() değişmeden çalışır.
             if (navigator.sendBeacon) {
                 navigator.sendBeacon('/api/note_view_end.php', body);
                 return;
             }
-            // Yedek yol (sendBeacon yoksa): keepalive ile sayfa kapanışına dayan.
             fetch('/api/note_view_end.php', { method: 'POST', body: body, keepalive: true })
                 .catch(function () {});
         }
@@ -238,8 +190,6 @@
                 fetch('/api/note_view_start.php', { method: 'POST', body: body })
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
-                        // view_id null gelebilir: sunucu "temsilci değilsin"
-                        // dediğinde sessiz no-op döner (bkz. uçnokta yorumu).
                         if (data && data.ok && data.view_id) {
                             currentViewId = data.view_id;
                             startNoteViewPing();
@@ -249,14 +199,6 @@
             }, VIEW_START_DELAY_MS);
         }
 
-        // ---- "Temsilci İnceleme Geçmişi" paneli ----------------------------
-        // api/note_view_list.php. Blok interface.php'de YALNIZCA yetkili role
-        // basılır, yani auditEl yoksa bu bölümün tamamı sessizce no-op olur
-        // (home.js'in bu sayfadaki diğer blokları gibi — null-check deseni).
-        //
-        // TEMBEL YÜKLEME: liste satır seçilince DEĞİL, panel AÇILINCA çekilir.
-        // Aksi hâlde kullanıcının hiç bakmadığı her not tıklaması bir istek
-        // daha üretirdi.
         var auditEl = document.getElementById('if-audit');
         var auditList = auditEl ? auditEl.querySelector('[data-audit-list]') : null;
         var auditEmpty = auditEl ? auditEl.querySelector('[data-audit-empty]') : null;
@@ -264,9 +206,6 @@
         var auditCount = auditEl ? auditEl.querySelector('[data-audit-count]') : null;
         var auditExport = auditEl ? auditEl.querySelector('[data-audit-export]') : null;
 
-        // Excel indirme bağlantısı AÇIK NOTA bağlıdır: seçim değişince href de
-        // değişmeli, yoksa kullanıcı başka bir notun raporunu indirirdi.
-        // Not seçili değilken bağlantı devre dışı (aria-disabled + tıklama iptali).
         function syncAuditExport() {
             if (!auditExport) {
                 return;
@@ -282,16 +221,12 @@
         }
 
         if (auditExport) {
-            // aria-disabled TEK BAŞINA tıklamayı engellemez (<a> için 'disabled'
-            // yoktur) — devre dışıyken olay burada durdurulur.
             auditExport.addEventListener('click', function (e) {
                 if (auditExport.getAttribute('aria-disabled') === 'true') {
                     e.preventDefault();
                 }
             });
         }
-        // Yüklenen geçmişin hangi kayda ait olduğu — aynı notta paneli kapatıp
-        // açmak ikinci bir istek atmasın diye.
         var auditLoadedFor = null;
 
         function resetAuditPanel() {
@@ -317,15 +252,11 @@
 
                 var name = document.createElement('span');
                 name.className = 'if-audit-item-name';
-                // textContent: isim kullanıcı verisidir, innerHTML KULLANILMAZ.
                 name.textContent = v.user_name;
                 row.appendChild(name);
 
                 var date = document.createElement('span');
                 date.className = 'if-audit-item-date';
-                // Kapanış saati varsa "başlangıç → bitiş" olarak gösterilir;
-                // süre böylece tek başına bir sayı olmaktan çıkıp
-                // doğrulanabilir hâle gelir (kullanıcı "saati saatine" istedi).
                 date.textContent = v.closed_at_display
                     ? v.opened_at_display + ' → ' + v.closed_at_display
                     : v.opened_at_display;
@@ -334,15 +265,9 @@
                 var dur = document.createElement('span');
                 dur.className = 'if-audit-item-duration';
                 if (v.duration_display === null) {
-                    // Süre GERÇEKTEN hiç yazılmamış (nabız bile atamadan
-                    // kesilmiş). Satır GİZLENMEZ: "baktı ama ne kadar baktığı
-                    // bilinmiyor" da bir denetim bilgisidir.
                     dur.classList.add('is-open');
                     dur.textContent = 'süre kaydedilmedi';
                 } else if (v.is_open) {
-                    // Kapanış olayı henüz gelmedi ama nabız süre yazdı: ya not
-                    // HÂLÂ açık ya da kapanış ulaşmadı. "en az" demek yanıltıcı
-                    // olmaz — gerçek süre bundan kısa olamaz.
                     dur.classList.add('is-open');
                     dur.textContent = 'en az ' + v.duration_display;
                 } else {
@@ -364,7 +289,7 @@
 
                 var recordId = currentDetailRow.getAttribute('data-record-id');
                 if (!recordId || auditLoadedFor === recordId) {
-                    return; // Aynı notun geçmişi zaten yüklü — istek atma.
+                    return;
                 }
                 auditLoadedFor = recordId;
 
@@ -385,48 +310,28 @@
                         auditCount.textContent = data.views.length;
                     })
                     .catch(function () {
-                        auditLoadedFor = null; // Tekrar denenebilsin.
+                        auditLoadedFor = null;
                         auditError.hidden = false;
                     });
             });
         }
 
-        // Sekme gizlenince/sayfa terk edilince açık incelemeyi kapat.
-        // beforeunload BİLEREK kullanılmadı: mobil tarayıcılarda güvenilmez ve
-        // içindeki fetch iptal edilir. visibilitychange + pagehide ikilisi
-        // sekme kapatma, pencere kapatma ve başka sayfaya gitmeyi kapsar.
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'hidden') {
                 endNoteView();
             } else if (currentDetailRow) {
-                // Kullanıcı sekmeye GERİ döndü ve hâlâ bir not açık — bu YENİ
-                // bir incelemedir (istenen davranış: her açılış ayrı kayıt).
                 startNoteView(currentDetailRow);
             }
         });
         window.addEventListener('pagehide', endNoteView);
 
-        // Satır tıklama: sağ detay paneli, satırın data-detail-fields JSON'undan
-        // (sunucu tarafında bir kez gömülmüş) kurulur — ikinci bir AJAX/sorgu YOK.
         function selectRow(row) {
-            // ÖNCE önceki incelemeyi kapat, SONRA yenisini başlat — sıra önemli:
-            // tersi olsaydı iki satır aynı anda açık kalırdı.
             endNoteView();
 
             currentDetailRow = row;
             rows.forEach(function (r) { r.classList.remove('is-selected'); });
             row.classList.add('is-selected');
 
-            // Seçim liste görünümünün dışına taşabilir (klavye okları ve ▲▼
-            // düğmeleri sıradaki kaydı ekranda olup olmadığına bakmadan seçer).
-            // Burada, selectRow'un İÇİNDE duruyor: her iki yol da (ve fare
-            // tıklaması da) tek bir kaydırma davranışını paylaşsın, ikinci bir
-            // kopya yazılmasın. 'nearest' zaten tamamen görünür olan satırda
-            // HİÇBİR ŞEY yapmaz — yani fareyle tıklamada no-op, yalnızca
-            // kısmen/tamamen dışarıda kalan satırı en az hareketle içeri alır.
-            // behavior:'smooth' BİLEREK kullanılmadı: ok tuşu basılı tutulunca
-            // yumuşak kaydırmalar kuyruğa girip listeyi seçimin gerisinde
-            // bırakıyor, gezinme takip edilemez hale geliyor.
             row.scrollIntoView({ block: 'nearest' });
 
             var fields = [];
@@ -452,17 +357,9 @@
                 var value = document.createElement('div');
                 value.className = 'if-detail-field-value';
                 if (f.field_type === 'attachment') {
-                    // Salt-okunur: küçük resim/rozet + indirme linki — grid.php'nin
-                    // AYNI .attachment-* sınıflarıyla (style.css, burada da yüklü),
-                    // yükleme/silme YOK (Duyuru ekranı hiçbir mutasyon çağırmaz).
                     value.className = 'if-detail-field-value attachment-cell-view';
                     renderAttachmentFiles(value, f.files || []);
                 } else if (f.is_rich) {
-                    // GÜVENLİ: f.value sunucuda bcc_sanitize_rich_text() ile
-                    // temizlenmiş HTML (cell_display_text long_text çıktısı) —
-                    // JSON.parse zaten HTML-entity çözümünü yapmış hâliyle
-                    // geldi, ham kullanıcı girdisi DEĞİL (grid.js'in aynı
-                    // data-value -> innerHTML deseniyle özdeş).
                     value.innerHTML = f.value;
                 } else {
                     value.textContent = f.value;
@@ -476,11 +373,8 @@
             detailContent.hidden = false;
             updateDetailNavState();
 
-            // Geçmiş paneli KAPANIR ve içeriği atılır: açık kalsaydı yeni
-            // seçilen notun altında ESKİ notun geçmişi görünmeye devam ederdi.
             resetAuditPanel();
 
-            // Yeni incelemeyi başlat (2 sn eşiğinden sonra, yukarıya bakın).
             startNoteView(row);
         }
 
@@ -490,15 +384,7 @@
             });
         });
 
-        // ---- Klavye ile kayıt gezinme (↑/↓) --------------------------------
-        // ▲▼ düğmeleriyle AYNI navigateDetail() yolunu kullanır — ikinci bir
-        // seçim/render mekanizması YAZILMADI, yani sınır kontrolü (listenin
-        // başında ↑ / sonunda ↓) ve "gizli satırı atlama" davranışı oradan
-        // olduğu gibi devralınır.
 
-        // Yazarken ok tuşları imleci hareket ettirir; listeyi gezdirmemeli.
-        // SELECT de dahil: kapalı bir <select> üzerinde ok tuşu seçeneği
-        // değiştirir, o da bir "yazma" eylemidir.
         function isTypingTarget(el) {
             if (!el) {
                 return false;
@@ -510,13 +396,6 @@
             return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
         }
 
-        // Paylaşım modalı açıkken liste ARKADA kalır — ok tuşu, kullanıcının
-        // göremediği bir seçimi değiştirmemeli. Kimliğe göre değil
-        // [aria-modal="true"] ile aranıyor: ileride eklenecek başka bir modal
-        // da bu korumadan kendiliğinden yararlansın.
-        // getClientRects() kullanılıyor, offsetParent DEĞİL: overlay
-        // position:fixed olduğunda offsetParent görünür bir modalda da null
-        // döner ve modal yanlışlıkla "kapalı" sayılırdı.
         function modalIsOpen() {
             var dlg = document.querySelector('[aria-modal="true"]');
             return !!(dlg && dlg.getClientRects().length);
@@ -526,8 +405,6 @@
             if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
                 return;
             }
-            // Modifier'lı kombinasyonlar (ör. tarayıcının kendi kısayolları)
-            // bu gezinmeye ait değil.
             if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
                 return;
             }
@@ -540,14 +417,8 @@
                 return;
             }
 
-            // Sayfanın kendi dikey kaydırması devreye girmesin; konumlandırmayı
-            // selectRow içindeki scrollIntoView yapıyor.
             e.preventDefault();
 
-            // Henüz seçim yoksa — ya da arama seçili kaydı gizlediyse
-            // (indexOf === -1, bu durumda navigateDetail hiçbir şey yapamazdı) —
-            // yön ne olursa olsun görünür listenin ilk kaydından başla. Böylece
-            // liste, önce fareyle bir kayda tıklamak gerekmeden gezilebilir.
             if (!currentDetailRow || visible.indexOf(currentDetailRow) === -1) {
                 selectRow(visible[0]);
                 return;
@@ -556,16 +427,8 @@
             navigateDetail(e.key === 'ArrowDown' ? 1 : -1);
         });
 
-        // ---- Grupla / Filtrele / Sırala ------------------------------------
-        //
-        // Kurallar burada YALNIZCA toplanıyor; anlamlandırma (hangi operatör
-        // hangi tipte geçerli, SQL nasıl kurulur, gruplar nasıl ağaçlanır)
-        // TAMAMEN sunucuda ve grid.php ile AYNI fonksiyonlarda
-        // (parse_grid_*_rules -> bcc_build_grid_records_query ->
-        // bcc_build_grouped_tree, bkz. public/api/interface_records.php).
-        // Üretilen parametre adları da grid.php'ninkiyle birebir aynı.
         var toolsWrap = document.getElementById('if-tools');
-        var groupHeaders = []; // istemcide üretilen grup başlığı düğümleri
+        var groupHeaders = [];
 
         function fieldById(id) {
             for (var i = 0; i < BCC_IF_FIELDS.length; i++) {
@@ -590,9 +453,6 @@
         function fieldOptions(kind) {
             var out = [];
             BCC_IF_FIELDS.forEach(function (f) {
-                // Filtre/sıralama için operatör tablosunda karşılığı olmayan
-                // tipler (ör. attachment) atlanır — sunucu da onları sessizce
-                // eliyor (parse_grid_*_rules), liste boşuna göstermesin.
                 if (kind !== 'group' && !BCC_IF_OPERATORS[f.type]) { return; }
                 out.push({ value: f.id, label: f.name });
             });
@@ -618,8 +478,6 @@
                 val.placeholder = 'Değer';
                 row.appendChild(val);
 
-                // Operatör listesi SEÇİLEN ALANIN TİPİNE bağlı — sunucudaki
-                // BCC_FILTER_OPERATORS'ın aynısı, ikinci bir tablo yok.
                 var syncOps = function () {
                     var f = fieldById(parseInt(fieldSel.value, 10));
                     var map = (f && BCC_IF_OPERATORS[f.type]) || {};
@@ -630,7 +488,6 @@
                         o.textContent = map[op];
                         condSel.appendChild(o);
                     });
-                    // empty / not_empty değer almaz.
                     var noVal = condSel.value === 'empty' || condSel.value === 'not_empty';
                     val.hidden = noVal;
                 };
@@ -665,24 +522,16 @@
             return row;
         }
 
-        // Panel position:fixed (bkz. interface.css'teki not: .if-list-panel'in
-        // overflow:hidden'ı absolute bir paneli kırpıyordu). Konumu açılışta
-        // burada hesaplanıyor — düğmenin altına hizalanır, sağdan taşacaksa
-        // pencere içine çekilir.
         function positionToolPanel(details) {
             var panel = details.querySelector('.if-tool-panel');
             var btn = details.querySelector('.if-tool-btn');
             if (!panel || !btn) { return; }
 
-            // rect'ler ve innerWidth GÖRSEL piksel, style'a yazılan değer
-            // YERLEŞİM pikseli — büyük ekranda zoom devredeyken bölünmezse
-            // panel kayar (bkz. assets/theme-init.js bcc_uiScale).
             var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
             var r = btn.getBoundingClientRect();
             panel.style.top = (r.bottom / s + 4) + 'px';
             panel.style.left = (r.left / s) + 'px';
 
-            // Genişliği ölçmek için önce yerleştirildi; taşma varsa sola kaydır.
             var pr = panel.getBoundingClientRect();
             var overflowRight = (pr.right - (window.innerWidth - 8)) / s;
             if (overflowRight > 0) {
@@ -709,13 +558,9 @@
                     if (rows.children.length >= (BCC_IF_MAX[kind] || 3)) { return; }
                     var row = buildRow(panel, kind);
                     if (row) { rows.appendChild(row); }
-                    // Filtrede yeni satır tek başına sonucu değiştirmez (değer
-                    // boş) ama sıralama/gruplama hemen etkilidir.
                     if (kind !== 'filter') { apply(); }
                 });
 
-                // Filtre paneli VE/VEYA bağlacı — sunucuda tek değer olarak
-                // tüm kurallara uygulanır (grid.php ile aynı kısıt).
                 if (kind === 'filter') {
                     var logic = makeSelect('if-tool-logic', [
                         { value: 'and', label: 'Tüm koşullar (VE)' },
@@ -728,7 +573,6 @@
             });
         }
 
-        // Toplanan kuralları grid.php'nin parametre adlarına çevirir.
         function collectParams() {
             var p = new URLSearchParams();
             p.set('table_id', recordList.getAttribute('data-table-id') || '');
@@ -772,9 +616,6 @@
             el.textContent = n ? String(n) : '';
         }
 
-        // Sunucudan gelen sırayı DOM'a uygular: satırlar YENİDEN ÜRETİLMEZ,
-        // mevcut düğümler taşınır (detay panelindeki data-detail-fields ve
-        // dinleyiciler korunur). Grup başlıkları istemcide üretilir.
         function renderItems(items) {
             groupHeaders.forEach(function (h) { if (h.parentNode) { h.parentNode.removeChild(h); } });
             groupHeaders = [];
@@ -792,7 +633,7 @@
                     h.className = 'if-group-header if-group-level-' + it.level;
                     var label = document.createElement('span');
                     label.className = 'if-group-label';
-                    label.textContent = it.label;           // kullanıcı verisi
+                    label.textContent = it.label;
                     var count = document.createElement('span');
                     count.className = 'if-group-count';
                     count.textContent = it.count;
@@ -809,7 +650,6 @@
                 }
             });
 
-            // noResults kutusu listenin sonunda kalmalı.
             recordList.insertBefore(frag, noResults || null);
 
             if (noResults) {
@@ -826,8 +666,6 @@
             fetch('/api/interface_records.php?' + collectParams().toString())
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
-                    // Yarış koruması: yalnızca EN SON isteğin sonucu uygulanır
-                    // (arama kutusundaki debounce deseniyle aynı).
                     if (reqId !== applyReqId || !data || !data.ok) { return; }
                     renderItems(data.items);
                     setBadge('filter', data.counts.filters);
@@ -842,22 +680,9 @@
             applyTimer = setTimeout(apply, 200);
         }
 
-        // Arama artık AYNI apply() yolundan geçiyor (public/api/
-        // interface_records.php, q parametresi). Eskiden ayrı bir uç nokta
-        // (interface_search.php) çağırıp yalnızca satır gizliyordu; filtre/
-        // sıralama eklenince iki yol BİRBİRİNİ EZERDİ — arama sonucu sıralamayı,
-        // sıralama aramayı geri alırdı. Tek yol olunca arama ile filtre KESİŞİR
-        // ve sonuç her zaman aktif sıralama/gruplamayla tutarlı kalır.
-        //
-        // interface_search.php SİLİNMEDİ: hâlâ kendi başına geçerli bir
-        // uç nokta ve interface_records.php aramayı ONUN üzerinden yapıyor
-        // (bcc_interface_fetch_records), yani arama mantığı tek yerde.
         if (searchInput && recordList) {
             searchInput.addEventListener('input', debounceApply);
         }
 
-        // İlk yükleme: sunucu satırları zaten doğru sırada bastı, bu yüzden
-        // açılışta istek YAPILMIYOR — apply() yalnızca kullanıcı bir kural
-        // değiştirdiğinde çalışır.
     });
 })();

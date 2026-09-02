@@ -1,10 +1,6 @@
 (function () {
     'use strict';
 
-    // Genel şifre göster/gizle — bir sayfada birden fazla ".input-with-toggle"
-    // olabilir (ör. account.php'nin mevcut/yeni/tekrar şifre alanları), her biri
-    // kendi tetikleyicisine bağlanır; ikinci bir kopya YOK (create_user.php'de
-    // daha önce sayfaya özel, tek input'a bağlı bir kopyası vardı).
     document.addEventListener('DOMContentLoaded', function () {
         Array.prototype.forEach.call(document.querySelectorAll('.input-toggle-btn'), function (toggle) {
             var wrapper = toggle.closest('.input-with-toggle');

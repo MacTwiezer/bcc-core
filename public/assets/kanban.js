@@ -1,42 +1,10 @@
 (function () {
     'use strict';
 
-    // Kanban tahtası (Grup View-Kanban).
-    //
-    // SÜRÜKLE-BIRAK YENİ BİR UÇ NOKTA GEREKTİRMEZ: bir kartı başka sütuna
-    // taşımak, o kaydın single_select hücresine yeni değeri yazmaktır — yani
-    // cell_update.php'nin TAM OLARAK yaptığı iş. O uçnokta zaten CSRF + oturum +
-    // require_role('editor') + kayıt↔alan sahipliği + soft-delete kontrolü
-    // yapıyor VE normalize_cell_value() sayesinde değerin gerçekten bir
-    // choices üyesi olduğunu doğruluyor. Özel bir "kartı taşı" uçnoktası yazmak
-    // bu doğrulamaları KOPYALAMAK olurdu.
-    //
-    // İstemcideki canEdit kontrolü yalnızca KOZMETİK (tutamaç bağlamamak);
-    // gerçek kapı sunucudaki require_role('editor').
 
     document.addEventListener('DOMContentLoaded', function () {
-        // POST sarmalayicisi ORTAK: window.bcc_post (assets/theme-init.js).
-        // Bu dosyanin kopyasi dizileri "k[]" olarak gonderiyordu; o yetenek
-        // ortak yardimciya TASINDI, davranis ayni.
-        // TEK FARK: JSON gelmeyen yanitta eski kopya {httpOk:false,data:null}
-        // donuyordu ve cagiran taraf genel bir mesaj gosteriyordu; ortak surum
-        // {ok:false,error:"Sunucu beklenmeyen bir yanit dondurdu."} donuyor,
-        // yani kullanici artik gercek sebebi goruyor.
         var post = window.bcc_post;
 
-        // ---- Sütunlama ayarları paneli --------------------------------------
-        // ⚠️ TAHTADAN ÖNCE ve TAHTADAN BAĞIMSIZ bağlanır.
-        //
-        // BULUNAN GERÇEK HATA (kullanıcı bildirdi): bu blok eskiden aşağıdaki
-        // `if (!board) return;` korumasının ALTINDAYDI. Tahta ([data-kanban-board])
-        // yalnızca sütunlama alanı ZATEN SEÇİLMİŞKEN basılıyor (bkz. kanban.php'nin
-        // boş durum dalı) — yani alan seçilmemişken script daha ilk satırda
-        // çıkıyor, "Kaydet" düğmesine hiçbir dinleyici bağlanmıyordu. Sonuç:
-        // Kanban'ı yapılandırmak için önce yapılandırılmış olması gerekiyordu;
-        // kullanıcı radyo düğmesini seçip Kaydet'e basıyor ve hiçbir şey
-        // olmuyordu (hata da yok, çünkü kod hiç çalışmıyordu).
-        //
-        // view_id artık panelin KENDİ data-view-id'sinden okunur, tahtadan değil.
         var settings = document.querySelector('[data-kanban-settings]');
         if (settings) {
             var saveBtn = settings.querySelector('[data-kanban-save]');
@@ -57,10 +25,6 @@
                     }).then(function (result) {
                         saveBtn.disabled = false;
                         if (result.httpOk && result.data && result.data.ok) {
-                            // Sütun yapısı tamamen değişebilir (farklı alan =
-                            // farklı seçenekler) — kısmi DOM güncellemesi yerine
-                            // sayfayı yenilemek hem basit hem doğru. Boş durumdan
-                            // geliniyorsa yenileme zaten tahtayı İLK KEZ basar.
                             window.location.reload();
                             return;
                         }
@@ -73,8 +37,6 @@
             }
         }
 
-        // Buradan AŞAĞISI tahtayı gerektirir: sütunlama alanı seçilmemişken
-        // (boş durum) tahta hiç basılmaz, kart tıklaması/sürükleme de anlamsızdır.
         var board = document.querySelector('[data-kanban-board]');
         if (!board) {
             return;
@@ -83,9 +45,6 @@
         var columnFieldId = board.getAttribute('data-column-field-id');
         var canEdit = board.getAttribute('data-can-edit') === '1';
 
-        // Rozet: süzme YOKKEN sütundaki kart sayısı, süzme VARKEN "eşleşen/toplam"
-        // (ör. "3/147"). Yalnızca eşleşeni yazmak, kullanıcıya sütunda gerçekte
-        // kaç kart olduğunu KAYBETTİRİRDİ.
         function refreshCounts() {
             Array.prototype.forEach.call(board.querySelectorAll('[data-kanban-column]'), function (col) {
                 var cards = Array.prototype.slice.call(col.querySelectorAll('[data-kanban-card]'));
@@ -102,27 +61,12 @@
             });
         }
 
-        // ---- Fare tekerleği ile YATAY kaydırma -------------------------------
-        // Kullanıcı bildirdi: "touchpad'de iki parmakla kayıyor ama fareyle
-        // erişemiyorum". İki ayrı sebep vardı:
-        //   1. Tahta ekrandan uzun olduğu için yatay çubuk ekranın altında
-        //      kalıyordu -> sütun gövdesine yükseklik sınırı konularak çözüldü
-        //      (home.css).
-        //   2. Tarayıcı BİNDİRMELİ (overlay) kaydırma çubuğu kullanıyorsa çubuk
-        //      yalnızca kaydırırken beliriyor; fareyle tutulacak bir şey yok.
-        //      ::-webkit-scrollbar biçimlendirmesi her yapıda bunu klasik
-        //      çubuğa çevirmiyor (ölçüldü: bu makinede çubuk hâlâ 0 piksel yer
-        //      kaplıyor). Bu yüzden tekerlek de yatay kaydırmaya bağlanıyor —
-        //      Trello/Airtable davranışı, ve çubuktan bağımsız çalışır.
-        //
-        // Sütun İÇİNDE hâlâ kaydırılacak yer varsa karışılmaz: kart listesinde
-        // aşağı inmek isteyen kullanıcı tahtayı yana kaydırmış olmaz.
         board.addEventListener('wheel', function (e) {
             if (e.deltaY === 0 || e.ctrlKey || e.shiftKey) {
-                return; // yakınlaştırma / zaten yatay olan hareket
+                return;
             }
             if (board.scrollWidth <= board.clientWidth) {
-                return; // taşma yok
+                return;
             }
 
             var body = e.target && e.target.closest ? e.target.closest('.kanban-column-body') : null;
@@ -131,7 +75,7 @@
                 var atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
                 var wantsUp = e.deltaY < 0;
                 if ((wantsUp && !atTop) || (!wantsUp && !atBottom)) {
-                    return; // sütun daha kayabilir — dikey kaydırma onun hakkı
+                    return;
                 }
             }
 
@@ -139,17 +83,6 @@
             e.preventDefault();
         }, { passive: false });
 
-        // ---- Kart arama (her tuş vuruşunda, SÜTUN İÇİNDE) --------------------
-        // Kutu hangi sütunun içindeyse YALNIZCA o sütunu süzer (bkz. kanban.php
-        // içindeki gerekçe). Aranan metin kartın TÜM görünen metnidir (birincil
-        // alan + kartta gösterilmesi seçilmiş ek alanlar) — kullanıcı ekranda ne
-        // okuyorsa onu arayabilsin diye.
-        //
-        // Metin bir kez okunup kartın kendisinde saklanır: her tuşta 147 kartın
-        // textContent'ini yeniden toplamak boşuna iş olurdu. Kart sürüklenip
-        // başka sütuna geçse bile damga üstünde taşındığı için geçerli kalır.
-        // toLocaleLowerCase('tr'): "İ/I" ayrımı doğru çalışsın (assets/
-        // table-fields.js'teki alan tipi aramasıyla AYNI kural).
         function cardHaystack(card) {
             var cached = card.getAttribute('data-search-text');
             if (cached === null) {
@@ -177,17 +110,6 @@
             });
         });
 
-        // ---- Kart tıklaması -> kayıt detayı ---------------------------------
-        // KARAR: DERİN LİNK (grid.php?table_id=N&record_id=M), modali burada
-        // yeniden kullanmak DEĞİL. Deneme yapıldı ve maliyeti ölçüldü:
-        // grid-row-detail.js window.BCC_GRID'e 20 kez, grid'e özel eleman
-        // id'lerine 33 kez bağlı; modalin DOM'u da grid.php'nin içinde
-        // (#grid-detail-overlay). Kanban'a taşımak, GRID'İ OLMAYAN bir sayfaya
-        // grid.js'in tamamını + modal DOM'unu yüklemek olurdu — ki kanban.php'yi
-        // ayrı sayfa yapmamızın gerekçesiyle doğrudan çelişirdi.
-        // Derin link ZATEN çalışan bir mekanizma: grid-row-detail.js:1338
-        // sayfa yüklenirken URL'deki record_id'yi okuyup paneli açıyor.
-        // (Modali paylaşılabilir bir partial'a çıkarmak ayrı bir tur işi.)
         var tableId = board.getAttribute('data-table-id');
 
         board.addEventListener('click', function (e) {
@@ -195,8 +117,6 @@
             if (!card) {
                 return;
             }
-            // Sürükleme SONRASI gelen click bastırılır — yoksa kartı taşıyan
-            // kullanıcı istemeden kayıt detayına yönlendirilirdi.
             if (card.getAttribute('data-drag-moved') === '1') {
                 card.removeAttribute('data-drag-moved');
                 return;
@@ -207,13 +127,9 @@
 
 
         if (!canEdit) {
-            return; // viewer/commenter: tahta salt-okunur, sürükleme bağlanmaz
+            return;
         }
 
-        // ---- Sürükle-bırak --------------------------------------------------
-        // Ortak sürükleme iskeleti (bcc_bindColumnDrag) yeniden kullanılıyor:
-        // mousedown/mousemove(rAF throttle)/mouseup/mouseleave ve clientY
-        // taşıması ZATEN orada — ikinci bir sürükleme motoru YAZILMADI.
         var dragState = null;
 
         function columnUnder(clientX, clientY) {
@@ -247,8 +163,6 @@
                     if (!dragState) {
                         return;
                     }
-                    // Fare gerçekten hareket etti -> bunu bir SÜRÜKLEME say ve
-                    // ardından gelecek click'i bastır (bkz. kart tıklama dalı).
                     card.setAttribute('data-drag-moved', '1');
                     clearHover();
                     var col = columnUnder(clientX, clientY);
@@ -269,7 +183,7 @@
 
                     var target = state.target;
                     if (!target || target === state.fromColumn) {
-                        return; // aynı sütun ya da tahta dışı — istek atılmaz
+                        return;
                     }
 
                     var newValue = target.getAttribute('data-column-value');
@@ -278,9 +192,6 @@
                         return;
                     }
 
-                    // İYİMSER TAŞIMA: kart hemen yeni sütuna alınır, istek
-                    // başarısız olursa GERİ ALINIR. Sunucu yanıtını beklemek
-                    // sürüklemeyi tutuk hissettirirdi.
                     var originalDropzone = state.fromColumn.querySelector('[data-kanban-dropzone]');
                     var originalNext = state.card.nextSibling;
                     dropzone.appendChild(state.card);
@@ -296,8 +207,6 @@
                         state.card.classList.remove('is-saving');
 
                         if (result.httpOk && result.data && result.data.ok) {
-                            // Seçenek artık geçerli bir choices üyesi — "seçenek
-                            // listesinde yok" rozeti varsa kaldırılır.
                             var stale = state.card.querySelector('.kanban-card-stale');
                             if (stale) {
                                 stale.remove();
@@ -305,7 +214,6 @@
                             return;
                         }
 
-                        // GERİ AL — kart eski yerine döner.
                         if (originalDropzone) {
                             originalDropzone.insertBefore(state.card, originalNext);
                         }

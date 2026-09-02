@@ -1,7 +1,3 @@
-// Ortak hesap menüsü davranışı (src/partials/account_menu.php ile birlikte kullanılır).
-// Sayfa başına tek menü varsayılır (dashboard.php'de "home", grid.php'de "gs",
-// interface.php'de "if" öneki) — seçiciler data-account-toggle / data-account-menu
-// olduğu için sınıf öneki fark etmez.
 (function () {
     var toggle = document.querySelector('[data-account-toggle]');
     var menu = document.querySelector('[data-account-menu]');
@@ -10,11 +6,6 @@
         return;
     }
 
-    // "Görünüm" alt-paneli — sayfa yenilenmeden ("main" <-> "appearance")
-    // geçiş, tema toggle'ı ile AYNI localStorage anahtarı/mekanizması (bkz.
-    // theme-init.js — sayfa boyanmadan önce <html data-theme> yazan senkron
-    // script, ikinci bir kopya YOK, burada yalnızca kullanıcı tıklayınca
-    // anlık uygulama + kalıcı kayıt yapılır).
     var THEME_STORAGE_KEY = 'bcc_theme';
     var pages = menu.querySelectorAll('[data-account-page]');
     var appearanceOpenBtn = menu.querySelector('[data-account-appearance-open]');
@@ -35,12 +26,6 @@
         if (stored === 'dark' || stored === 'light') {
             active = stored;
         } else {
-            // Bulunan gerçek bug: kullanıcı hiç tema seçmemişse (localStorage boş)
-            // burada her zaman 'light' varsayılıyordu. theme-init.js bu durumda
-            // data-theme'i HİÇ yazmıyor, theme.css'in prefers-color-scheme:dark
-            // kuralı (bkz. :root:not([data-theme]) seçicisi) sayfayı işletim
-            // sistemi koyu istiyorsa GERÇEKTEN koyu render ediyor — menüdeki
-            // işaretli seçenek sayfanın fiilen gösterdiği temeyle çelişiyordu.
             active = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         }
 
@@ -77,12 +62,6 @@
         });
     });
 
-    // Trash — OpsFlow workspace trash referansı. Overlay .X-account'ın
-    // DIŞINDA (sayfa-geneli), bu yüzden document üzerinden aranıyor; tek
-    // sayfada en fazla bir tane olur (account_menu.php sayfa başına tek kez
-    // require ediliyor). Adım 3d: aynı modale "Kayıtlar" bölümü eklendi —
-    // satır render + geri-yükle mantığı TEK bir fonksiyona (renderTrashSection)
-    // çıkarıldı, base'ler VE kayıtlar AYNI fonksiyonu çağırıyor, kopya yok.
     var trashOpenBtn = menu.querySelector('[data-account-trash-open]');
     var trashOverlay = document.querySelector('.bcc-trash-overlay');
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -99,9 +78,6 @@
             trashOverlay.hidden = true;
         }
 
-        // listEl/emptyEl: hedef bölüm. idAttr: satırın taşıyacağı data-* (yalnızca
-        // hata ayıklama/gelecekteki kullanım için, işlevsel olarak kullanılmıyor).
-        // restoreUrl/idParam: "Geri Yükle" hangi uçnoktaya, hangi POST alanıyla gitsin.
         function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam) {
             Array.prototype.forEach.call(listEl.querySelectorAll('.bcc-trash-item'), function (el) {
                 el.remove();
@@ -214,12 +190,6 @@
         menu.classList.toggle('is-open');
     });
 
-    // Dışarı tıklayınca kapatma artık projenin ortak mekanizmasıyla (bkz.
-    // dismissable-panel.js) — elle yeniden yazılmış kopya kaldırıldı. Bu menü
-    // native <details> DEĞİL (is-open class'ıyla açılıp kapanıyor), bu yüzden
-    // isOpen/close override edilir; dışarı-tık koşulu varsayılanla (!el.contains)
-    // ÖNCEKİYLE BİREBİR AYNI. Kapanınca "main" sayfaya sıfırlanır — tekrar
-    // açılışta kullanıcı kaldığı yerde (Görünüm alt-panelinde) bulmasın diye.
     window.bcc_bindDismissable(menu, {
         isOpen: function () { return menu.classList.contains('is-open'); },
         close: function () {

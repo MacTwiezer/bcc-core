@@ -12,11 +12,6 @@
             }
         }
 
-        // .gs-table-tabs-scroll overflow-x:auto taşıyor (bu da spec gereği
-        // overflow-y'yi "auto" yapar) — position:absolute panel sekme şeridinin
-        // altında kırpılırdı (bkz. grid-shell.css .gs-table-tab-import-menu-panel
-        // yorumu, aynı ders .gs-view-row-menu-panel'de de uygulanmıştı).
-        // position:fixed + burada hesaplanan konum bunu atlıyor.
         Array.prototype.forEach.call(document.querySelectorAll('.gs-table-tab-import-menu'), function (menu) {
             var summary = menu.querySelector(':scope > summary');
             var panel = menu.querySelector(':scope > .gs-table-tab-import-menu-panel');
@@ -27,20 +22,11 @@
 
             function positionPanel() {
                 var rect = summary.getBoundingClientRect();
-                // rect GÖRSEL, style YERLEŞİM pikseli — büyük ekranda zoom
-                // devredeyken bölünmezse panel kayar (bkz. theme-init.js
-                // bcc_uiScale; aynı düzeltme home.js/grid-view-manage.js'de).
                 var s = window.bcc_uiScale ? window.bcc_uiScale() : 1;
                 panel.style.top = (rect.bottom / s + 4) + 'px';
                 panel.style.left = (rect.left / s) + 'px';
             }
 
-            // Bulunan gerçek bug: konum yalnızca AÇILIŞTA hesaplanıyordu —
-            // grid-column-menu.js/grid-add-field.js'de bulunan AYNI sorun.
-            // .gs-table-tabs-scroll yatayda kaydırılabilir; menü açıkken
-            // sekme şeridi kaydırılırsa özet (caret) kayarken panel ekranda
-            // sabit kalıp tamamen kopuyordu. Scroll'da yeniden konumlandırılır,
-            // menü kapanınca listener kaldırılır.
             menu.addEventListener('toggle', function () {
                 if (!menu.open) {
                     window.removeEventListener('scroll', positionPanel, true);
@@ -51,12 +37,10 @@
             });
         });
 
-        // ---- Verileri temizle (Clear data) ----
         Array.prototype.forEach.call(document.querySelectorAll('[data-table-clear]'), function (btn) {
             btn.addEventListener('click', function () {
                 closeTabMenu(btn);
                 var tableId = btn.getAttribute('data-table-clear');
-                // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
                 window.bcc_confirm({
                     title: 'Tablo verilerini temizle',
                     message: 'Bu tablodaki TÜM kayıtlar kalıcı olarak silinecek (alanlar/kolonlar kalır). Emin misiniz?',
@@ -89,10 +73,6 @@
             });
         });
 
-        // ---- Ad veya açıklama değiştir -------------------------------------
-        // Menü öğesi ve pencere YALNIZCA owner'a basılır (grid.php $isOwner);
-        // ikisi de yoksa bu blok sessizce no-op olur. Asıl yetki kapısı
-        // sunucuda: api/table_rename.php require_role('owner').
         var renameModal = document.getElementById('gs-table-rename-modal');
 
         if (renameModal) {
@@ -112,10 +92,6 @@
                 btn.addEventListener('click', function () {
                     closeTabMenu(btn);
                     renameTargetId = btn.getAttribute('data-table-rename');
-                    // Alanlar MEVCUT değerlerle DOLU açılır — boş açılsaydı
-                    // kullanıcı adı düzeltirken açıklamayı farkında olmadan
-                    // silerdi (bu yüzden bcc_list_base_tables description'ı da
-                    // seçiyor, bkz. src/schema.php).
                     renameNameInput.value = btn.getAttribute('data-table-name') || '';
                     renameDescInput.value = btn.getAttribute('data-table-desc') || '';
                     renameError.hidden = true;
@@ -132,7 +108,7 @@
             });
 
             renameForm.addEventListener('submit', function (e) {
-                e.preventDefault(); // sayfa terk edilmesin, gönderim AJAX
+                e.preventDefault();
                 if (!renameTargetId) { return; }
 
                 var submit = renameForm.querySelector('button[type="submit"]');
@@ -154,10 +130,6 @@
                     });
                 }).then(function (data) {
                     if (data && data.ok) {
-                        // Yenileme: sekme etiketi, sayfa başlığı ve "tüm tablolar"
-                        // listesi aynı adı taşıyor — üçünü elle güncellemek yerine
-                        // sunucunun ürettiği doğru hâli almak daha güvenli
-                        // (xlsx içe aktarmada da AYNI karar).
                         window.location.reload();
                         return;
                     }
@@ -172,15 +144,6 @@
             });
         }
 
-        // ---- Tabloyu çoğalt -------------------------------------------------
-        // ⚠️ GÖRÜNÜM MENÜSÜNDEKİ "Bağımsız kopya oluştur" ARTIK AYNI UÇNOKTAYI
-        // çağırıyor (api/table_duplicate.php) — eskiden orası "Görünümü çoğalt"
-        // idi ve view_duplicate.php'yi çağırıyordu, o da yalnızca views satırını
-        // kopyaladığı için iki görünüm AYNI kayıtlara bakıyordu (kullanıcı üç
-        // kez bildirdi). O uçnokta kaldırıldı; iki giriş de buraya bakıyor.
-        // GERÇEKTEN bağımsız kopya budur: alanlar + görünümler (+ isteğe bağlı
-        // kayıtlar/hücreler/dosya ekleri) yeni bir tabloya kopyalanır.
-        // Menü öğesi ve pencere YALNIZCA owner'a basılır; asıl kapı sunucuda.
         var dupModal = document.getElementById('gs-table-duplicate-modal');
 
         if (dupModal) {
@@ -200,8 +163,6 @@
                 btn.addEventListener('click', function () {
                     closeTabMenu(btn);
                     dupTargetId = btn.getAttribute('data-table-duplicate');
-                    // Ad ÖNERİLİR ama düzenlenebilir. Sunucu ayrıca aynı base'te
-                    // çakışma olursa sonuna sayı ekler (api/table_duplicate.php).
                     dupNameInput.value = (btn.getAttribute('data-table-name') || 'Tablo') + ' kopyası';
                     dupRecordsInput.checked = true;
                     dupError.hidden = true;
@@ -218,14 +179,12 @@
             });
 
             dupForm.addEventListener('submit', function (e) {
-                e.preventDefault(); // sayfa terk edilmesin, gönderim AJAX
+                e.preventDefault();
                 if (!dupTargetId) { return; }
 
                 var dupSubmit = dupForm.querySelector('button[type="submit"]');
                 dupSubmit.disabled = true;
                 dupError.hidden = true;
-                // Büyük tablolarda kopyalama sürebilir — düğme metni "donmuş"
-                // hissini engeller (ikinci bir yükleniyor bileşeni yazılmadı).
                 var dupLabel = dupSubmit.textContent;
                 dupSubmit.textContent = 'Çoğaltılıyor…';
 
@@ -251,9 +210,6 @@
                     });
                 }).then(function (data) {
                     if (data && data.ok && data.redirect_url) {
-                        // Hedef SUNUCUDAN geliyor (istemci id'den URL uydurmuyor).
-                        // Yeni tabloya geçilir: kullanıcı kopyanın gerçekten
-                        // oluştuğunu ve neyi içerdiğini hemen görsün.
                         window.location.href = data.redirect_url;
                         return;
                     }
@@ -264,9 +220,6 @@
             });
         }
 
-        // ---- Tabloyu sil ----------------------------------------------------
-        // "Verileri temizle"den AYRI bir iş: o veriyi siler ve tabloyu bırakır
-        // (editor yetkisi), bu tablonun KENDİSİNİ siler (owner yetkisi).
         var deleteModal = document.getElementById('gs-table-delete-modal');
 
         if (deleteModal) {
@@ -288,11 +241,6 @@
                     deleteTargetId = btn.getAttribute('data-table-delete');
                     var name = btn.getAttribute('data-table-name') || '';
 
-                    // Tablo adı KULLANICI VERİSİDİR. innerHTML ile birleştirmek
-                    // yerine DOM düğümleri kuruluyor: ad textContent ile
-                    // yazıldığı için "<img onerror=...>" adlı bir tablo script
-                    // çalıştıramaz. (Bu dosyada bir escapeHtml yardımcısı yok
-                    // ve yalnızca bunun için bir tane eklemek gereksizdi.)
                     deleteSummary.textContent = '';
 
                     var strong = document.createElement('strong');
@@ -338,9 +286,6 @@
                     });
                 }).then(function (data) {
                     if (data && data.ok) {
-                        // Nereye gidileceğini SUNUCU söyler: açık olan tablo
-                        // silinmiş olabilir. Base'de başka tablo varsa oraya,
-                        // yoksa tablo listesine.
                         window.location.href = data.redirect_url;
                         return;
                     }
@@ -355,7 +300,6 @@
             });
         }
 
-        // ---- Veri içe aktar (Import Excel) ----
         var overlay = document.getElementById('gs-table-import-overlay');
         var fileInput = document.getElementById('gs-table-import-file');
         var resultBox = document.getElementById('gs-table-import-result');
@@ -379,7 +323,6 @@
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
-        // Dropzone <-> seçilen dosya kartı: ikisi asla aynı anda görünmez.
         function renderSelectedFile() {
             var file = (fileInput && fileInput.files && fileInput.files[0]) || null;
             var hasFile = !!file;
@@ -392,8 +335,6 @@
                 fileCard.hidden = !hasFile;
             }
             if (hasFile) {
-                // textContent: dosya adı kullanıcı verisidir, HTML olarak
-                // yorumlanmamalı.
                 if (fileNameEl) { fileNameEl.textContent = file.name; }
                 if (fileSizeEl) { fileSizeEl.textContent = formatBytes(file.size); }
             }
@@ -441,9 +382,6 @@
 
             fileInput.addEventListener('change', renderSelectedFile);
 
-            // "Dosyayı Değiştir": seçimi temizleyip dropzone'u geri getirir ve
-            // dosya seçiciyi yeniden açar. fileInput.value = '' ŞART — aynı
-            // dosya tekrar seçilirse 'change' aksi hâlde hiç tetiklenmezdi.
             if (fileChangeBtn) {
                 fileChangeBtn.addEventListener('click', function () {
                     fileInput.value = '';
@@ -453,8 +391,6 @@
             }
 
             if (dropzone) {
-                // dragover'da preventDefault ŞART: yoksa tarayıcı dosyayı
-                // sayfada AÇAR (varsayılan davranış) ve modal kaybolur.
                 ['dragenter', 'dragover'].forEach(function (evt) {
                     dropzone.addEventListener(evt, function (e) {
                         e.preventDefault();
@@ -481,10 +417,6 @@
                         return;
                     }
 
-                    // Uzantı istemcide de kontrol ediliyor: sunucu zaten
-                    // reddediyor (api/table_import_xlsx.php, 422) ama kullanıcı
-                    // yanlış dosyayı bırakır bırakmaz görsün, yükleme turunu
-                    // beklemesin.
                     var file = dropped[0];
                     if (!/\.xlsx$/i.test(file.name)) {
                         resultBox.hidden = false;
@@ -493,9 +425,6 @@
                         return;
                     }
 
-                    // DataTransfer'ı doğrudan input'a bağlamak, dosyanın
-                    // gönderimde FormData'ya TEK yoldan girmesini sağlıyor
-                    // (ayrı bir "bırakılan dosya" değişkeni tutulmuyor).
                     fileInput.files = e.dataTransfer.files;
                     resultBox.hidden = true;
                     resultBox.textContent = '';
@@ -503,7 +432,6 @@
                     renderSelectedFile();
                 });
 
-                // Klavye: label'a odaklanıp Enter/Space ile dosya seçici açılır.
                 dropzone.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -512,9 +440,6 @@
                 });
             }
 
-            // Modalın DIŞINA bırakılan bir dosyayı tarayıcı sayfada açar ve
-            // kullanıcı düzenlediği tabloyu kaybeder. Overlay açıkken bu
-            // varsayılan iptal edilir.
             ['dragover', 'drop'].forEach(function (evt) {
                 overlay.addEventListener(evt, function (e) {
                     e.preventDefault();

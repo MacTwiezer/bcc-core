@@ -1,26 +1,6 @@
 (function () {
     'use strict';
 
-    // Satır seçimi (checkbox) + satır genişletme paneli. Panel artık TÜM takım
-    // rollerine açık (OpsFlow davranışı: kayıt görüntüleme herkese açık, yorum
-    // commenter+, hücre düzenleme editor+) — bu yüzden window.BCC_GRID (grid.js)
-    // varlığına SERTÇE bağımlı değil: grid.js yalnızca editor/owner'da yüklenir
-    // (bkz. grid.php script sırası), viewer/commenter'da hiç yoktur. Düzenleme
-    // yolları (commitFieldValue, buildEditableFieldWidget) window.BCC_CAN_EDIT
-    // true olduğunda (dolayısıyla window.BCC_GRID de var olduğunda) çalışır;
-    // aksi hâlde buildReadOnlyFieldWidget kullanılır (yeniden yazma YOK, canlı
-    // <td>'nin zaten sunucuda render edilmiş içeriği kopyalanır).
-    //
-    // Görünür alanlar: gerçek <td data-field-id> DOM'da var — widget ondan
-    // (data-value/data-options) kurulur, kaydedince applyCellResultToTd o
-    // td'yi de günceller (gridle panel her zaman senkron kalır).
-    // Gizli alanlar: <td> yok — satırın data-fields JSON'undaki
-    // {id, name, field_type, options, raw} kullanılır, kaydetme doğrudan
-    // postCellValue(recordId, fieldId, value) ile (senkronlanacak <td> yok).
-    //
-    // Yorumlar (comment_list/add/update/delete.php): window.BCC_GRID'den TAMAMEN
-    // bağımsız, kendi küçük fetch sarmalayıcısını kullanır (grid.js'deki post()
-    // dışa açılmıyor, ve bu dosya grid.js YOKKEN de çalışmalı) — bkz. apiPost().
 
     function getRowFields(tr) {
         var raw = tr.getAttribute('data-fields');
@@ -39,12 +19,6 @@
         return tr.querySelector('td.grid-cell[data-field-id="' + fieldId + '"]');
     }
 
-    // grid.js'deki post()'un küçük bir kopyası — BİLEREK: window.BCC_GRID'i
-    // (dolayısıyla grid.js'i) hiç yüklemeyen viewer/commenter'da da yorum
-    // gönderebilmek için bu dosyanın grid.js'e bağımlı OLMAMASI gerekiyor.
-    // Adı "commentPost" iken artık "Kaydı gönder" (record_send.php) de AYNI
-    // fonksiyonu çağırıyor — genel bir POST+JSON yardımcısı olduğu için
-    // ikinci bir kopya yazılmadı, ismi buna göre güncellendi.
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     var CSRF = csrfMeta ? csrfMeta.content : '';
 
@@ -62,18 +36,6 @@
         });
     }
 
-    // long_text'in ham değeri (raw) sunucuda zaten temizlenmiş (whitelist)
-    // HTML — burada yalnızca DÜZ METNİ okumak için DOM'a hiç eklenmeyen bir
-    // <div>'e yazılıp .textContent okunuyor (script YÜRÜTÜLMEZ, hiçbir zaman
-    // sayfaya eklenmedi); panelde tam zengin metin araç çubuğu YOK, "input/
-    // textarea" isteğine uygun düz bir <textarea>.
-    // Bulunan gerçek bug: .textContent tek başına <br>'ları HİÇBİR ayırıcı
-    // eklemeden siliyordu ("Merhaba<br>a<br>a" -> "Merhabaaa") — bu yüzden
-    // ÖNCE <br>/<br/>/<br /> \n'e çevrilip SONRA geri kalan etiketler
-    // textContent ile temizleniyor. Detay modalı textarea'sı (aşağıda) VE
-    // fieldPrintText()'in salt-okunur dalı (yazdır + gönder e-posta
-    // önizlemesi, ikisi de fieldPrintText'i çağırıyor) AYNI bu fonksiyonu
-    // kullanıyor — ikinci bir kopya yazılmadı.
     function htmlToPlainTextWithLineBreaks(html) {
         var withBreaks = String(html || '').replace(/<br\s*\/?>/gi, '\n');
         var tmp = document.createElement('div');
@@ -81,14 +43,6 @@
         return tmp.textContent || '';
     }
 
-    // Detay panelindeki TÜM long_text/textarea alanlarının (tek oluşturma yeri:
-    // buildFieldWidget()'in long_text dalı) ortak auto-grow mantığı — üst sınır
-    // (max-height: 600px, style.css) CSS'te, burada yalnızca içeriğe göre
-    // height ayarlanır; tavana çarpınca tarayıcı textarea'nın kendi native
-    // scrollbar'ını otomatik gösterir, ayrı bir overflow state takibi gerekmez.
-    // [hidden] tuzağı: bu fonksiyon overlay GÖRÜNÜRKEN çağrılmalı — layout
-    // hesaplanmamış (display:none) bir ağaçta scrollHeight her zaman 0 döner
-    // (bkz. openDetail()'deki çağrı sırası).
     function autoGrowTextarea(ta) {
         ta.style.height = 'auto';
         ta.style.height = ta.scrollHeight + 'px';
@@ -97,9 +51,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         var grid = document.querySelector('table.grid');
         var overlay = document.getElementById('grid-detail-overlay');
-        // window.BCC_GRID artık ZORUNLU değil (bkz. dosya başındaki not) —
-        // yalnızca editor/owner'da yüklenir, viewer/commenter'da panel yine
-        // açılır ama salt-okunur render'a düşer.
         if (!grid || !overlay) {
             return;
         }
@@ -163,7 +114,6 @@
                     window.BCC_GRID.applyCellResultToTd(liveTd, result.data);
                 }
 
-                // Birincil alan (panel başlığı) düzenlendiyse başlık da güncellensin.
                 var fields = getRowFields(tr);
                 if (tr === currentDetailRow && fields.length && fields[0].id === field.id) {
                     updateDetailTitle(tr);
@@ -171,12 +121,6 @@
             });
         }
 
-        // Salt-okunur (viewer/commenter): canlı <td> varsa (görünür alan) sunucuda
-        // zaten doğru biçimde render edilmiş içeriği (chip/checkbox/rich-text/ek
-        // dosyası) AYNEN kopyalar — ikinci bir render fonksiyonu YAZILMAZ. Canlı
-        // <td> yoksa (gizli alan, panel TÜM alanları gösterir) düz metne düşülür;
-        // bu nadir bir durumdur (görünümde gizlenmiş bir alanı genişletme
-        // panelinde okumak), chip/ek dosyası biçimlendirmesi olmadan kabul edildi.
         function buildReadOnlyFieldWidget(tr, field) {
             var liveTd = findLiveTd(tr, field.id);
             var wrap = document.createElement('div');
@@ -213,14 +157,6 @@
         }
 
         function buildFieldWidget(tr, field) {
-            // created_time/created_by/last_modified_time/last_modified_by:
-            // OpsFlow'daki gibi kullanıcı tarafından ASLA düzenlenemez — rol
-            // fark etmeksizin (owner dahil) her zaman salt-okunur render'a
-            // düşer. Zaten var olan buildReadOnlyFieldWidget() (viewer/commenter
-            // için kullanılan AYNI desen) yeniden kullanılıyor, ikinci bir
-            // salt-okunur widget YAZILMADI.
-            // autonumber (Grup C2) da AYNI listede — değeri cell_values'ta gerçekten
-            // yaşıyor ama yalnızca sunucu (bcc_assign_autonumbers) yazabilir.
             if (field.field_type === 'created_time' || field.field_type === 'created_by'
                 || field.field_type === 'last_modified_time' || field.field_type === 'last_modified_by'
                 || field.field_type === 'autonumber') {
@@ -246,18 +182,9 @@
                 return wrap;
             }
 
-            // Rating: grid hücresindeki AYNI tıkla-kaydet yıldız deseni (grid.js'in
-            // click/mouseover/mouseout dinleyicileri BURADA TEKRARLANMADI — bu widget
-            // panel içinde TEK bir örnek olduğu için kendi kapanış-scope'lu
-            // dinleyicilerini doğrudan kuruyor, grid'in event-delegation'ına gerek yok).
             if (field.field_type === 'rating') {
                 var ratingRaw = liveTd ? liveTd.getAttribute('data-value') : field.raw;
                 var ratingCurrentValue = ratingRaw ? parseInt(ratingRaw, 10) : 0;
-                // Bulunan gerçek bug: window.BCC_GRID.getChoices() YALNIZCA dizi
-                // döndürür (Array.isArray kontrolü, select/user'ın diziyle çalışan
-                // buildInput()'u için doğru) — rating'in {"max_rating":N} NESNESİNİ
-                // sessizce [] yapıp max_rating'i kaybederdi. data-options doğrudan
-                // okunup ayrıştırılıyor, getChoices() KULLANILMIYOR.
                 var ratingOptsSource = {};
                 if (liveTd) {
                     try {
@@ -313,14 +240,6 @@
                 ta.className = 'cell-input grid-detail-textarea';
                 var initialPlainText = htmlToPlainTextWithLineBreaks(rawHtml || '');
                 ta.value = initialPlainText;
-                // Bulunan gerçek bug: panelde zengin metin (kalın/link) araç çubuğu
-                // YOK, bu yüzden düzenleme alanı yalnızca DÜZ METİN gösteriyor —
-                // dokunulmadan panel kapatılsa bile blur, bu düz metni sunucuya
-                // geri gönderip mevcut biçimlendirmeyi sessizce siliyordu. Artık
-                // yalnızca kullanıcı gerçekten metni değiştirdiyse kaydediliyor.
-                // Sürekli auto-grow: kullanıcı yazarken de textarea içeriğe göre
-                // büyümeye devam eder (tek seferlik açılış boyutlandırması
-                // openDetail()'de, overlay görünür olduktan SONRA yapılır).
                 ta.addEventListener('input', function () {
                     autoGrowTextarea(ta);
                 });
@@ -334,11 +253,6 @@
                 return wrap;
             }
 
-            // Dosya eki: cell_update.php'ye hiç gitmez (attachment_upload/delete.php
-            // üzerinden kendi AJAX'ı) — liste/yükle/sil arayüzü grid.js'nin
-            // window.BCC_GRID.buildAttachmentManager() ile PAYLAŞILIR, ikinci bir
-            // kopya yazılmaz. Görünür alan ise canlı <td>'nin data-attachments'ı da
-            // (grid'deki hücreyle senkron kalsın diye) güncellenir.
             if (field.field_type === 'attachment') {
                 var recordId = tr.getAttribute('data-record-id');
                 var initialFiles = liveTd
@@ -417,17 +331,10 @@
             fieldsContainer.textContent = '';
             getRowFields(tr).forEach(function (field, index) {
                 var row = document.createElement('div');
-                // Birincil alan (index 0): mevcut tam genişlik/etiket-üstte
-                // şablonda kalır, dokunulmadı. Diğer TÜM alanlar OpsFlow'daki
-                // gibi iki sütuna (sol dar etiket / sağ değer) geçer.
                 row.className = index === 0 ? 'grid-detail-field grid-detail-field-primary' : 'grid-detail-field grid-detail-field-inline';
 
                 var label = document.createElement('label');
                 label.className = 'grid-detail-field-label';
-                // .field-badge / --field-icon: theme.css'te zaten var olan, tüm
-                // alan tiplerini kapsayan ikon seti (grid başlığı/alan sihirbazında
-                // kullanılan AYNI ikonlar) — OpsFlow davranış isteği için ikinci
-                // bir ikon seti icat edilmedi, burada yeniden kullanılıyor.
                 var badge = document.createElement('span');
                 badge.className = 'field-badge field-badge--' + field.field_type;
                 label.appendChild(badge);
@@ -450,20 +357,11 @@
             }
         }
 
-        // --- Yorumlar (comment_list/add/update/delete.php) ----------------------
-        // OpsFlow davranışı: görüntüleme herkese açık (bkz. grid.php $canComment
-        // yalnızca FORM/hint'i belirler, listeyi DEĞİL), ekleme/kendi yorumunu
-        // düzenleme-silme yalnızca commenter+ — sunucu zaten require_role('commenter')
-        // + sahiplik kontrolü ile aynı kuralı uyguluyor, burası yalnızca UI.
 
         function formatCommentDate(mysqlDatetime) {
             return mysqlDatetime ? mysqlDatetime.substr(0, 16).replace('T', ' ') : '';
         }
 
-        // Avatar: .ws-collab-avatar (home.css) yeniden kullanılır — grid.php zaten
-        // home.css'i yüklüyor (collab-popover-avatar de aynı sınıfı paylaşıyor),
-        // ikinci bir avatar bileşeni YAZILMAZ. İlk harf, bcc_user_initial()
-        // (src/auth.php) ile AYNI mantık: ad'ın ilk karakteri, büyük harf.
         function buildCommentItem(c) {
             var item = document.createElement('div');
             item.className = 'grid-detail-comment';
@@ -574,7 +472,6 @@
         }
 
         function deleteComment(commentId, item) {
-            // Sayfa içi onay (assets/confirm-modal.js) — native confirm DEĞİL.
             window.bcc_confirm({
                 title: 'Yorumu sil',
                 message: 'Bu yorumu silmek istediğinize emin misiniz?',
@@ -605,7 +502,6 @@
             if (!comments.length) {
                 var empty = document.createElement('div');
                 empty.className = 'grid-detail-comments-empty';
-                // Statik ikon (kullanıcı verisi YOK) — innerHTML burada güvenli.
                 var icon = document.createElement('div');
                 icon.className = 'grid-detail-comments-empty-icon';
                 icon.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
@@ -668,9 +564,6 @@
             updateNavState();
             loadComments(tr.getAttribute('data-record-id'));
             overlay.hidden = false;
-            // Açılış boyutlandırması overlay GÖRÜNÜR OLDUKTAN SONRA yapılır —
-            // renderDetailFields() sırasında overlay hâlâ [hidden] (display:none)
-            // olduğu için textarea'ların scrollHeight'i o an her zaman 0 döner.
             fieldsContainer.querySelectorAll('.grid-detail-textarea').forEach(autoGrowTextarea);
         }
 
@@ -702,10 +595,6 @@
             });
         }
 
-        // Ölü delete_record handler'ının yerini alan toplu silme — checkbox
-        // seçimi zaten vardı (yalnızca .is-row-selected görsel vurgusu yapıyordu),
-        // burada bir "Seçilenleri sil" butonuna bağlanıyor. Buton grid.php'de
-        // yalnızca $canEdit iken render edilir (bkz. gs-delete-selected-btn).
         function updateDeleteButtonState() {
             if (!deleteSelectedBtn) {
                 return;
@@ -822,10 +711,6 @@
                             }
                         });
 
-                        // Tam sayfa reload YOK — record_add.php'nin AJAX satır-ekleme
-                        // deseniyle simetrik. Satır numaraları + "X kayıt" sayacı
-                        // grid.js'nin zaten sahip olduğu renumberRows() ile güncellenir
-                        // (window.BCC_GRID üzerinden, ikinci bir sayaç mantığı YAZILMAZ).
                         if (window.BCC_GRID && window.BCC_GRID.renumberRows) {
                             window.BCC_GRID.renumberRows();
                         }
@@ -853,15 +738,6 @@
             nextBtn.addEventListener('click', function () { navigate(1); });
         }
 
-        // Bağlantı kopyalama bildirimi: grid.js'teki showToast() ile AYNI ".ok"
-        // (yeşil başarı metni, style.css) rengi kullanılıyor — ikinci bir
-        // bildirim sistemi DEĞİL, o rengin modal'a uygun bir yerleşimi.
-        // grid.js'teki showToast() burada KULLANILAMAZ: bu dosya (grid-row-detail.js)
-        // BİLEREK window.BCC_GRID'e/grid.js'e bağımlı değil (viewer/commenter'da
-        // grid.js hiç yüklenmez), ve o fonksiyon zaten modal açıkken görünmeyen
-        // .gs-grid-footer'a ekleniyor. headerEl opsiyonel — gönder modalının
-        // "Gönderme Adım 4'te bağlanacak" bildirimi de AYNI fonksiyonu kendi
-        // header'ıyla (.grid-send-header) çağırıyor, ikinci bir toast yazılmadı.
         function showDetailToast(message, headerEl) {
             var header = headerEl || document.querySelector('.grid-detail-header');
             if (!header) {
@@ -906,8 +782,6 @@
             });
         }
 
-        // navigator.clipboard bazı bağlamlarda (ör. http, eski tarayıcı)
-        // hiç yoktur/reddeder — eski execCommand yöntemine sessizce düşülür.
         function legacyCopy(text, onDone) {
             var input = document.createElement('textarea');
             input.value = text;
@@ -929,14 +803,6 @@
             });
         }
 
-        // "Kaydı yazdır" — bir alanın widget'ından (input/select/textarea/
-        // checkbox/dosya eki yöneticisi/salt-okunur .cell-view) o anki
-        // GÖRÜNEN değeri düz metne çevirir. Print CSS'in (style.css @media
-        // print) widget'ları gizleyip yerine gösterdiği .grid-detail-print-value
-        // span'ı BUNUNLA doldurulur — textarea/select gibi kendi scroll/dropdown
-        // alanı olan elemanlar print'te boş/kırpılmış çıkabildiği için, gerçek
-        // metni DOM'dan okuyup ayrı bir düz-metin elemanına taşımak, tarayıcı
-        // print motoruna güvenmekten daha güvenilir.
         function fieldPrintText(valueWrap) {
             var checkbox = valueWrap.querySelector('input[type="checkbox"]');
             if (checkbox) {
@@ -968,9 +834,6 @@
             }
             var cellView = valueWrap.querySelector('.cell-view');
             if (cellView) {
-                // Salt-okunur long_text hücreleri gerçek <br> etiketleri taşıyabilir —
-                // htmlToPlainTextWithLineBreaks() ile AYNI kural (diğer alan tiplerinde
-                // <br> hiç geçmediği için davranış değişmiyor, no-op).
                 return htmlToPlainTextWithLineBreaks(cellView.innerHTML).trim() || '—';
             }
             return valueWrap.textContent.trim() || '—';
@@ -1019,13 +882,6 @@
             });
         }
 
-        // "Kaydı gönder" modalı (OpsFlow "Send record" davranışı) — alan
-        // önizlemesi YAZDIRDAKİ fieldPrintText()'i AYNEN çağırır (KOPYALAMA
-        // yok, fonksiyon zaten print'e özel bir şey içermiyordu). Bu tek
-        // döngü hem EKRANDAKİ önizlemeyi (renderSendPreview, ikonlu DOM
-        // clone'u) hem "Gönder"de backend'e giden payload'ı (submit handler,
-        // düz {label,value} — sunucu bunu yeniden ÇIKARMAZ, yalnızca
-        // escape'leyip biçimlendirir) besler, ikinci bir alan-okuma kodu YOK.
         function collectFieldPreviewData() {
             var items = [];
             Array.prototype.forEach.call(fieldsContainer.querySelectorAll('.grid-detail-field'), function (row) {
@@ -1054,8 +910,6 @@
 
                 var label = document.createElement('div');
                 label.className = 'grid-send-preview-label';
-                // Etiket (ikon+metin) yazdırdaki gibi yeniden ÜRETİLMEZ,
-                // mevcut .grid-detail-field-label DOM'u cloneNode ile taşınır.
                 label.appendChild(item.labelEl.cloneNode(true));
                 field.appendChild(label);
 
@@ -1132,14 +986,6 @@
             });
         }
 
-        // "Kaydı çoğalt" — record_duplicate.php'ye POST. Rol kontrolü BACKEND'de
-        // zorunlu (require_role('editor')), burada yalnızca UX (buton zaten
-        // $canEdit değilse DOM'da yok). Dönen row_html record_add.php'nin
-        // addRecord()'daki AYNI ekleme deseniyle orijinalin hemen altına konur
-        // (window.BCC_GRID.renumberRows/window.BCC_reapplyFreeze zaten dışa
-        // açık, ikinci bir kopyası yazılmadı), sonra openDetail() ile modal
-        // KOPYAYA geçirilir (orijinal değil — kullanıcı hangisinin kopya
-        // olduğunu görsün).
         if (duplicateBtn) {
             duplicateBtn.addEventListener('click', function () {
                 if (moreMenu) {
@@ -1182,14 +1028,6 @@
             });
         }
 
-        // "Kaydı sil" — Adım 3b: SADECE soft-delete işaretleme. Grid/filtre/
-        // arama sorgularının silinmiş kayıtları gizlemesi Adım 3c'nin işi —
-        // bu adımdan sonra kayıt hâlâ grid'de görünebilir, bu BEKLENEN.
-        // Onay diyaloğu: projede ÖZEL bir modal deseni YOK, her yerde
-        // (record_delete/home.js/grid-view-manage.js/team-members.js) native
-        // window.confirm() kullanılıyor — burada da AYNI, yeni bir modal
-        // icat edilmedi. "Çöp kutusundan geri yükleyebilirsiniz" ifadesi
-        // home.js'teki base silme onayıyla BİREBİR AYNI ton.
         if (deleteRecordBtn) {
             deleteRecordBtn.addEventListener('click', function () {
                 if (moreMenu) {
@@ -1208,11 +1046,6 @@
                         return;
                     }
 
-                    // ⚠️ recordRow, onay penceresi AÇILMADAN ÖNCE yakalandı:
-                    // onay artık asenkron, bu arada kullanıcı başka bir kayda
-                    // geçerse currentDetailRow değişmiş olurdu ve YANLIŞ kayıt
-                    // silinirdi. Native confirm senkron olduğu için bu risk
-                    // eskiden yoktu.
                     var recordId = recordRow.getAttribute('data-record-id');
                     apiPost('/api/record_soft_delete.php', {
                         csrf_token: CSRF,
@@ -1225,9 +1058,6 @@
                             return;
                         }
 
-                        // Toast'ın (henüz açık olan) modal header'ında görünmesi
-                        // için kapatma kısa bir gecikmeyle yapılır — showDetailToast
-                        // AYNEN yeniden kullanılıyor, yeni bir bildirim yolu yok.
                         showDetailToast('Kayıt silindi');
                         setTimeout(closeDetail, 700);
                     });
@@ -1244,11 +1074,6 @@
         if (sendToInput) {
             sendToInput.addEventListener('input', validateSendRecipients);
         }
-        // "Kaydı gönder" — record_send.php'ye POST. Rol/alıcı-domain/15-limit
-        // kontrolü BACKEND'de (frontend'deki validateSendRecipients() sadece
-        // UX için, tek gerçek karar sunucuda). Alan önizlemesi zaten ekranda
-        // görüneni (collectFieldPreviewData()) JSON olarak taşır — backend
-        // BUNU YENİDEN ÇIKARMAZ, yalnızca escape'leyip biçimlendirir.
         function showSendFormError(message) {
             if (!sendFormError) {
                 return;
@@ -1294,33 +1119,16 @@
             });
         }
 
-        // Backdrop'a (modal içeriğine değil) tıklayınca / Escape ile kapanma —
-        // assets/dismissable-panel.js, isOpen/close .hidden'a göre override edilir.
         window.bcc_bindDismissable(overlay, {
             isOpen: function () { return !overlay.hidden; },
             close: closeDetail,
             isClickOutside: function (target) { return target === overlay; },
         });
 
-        // "..." (Diğer seçenekler) menüsü: native <details> — varsayılan
-        // isOpen/close/isClickOutside (el.hasAttribute('open') vb.) native
-        // <details> için zaten doğru, hiçbir option geçmeye gerek yok. Menü
-        // kalemleri bu adımda BİLEREK no-op (işlev sonraki adımda bağlanacak).
         var moreMenu = document.getElementById('grid-detail-more-menu');
         if (moreMenu) {
             window.bcc_bindDismissable(moreMenu);
 
-            // ESC katmanlaması: bcc_bindDismissable her çağrıda document'a
-            // BAĞIMSIZ bir keydown dinleyicisi ekliyor (dismissable-panel.js) —
-            // overlay'in kendi ESC dinleyicisi menü açık mı diye bakmadan her
-            // zaman kapanıyordu, tek ESC ikisini birden kapatırdı. Helper 5
-            // BAŞKA yerde de kullanıldığı için (account-menu/grid-table-data/
-            // grid-view-manage/home.js) global DEĞİŞTİRİLMEDİ — yalnızca bu
-            // menüye özel, capture fazında (bubble fazındaki overlay/menü
-            // dinleyicilerinden HER ZAMAN önce çalışır, kayıt sırasından
-            // bağımsız) bir dinleyici: menü açıksa ESC'i kendisi kapatıp
-            // stopPropagation ile olayın overlay'e ulaşmasını engelliyor; menü
-            // kapalıysa hiçbir şey yapmaz, olay normal akıp modalı kapatır.
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && moreMenu.hasAttribute('open')) {
                     e.stopPropagation();
@@ -1329,14 +1137,6 @@
             }, true);
         }
 
-        // "Kaydı gönder" modalı — kayıt detay overlay'inin ÜSTÜNDE ayrı bir
-        // overlay (z-index, style.css). Backdrop-tık için AYNI kanıtlanmış
-        // desen (isClickOutside: target===overlay). ESC katmanlaması "..."
-        // menüsüyle BİREBİR AYNI mantık: gönder modalı açıkken ESC SADECE onu
-        // kapatmalı, alttaki kayıt modalını DEĞİL — capture fazında önce
-        // çalışan özel bir dinleyici, açıksa kendisi kapatıp stopPropagation
-        // ile olayın overlay'in bubble-fazlı ESC dinleyicisine ulaşmasını
-        // engelliyor; kapalıyken hiçbir şey yapmaz.
         if (sendOverlay) {
             window.bcc_bindDismissable(sendOverlay, {
                 isOpen: function () { return !sendOverlay.hidden; },
@@ -1352,11 +1152,6 @@
             }, true);
         }
 
-        // URL'den otomatik kayıt açma: copyLinkBtn'in ürettiği AYNI formattaki
-        // (?record_id=N) bir link ziyaret edildiğinde ilgili kaydın detay
-        // paneli otomatik açılır. Kayıt şu an render edilen satırlar arasında
-        // yoksa (filtre/sayfalama dışında, silinmiş, başka tablo) sessizce
-        // hiçbir şey yapılmaz — eski/hatalı bir link için zorlama yok.
         var initialRecordId = new URLSearchParams(window.location.search).get('record_id');
         if (initialRecordId) {
             var initialRow = getAllDataRows().filter(function (tr) {

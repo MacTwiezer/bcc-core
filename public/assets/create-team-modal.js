@@ -1,16 +1,6 @@
 (function () {
     'use strict';
 
-    // "Yeni Çalışma Alanı" (= ekip) modalının davranışı — PAYLAŞILAN.
-    //
-    // İKİ sayfa kullanıyor: workspaces.php ve admin/index.php. Markup
-    // src/partials/create_team_modal.php'de, davranış burada — ikisi de
-    // kopyalanmadı (share_link_popover.php / share-popover.js ile aynı desen).
-    //
-    // Tetikleyici: [data-create-team-btn] taşıyan HER bağlantı. Bunlar gerçek
-    // <a href="/admin/create_team.php"> — JS bu dosyada araya girip modalı
-    // açıyor. JS yüklenmezse bağlantı kendi sayfasına gider, yani akış JS'siz
-    // de tamamlanır (ilerici zenginleştirme).
 
     document.addEventListener('DOMContentLoaded', function () {
         var modal = document.getElementById('create-team-modal');
@@ -24,8 +14,6 @@
         var errorEl = document.getElementById('create-team-error');
         var nameInput = form.querySelector('input[name="name"]');
         var submitBtn = form.querySelector('button[type="submit"]');
-        // Modal kapanınca odağın kaybolmaması için: hangi tetikleyiciden
-        // açıldıysa oraya geri verilir (birden fazla tetikleyici olabilir).
         var lastTrigger = null;
 
         function showError(message) {
@@ -53,7 +41,7 @@
 
         triggers.forEach(function (btn) {
             btn.addEventListener('click', function (e) {
-                e.preventDefault(); // href yalnızca JS'siz yedek
+                e.preventDefault();
                 openModal(btn);
             });
         });
@@ -62,10 +50,6 @@
             btn.addEventListener('click', closeModal);
         });
 
-        // Dışarı tıklayınca kapanma — .home-modal'ın İÇİNE tıklandığında olay
-        // yukarı kabarıp backdrop'a ulaştığı için hedef kontrolü ŞART
-        // (e.target === modal), yoksa form alanlarına her tıklama modalı
-        // kapatırdı (home.js'teki base modalında yazılı AYNI gerekçe).
         modal.addEventListener('click', function (e) {
             if (e.target === modal) {
                 closeModal();
@@ -79,9 +63,6 @@
         });
 
         form.addEventListener('submit', function (e) {
-            // Buraya gelindiyse AJAX yolu kullanılır; formun kendi
-            // action="/admin/create_team.php" POST'u yalnızca bu dinleyici hiç
-            // bağlanamadıysa devreye giren yedektir.
             e.preventDefault();
 
             if (submitBtn.disabled) {
@@ -100,10 +81,6 @@
                 return res.json().catch(function () { return { ok: false }; });
             }).then(function (data) {
                 if (data && data.ok && data.redirect_url) {
-                    // Hedef SUNUCUDAN geliyor (istemci id'den URL uydurmuyor).
-                    // Sayfa yeniden yükleniyor: yeni çalışma alanı listeye
-                    // girsin ve seçili gelsin — kartı DOM'a elle eklemeye gerek
-                    // yok, sayfa zaten terk ediliyor.
                     window.location.href = data.redirect_url;
                     return;
                 }

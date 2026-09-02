@@ -1,9 +1,4 @@
 <?php
-// AJAX uçnoktası: aktif görünümün adını kaydeder (grid.php / assets/grid-table-tabs.js
-// tarafından çağrılır, satır içi yeniden adlandırma). Güvenlik: CSRF + require_role('editor')
-// + view_id'nin gerçekten var olduğu ve team_id'nin ondan geldiği kontrolü (istekten değil).
-// Viewer rolü: istemci dblclick'i zaten açmaz, ama bu uçnokta sunucu tarafında da
-// require_role ile ayrıca reddeder — istemci kontrolü tek başına yeterli sayılmaz.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -15,20 +10,12 @@ $viewId = isset($_POST['view_id']) ? (int) $_POST['view_id'] : 0;
 $rawName = isset($_POST['name']) ? $_POST['name'] : '';
 
 try {
-    $view = bcc_fetch_one(
-        'SELECT v.id, v.table_id, b.team_id
-         FROM views v
-         INNER JOIN tables_meta tm ON tm.id = v.table_id
-         INNER JOIN bases b ON b.id = tm.base_id
-         WHERE v.id = :id LIMIT 1',
-        array(':id' => $viewId)
-    );
+    $view = bcc_find_view_by_id($viewId);
 
     if (!$view) {
         json_fail(404, 'Görünüm bulunamadı.');
     }
 
-    // KVKK ekip izolasyonu + editor+ rolü — team_id bu satırdan geliyor, istekten değil.
     require_role($view['team_id'], 'editor');
 
     $name = trim((string) $rawName);
@@ -40,18 +27,10 @@ try {
         json_fail(422, 'Görünüm adı en fazla 150 karakter olabilir.');
     }
 
-    // Aynı tabloda başka bir görünüm bu adı kullanıyor mu? GÖRÜNÜMÜN KENDİSİ
-    // hariç tutulur (4. argüman) — yoksa adı değiştirmeden kaydetmek hata
-    // verirdi. Başka bir TABLODA aynı ad serbesttir (bkz. src/schema.php
-    // bcc_name_taken() scope haritası).
     if (bcc_name_taken('views', $view['table_id'], $name, $view['id'])) {
         json_fail(422, bcc_name_taken_error('views', 'görünüm'));
     }
 
-    // UPDATE + log_audit AYNI transaction'da — record_add.php ve diğer view_*.php
-    // dosyalarında bulunan AYNI sınıf bug: ikisi ayrı olsaydı, log_audit()
-    // istisna atarsa (nadir ama mümkün) UPDATE zaten commit edilmiş olurdu,
-    // istemci yine de "Veritabanı hatası" görürdü.
     bcc_begin_transaction();
     bcc_execute('UPDATE views SET name = :name WHERE id = :id', array(':name' => $name, ':id' => $view['id']));
     log_audit('view.rename', 'view', $view['id'], array('name' => $name), $view['team_id']);

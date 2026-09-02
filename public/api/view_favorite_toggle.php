@@ -1,9 +1,4 @@
 <?php
-// AJAX uçnoktası: sol Views panelindeki yıldız — public/api/star_base.php ile
-// AYNI karar: favorileme kullanıcı tercihi, içerik değişikliği değil, bu
-// yüzden require_role('editor') DEĞİL require_team_access() yeterli (viewer
-// da favorileyebilir). Toggle = user_favorite_views'ta tek satır INSERT/DELETE
-// (UNIQUE constraint çakışmayı engeller) — user_starred_bases ile AYNI desen.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -15,14 +10,7 @@ $viewId = isset($_POST['view_id']) ? (int) $_POST['view_id'] : 0;
 $user = current_user();
 
 try {
-    $view = bcc_fetch_one(
-        'SELECT v.id, b.team_id
-         FROM views v
-         INNER JOIN tables_meta tm ON tm.id = v.table_id
-         INNER JOIN bases b ON b.id = tm.base_id
-         WHERE v.id = :id LIMIT 1',
-        array(':id' => $viewId)
-    );
+    $view = bcc_find_view_by_id($viewId);
 
     if (!$view) {
         json_fail(404, 'Görünüm bulunamadı.');

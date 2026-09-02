@@ -1,11 +1,4 @@
 <?php
-// AJAX uçnoktası: F3 Duyuru arayüzünün arama kutusu (public/interface.js).
-// Salt-okunur (SELECT), mutasyon yok — CSRF gerekmez, ama require_team_access()
-// aynen diğer her uçnokta gibi zorunlu. Kayıtları YENİDEN RENDER ETMEZ — yalnızca
-// eşleşen record_id listesini döner, interface.php'nin zaten bastığı satırlar
-// istemci tarafında gösterilip/gizlenir (ikinci bir HTML üretim yolu yok).
-// bcc_interface_fetch_records() interface.php'nin İLK yüklemede kullandığı AYNI
-// fonksiyon — paralel sorgu YOK.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 

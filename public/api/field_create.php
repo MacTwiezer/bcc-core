@@ -1,8 +1,4 @@
 <?php
-// AJAX uçnoktası: grid.php'nin sağ üstteki "+" popup'ından (tip-önce-isim-sonra
-// akışı) yeni alan/sütun oluşturur. Doğrulama/insert mantığı bcc_create_field()
-// (src/schema.php) — table_fields.php'nin tam sayfa formuyla PAYLAŞILIR,
-// ikinci bir kopya YOK.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -12,18 +8,10 @@ api_require_csrf();
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
 
+$table = find_table_or_404($tableId);
+require_role($table['team_id'], 'owner');
+
 try {
-    $table = bcc_fetch_one(
-        'SELECT tm.id, b.team_id FROM tables_meta tm INNER JOIN bases b ON b.id = tm.base_id WHERE tm.id = :id LIMIT 1',
-        array(':id' => $tableId)
-    );
-
-    if (!$table) {
-        json_fail(404, 'Tablo bulunamadı.');
-    }
-
-    require_role($table['team_id'], 'owner');
-
     $result = bcc_create_field($table['id'], $table['team_id'], $_POST);
 
     if (!$result['ok']) {

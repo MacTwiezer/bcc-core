@@ -767,6 +767,30 @@ function bcc_get_or_create_default_view($tableId)
 // çağıran bcc_get_or_create_default_view()'e düşer). grid.php'nin çoklu view
 // desteği (sol panel) için — bcc_get_or_create_default_view() hâlâ "hiç
 // view_id verilmemişse" veya "geçersizse" düşülecek varsayılan.
+// view_id -> view + team_id, tablo kimligi BILINMEDEN. bcc_find_view()'in
+// aksine $tableId istemez; view_* AJAX uc noktalari yalnizca view_id
+// aliyor. find_table_or_404() ile AYNI zincir ve AYNI soft-delete kurali:
+// cop kutusundaki bir base'in gorunumu BULUNMAZ.
+//
+// Bu sorgu sekiz ayri uc noktada (kanban_config_update, view_config_update,
+// view_delete, view_description_update, view_favorite_toggle, view_rename,
+// view_reorder, view_save_state) BIREBIR ayni sekilde kopyalanmisti ve
+// KOPYALARIN HICBIRI b.deleted_at kosulunu tasimiyordu.
+//
+// Hata YONETMEZ (false doner) — cagiranlar kendi json_fail(404) mesajlarini
+// koruyabilsin diye.
+function bcc_find_view_by_id($viewId)
+{
+    return bcc_fetch_one(
+        'SELECT v.id, v.table_id, v.view_type, v.config, b.team_id
+         FROM views v
+         INNER JOIN tables_meta tm ON tm.id = v.table_id
+         INNER JOIN bases b ON b.id = tm.base_id
+         WHERE v.id = :id AND b.deleted_at IS NULL LIMIT 1',
+        array('id' => $viewId)
+    );
+}
+
 function bcc_find_view($viewId, $tableId)
 {
     return bcc_fetch_one(
@@ -5117,7 +5141,7 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId,
     $sql = "SELECT r.id, r.created_at,
                    COALESCE((SELECT MAX(cv2.updated_at) FROM cell_values cv2 WHERE cv2.record_id = r.id), r.created_at) AS last_update
             FROM records r
-            WHERE r.table_id = ?";
+            WHERE r.table_id = ? AND r.deleted_at IS NULL";
     $params = array($tableId);
 
     if ($searchTerm !== null && $searchTerm !== '') {

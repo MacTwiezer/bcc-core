@@ -1,10 +1,4 @@
 <?php
-// AJAX uçnoktası: bir yorumu (soft-delete) siler. Güvenlik: CSRF +
-// require_role('commenter') + SAHİPLİK kontrolü — comment_update.php ile AYNI
-// kural: yalnızca yorumu yazan kullanıcı silebilir, owner dahil kimseye
-// "başkasının yorumunu sil" admin yetkisi YOK (bkz. comment_update.php'deki
-// gerekçe). team_id, comment -> record zincirinden bcc_find_record() ile
-// DB'den türetilir.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 

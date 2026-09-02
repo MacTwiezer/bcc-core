@@ -564,8 +564,11 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
      (şablon: `.example`). Doğrulama maili ile "kaydı gönder" maili aynı
      kutudan çıkar, ikinci bir hesap yok.
    Doğrulama: bir kullanıcı kaydı açıp mailin gerçekten geldiğini gör.
-3. **`migrations/` sırayla uygulanmalı** (`001` → `024`). `schema.sql` sıfırdan
-   kurulum içindir; ikisini birlikte çalıştırma.
+3. **Şema:** sıfırdan kurulumda YALNIZCA `schema.sql` (canlı şemayla birebir
+   doğrulandı). Mevcut veri taşınacaksa `migrations/` numara sırasıyla
+   (`002` → `024`; `001` ve `003`–`007` silindi, `schema.sql`'e katlandılar) —
+   bu yol MariaDB gerektirir, bkz. `migrations/README.md`. İkisini birlikte
+   çalıştırma.
 4. **`storage/` yazılabilir olmalı** (dosya ekleri orada, `public/` dışında).
 5. **PHP:** `display_errors=Off`, `log_errors=On`. Uygulama `display_errors`'ı
    kendi de kapatıyor (`src/error_handler.php`) ama sunucu tarafında da kapalı

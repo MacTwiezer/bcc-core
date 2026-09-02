@@ -92,8 +92,9 @@ bcc-core/
                            yönetimi, dosya eki, CSV içe/dışa aktarma, ...)
     assets/                CSS/JS/statik dosyalar
   scripts/                 CLI araçları (create_admin, regresyon test betikleri)
-  migrations/              tarihsel DDL script'leri (çoğu zaten schema.sql'e
-                           katlanmış, kayıt/referans amaçlı tutuluyor)
+  migrations/              tarihsel DDL script'leri — sıfırdan kurulumda
+                           GEREKMEZ (schema.sql yeterli), bkz.
+                           migrations/README.md
   docs/
     PROJE-DURUM.md          GÜNCEL proje durumu (otoriter kaynak, sık güncellenir)
     GEREKSINIMLER.md        orijinal (dondurulmuş) istekler

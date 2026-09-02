@@ -39,7 +39,7 @@ Aylık kiralanan sunucu (DigitalOcean, Hetzner, Turhost, Natro vb.).
 |---|---|
 | PHP | **7.3 veya üstü** (geliştirme 7.3.33 ile yapıldı) |
 | PHP eklentileri | `mysqli`, `mbstring`, `zip` (Excel dışa aktarma), `openssl` (SMTP) |
-| Veritabanı | MySQL 5.7+ / MariaDB 10.4+, **utf8mb4 / utf8mb4_unicode_ci** |
+| Veritabanı | MySQL 5.7+ / MariaDB 10.4+, **utf8mb4 / utf8mb4_unicode_ci**. Sıfırdan kurulum ikisinde de çalışır; **mevcut veri taşınacaksa MariaDB gerekir** (bkz. §3.2) |
 | Web sunucusu | Apache (`.htaccess` kullanılıyor) veya Nginx |
 | Disk | Kod ~50 MB + dosya ekleri (kullanıma göre büyür) |
 
@@ -71,7 +71,10 @@ Sonra **ikisinden birini** yap — ikisini birden değil:
 
 - **Sıfırdan kurulum:** `schema.sql` dosyasını içe aktar.
 - **Mevcut veriyi taşıyorsan:** önce mevcut veritabanının yedeğini yükle, sonra
-  `migrations/` içindeki dosyaları **numara sırasıyla** (`001` → `024`) uygula.
+  `migrations/` içindeki dosyaları **numara sırasıyla** uygula (`002` → `024`;
+  `001` ve `003`–`007` yoktur, içerikleri `schema.sql`'e katlandı).
+  ⚠️ Bu dosyalar **MariaDB gerektirir** — 10'unda `ADD COLUMN IF NOT EXISTS`
+  gibi MySQL'in desteklemediği sözdizimi var. Ayrıntı: `migrations/README.md`.
 
 ### 3.3 Yapılandırma dosyalarını oluştur
 

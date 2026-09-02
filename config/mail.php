@@ -24,8 +24,8 @@
 //
 //   $MAIL_MODE = 'smtp';   // SMTP bilgileri mail_record_send.local.php'den
 //
-// GERİYE DÖNÜK UYUMLULUK: mail_record_send.local.php yoksa, bcc_smtp_config()
-// buradaki eski $MAIL_SMTP_HOST/PORT/USER/PASS değişkenlerine düşer.
+// mail_record_send.local.php yoksa bcc_smtp_config() null döner (SMTP
+// yapılandırılmamış sayılır). Şablon: config/mail.local.php.example.
 
 $MAIL_MODE = 'log';
 $MAIL_FROM_EMAIL = 'no-reply@opsflow.bcccrm.com';

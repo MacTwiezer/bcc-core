@@ -467,7 +467,7 @@ scripts/                   create_admin, test_isolation, _isolation_case,
 ```
 C:/php73/php.exe scripts/test_isolation.php            → 6/6
 C:/php73/php.exe scripts/_verify_phase4_sort_search.php → 8/8
-C:/php73/php.exe scripts/_verify_phase4_filter.php      → 19/19
+C:/php73/php.exe scripts/_verify_phase4_filter.php      → 20/20
 ```
 
 **Git akışı** (her özellik sonunda, ayrı cmd'den):
@@ -541,11 +541,22 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
 
 ### Canlıya çıkarken yapılacaklar
 
-1. **`config/database.local.php` oluştur.** Takip edilen `config/database.php`
-   XAMPP varsayılanlarını (`root`, boş şifre) taşıyor; canlıda `.local.php`
-   ile ezilmeli. Dosya `.gitignore`'da.
+1. **`config/database.local.php` oluştur** — şablonu
+   `config/database.local.php.example`. Takip edilen `config/database.php` XAMPP
+   varsayılanlarını (`root`, boş şifre) taşıyor; canlıda ezilmeli. Oluşturulmazsa
+   uygulama bağlanamaz ve her sayfa "Bir şeyler ters gitti" döner.
 2. **`config/app.local.php` oluştur** (e-posta bağlantılarının taban URL'i) —
-   şablonu `config/app.local.php.example`.
+   şablonu `config/app.local.php.example`. Zorunlu değil: `config/app.php`
+   canlı adresi (`https://opsflow.bcccrm.com`) zaten varsayılan taşıyor.
+2b. **E-posta ZORUNLU — atlanırsa sessizce bozulur.** `config/mail.php`
+   varsayılanı `$MAIL_MODE = 'log'`, yani mail gönderilmez, `storage/mail/`
+   altına dosya yazılır ve hata verilmez. Kayıt doğrulama ve şifre sıfırlama
+   bağlantıları alıcıya ULAŞMAZ. İki dosya gerekir:
+   - `config/mail.local.php` → `$MAIL_MODE = 'smtp';` (şablon: `.example`)
+   - `config/mail_record_send.local.php` → SMTP sunucu/kimlik bilgileri
+     (şablon: `.example`). Doğrulama maili ile "kaydı gönder" maili aynı
+     kutudan çıkar, ikinci bir hesap yok.
+   Doğrulama: bir kullanıcı kaydı açıp mailin gerçekten geldiğini gör.
 3. **`migrations/` sırayla uygulanmalı** (`001` → `024`). `schema.sql` sıfırdan
    kurulum içindir; ikisini birlikte çalıştırma.
 4. **`storage/` yazılabilir olmalı** (dosya ekleri orada, `public/` dışında).

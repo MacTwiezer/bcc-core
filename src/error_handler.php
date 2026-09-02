@@ -18,8 +18,27 @@
 // log'una yine düşüyor), yalnızca TARAYICIYA basılması kapatılıyor.
 ini_set('display_errors', '0');
 
+// Argümansız yığın izi. getTraceAsString() çağrı argümanlarını da basar ve
+// mysqli_connect() başarısız olduğunda DB şifresi düz metin olarak log'a düşer.
+function bcc_safe_trace(Throwable $e)
+{
+    $lines = array();
+
+    foreach ($e->getTrace() as $i => $frame) {
+        $where = isset($frame['file'])
+            ? $frame['file'] . ':' . (isset($frame['line']) ? $frame['line'] : '?')
+            : '[internal]';
+        $call = (isset($frame['class']) ? $frame['class'] . $frame['type'] : '')
+            . (isset($frame['function']) ? $frame['function'] : '?') . '()';
+
+        $lines[] = '#' . $i . ' ' . $where . ' ' . $call;
+    }
+
+    return implode("\n", $lines);
+}
+
 set_exception_handler(function (Throwable $e) {
-    error_log('Yakalanmamış hata: ' . $e->getMessage() . ' (' . $e->getFile() . ':' . $e->getLine() . ")\n" . $e->getTraceAsString());
+    error_log('Yakalanmamış hata: ' . $e->getMessage() . ' (' . $e->getFile() . ':' . $e->getLine() . ")\n" . bcc_safe_trace($e));
 
     if (!headers_sent()) {
         http_response_code(500);

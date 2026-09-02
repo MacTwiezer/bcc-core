@@ -1,0 +1,15 @@
+<?php
+// Veritabani baglantisi — ornek sablon (sifresiz, git'e girebilir).
+// Gercek ayarlar icin bu dosyayi config/database.local.php olarak kopyalayin
+// (o dosya .gitignore'dadir). Yalnizca degistirmek istediginiz satirlari
+// birakabilirsiniz; yazmadiklariniz config/database.php'deki varsayilanda kalir.
+//
+// CANLIDA ZORUNLU: config/database.php'deki varsayilanlar XAMPP icindir
+// (root / sifresiz). Canlida bu dosya olusturulmazsa uygulama baglanamaz.
+
+$DB_HOST = '127.0.0.1';
+$DB_PORT = '3306';
+$DB_NAME = 'bcc_core';
+$DB_USER = 'BURAYA_KULLANICI';
+$DB_PASS = 'BURAYA_SIFRE';
+$DB_CHARSET = 'utf8mb4';

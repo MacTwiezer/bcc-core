@@ -1,7 +1,4 @@
 <?php
-// AJAX uçnoktası: tek bir hücreyi kaydeder (grid.php / assets/grid.js tarafından çağrılır).
-// Güvenlik: CSRF + require_role('editor') + kaydın gerçekten bu alanın tablosuna ait
-// olduğu kontrolü. team_id her zaman DB satırından gelir (istekten değil).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -20,7 +17,6 @@ try {
         json_fail(404, 'Alan bulunamadı.');
     }
 
-    // KVKK ekip izolasyonu + editor+ rolü — team_id bu satırdan geliyor, istekten değil.
     require_role($field['team_id'], 'editor');
 
     $record = bcc_fetch_one('SELECT id, table_id, deleted_at FROM records WHERE id = :id LIMIT 1', array(':id' => $recordId));
@@ -28,15 +24,11 @@ try {
     if (!$record || (int) $record['table_id'] !== (int) $field['table_id']) {
         json_fail(400, 'Bu kayıt bu alana ait değil.');
     }
-    // Adım 3c: silinmiş (çöp kutusundaki) bir kaydın hücresi düzenlenemez —
-    // ör. kayıt açıkken başka bir sekmede silinmişse bu isteği yakalar.
+
     if ($record['deleted_at'] !== null) {
         json_fail(400, 'Bu kayıt silinmiş, düzenlenemez.');
     }
 
-    // 'user' tipi için tek kaynak: bu takımın (KVKK) aktif üyeleri — hem gönderilen
-    // id'nin gerçekten üye olduğunu doğrulamak hem de yanıttaki 'display' adını
-    // çözmek için kullanılır (bkz. bcc_team_users_by_id, src/schema.php).
     $usersById = bcc_team_users_by_id($field['team_id']);
 
     $result = normalize_cell_value($field['field_type'], $field['options'], $rawValue, $usersById);
@@ -45,12 +37,6 @@ try {
         json_fail(422, $result['error']);
     }
 
-    // "Zorunlu" (is_required) rozeti şimdiye kadar yalnızca kozmetikti (grid.php'de
-    // bir "*" işareti dışında hiçbir yerde kontrol edilmiyordu) — burada gerçekten
-    // uygulanıyor: normalize_cell_value() bu alan tipi için "boş" (null) sayıyorsa
-    // ve alan zorunluysa kayıt reddedilir. Yeni (henüz hiç hücresi olmayan) bir
-    // satırı boş bırakmayı ENGELLEMEZ (record_add.php hiç cell_values yazmıyor) —
-    // yalnızca zorunlu bir hücreyi elle boşaltmayı engeller.
     if ((int) $field['is_required'] === 1 && $result['value'] === null) {
         json_fail(422, 'Bu alan zorunludur, boş bırakılamaz.');
     }
@@ -58,15 +44,6 @@ try {
     $column = $result['column'];
     $value = $result['value'];
 
-    // ---- Slack "hücre değişti" bildirimi: ESKİ değeri YAZMADAN ÖNCE oku ----
-    // Dördüncü Slack olayı (bkz. bcc_notify_slack_cell_change, src/slack.php).
-    // Mesaj "Durum: Gorusuluyor → Kazanildi" diyebilsin diye eski değere
-    // ihtiyaç var; INSERT ... ON DUPLICATE KEY UPDATE onu ezeceği için okuma
-    // ZORUNLU OLARAK buraya, yazmadan önce giriyor.
-    //
-    // ⚠️ EK SORGU YALNIZCA İZLENEN ALANLARDA. Alan izlenmiyorsa (varsayılan:
-    // hiçbiri) tek bir ek sorgu bile açılmaz — her hücre kaydında bedel
-    // ödenmez. bcc_slack_watched_field_ids() istek başına önbellekli.
     $bccSlackWatched = in_array((int) $fieldId, bcc_slack_watched_field_ids($field['table_id']), true);
     $bccSlackOldDisplay = null;
 
@@ -83,11 +60,6 @@ try {
         );
     }
 
-    // "Last modified time/by" (Grup B2): cell_values yazması + records'un
-    // "son değişiklik" damgası + audit log AYNI transaction'da — view_save_state.php
-    // ile AYNI gerekçe: ikisi ayrı olsaydı, ikinci yazma istisna atarsa ilki zaten
-    // commit edilmiş olurdu, "içerik değişti ama son değişiklik yansımadı" gibi
-    // tutarsız bir durum ortaya çıkardı.
     bcc_begin_transaction();
     $sql = "INSERT INTO cell_values (record_id, field_id, {$column}) VALUES (:record_id, :field_id, :value)
             ON DUPLICATE KEY UPDATE {$column} = VALUES({$column})";
@@ -111,25 +83,13 @@ $response = array(
     'raw' => cell_raw_value($field['field_type'], $cellRow),
 );
 
-// ---- Slack "hücre değişti" bildirimi: gönderim ----
-// COMMIT'TEN SONRA, yanıt üretildikten sonra. Sıra önemli: bildirim bir YAN
-// ETKİ, hücrenin kaydedilmesini hiçbir koşulda geciktirmemeli/engellememeli
-// (fonksiyonun kendisi de asla istisna sızdırmıyor, bkz. src/slack.php).
-//
-// long_text dönüşümünden ÖNCE okunuyor: aşağıdaki blok $response['display']'i
-// HTML'e çeviriyor, Slack'e ham metin gitmeli.
-//
-// DEĞER GERÇEKTEN DEĞİŞTİYSE gönderilir. Grid, hücreden çıkışta değer aynı
-// olsa da kaydedebiliyor; bu kontrol olmasaydı bir hücreye girip çıkmak bile
-// kanala mesaj basardı.
 if ($bccSlackWatched && $bccSlackOldDisplay !== $response['display']) {
     $bccSlackUser = current_user();
 
     bcc_notify_slack_cell_change(
         (int) $field['table_id'],
         $recordId,
-        // Alan TİPİ de gidiyor: zengin metin (long_text) HTML sakladığı için
-        // Slack'e giderken mrkdwn'a çevrilmeli (bkz. bcc_slack_cell_value_markup).
+
         $field['field_type'],
         $field['name'],
         $bccSlackOldDisplay,
@@ -138,19 +98,10 @@ if ($bccSlackWatched && $bccSlackOldDisplay !== $response['display']) {
     );
 }
 
-// long_text (zengin metin): 'display' doğrudan .cell-view'ın innerHTML'i olarak
-// yazılıyor (grid.js applyCellResultToTd) — yani KAPALI hücre görünümü. İlk
-// render'la (bcc_render_grid_data_row) AYNI dönüşümden geçmeli, yoksa kaydettikten
-// hemen sonra hücre çok satırlı kalır, ancak F5'ten sonra tek satıra düşerdi.
-// 'raw' DOKUNULMADAN kalıyor: düzenleyici data-value'yu ondan alıyor.
 if ($field['field_type'] === 'long_text') {
     $response['display'] = bcc_rich_text_grid_html($response['display']);
 }
 
-// Color: tekli/çoklu seçim hücreleri düz metin değil renkli "chip" olarak
-// render edilir (bkz. bcc_render_grid_data_row) — bu anahtar VARSA (boş dizi
-// dahil), grid.js kaydettikten sonra .cell-view'ı chip olarak yeniden çizer;
-// yoksa (diğer tüm tipler) her zamanki gibi düz metin yazılır.
 if (is_select_field_type($field['field_type'])) {
     $choices = select_choices_from_options($field['options']);
     $choiceColorMap = bcc_build_choice_color_map($choices, select_choice_colors_from_options($field['options']));
@@ -165,16 +116,6 @@ if (is_select_field_type($field['field_type'])) {
     $response['display_chips'] = bcc_choice_chip_data($selectedValues, $choiceColorMap);
 }
 
-// Grup A (url/email/phone): display_chips ile BİREBİR AYNI desen — anahtar VARSA
-// grid.js hücreyi özel render eder, YOKSA her zamanki düz metne düşer.
-//
-// ⚠️ Şema whitelist'i SUNUCUDA uygulanır (bcc_cell_link_href yalnızca
-// http/https/mailto/tel üretir) — istemciye YALNIZCA zaten güvenli bir href
-// gider, grid.js'in ayrıca şema kontrolü yapması gerekmez.
-//
-// Değer linkleştirilemiyorsa anahtar null olarak YİNE gönderilir, hiç
-// gönderilmemesi bug olurdu: geçerli bir URL'yi "abc" yapan kullanıcıda
-// eski ikon ekranda asılı kalırdı (grid.js null'ı görünce ikonu SİLER).
 if (in_array($field['field_type'], $GLOBALS['BCC_LINKIFIED_FIELD_TYPES'], true)) {
     $linkHref = bcc_cell_link_href($field['field_type'], $response['display']);
 

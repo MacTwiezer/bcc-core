@@ -39,7 +39,7 @@ Aylık kiralanan sunucu (DigitalOcean, Hetzner, Turhost, Natro vb.).
 |---|---|
 | PHP | **7.3 veya üstü** (geliştirme 7.3.33 ile yapıldı) |
 | PHP eklentileri | `mysqli`, `mbstring`, `zip` (Excel dışa aktarma), `openssl` (SMTP) |
-| Veritabanı | MySQL 5.7+ / MariaDB 10.4+, **utf8mb4 / utf8mb4_unicode_ci**. Sıfırdan kurulum ikisinde de çalışır; **mevcut veri taşınacaksa MariaDB gerekir** (bkz. §3.2) |
+| Veritabanı | MySQL 5.7+ / MariaDB 10.4+, **utf8mb4 / utf8mb4_unicode_ci** |
 | Web sunucusu | Apache (`.htaccess` kullanılıyor) veya Nginx |
 | Disk | Kod ~50 MB + dosya ekleri (kullanıma göre büyür) |
 
@@ -69,40 +69,76 @@ CREATE DATABASE bcc_core CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 Sonra **ikisinden birini** yap — ikisini birden değil:
 
-- **Sıfırdan kurulum:** `schema.sql` dosyasını içe aktar.
-- **Mevcut veriyi taşıyorsan:** önce mevcut veritabanının yedeğini yükle, sonra
-  `migrations/` içindeki dosyaları **numara sırasıyla** uygula (`002` → `024`;
-  `001` ve `003`–`007` yoktur, içerikleri `schema.sql`'e katlandı).
-  ⚠️ Bu dosyalar **MariaDB gerektirir** — 10'unda `ADD COLUMN IF NOT EXISTS`
-  gibi MySQL'in desteklemediği sözdizimi var. Ayrıntı: `migrations/README.md`.
+- **Sıfırdan kurulum:** `schema.sql` dosyasını içe aktar. Güncel şemanın
+  tamamını üretir (doğrulandı: 21 tablo, 147 kolon, 76 index, 40 yabancı
+  anahtar — canlı veritabanıyla farksız).
+- **Mevcut veriyi taşıyorsan:** canlı veritabanının `mysqldump` yedeğini
+  yükle. Ayrı bir yükseltme adımı YOK; şema zaten güncel gelir.
 
 ### 3.3 Yapılandırma dosyalarını oluştur
 
 Bu dosyalar git'e **girmez** (`.gitignore`), her sunucuda elle oluşturulur:
 
-Her birinin yanında şifresiz bir `.example` şablonu var — kopyalayıp doldurun.
-**Dördü de zorunludur.**
+Şablon dosyası yoktur; dördü de aşağıdaki bloklardan elle yazılır.
 
-| Dosya | İçerik |
+| Dosya | Zorunlu mu? |
 |---|---|
-| `config/database.local.php` | Canlı DB kullanıcı adı/şifresi |
-| `config/app.local.php` | `$APP_BASE_URL` (e-postadaki bağlantıların adresi) |
-| `config/mail.local.php` | `$MAIL_MODE = 'smtp';` — **atlanırsa hiç mail gitmez** |
-| `config/mail_record_send.local.php` | SMTP sunucu + hesap bilgileri |
+| `config/database.local.php` | **Evet** — yoksa uygulama veritabanına bağlanamaz |
+| `config/mail.local.php` | **Evet** — yoksa hiç mail gitmez (sessizce) |
+| `config/mail_record_send.local.php` | **Evet** — SMTP hesabı burada |
+| `config/app.local.php` | Yalnızca adres `opsflow.bcccrm.com` değilse |
 
-```bash
-cd config
-for f in database mail mail_record_send app; do cp $f.local.php.example $f.local.php; done
+`config/mail.local.php` — mail gönderimini açar. Tek satır:
+
+```php
+<?php
+$MAIL_MODE = 'smtp';   // 'log' = gönderme, dosyaya yaz | 'smtp' = gerçekten gönder
 ```
 
-> `config/database.php` XAMPP varsayılanlarını (`root`, boş şifre) taşır.
-> Canlıda `.local.php` oluşturulmazsa uygulama bağlanamaz ve her sayfa
-> "Bir şeyler ters gitti" döner. DB kullanıcısı **root olmamalı** — yalnızca
-> `bcc_core` veritabanına yetkili ayrı bir kullanıcı açın.
+`config/mail_record_send.local.php` elle oluşturulur — SMTP hesabı burada.
+`mail.local.php` `'smtp'` moduna alınmışsa **zorunlu**, yoksa mail gitmez:
 
-`config/app.local.php` içinde `$APP_BASE_URL = 'https://opsflow.sirketiniz.com';`
-olmalı — boş bırakılırsa doğrulama e-postalarındaki bağlantı `localhost` çıkar
-ve kullanıcılar hesaplarını etkinleştiremez.
+```php
+<?php
+return array(
+    'host'       => 'smtp.office365.com',
+    'port'       => 587,
+    'encryption' => 'tls',          // 587 ile 'tls', 465 ile 'ssl'
+    'username'   => 'gonderen@sirketiniz.com',
+    'password'   => 'hesap-sifresi',
+    'from_email' => 'gonderen@sirketiniz.com',   // username ile AYNI olmalı
+    'from_name'  => 'Şirket Adı',
+);
+```
+
+> Office 365, kimlik doğrulanan kutudan farklı bir `from_email` reddeder —
+> `username` ile aynı yazın. Görünen ad `config/mail.php`'deki
+> `$MAIL_FROM_NAME`'den gelir, buradaki `from_name` yalnızca yedektir.
+
+`config/database.local.php` elle oluşturulur (**zorunlu** — yoksa uygulama
+veritabanına bağlanamaz). Yalnızca değiştirmek istediğiniz satırları yazın;
+yazmadıklarınız `config/database.php`'deki varsayılanda kalır:
+
+```php
+<?php
+$DB_HOST    = '127.0.0.1';
+$DB_PORT    = '3306';
+$DB_NAME    = 'bcc_core';
+$DB_USER    = 'bcc_app';        // root DEĞİL — sadece bu veritabanına yetkili
+$DB_PASS    = 'guclu-bir-sifre';
+$DB_CHARSET = 'utf8mb4';
+```
+
+Dördüncüsü koşullu: `config/app.php` varsayılanı `https://opsflow.bcccrm.com`.
+Sunucu BAŞKA bir adreste yayınlanacaksa `config/app.local.php` elle oluşturulur:
+
+```php
+<?php
+$APP_BASE_URL = 'https://opsflow.sirketiniz.com';   // sonunda / OLMASIN
+```
+
+Yazılmazsa doğrulama e-postalarındaki bağlantılar yanlış alan adına gider ve
+kullanıcılar hesaplarını etkinleştiremez.
 
 ### 3.4 Dosya izinleri
 
@@ -143,7 +179,7 @@ HTTPS açılınca uygulama oturum çerezini otomatik `secure` işaretler ve
 
 ## 4. Ters vekil (reverse proxy) kullanacaksanız
 
-Giriş denemesi sınırı uygulamada **var** (`migrations/024`, 2026-09-02):
+Giriş denemesi sınırı uygulamada **var** (`login_attempts` tablosu, `schema.sql`):
 aynı IP + e-posta için 5 hata / 15 dk, aynı IP için 20 hata / 15 dk.
 Şifre sıfırlamanın kendi sınırı zaten vardı (`password_reset_attempts`).
 
@@ -224,7 +260,7 @@ Yedeklerin **başka bir makinede** de kopyası olmalı.
 - [ ] `https://adres/../config/database.local.php` **404/403 veriyor** (DocumentRoot doğru)
 - [ ] Yanlış adresle `https://adres/grid.php?table_id=999999` → markalı "Tablo bulunamadı" sayfası, 404
 - [ ] 6 kez yanlış şifreyle giriş denendi → "Çok fazla başarısız giriş
-      denemesi" uyarısı çıkıyor (`migrations/024` uygulanmış demektir)
+      denemesi" uyarısı çıkıyor (`login_attempts` tablosu çalışıyor demektir)
 - [ ] Ters vekil varsa `REMOTE_ADDR` gerçek istemciyi gösteriyor (bkz. §4)
 
 ---

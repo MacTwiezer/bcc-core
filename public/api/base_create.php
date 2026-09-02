@@ -1,14 +1,4 @@
 <?php
-// AJAX uçnoktası: Home'daki "+ Yeni Base Oluştur" kutucuğunun açtığı modal.
-// public/bases.php'nin klasik form POST'u ile AYNI işi yapar — ikisi de
-// bcc_create_base()'i çağırır (doğrulama/INSERT/audit tek yerde), burada yalnızca
-// istek biçimi (JSON) ve yetki reddi farklıdır.
-//
-// Yetki: bir çalışma alanına base EKLEMEK yalnızca Owner'a açıktır (Editor
-// kayıt düzenler ama base ekleyemez) — eşik src/auth.php'deki
-// bcc_can_manage_bases()'te TEK yerde tanımlı, dashboard.php'nin kutucuğu
-// gizleme kararı da aynı fonksiyondan gelir. Buradaki kontrol asıl kapıdır:
-// kutucuğu görmeyen bir kullanıcı bu uçnoktaya elle istek atsa da reddedilir.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -20,18 +10,10 @@ $user = current_user();
 $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
 $name = isset($_POST['name']) ? $_POST['name'] : '';
 $description = isset($_POST['description']) ? $_POST['description'] : '';
-// İkon/renk seçimi OPSİYONEL: modalda seçim yapılmazsa (ya da JS'siz düz form
-// gönderiminde hiç basılmazsa) bcc_create_base() ikisini de NULL yazar ve base
-// eski otomatik davranışa düşer. Doğrulama BURADA yapılmaz — whitelist tek
-// yerde, bcc_create_base()'in içinde (aynı kapıdan bases.php de geçiyor).
+
 $icon = isset($_POST['icon']) ? $_POST['icon'] : null;
 $iconColor = isset($_POST['icon_color']) ? $_POST['icon_color'] : null;
 
-// require_role() BİLEREK kullanılmadı: o, hata durumunda düz metinle die() eder
-// ve bu uçnoktanın JSON sözleşmesini bozardı. Aynı iki adım (önce üyelik =
-// KVKK izolasyonu, sonra rol) burada json_fail() ile yapılır. Üye olmama ve
-// yetkisi yetmeme AYRI mesaj alır ama ikisi de 403'tür — üye olmadığı bir
-// çalışma alanının VAR olup olmadığı böylece sızmaz.
 if (!in_array($teamId, current_user_team_ids(), true)) {
     json_fail(403, 'Bu çalışma alanına erişim yetkiniz yok.');
 }
@@ -47,8 +29,6 @@ try {
 }
 
 if (!$result['ok']) {
-    // Doğrulama hatası (boş ad / uzunluk) — 500 değil 422; mesaj modalda
-    // alanın altında gösterilir.
     json_fail(422, $result['error']);
 }
 

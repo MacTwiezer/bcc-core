@@ -49,8 +49,6 @@ if (empty($accounts)) {
     line('');
     line('config/app.local.php dosyasina su satiri ekleyin (bu dosya git\'e girmez):');
     line('    $BCC_DEMO_PASSWORD = \'yerel-bir-sifre\';');
-    line('');
-    line('Sablon: config/app.local.php.example');
     exit(1);
 }
 

@@ -1,13 +1,4 @@
 <?php
-// Bir ek dosyayı indirir/görüntüler (grid.php'deki küçük resim <img> kaynağı VE
-// indirme linki, interface.php'de aynı şekilde). GET — salt-okunur, CSRF gerekmez.
-// GÜVENLİK: dosyalar public/ DIŞINDA (storage/attachments/) saklanıyor, bu yüzden
-// web sunucusu onları hiçbir zaman doğrudan servis edemez — TEK erişim yolu bu
-// dosya, ve her istekte require_team_access() ile KVKK kontrolünden geçer (team_id
-// bcc_find_attachment() ile field_id -> table_id -> base_id zincirinden gelir,
-// istekten değil). Görüntülemek (indirmek) düzenleme değildir — require_role
-// DEĞİL, require_team_access yeterli (viewer da indirebilir, grid.php'yi
-// görüntülemekle aynı yetki seviyesi).
 
 require __DIR__ . '/../../src/bootstrap.php';
 
@@ -29,8 +20,6 @@ if (!is_file($path)) {
     die('Dosya diskte bulunamadı.');
 }
 
-// CRLF/tırnak enjeksiyonuna karşı (original_name kullanıcı girdisi) — header
-// enjeksiyonunu önler, dosya adının kendisini DEĞİL yalnızca header'a yazımını etkiler.
 $safeName = str_replace(array("\r", "\n", '"'), '', $attachment['original_name']);
 $isImage = strpos($attachment['mime_type'], 'image/') === 0;
 

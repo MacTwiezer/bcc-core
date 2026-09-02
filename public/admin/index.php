@@ -11,12 +11,6 @@ $user = $currentUser;
 $error = null;
 $success = null;
 
-// Kullanıcı/ekip-üyeliği toplu işlemleri — hem "..." satır menüsü hem de
-// tablo altındaki "İşlemler" (bulk) menüsü AYNI action isimlerini ve AYNI
-// user_ids[] listesini POST eder, tek yerde işlenir (iki ayrı uç nokta yok).
-// Admin'in kendi hesabını admin'likten düşürmesi / pasif yapması KASITLI
-// olarak engellenir (OpsFlow admin panelindeki aynı kural), sessizce
-// listeden çıkarılır — işlem geri kalan seçili kullanıcılar için devam eder.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
 
@@ -38,10 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($applyIds)) {
-            // Yalnızca kendi hesabı seçilmişti, kendi kendini çıkarınca uygulanacak
-            // kimse kalmadı — hiçbir UPDATE/log_audit çalışmadı (bulunan gerçek bug:
-            // bu durumda bile "Güncellendi" mesajı gösteriliyordu, hiçbir şey
-            // değişmediği halde bir işlem olmuş gibi görünüyordu).
             $success = 'Hiçbir şey güncellenmedi (kendi admin yetkinizi kendiniz kaldıramazsınız).';
         } else {
             $placeholders = implode(',', array_fill(0, count($applyIds), '?'));
@@ -60,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($applyIds)) {
-            // Aynı gerekçe: yukarıdaki grant_admin/revoke_admin bloğuyla AYNI bug.
             $success = 'Hiçbir şey güncellenmedi (kendi hesabınızı kendiniz pasif yapamazsınız).';
         } else {
             $placeholders = implode(',', array_fill(0, count($applyIds), '?'));
@@ -75,13 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($teamId <= 0) {
             $error = 'Geçersiz ekip.';
         } else {
-            // team_members.php ile AYNI fonksiyon. Burada eskiden çıplak bir
-            // DELETE vardı ve o yoldaki korumaların hiçbiri çalışmıyordu — en
-            // önemlisi "son owner çıkarılamaz": ekip owner'sız kalabiliyordu.
-            // Ayrıca log_audit'e team_id geçilmediği için kayıt hiçbir bildirim
-            // panelinde görünmüyordu (audit_log.team_id NULL kalıyordu).
-            // Platform admini her ekipte sanal owner'dır (bkz. auth.php),
-            // rütbe de buna göre veriliyor.
             $result = bcc_team_member_remove_many(
                 $teamId,
                 $userIds,
@@ -112,9 +94,6 @@ $membersByTeam = array();
 foreach ($memberRows as $row) {
     $membersByTeam[$row['team_id']][] = $row;
 }
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
 $homePageTitle = bcc_tab_title('Admin');
@@ -125,13 +104,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
         </div>
 
         <?php
-        // Şu an çevrimiçi olanlar. Üst bardaki rozet yalnızca SAYIYI gösteriyor;
-        // burada KİM olduğu listeleniyor — admin için asıl değerli olan bu.
-        //
-        // bcc_online_users() LIMIT KULLANMAZ (bkz. src/auth.php): son
-        // BCC_PRESENCE_WINDOW_MINUTES dakikada etkin olan herkes döner. Sayı da
-        // count($bccOnlineUsers)'tan geliyor, ayrı bir sorgudan değil — iki
-        // gösterge birbirinden ayrışamaz.
+
         $bccOnlineUsers = bcc_online_users();
         ?>
         <div class="settings-card">
@@ -141,8 +114,8 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
             </div>
 
             <?php if (!$bccOnlineUsers): ?>
-                <?php // Boş <ul> basıp kullanıcıyı "bozuk mu?" diye düşündürmek
-                      // yerine açık bir cümle. ?>
+                <?php
+                      ?>
                 <p class="admin-muted">Son <?php echo (int) BCC_PRESENCE_WINDOW_MINUTES; ?> dakika içinde etkin olan kullanıcı yok.</p>
             <?php else: ?>
                 <ul class="admin-online-list">
@@ -153,10 +126,9 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                                 <div class="admin-user-name"><?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <div class="admin-user-email"><?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?></div>
                             </div>
-                            <?php // bcc_time_ago() referans saati bcc_db_now()'dan, yani
-                                  // VERİTABANINDAN alıyor; last_activity_at da NOW() ile
-                                  // yazılıyor. Bu ortamda PHP UTC / MySQL +03 çalıştığı için
-                                  // bu eşleşme şart, yoksa herkes "3 saat önce" görünürdü. ?>
+                            <?php
+
+                                  ?>
                             <span class="admin-online-when"><?php echo htmlspecialchars(bcc_time_ago($bccOu['last_activity_at']), ENT_QUOTES, 'UTF-8'); ?></span>
                         </li>
                     <?php endforeach; ?>
@@ -289,7 +261,10 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                     <h3><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
                 </div>
                 <?php if (!empty($membersByTeam[$teamId])): ?>
-                    <form id="<?php echo $bulkFormId; ?>" method="post" action="/admin/index.php">
+                    <form id="<?php echo $bulkFormId; ?>" method="post" action="/admin/index.php"
+                          data-confirm="Seçili kullanıcıları bu ekipten çıkarmak istediğinize emin misiniz?"
+                          data-confirm-title="Ekipten çıkar"
+                          data-confirm-label="Evet, çıkar">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="remove_from_team">
                         <input type="hidden" name="team_id" value="<?php echo $teamId; ?>">
@@ -319,14 +294,17 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                                     </td>
                                     <td>
                                         <span class="admin-pill admin-pill-<?php echo isset($roleColors[$m['role']]) ? $roleColors[$m['role']] : 'gray'; ?>">
-                                            <?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$m['role']], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars(isset($GLOBALS['BCC_ROLE_LABELS'][$m['role']]) ? $GLOBALS['BCC_ROLE_LABELS'][$m['role']] : $m['role'], ENT_QUOTES, 'UTF-8'); ?>
                                         </span>
                                     </td>
                                     <td class="admin-actions-cell">
                                         <details class="admin-menu">
                                             <summary class="admin-row-menu-btn" aria-label="İşlemler">&#8942;</summary>
                                             <div class="admin-menu-panel">
-                                                <form method="post" action="/admin/index.php" onsubmit="return confirm('Bu kullanıcıyı ekipten çıkarmak istediğinize emin misiniz?');">
+                                                <form method="post" action="/admin/index.php"
+                                                      data-confirm="Bu kullanıcıyı ekipten çıkarmak istediğinize emin misiniz?"
+                                                      data-confirm-title="Ekipten çıkar"
+                                                      data-confirm-label="Evet, çıkar">
                                                     <?php echo csrf_field(); ?>
                                                     <input type="hidden" name="action" value="remove_from_team">
                                                     <input type="hidden" name="team_id" value="<?php echo $teamId; ?>">
@@ -341,7 +319,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                         </tbody>
                     </table>
                     <div class="admin-bulk-bar">
-                        <button type="submit" form="<?php echo $bulkFormId; ?>" class="admin-bulk-trigger admin-bulk-trigger-muted" onclick="return confirm('Seçili kullanıcıları bu ekipten çıkarmak istediğinize emin misiniz?');">Seçilenleri ekipten çıkar</button>
+                        <button type="submit" form="<?php echo $bulkFormId; ?>" class="admin-bulk-trigger admin-bulk-trigger-muted">Seçilenleri ekipten çıkar</button>
                     </div>
                 <?php else: ?>
                     <p class="admin-empty">Bu ekipte henüz üye yok.</p>
@@ -349,14 +327,14 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
             </div>
         <?php endforeach; ?>
         <div class="admin-actions-row">
-            <?php // href KORUNDU: create-team-modal.js tıklamayı yakalayıp aynı
-                  // sayfada modal açıyor; JS yoksa bağlantı kendi sayfasına gider.
-                  // workspaces.php'deki butonla AYNI modal/partial/JS. ?>
+            <?php
+
+                  ?>
             <a href="/admin/create_team.php" class="admin-add-link" data-create-team-btn>+ Yeni ekip oluştur</a>
             <a href="/admin/assign_team.php" class="admin-add-link">Kullanıcıyı ekibe ata</a>
         </div>
         </div>
-<?php // Bu sayfaya zaten yalnızca admin girebiliyor (require_admin, dosya başı). ?>
+<?php ?>
 <?php require __DIR__ . '/../../src/partials/create_team_modal.php'; ?>
 <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('admin.js'); ?>"></script>

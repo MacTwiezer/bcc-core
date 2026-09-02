@@ -152,6 +152,6 @@ function bcc_demo_password_for_test()
         }
     }
     fwrite(STDERR, "\nBu test demo hesaplarina ihtiyac duyar: config/app.local.php'ye\n"
-        . "\$BCC_DEMO_PASSWORD tanimlayin (bkz. config/app.local.php.example).\n");
+        . "\$BCC_DEMO_PASSWORD tanimlayin.\n");
     exit(2);
 }

@@ -510,8 +510,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     KEY idx_audit_log_team (team_id),
     KEY idx_audit_log_user (user_id),
     -- dashboard.php'nin "Açıldı" tarih filtresi (log_base_open()) her açılışta
-    -- action='base.open' AND entity_type='base' AND entity_id=:id ile tarar
-    -- (bkz. migrations/002_audit_log_entity_index.sql).
+    -- action='base.open' AND entity_type='base' AND entity_id=:id ile tarar.
     KEY idx_audit_log_entity (entity_type, entity_id, action),
     CONSTRAINT fk_audit_log_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
     CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL

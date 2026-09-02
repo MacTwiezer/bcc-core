@@ -546,12 +546,12 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
 > yalnızca bu depoya özgü teknik notlardır; ikisi çelişirse CANLIYA-ALMA.md
 > esas alınır.
 
-1. **`config/database.local.php` oluştur** — şablonu
-   `config/database.local.php.example`. Takip edilen `config/database.php` XAMPP
+1. **`config/database.local.php` oluştur** — değişken adları için bkz.
+   `config/database.php:9-14`. Takip edilen `config/database.php` XAMPP
    varsayılanlarını (`root`, boş şifre) taşıyor; canlıda ezilmeli. Oluşturulmazsa
    uygulama bağlanamaz ve her sayfa "Bir şeyler ters gitti" döner.
 2. **`config/app.local.php` oluştur** (e-posta bağlantılarının taban URL'i) —
-   şablonu `config/app.local.php.example`. `config/app.php` varsayılanı
+   şablonu YOK, elle yazılır (tek satır). `config/app.php` varsayılanı
    `https://opsflow.bcccrm.com`; sunucu BAŞKA bir adreste yayınlanacaksa bu
    dosya ZORUNLU — yoksa doğrulama e-postalarındaki bağlantılar yanlış alan
    adına gider ve kullanıcılar hesaplarını etkinleştiremez.
@@ -564,16 +564,15 @@ göndermek spesifikasyona aykırı). `preload` bilerek yok — geri dönüşü z
      (şablon: `.example`). Doğrulama maili ile "kaydı gönder" maili aynı
      kutudan çıkar, ikinci bir hesap yok.
    Doğrulama: bir kullanıcı kaydı açıp mailin gerçekten geldiğini gör.
-3. **Şema:** sıfırdan kurulumda YALNIZCA `schema.sql` (canlı şemayla birebir
-   doğrulandı). Mevcut veri taşınacaksa `migrations/` numara sırasıyla
-   (`002` → `024`; `001` ve `003`–`007` silindi, `schema.sql`'e katlandılar) —
-   bu yol MariaDB gerektirir, bkz. `migrations/README.md`. İkisini birlikte
-   çalıştırma.
+3. **Şema:** `schema.sql` tek kaynaktır ve canlı şemayla birebir doğrulanmıştır
+   (21 tablo, 147 kolon, 76 index, 40 yabancı anahtar). Sıfırdan kurulumda
+   bu dosya içe aktarılır; mevcut veri taşınacaksa `mysqldump` yedeği
+   yüklenir. Ayrı bir migration klasörü YOK.
 4. **`storage/` yazılabilir olmalı** (dosya ekleri orada, `public/` dışında).
 5. **PHP:** `display_errors=Off`, `log_errors=On`. Uygulama `display_errors`'ı
    kendi de kapatıyor (`src/error_handler.php`) ama sunucu tarafında da kapalı
    olmalı.
-6. **Giriş denemesi sınırı ARTIK VAR** (2026-09-02, `migrations/024`) — ama ters
+6. **Giriş denemesi sınırı ARTIK VAR** (`login_attempts` tablosu) — ama ters
    vekil kullanılacaksa dikkat: sınır `$_SERVER['REMOTE_ADDR']`'e dayanır ve
    `X-Forwarded-For` bilerek okunmaz. nginx/Cloudflare arkasına alınırsa TÜM
    istekler tek bir vekil IP'sinden geliyor görünür ve (ip) kuralı (20 hata/15

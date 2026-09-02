@@ -18,14 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
     } elseif (mb_strlen($email, 'UTF-8') > 190) {
-        // users.email VARCHAR(190) — bu kontrol olmadan uzun bir e-posta hatasız
-        // sessizce kırpılıyordu (sql_mode'da STRICT_TRANS_TABLES yok, doğrulandı).
-        // account_update_email.php ile AYNI sınır/mesaj.
         $error = 'E-posta en fazla 190 karakter olabilir.';
     } elseif ($fullName === '') {
         $error = 'Ad Soyad boş olamaz.';
     } elseif (mb_strlen($fullName, 'UTF-8') > 150) {
-        // users.full_name VARCHAR(150) — account_update_name.php ile AYNI sınır/mesaj.
         $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } elseif (!bcc_is_valid_password($password)) {
         $error = 'Şifre 8-72 karakter arasında olmalı.';
@@ -43,15 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newId = bcc_last_insert_id();
             log_audit('user.create', 'user', $newId, array('email' => $email));
             $success = 'Kullanıcı oluşturuldu: ' . $email;
-            // Bir sonraki kullanıcı için formu temizle.
+
             $email = '';
             $fullName = '';
         }
     }
 }
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
 $homePageTitle = bcc_tab_title('Yeni Kullanıcı');

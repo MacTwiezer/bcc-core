@@ -1,13 +1,4 @@
 <?php
-// AJAX uçnoktası: bir "attachment" (dosya eki) hücresine yeni dosya yükler.
-// grid.php / assets/grid.js (ve satır genişletme paneli, grid-row-detail.js —
-// window.BCC_GRID.uploadAttachment üzerinden AYNI uç nokta) çağırır.
-// Güvenlik: CSRF + require_role('editor') + kaydın gerçekten bu alanın tablosuna
-// ait olduğu kontrolü (cell_update.php ile AYNI desen). Dosya, gerçek içeriğinden
-// (finfo — istemcinin gönderdiği MIME'a GÜVENİLMEZ) + sabit uzantı whitelist'inden
-// doğrulanır; diskte RASTGELE bir adla saklanır (orijinal ad yalnızca DB'de,
-// yalnızca gösterim için). Depolama public/ DIŞINDA (storage/attachments/) —
-// tek erişim yolu attachment_download.php, her indirmede KVKK kontrolünden geçer.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -15,11 +6,6 @@ api_require_post();
 api_require_login();
 api_require_csrf();
 
-// Uzantı => [izinli uzantı, izinli gerçek MIME'ler, DB'ye yazılacak kanonik MIME].
-// Bazı Office (OOXML) dosyaları finfo'da bazen genel "application/zip" olarak
-// algılanabiliyor (bilinen bir finfo/magic-db kısıtı) — bu yüzden xlsx/docx/pptx
-// için zip de kabul ediliyor, ama DB'ye HER ZAMAN kanonik MIME yazılıyor (indirme
-// sırasında doğru Content-Type için).
 $ALLOWED = array(
     'png' => array('mimes' => array('image/png'), 'canonical' => 'image/png'),
     'jpg' => array('mimes' => array('image/jpeg'), 'canonical' => 'image/jpeg'),
@@ -33,7 +19,7 @@ $ALLOWED = array(
     'pptx' => array('mimes' => array('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'), 'canonical' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'),
 );
 
-const BCC_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20MB — php.ini'deki upload_max_filesize'dan bağımsız ikinci bir üst sınır.
+const BCC_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
 
 $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
 $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;
@@ -43,7 +29,6 @@ if (!$field) {
     json_fail(404, 'Alan bulunamadı.');
 }
 
-// KVKK ekip izolasyonu + editor+ rolü — team_id bu satırdan geliyor, istekten değil.
 require_role($field['team_id'], 'editor');
 
 if ($field['field_type'] !== 'attachment') {
@@ -54,8 +39,7 @@ $record = bcc_fetch_one('SELECT id, table_id, deleted_at FROM records WHERE id =
 if (!$record || (int) $record['table_id'] !== (int) $field['table_id']) {
     json_fail(400, 'Bu kayıt bu alana ait değil.');
 }
-// Adım 3c: silinmiş (çöp kutusundaki) bir kayda dosya eklenemez — cell_update.php
-// ile AYNI gerekçe/desen.
+
 if ($record['deleted_at'] !== null) {
     json_fail(400, 'Bu kayıt silinmiş, düzenlenemez.');
 }
@@ -97,11 +81,7 @@ if (!$detectedMime || !in_array($detectedMime, $ALLOWED[$ext]['mimes'], true)) {
 }
 
 $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
-// Dizin adı ve "yoksa oluştur" mantığı src/schema.php'de TEK YERDE
-// (bcc_attachment_storage_dir_ensured) — burada dirname() ile yeniden
-// hesaplanmıyor. Gerekçe o fonksiyonun başında yazılı: eski dirname() hesabı
-// bir seviye fazla kırpıp "storage"ı işaret ediyordu, bu yüzden
-// storage/attachments/ silinmişse yükleme "Dosya kaydedilemedi." ile düşüyordu.
+
 bcc_attachment_storage_dir_ensured();
 $destPath = bcc_attachment_storage_path($storedName);
 
@@ -111,9 +91,7 @@ if (!move_uploaded_file($upload['tmp_name'], $destPath)) {
 
 try {
     $user = current_user();
-    // "Last modified time/by" (Grup B2): attachments INSERT + records'un "son
-    // değişiklik" damgası + audit log AYNI transaction'da (cell_update.php ile
-    // AYNI gerekçe — bkz. o dosyadaki yorum).
+
     bcc_begin_transaction();
     bcc_execute(
         'INSERT INTO attachments (field_id, record_id, original_name, stored_name, mime_type, file_size, uploaded_by)
@@ -132,10 +110,6 @@ try {
 
     bcc_touch_record_modified($recordId);
 
-    // record_add.php ile AYNI desen: log_audit() try/catch İÇİNDE — dışarıda
-    // olursa (bulunan gerçek bug) burada atılan bir istisna yakalanmaz, ham PHP
-    // hata çıktısı (display_errors=On, bkz. C:\xampp\php\php.ini) doğrudan
-    // istemciye sızar; dosya aslında başarıyla yüklenmiş olsa bile.
     log_audit('attachment.upload', 'record', $recordId, array('field_id' => $fieldId, 'file_name' => $originalName), $field['team_id']);
     bcc_commit();
 } catch (Throwable $e) {

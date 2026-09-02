@@ -1,9 +1,4 @@
 <?php
-// AJAX uçnoktası: Hesap sayfasında (account.php) "Ad Soyad" satırının inline
-// düzenlemesi. ÖNEMLİ: require_role() KULLANILMAZ — bu kullanıcının KENDİ
-// hesap bilgisi, takım rolüyle ilgisi yok (viewer dahil herkes kendi adını
-// değiştirebilir). Yalnızca require_login() + oturumdaki $user['id'] üzerinden
-// güncelleme — istekten bir kullanıcı id'si ASLA kabul edilmez.
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 

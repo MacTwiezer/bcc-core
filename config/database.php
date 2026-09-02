@@ -1,10 +1,4 @@
 <?php
-// opsflow.bcccrm.com — mysqli veritabanı bağlantısı
-// Ortam: MariaDB 10.4 (XAMPP MySQL), 127.0.0.1:3306, DB: bcc_core, user: root, şifre: yok.
-// Bu varsayılanlar YALNIZCA bu makine içindir — farklı bir MySQL/MariaDB kurulumu
-// (başka kullanıcı/şifre/port) kullanan geliştiriciler bunları DEĞİŞTİRMEK yerine
-// config/database.local.php dosyası oluşturup (git'e girmez, bkz. .gitignore)
-// içinde ihtiyaç duydukları $DB_* değişkenlerini yeniden atayabilir.
 
 $DB_HOST = '127.0.0.1';
 $DB_PORT = '3306';
@@ -37,28 +31,17 @@ function bcc_get_mysqli()
     return $mysqli;
 }
 
-/**
- * :isim tarzı named parametreleri sırayla ? ile değiştirir ve
- * $params dizisinden ilgili değerleri sıraya göre toplar.
- * Aynı isim birden çok kez geçerse değeri her seferinde tekrar bağlar.
- */
 function bcc_prepare_positional($sql, array $params)
 {
-    // Zaten positional (?) yazılmışsa dokunma, $params sırayla bağlanacak.
     if (strpos($sql, ':') === false) {
         return array($sql, array_values($params));
     }
 
     $bound = array();
 
-    // Tek tırnaklı string literal'ler ('...') İLK alternatif olarak eşleşip
-    // OLDUĞU GİBİ bırakılır — SQL metninin içinde (bağlı parametre değil,
-    // doğrudan yazılmış) "'ratio:total'" gibi bir değer varsa, ":total" bir
-    // named parametre sanılıp yanlışlıkla ? ile değiştirilmez.
     $converted = preg_replace_callback(
         "/'(?:[^'\\\\]|\\\\.)*'|:([a-zA-Z_][a-zA-Z0-9_]*)/",
         function ($m) use ($params, &$bound) {
-            // Grup 1 yoksa/boşsa bu bir string literal eşleşmesidir, dokunma.
             if (!isset($m[1]) || $m[1] === '') {
                 return $m[0];
             }
@@ -83,8 +66,6 @@ function bcc_prepare_positional($sql, array $params)
 
 function bcc_bind_type($value)
 {
-    // bool: is_int() false döner ama mysqli bind_param 'i' tipinde true/false'u
-    // otomatik 1/0'a çevirir — ayrı bir dönüşüm gerekmez, yalnızca doğru tip harfi.
     if (is_int($value) || is_bool($value)) {
         return 'i';
     }
@@ -93,17 +74,9 @@ function bcc_bind_type($value)
         return 'd';
     }
 
-    // null dahil geri kalan her şey string olarak bağlanır (NULL da bu şekilde geçer).
     return 's';
 }
 
-/**
- * $sql içindeki :isim ya da ? parametrelerini $params ile bağlayıp çalıştırır.
- * SELECT sorguları için mysqli_result (get_result), diğerleri için etkilenen
- * satır sayısını taşıyan mysqli_stmt döndürür.
- *
- * @return mysqli_result|mysqli_stmt
- */
 function bcc_query($sql, $params = array())
 {
     $mysqli = bcc_get_mysqli();
@@ -162,7 +135,6 @@ function bcc_execute($sql, $params = array())
 {
     $result = bcc_query($sql, $params);
 
-    // SELECT dışı sorgularda bcc_query mysqli_stmt döndürür; affected_rows oradan okunur.
     if ($result instanceof mysqli_stmt) {
         return $result->affected_rows;
     }

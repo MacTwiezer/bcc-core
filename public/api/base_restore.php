@@ -1,7 +1,4 @@
 <?php
-// AJAX uçnoktası: Trash modalındaki "Geri Yükle" — base_delete.php'nin
-// TERSİ (deleted_at/deleted_by NULL'lanır). Yalnızca 'owner' rolü geri
-// yükleyebilir (OpsFlow davranışı — base_delete.php ile AYNI kural).
 
 require __DIR__ . '/../../src/api_bootstrap.php';
 
@@ -19,6 +16,10 @@ try {
     }
 
     require_role($base['team_id'], 'owner');
+
+    if (bcc_name_taken('bases', $base['team_id'], $base['name'])) {
+        json_fail(422, 'Bu adda aktif bir base zaten var. Geri yüklemeden önce birini yeniden adlandırın.');
+    }
 
     bcc_execute('UPDATE bases SET deleted_at = NULL, deleted_by = NULL WHERE id = :id', array(':id' => $base['id']));
 

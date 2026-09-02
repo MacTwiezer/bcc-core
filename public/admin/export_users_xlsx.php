@@ -1,6 +1,4 @@
 <?php
-// Admin panelindeki "Excel indir" (Kullanıcılar) — gerçek .xlsx,
-// src/xlsx_writer.php (dış kütüphane yok, ZipArchive ile elle inşa).
 
 require __DIR__ . '/../../src/bootstrap.php';
 require __DIR__ . '/../../src/xlsx_writer.php';

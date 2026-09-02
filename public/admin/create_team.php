@@ -13,9 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
 
-    // Doğrulama + INSERT + oluşturanı 'owner' üye yapma TEK YERDE:
-    // bcc_create_team() (bkz. src/schema.php). api/team_create.php de AYNI
-    // fonksiyonu çağırıyor — bases.php / api/base_create.php ile aynı desen.
     try {
         $result = bcc_create_team($name, $user['id']);
     } catch (Throwable $e) {
@@ -24,15 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result['ok']) {
         $success = 'Ekip oluşturuldu: ' . $name;
-        // Bir sonraki ekip için formu temizle.
+
         $name = '';
     } else {
         $error = $result['error'];
     }
 }
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'admin';
 $homePageTitle = bcc_tab_title('Yeni Ekip');

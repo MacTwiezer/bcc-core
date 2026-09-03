@@ -26,7 +26,10 @@ require __DIR__ . '/../src/bootstrap.php';
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
-define('T_PASS', 'DeactivateTest!2026');
+// Bu betik de is_admin=1 test hesaplari aciyor; sifre depoda sabit
+// tutulmuyor (bkz. _verify_team_create.php'deki ayni not). Deger yalnizca bu
+// kosuda kullaniliyor.
+define('T_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $results = array();
 

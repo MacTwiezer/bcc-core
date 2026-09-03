@@ -45,7 +45,11 @@ bcc_test_purge_own_audit();
 define('BASE_URL', 'http://localhost');
 define('ADMIN_EMAIL', 'tcreate.admin@bcc-test.local');
 define('PLAIN_EMAIL', 'tcreate.plain@bcc-test.local');
-define('TEST_PASS', 'TCreate!2026');
+// Bu betik PLATFORM ADMINI (is_admin=1) bir test hesabi aciyor. Sifre depoda
+// sabit dursaydi, temizlik bir sekilde atlandiginda yayinlanmis kimlik
+// bilgisine sahip bir admin hesabi geride kalirdi (depo acik). Deger yalnizca
+// bu kosu icinde kullaniliyor, disari basilmiyor.
+define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 define('TEAM_PREFIX', 'TCreate Test ');
 
 $results = array();
@@ -112,6 +116,11 @@ $wipe = function () {
     }
 };
 $wipe();
+
+// Temizlik kapanisa da baglanir: asagidaki try/catch yalnizca ISTISNALARI
+// yakaliyor, exit() ya da olumcul hata durumunda calismazdi — ve geride kalan
+// sey PLATFORM ADMINI yetkili bir hesap olurdu.
+register_shutdown_function($wipe);
 
 try {
     // =====================================================================

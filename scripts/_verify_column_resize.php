@@ -554,7 +554,7 @@ try {
         && strpos($om[1], 'clientY') === false);
     check('G) istemci min/max, sunucudan gelen sinirlarla kirpiyor',
         strpos($resizeJs, 'var MIN_WIDTH = parseInt(window.BCC_MIN_COLUMN_WIDTH, 10) || 80;') !== false
-        && strpos($resizeJs, 'clampWidth(startWidth + (clientX - startX))') !== false);
+        && strpos($resizeJs, 'clampWidth(startWidth + (clientX - startX) / scale)') !== false);
     check('G) surukleme boyunca imlec col-resize kaliyor (body sinifi)',
         strpos($resizeJs, "document.body.classList.add('is-col-resizing')") !== false
         && strpos($resizeJs, "document.body.classList.remove('is-col-resizing')") !== false
@@ -562,7 +562,7 @@ try {
     check('G) her surukleme sonunda localStorage a yaziliyor',
         preg_match('/function persist\(\)\s*\{\s*var map = currentWidthMap\(\);\s*writeStored\(map\);/s', $resizeJs) === 1);
     check('G) SUNUCU kaydi oncelikli (varsa localStorage ondan tazeleniyor)',
-        preg_match("/if \(table\.classList\.contains\('grid-has-col-widths'\)\) \{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*writeStored\(currentWidthMap\(\)\);\s*\} else \{/s", $resizeJs) === 1);
+        preg_match("/if \(table\.classList\.contains\('grid-has-col-widths'\)\) \{\s*writeStored\(currentWidthMap\(\)\);\s*\} else \{/s", $resizeJs) === 1);
     check('G) localStorage anahtari GORUNUM basina',
         strpos($resizeJs, "'bcc.grid.column_widths.v' + viewId") !== false);
     // Her iki localStorage cagrisi (getItem/setItem) da try/catch icinde:

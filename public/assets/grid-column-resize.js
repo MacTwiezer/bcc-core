@@ -53,7 +53,7 @@
                 var col = document.createElement('col');
                 var key = th.getAttribute('data-col-key');
                 var storeKey = key || (th.classList.contains('grid-rownum') ? 'row' : '');
-                var width = Math.round(th.getBoundingClientRect().width);
+                var width = th.offsetWidth;
 
                 if (overrides && storeKey && typeof overrides[storeKey] === 'number' && isFinite(overrides[storeKey])) {
                     width = key ? clampWidth(Math.round(overrides[storeKey])) : Math.round(overrides[storeKey]);
@@ -278,14 +278,15 @@
                     col = colFor(key);
                     startX = e.clientX;
                     var th = table.querySelector('thead th[data-col-key="' + key + '"]');
-                    startWidth = th ? Math.round(th.getBoundingClientRect().width) : 0;
+                    startWidth = th ? th.offsetWidth : 0;
                     document.body.classList.add('is-col-resizing');
                 },
                 onMove: function (clientX) {
                     if (!col) {
                         return;
                     }
-                    var next = clampWidth(startWidth + (clientX - startX));
+                    var scale = window.bcc_uiScale ? window.bcc_uiScale() : 1;
+                    var next = clampWidth(startWidth + (clientX - startX) / scale);
                     col.style.width = next + 'px';
                     syncTableWidth();
 

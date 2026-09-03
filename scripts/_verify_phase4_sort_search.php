@@ -14,6 +14,12 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
+// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
+// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
+// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
+require __DIR__ . '/_test_slack_guard.php';
+bcc_test_purge_own_audit();
+
 define('BASE_URL', 'http://localhost');
 define('TEST_EMAIL', 'faz4.test.editor@bcc-test.local');
 define('TEST_PASS', 'Faz4Test!2026');

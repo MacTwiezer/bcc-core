@@ -43,6 +43,7 @@ require __DIR__ . '/../config/database.php';
 // kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
+bcc_test_purge_own_audit();
 require __DIR__ . '/../src/schema.php';
 require __DIR__ . '/../src/audit.php';
 

@@ -31,6 +31,7 @@ require __DIR__ . '/../src/bootstrap.php';
 // kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
+bcc_test_purge_own_audit();
 
 $results = array();
 

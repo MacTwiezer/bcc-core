@@ -53,3 +53,36 @@ function bcc_test_silence_slack()
 
     return count($hooks);
 }
+
+// Bu kosunun urettigi DENETIM satirlarini kapanista temizler.
+//
+// NEDEN: betikler gercek uc noktalardan yaziyor, dolayisiyla audit_log'a
+// gercek satirlar dusuyor. Sonra test kullanicisi/ekibi siliniyor ama
+// audit_log.user_id -> users ve audit_log.team_id -> teams FK'leri SET NULL
+// oldugu icin SATIRLAR KALIYOR. Olculdu: tam suit kosusu audit_log'a 235 satir
+// ekliyordu ve veritabaninda birikmis 4.878 tamamen oksuz satir vardi
+// (en eskisi 2026-07-13).
+//
+// OLCUT — neden guvenli: yalnizca (a) BU kosuda olusmus (id > baslangic) VE
+// (b) aktoru ARTIK VAR OLMAYAN (user_id IS NULL) satirlar siliniyor. Kosu
+// sirasindaki gercek kullanici etkinligi kendi user_id'sini korur, bu yuzden
+// asla silinmez. Ikinci kosul olmadan (duz "id > baslangic") es zamanli gercek
+// etkinlik de silinirdi.
+//
+// SIRA: temizlik, kapanisin ICINDEN ikinci bir kapanis kaydederek erteleniyor.
+// Boylece betigin KENDI temizligi (kullanici/ekip silme) ONCE calisir ve
+// user_id o noktada zaten NULL olmus olur. PHP, kapanis sirasinda kaydedilen
+// fonksiyonlari listenin sonuna ekler (bu davranis olcumle dogrulandi).
+function bcc_test_purge_own_audit()
+{
+    $since = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
+
+    register_shutdown_function(function () use ($since) {
+        register_shutdown_function(function () use ($since) {
+            bcc_execute(
+                'DELETE FROM audit_log WHERE id > :s AND user_id IS NULL',
+                array('s' => $since)
+            );
+        });
+    });
+}

@@ -20,6 +20,12 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
+// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
+// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
+// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
+require __DIR__ . '/_test_slack_guard.php';
+bcc_test_purge_own_audit();
+
 define('T_PASS', 'DeactivateTest!2026');
 
 $results = array();

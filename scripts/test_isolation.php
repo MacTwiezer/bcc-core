@@ -18,6 +18,12 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
+// Bu betik denetim satiri uretiyor; test kullanicisi silinince o satirlar
+// audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu kosunun urettigi ve
+// aktoru artik var olmayan satirlar temizlenir.
+require __DIR__ . '/_test_slack_guard.php';
+bcc_test_purge_own_audit();
+
 const TEST_TY_EMAIL = 'izole.test.ty@bcc-test.local';
 const TEST_GULF_EMAIL = 'izole.test.gulf@bcc-test.local';
 const TEST_BASE_TY = 'IZOLASYON_TEST_BASE_TY';

@@ -5492,6 +5492,16 @@ function bcc_workspace_usage($teamId)
 // ve export izleri DIŞARIDA BIRAKILIR — akış "kim neyi DEĞİŞTİRDİ" sorusuna
 // cevap versin, "kim ne zaman baktı"ya değil.
 //
+// ⚠️ EXPORT'LAR LİSTEYLE DEĞİL DESENLE ELENİR. Önceden liste iki adı sayıyordu
+// ('view.export_xlsx', 'team_member.export_xlsx') ve BAYATLAMIŞTI: canlı
+// audit_log'da team_id'si dolu 'note_view.export_xlsx', 'view.export_csv' ve
+// 'team_member.export_csv' satırları da var ve panelin KENDİ kuralına aykırı
+// olarak akışta görünüyorlardı. Adlandırma sözleşmesi "<varlık>.export_<biçim>"
+// olduğu için desen hem bugünküleri hem sonradan eklenecek biçimleri kapsar —
+// listeyi güncellemeyi unutmak artık mümkün değil.
+// ESCAPE '/' : desendeki "_" LİTERAL alt tire olmalı, tek karakter jokeri değil
+// (bkz. bcc_like_escape yorumu — aynı tuzak).
+//
 // N+1 YOK: sonuç sayfası (varsayılan 12 satır) toplandıktan SONRA içindeki
 // base/tablo/kullanıcı id'leri TEK seferde toplu çözülür — satır başına sorgu
 // açılmaz.
@@ -5508,7 +5518,8 @@ function bcc_workspace_activity($teamId, $limit = 12)
          FROM audit_log al
          LEFT JOIN users u ON u.id = al.user_id
          WHERE al.team_id = :team_id
-           AND al.action NOT IN ('base.open', 'user.login', 'user.logout', 'view.export_xlsx', 'team_member.export_xlsx')
+           AND al.action NOT IN ('base.open', 'user.login', 'user.logout')
+           AND al.action NOT LIKE '%.export/_%' ESCAPE '/'
          ORDER BY al.id DESC
          LIMIT " . $limit,
         array('team_id' => $teamId)

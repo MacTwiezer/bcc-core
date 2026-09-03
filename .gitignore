@@ -8,8 +8,10 @@
 config/database.local.php
 config/mail.local.php
 config/mail_record_send.local.php
-# Makineye/sunucuya özel uygulama ayarları (e-posta bağlantılarının taban URL'i).
-# Sır içermez ama ortama özeldir; şablonu config/app.local.php.example commit edilir.
+# Makineye/sunucuya özel uygulama ayarları: e-posta bağlantılarının taban URL'i
+# ($APP_BASE_URL) VE demo hesaplarının ortak şifresi ($BCC_DEMO_PASSWORD, bkz.
+# config/app.php'deki güvenlik notu). SIR İÇERİR — asla commit edilmez.
+# Nasıl doldurulacağı: docs/CANLIYA-ALMA.md (eski .example şablonu oraya taşındı).
 config/app.local.php
 
 # Composer bağımlılıkları (composer.json/composer.lock commit edilir, vendor/ değil)

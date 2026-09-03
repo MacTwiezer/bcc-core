@@ -244,11 +244,17 @@ check('owner: uyelik GERCEKTEN silindi',
 // ---------------------------------------------------------------------------
 echo "\n--- D) grid.php gorunurluk ---\n";
 
+// Demo verisi ON KOSUL: kontrolsuz indeksleme id'yi 0 yapar ve asagidaki
+// gorunurluk kontrolleri anlamsiz bir hata yigini uretir.
 $tableRow = bcc_fetch_one(
     "SELECT tm.id FROM tables_meta tm JOIN bases b ON b.id = tm.base_id
      WHERE b.team_id = :t AND tm.name = 'Musteriler' LIMIT 1",
     array('t' => $teamId)
 );
+if ($tableRow === false || $tableRow === null) {
+    die("Demo 'Musteriler' tablosu yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $tableId = (int) $tableRow['id'];
 
 foreach (array('owner@bcc.local' => 'owner', 'editor@bcc.local' => 'editor', 'viewer@bcc.local' => 'viewer') as $email => $role) {
@@ -305,6 +311,10 @@ $html = render_as($uid['editor@bcc.local'], 'table_fields.php', 'table_id=' . $t
 check('editor: table_fields.php "Islemler" kolonu YOK', strpos($html, '<th>İşlemler</th>') === false);
 
 $baseRow = bcc_fetch_one("SELECT id FROM bases WHERE team_id = :t AND name = 'Demo CRM' LIMIT 1", array('t' => $teamId));
+if ($baseRow === false || $baseRow === null) {
+    die("Demo 'Demo CRM' base'i yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $html = render_as($uid['editor@bcc.local'], 'base_tables.php', 'base_id=' . (int) $baseRow['id']);
 check('editor: base_tables.php tablo olusturma formu YOK', strpos($html, '<th>İşlemler</th>') === false);
 

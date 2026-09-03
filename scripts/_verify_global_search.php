@@ -124,7 +124,14 @@ if ($team === false || $team === null) {
 }
 $teamId = (int) $team['id'];
 
+// Demo verisi ON KOSUL: kontrolsuz indeksleme $ownerId'yi 0 yapar ve testler
+// "oturumsuz kullanici" olarak calisip anlamsiz bir hata yigini uretir. Tek ve
+// acik bir mesaj daha iyi (yukaridaki ekip kontrolu ile AYNI kalip).
 $owner = bcc_fetch_one("SELECT id FROM users WHERE email = 'owner@bcc.local' LIMIT 1");
+if ($owner === false || $owner === null) {
+    die("owner@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $ownerId = (int) $owner['id'];
 
 $tableRow = bcc_fetch_one(
@@ -132,6 +139,10 @@ $tableRow = bcc_fetch_one(
      WHERE b.team_id = :t AND tm.name = 'Musteriler' LIMIT 1",
     array('t' => $teamId)
 );
+if ($tableRow === false || $tableRow === null) {
+    die("Demo 'Musteriler' tablosu yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $tableId = (int) $tableRow['id'];
 
 $pages = array(
@@ -212,6 +223,10 @@ foreach ($selectorChecks as $sc) {
 
 // Salt-okunur rol metni (owner olmayan gorunum) de aranabilir olmali.
 $viewer = bcc_fetch_one("SELECT id FROM users WHERE email = 'viewer@bcc.local' LIMIT 1");
+if ($viewer === false || $viewer === null) {
+    die("viewer@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $viewerHtml = render_as((int) $viewer['id'], 'team_members.php', 'team_id=' . $teamId);
 check('global-search.js salt-okunur rol metnini de okuyor (.tm-role-readonly)',
     strpos($js, 'tm-role-readonly') !== false);

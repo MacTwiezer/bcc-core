@@ -179,16 +179,30 @@ if (no_row($team)) {
 }
 $teamId = (int) $team['id'];
 
+// Demo verisi ON KOSUL: kontrolsuz indeksleme id'leri 0 yapar ve testler
+// anlamsiz bir hata yigini uretir. Tek ve acik bir mesaj daha iyi.
 $owner = bcc_fetch_one("SELECT id, full_name FROM users WHERE email = 'owner@bcc.local' LIMIT 1");
+if ($owner === false || $owner === null) {
+    die("owner@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $ownerId = (int) $owner['id'];
 
 $base = bcc_fetch_one("SELECT id FROM bases WHERE team_id = :t AND name = 'Demo CRM' LIMIT 1", array('t' => $teamId));
+if ($base === false || $base === null) {
+    die("Demo 'Demo CRM' base'i yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $baseId = (int) $base['id'];
 
 $existingTable = bcc_fetch_one(
     "SELECT id FROM tables_meta WHERE base_id = :b AND name = 'Musteriler' LIMIT 1",
     array('b' => $baseId)
 );
+if ($existingTable === false || $existingTable === null) {
+    die("Demo 'Musteriler' tablosu yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $tableId = (int) $existingTable['id'];
 
 // ---------------------------------------------------------------------------
@@ -348,6 +362,10 @@ if (!no_row($foreign)) {
 
 // --- C7: Yetki — owner olmayan test/kaydetme yapamaz ---
 $editor = bcc_fetch_one("SELECT id FROM users WHERE email = 'editor@bcc.local' LIMIT 1");
+if ($editor === false || $editor === null) {
+    die("editor@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
+");
+}
 $r = post_as((int) $editor['id'], 'slack_settings.php', 'table_id=' . $tableId, array(
     'action' => 'test_webhook', 'table_id' => $tableId, 'webhook_id' => $tempWebhookId,
 ));

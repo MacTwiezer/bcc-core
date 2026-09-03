@@ -28,12 +28,6 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require __DIR__ . '/../config/database.php';
-
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
-require __DIR__ . '/_test_slack_guard.php';
-bcc_test_purge_own_audit();
 require __DIR__ . '/../src/schema.php';
 // ⚠️ audit.php DA GEREKLI: bcc_create_team() log_audit() cagiriyor
 // (bcc_create_base() gibi). Kardes testler yalnizca duz SQL kullandigi icin
@@ -41,6 +35,12 @@ require __DIR__ . '/../src/schema.php';
 // bootstrap.php'nin tamami YUKLENMIYOR: o session_start() yapiyor ve CLI'da
 // gereksiz yan etkileri var.
 require __DIR__ . '/../src/audit.php';
+
+// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
+// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
+// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
+require __DIR__ . '/_test_slack_guard.php';
+bcc_test_purge_own_audit();
 
 define('BASE_URL', 'http://localhost');
 define('ADMIN_EMAIL', 'tcreate.admin@bcc-test.local');

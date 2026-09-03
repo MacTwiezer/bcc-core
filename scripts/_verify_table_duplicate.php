@@ -36,6 +36,8 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../src/schema.php';
+require __DIR__ . '/../src/audit.php';
 
 // Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
 // bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
@@ -44,8 +46,6 @@ require __DIR__ . '/../config/database.php';
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
-require __DIR__ . '/../src/schema.php';
-require __DIR__ . '/../src/audit.php';
 
 define('BASE_URL', 'http://localhost');
 define('OWNER_EMAIL', 'tdup.owner@bcc-test.local');

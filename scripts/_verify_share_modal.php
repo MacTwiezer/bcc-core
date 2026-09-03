@@ -20,15 +20,15 @@ if (PHP_SAPI !== 'cli') {
 session_start();
 
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../src/schema.php';   // src/auth.php'yi kendisi yukler
+require __DIR__ . '/../src/audit.php';    // log_audit — mutasyon yardimcilari cagiriyor
+require __DIR__ . '/../src/share_modal_payload.php';
 
 // Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
 // kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
 // kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
-require __DIR__ . '/../src/schema.php';   // src/auth.php'yi kendisi yukler
-require __DIR__ . '/../src/audit.php';    // log_audit — mutasyon yardimcilari cagiriyor
-require __DIR__ . '/../src/share_modal_payload.php';
 
 define('BASE_URL', 'http://localhost');
 define('TEST_PASS', 'ShareModal!2026');

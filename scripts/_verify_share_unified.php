@@ -26,13 +26,13 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../src/schema.php';
 
 // Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
 // kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
 // kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
-require __DIR__ . '/../src/schema.php';
 
 define('BASE_URL', 'http://localhost');
 define('OWNER_EMAIL', 'shareu.owner@bcc-test.local');

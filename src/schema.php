@@ -3505,9 +3505,15 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
 
     switch ($operator) {
         case 'contains':
-            return array('sql' => "{$column} LIKE {$paramName}", 'params' => array($paramName => '%' . $raw . '%'));
+            return array(
+                'sql' => "{$column} LIKE {$paramName} ESCAPE '\\\\'",
+                'params' => array($paramName => '%' . bcc_like_escape($raw) . '%'),
+            );
         case 'not_contains':
-            return array('sql' => "({$column} NOT LIKE {$paramName} OR {$column} IS NULL)", 'params' => array($paramName => '%' . $raw . '%'));
+            return array(
+                'sql' => "({$column} NOT LIKE {$paramName} ESCAPE '\\\\' OR {$column} IS NULL)",
+                'params' => array($paramName => '%' . bcc_like_escape($raw) . '%'),
+            );
         case 'equals':
             return array('sql' => "{$column} = {$paramName}", 'params' => array($paramName => $raw));
         case 'not_equals':
@@ -3515,6 +3521,26 @@ function filter_condition_sql($fieldType, $operator, $rawValue, $alias, $paramNa
     }
 
     return null;
+}
+
+// LIKE'ın kendi joker karakterlerini (%, _) ve kaçış karakterini (\) LİTERAL
+// hâle getirir. Çağıran taraf sorguya ESCAPE '\\' eklemek ZORUNDA.
+//
+// ⚠️ BULUNAN GERÇEK BUG: bu kaçış YALNIZCA Duyuru aramasında
+// (bcc_interface_fetch_records) vardı; grid filtresinin "içerir"/"içermez"
+// koşulları kullanıcının yazdığını doğrudan '%...%' arasına koyuyordu. Canlı
+// ölçüldü: "içerir: 50%off" filtresi, o metni HİÇ içermeyen ama "50" ve "off"u
+// ayrı yerlerde geçiren "50 lira ve off" kaydını da döndürüyordu (% joker
+// karakteri araya her şeyi kabul ediyor). Tek başına bir "%" yazmak da bütün
+// dolu hücreleri eşleştiriyordu. Aynı sorgu kurucusu Excel dışa aktarımında da
+// kullanıldığı için (bcc_build_grid_records_query -> view_export_xlsx.php)
+// yanlış satır kümesi dosyaya da gidiyordu.
+//
+// Kaçış SIRASI önemli: önce "\", sonra jokerler — ters sırada, jokerlerin
+// önüne konan ters bölü ikinci turda tekrar kaçırılırdı.
+function bcc_like_escape($text)
+{
+    return str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), (string) $text);
 }
 
 // grid.php'nin kayıt sorgusunu (sort/filter/group JOIN'leri + WHERE + ORDER BY)

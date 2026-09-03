@@ -250,6 +250,28 @@ check('seed betigi de bcc_demo_accounts() kullaniyor (kopya liste yok)',
     strpos($seedSrc, 'bcc_demo_accounts()') !== false
     && ($demoPass === null || strpos($seedSrc, $demoPass) === false));
 
+// Yukaridaki iki kontrol yalnizca IKI dosyaya bakiyordu. Denetim turunda
+// sizintinin baska yerlerden de cikabilecegi gorildu (bir test KONTROL
+// ETIKETINDE sifreyi basiyordu, kaynakta literal yoktu). Bu yuzden tarama
+// izlenen TUM kaynak dosyalarina genisletildi; git'e girmeyen *.local.php
+// haric (deger zaten orada yasiyor).
+if ($demoPass !== null) {
+    $sizinti = array();
+    $desenler = array('/../config/*.php', '/../src/*.php', '/../src/partials/*.php',
+                      '/../public/*.php', '/../public/api/*.php', '/../public/admin/*.php',
+                      '/../public/assets/*.js', '/*.php');
+    foreach ($desenler as $desen) {
+        foreach (glob(__DIR__ . $desen) as $dosya) {
+            if (strpos(basename($dosya), '.local.php') !== false) { continue; }
+            if (strpos((string) file_get_contents($dosya), $demoPass) !== false) {
+                $sizinti[] = basename($dosya);
+            }
+        }
+    }
+    check('demo sifresi izlenen HICBIR kaynak dosyasinda literal olarak gecmiyor',
+        empty($sizinti), implode(', ', $sizinti));
+}
+
 // ---------------------------------------------------------------------------
 echo "\n";
 $failed = count(array_filter($results, function ($r) { return !$r; }));

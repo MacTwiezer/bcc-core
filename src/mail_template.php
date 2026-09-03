@@ -1,53 +1,14 @@
 <?php
-// opsflow.bcccrm.com — ORTAK HTML e-posta şablonu.
-//
-// Neden tablo tabanlı layout ve inline CSS: e-posta istemcileri (özellikle
-// Outlook, Word render motorunu kullanıyor) flexbox/grid/harici <style>
-// desteklemez ya da kırpar. Bu yüzden burada bilerek 2005 tarzı HTML var —
-// <table> iskeleti, her kurala inline `style`, genişlik piksel cinsinden.
-// Uygulamanın kendi CSS'iyle (theme.css) HİÇBİR bağlantısı yok, olamaz da;
-// renkler oradan ELLE kopyalandı (--bcc-accent-strong #1a56db,
-// --bcc-accent #2d7ff9) çünkü mailde CSS değişkeni çalışmaz.
-//
-// LOGO bir <img src="https://..."> ile UZAKTAN çekiliyor. Gömülü/base64 (CID
-// olmayan data: URI) görselleri Gmail dahil birçok istemci engeller. Adres
-// bilerek ŞİRKETİN KENDİ alan adı: gönderen alan adıyla aynı kaynaktan gelen
-// görsel istemcilerde en yüksek güveni görür ve depoya yeni dosya eklemeyi
-// gerektirmez (proje logosu zaten orada yayında, birebir aynı dosya).
-// localhost adresleri BURAYA ASLA GİRMEZ — alıcı onlara erişemez.
-//
-// KULLANIM: şu an TEK tüketicisi register.php (e-posta doğrulama). record_send.php
-// hâlâ KENDİ bcc_build_send_email_html()'ini kullanıyor — bu turda bilerek
-// dokunulmadı. İki şablonu birleştirmek ayrı bir iş.
 
 $GLOBALS['BCC_MAIL_LOGO_URL'] = 'https://bcciletisim.com.tr/assets/images/logo.png';
 $GLOBALS['BCC_MAIL_SITE_URL'] = 'https://bcciletisim.com.tr';
 $GLOBALS['BCC_MAIL_CONTACT_EMAIL'] = 'info@bcciletisim.com.tr';
-// İki numara da AYNI WhatsApp hattına gidiyor — istenen davranış bu.
+
 $GLOBALS['BCC_MAIL_WHATSAPP_URL'] = 'https://wa.me/902162100707';
 $GLOBALS['BCC_MAIL_PHONE_1'] = '0(216) 210 07 07';
 $GLOBALS['BCC_MAIL_PHONE_2'] = '0(850) 260 0 999';
 $GLOBALS['BCC_MAIL_MAPS_URL'] = 'https://www.google.com/maps/place/bcc+%C4%B0leti%C5%9Fim+Hizmetleri+A.%C5%9E./@40.9764305,29.1006436,17z/data=!3m1!4b1!4m6!3m5!1s0x14cac77177a2ac63:0xb734a2c61af0af6e!8m2!3d40.9764265!4d29.1032185!16s%2Fg%2F11n7z48_0s';
 
-/**
- * FOOTER İKONLARI — cid: (Content-ID) ile GÖMÜLÜ.
- *
- * Üç seçenek vardı, ikisi elendi:
- *   * data: URI  — Gmail ve Outlook <img src="data:..."> görsellerini
- *     ENGELLER (bu dosyanın en üstündeki logo notu da aynı şeyi söylüyor).
- *     "Gömülü" istense de ekranda kırık ikon çıkardı.
- *   * Üçüncü taraf CDN — her maile şirket dışı bir bağımlılık ve iz sürücü
- *     ekler, lisans/erişilebilirlik garantisi bizde değil.
- *   * cid: (SEÇİLEN) — görsel mailin KENDİ gövdesinde taşınır; Gmail,
- *     Outlook (Word motoru dahil), Apple Mail ve Thunderbird hepsinde
- *     render edilir, dış istek yapılmaz, "görselleri göster" uyarısı çıkmaz.
- *
- * Dosyalar repoda (public/assets/mail/) ve gönderim anında
- * bcc_mail_attach_footer_icons() ile eklenir — CID'ler İKİ TARAFTA DA bu
- * diziden okunur, elle yazılmış bir string eşleşmesi YOK.
- *
- * 36x36 üretilip 18x18 gösteriliyor: retina/HiDPI istemcilerde net kalsın.
- */
 $GLOBALS['BCC_MAIL_ICONS'] = array(
     'web'   => array('cid' => 'bcc-icon-web',   'file' => 'icon-web.png',   'alt' => 'Web'),
     'phone' => array('cid' => 'bcc-icon-phone', 'file' => 'icon-phone.png', 'alt' => 'Telefon'),
@@ -55,48 +16,22 @@ $GLOBALS['BCC_MAIL_ICONS'] = array(
     'map'   => array('cid' => 'bcc-icon-map',   'file' => 'icon-map.png',   'alt' => 'Adres'),
 );
 
-/**
- * İkon dosyalarının bulunduğu dizin (tek kaynak — şablon ve gönderici aynı
- * yolu buradan okur).
- */
 function bcc_mail_icons_dir()
 {
     return __DIR__ . '/../public/assets/mail';
 }
 
-/**
- * TASARIM BELİRTEÇLERİ — tek kaynak.
- *
- * Mailde CSS değişkeni (var(--x)) ÇALIŞMAZ; bu sabitler PHP tarafında
- * çözülüp her kurala inline gömülüyor. Renkler Tailwind slate/blue
- * ölçeğiyle aynı hizada seçildi (#0f172a … #f8fafc), böylece uygulamanın
- * arayüzüyle aynı görsel dili konuşuyor.
- */
 define('BCC_MAIL_FONT', "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif");
-define('BCC_MAIL_C_INK', '#0f172a');        // başlık
-define('BCC_MAIL_C_BODY', '#334155');       // gövde metni
-define('BCC_MAIL_C_MUTED', '#475569');      // footer metni
-define('BCC_MAIL_C_FAINT', '#94a3b8');      // etiket / telif
+define('BCC_MAIL_C_INK', '#0f172a');
+define('BCC_MAIL_C_BODY', '#334155');
+define('BCC_MAIL_C_MUTED', '#475569');
+define('BCC_MAIL_C_FAINT', '#94a3b8');
 define('BCC_MAIL_C_ACCENT', '#2563eb');
 define('BCC_MAIL_C_ACCENT_DARK', '#1d4ed8');
 define('BCC_MAIL_C_LINE', '#e2e8f0');
 define('BCC_MAIL_C_PANEL', '#f8fafc');
 define('BCC_MAIL_C_PAGE', '#f1f5f9');
 
-/**
- * Footer ızgarasındaki 14x14 ikonun <img> etiketi.
- *
- * width/height ÖZNİTELİK olarak da veriliyor (yalnızca style değil): Outlook
- * inline CSS'in bir kısmını kırpar ama HTML özniteliklerine her zaman uyar —
- * öznitelik olmadan ikon doğal 36px'ine büyüyüp satırı bozardı.
- *
- * ⚠️ BU BAŞLIK BAYATLAMIŞTI: "16x16 + vertical-align: middle + margin-right"
- * yazıyordu ama gövde uzun süredir 14x14 + display:block üretiyor (gerekçe
- * aşağıdaki satır içi notta). Başlık ile kod ayrışınca testler de eski hâli
- * doğrulamaya devam etmişti — düzeltildi.
- *
- * 36x36 üretilip 14x14 gösteriliyor (~2.6x): retina/HiDPI istemcilerde net kalır.
- */
 function bcc_mail_icon_img($key)
 {
     if (!isset($GLOBALS['BCC_MAIL_ICONS'][$key])) {
@@ -106,27 +41,10 @@ function bcc_mail_icon_img($key)
     $cid = htmlspecialchars($icon['cid'], ENT_QUOTES, 'UTF-8');
     $alt = htmlspecialchars($icon['alt'], ENT_QUOTES, 'UTF-8');
 
-    // 14x14 ve display:block — ETİKET SATIRIYLA HİZALANSIN diye.
-    // Önceki hâli 16x16 + vertical-align:middle + margin-right idi: etiketin
-    // satır yüksekliği 14px olduğu için 16px'lik ikon 2-3px aşağı taşıyor ve
-    // dört kanalda da başlığın altına kayık duruyordu. margin-right kaldırıldı,
-    // aradaki boşluğu zaten ikon hücresinin sabit 22px genişliği veriyor.
     return '<img src="cid:' . $cid . '" width="14" height="14" alt="' . $alt . '"'
         . ' style="width: 14px; height: 14px; display: block; border: 0;">';
 }
 
-/**
- * Footer'daki TEK bir iletişim kanalı (ızgaranın bir hücresi):
- * ikon + üstte küçük etiket + altta değer.
- *
- * Ikon ve metin AYRI <td>'lerde: tek satırda yan yana <img>+metin, uzun değer
- * kaydığında ikonun altına sarardı. İki hücreli mini tablo, metin kaç satıra
- * çıkarsa çıksın ikonu sabit tutar (Outlook dahil).
- *
- * @param string $iconKey $GLOBALS['BCC_MAIL_ICONS'] anahtarı
- * @param string $label   Kanal adı (düz metin, kaçırılır)
- * @param string $valueHtml Değer — GÜVENLİ HTML (çağıran kaçırır)
- */
 function bcc_mail_contact_cell($iconKey, $label, $valueHtml)
 {
     $icon = bcc_mail_icon_img($iconKey);
@@ -148,43 +66,10 @@ function bcc_mail_contact_cell($iconKey, $label, $valueHtml)
 HTML;
 }
 
-/**
- * Bir e-posta gövdesini kurumsal kabuğa (üst şerit + kart + CTA + iletişim
- * ızgarası) sarar.
- *
- * DÜZEN: 600px'lik tek bir "kart" — üstte marka şeridi (accent border +
- * açık gri zemin + logo), ortada içerik, altta 2 sütunlu iletişim paneli.
- * Tamamı <table> ve inline CSS: Outlook Word motorunu kullandığı için
- * flexbox/grid/harici <style> ya desteklenmez ya kırpılır.
- *
- * OUTLOOK'TA DÜŞEN KURALLAR ve karşılıkları (hepsi bilerek, kırık değil sade
- * görünmesi için):
- *   * border-radius   -> köşeler dik çıkar; kart/kutu yine de doğru renkte.
- *   * linear-gradient -> butonda background-color (#2563eb) YEDEĞİ var,
- *                        ayrıca <td bgcolor> ile ikinci kez garantiye alındı.
- *   * box-shadow      -> gölge yok, buton dolgusu ve rengi yerinde.
- *   * Inter/system-ui -> font yığınının sonundaki Arial'a düşer.
- * Bu yüzden hiçbir görsel bilgi YALNIZCA bu kurallara emanet edilmedi.
- *
- * @param string      $heading     Büyük başlık (düz metin, kaçırılır)
- * @param string      $introHtml   Başlığın altındaki paragraf(lar) — GÜVENLİ HTML
- *                                 beklenir; değişken içerik çağıran tarafından
- *                                 htmlspecialchars'lanmalıdır.
- * @param string|null $ctaText     Buton metni (null ise buton basılmaz)
- * @param string|null $ctaUrl      Buton hedefi
- * @param string|null $noteHtml    CTA altındaki küçük not
- * @param string|null $badgeText   Başlığın üstündeki rozet/pill (null ise basılmaz)
- * @param string|null $fallbackUrl Verilirse ham bağlantı, kopyalanabilir bir
- *                                 kutu içinde gösterilir (buton çalışmayan
- *                                 istemciler için)
- */
 function bcc_mail_html_shell($heading, $introHtml, $ctaText = null, $ctaUrl = null, $noteHtml = null, $badgeText = null, $fallbackUrl = null)
 {
     $logo = htmlspecialchars($GLOBALS['BCC_MAIL_LOGO_URL'], ENT_QUOTES, 'UTF-8');
-    // Telif satırında ALAN ADI değil ÜRÜN ADI yazar. Gerekçe: posta
-    // istemcileri (Gmail dahil) alan adı gibi görünen düz metni OTOMATİK
-    // bağlantıya çevirir — "opsflow.bcccrm.com" yazısı tıklanabilir oluyor ve
-    // kullanıcıyı canlı sunucuya götürüyordu. Ürün adında bu olmaz.
+
     $brandName = htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8');
     $site = htmlspecialchars($GLOBALS['BCC_MAIL_SITE_URL'], ENT_QUOTES, 'UTF-8');
     $siteLabel = htmlspecialchars(preg_replace('#^https?://#', '', $GLOBALS['BCC_MAIL_SITE_URL']), ENT_QUOTES, 'UTF-8');
@@ -207,10 +92,6 @@ function bcc_mail_html_shell($heading, $introHtml, $ctaText = null, $ctaUrl = nu
     $panel = BCC_MAIL_C_PANEL;
     $page = BCC_MAIL_C_PAGE;
 
-    // --- Rozet (pill) ------------------------------------------------------
-    // <span> DEĞİL mini tablo: Outlook, satır içi bir span'in padding'ini
-    // yok sayar ve rozet zemini metne yapışırdı. bgcolor ÖZNİTELİĞİ, inline
-    // background kırpılsa bile zemini garanti eder.
     $badgeHtml = '';
     if ($badgeText !== null && $badgeText !== '') {
         $badgeSafe = htmlspecialchars($badgeText, ENT_QUOTES, 'UTF-8');
@@ -227,22 +108,8 @@ function bcc_mail_html_shell($heading, $introHtml, $ctaText = null, $ctaUrl = nu
 HTML;
     }
 
-    // --- CTA butonu --------------------------------------------------------
-    // <button> mailde çalışmaz; buton bir <a>. Gradyan Outlook'ta düşer, bu
-    // yüzden ÖNCE background-color (düz #2563eb) yazılıyor, gradyan onun
-    // ÜSTÜNE geliyor: destekleyen istemci gradyanı, desteklemeyen düz rengi
-    // gösterir. Sarmalayan <td bgcolor> ise <a>'nın arka planını tamamen
-    // kırpan istemciler için üçüncü katman.
     $ctaHtml = '';
-    // Buton ORTALI (eskiden sola yaslıydı). align="center" td'de ŞART: Outlook
-    // (Word motoru) iç tablodaki margin:auto'yu yok sayar, hizalamayı yalnızca
-    // align özniteliğinden alır. margin:0 auto + text-align ise diğer
-    // istemcilerdeki ikinci güvence — üçü birlikte her yerde ortalar.
-    //
-    // ⚠️ Aşağısı HEREDOC: içine PHP açma/kapama etiketi yazılamaz, düz metin
-    // olarak maile basılır. Açıklamalar bu yüzden heredoc'un DIŞINDA.
-    // (Not: PHP kapatma etiketi TEK SATIRLIK YORUMUN İÇİNDE bile PHP modunu
-    // bitirir — bu yorumun ilk hâli tam olarak o yüzden dosyayı bozmuştu.)
+
     if ($ctaText !== null && $ctaUrl !== null) {
         $ctaUrlSafe = htmlspecialchars($ctaUrl, ENT_QUOTES, 'UTF-8');
         $ctaTextSafe = htmlspecialchars($ctaText, ENT_QUOTES, 'UTF-8');
@@ -261,9 +128,6 @@ HTML;
 HTML;
     }
 
-    // --- Ham bağlantı kutusu ----------------------------------------------
-    // Buton bazı istemcilerde düz metne çevriliyor; adresin kendisi de
-    // görünür olmalı. word-break: uzun token satırı yatay taşırmasın.
     $fallbackHtml = '';
     if ($fallbackUrl !== null && $fallbackUrl !== '') {
         $fallbackSafe = htmlspecialchars($fallbackUrl, ENT_QUOTES, 'UTF-8');
@@ -283,10 +147,6 @@ HTML;
 HTML;
     }
 
-    // Not satiri #94a3b8 DEGIL #64748b: beyaz zeminde #94a3b8 ~2.8:1 kontrast
-    // veriyor (WCAG AA icin 4.5:1 gerekiyor) ve "kaydi siz yapmadiysaniz"
-    // uyarisi okunmasi ONEMLI bir metin. #94a3b8 yalnizca telif satirinda
-    // kaldi — orasi gercekten ikincil.
     $noteRow = '';
     if ($noteHtml !== null) {
         $noteRow = <<<HTML
@@ -296,9 +156,6 @@ HTML;
 HTML;
     }
 
-    // --- İletişim ızgarası (2 sütun x 2 satır) -----------------------------
-    // Kanallar gruplanmış: Web / Telefon / Destek / Adres. CSS grid mailde
-    // yok — ızgara <td width="50%"> ile kuruluyor.
     $cellWeb = bcc_mail_contact_cell('web', 'Web Sitesi',
         '<a href="' . $site . '" style="font-family: ' . $font . '; font-size: 13px; line-height: 20px; color: ' . $accent . '; text-decoration: none;">' . $siteLabel . '</a>');
     $cellPhone = bcc_mail_contact_cell('phone', 'Telefon / WhatsApp',
@@ -407,17 +264,9 @@ HTML;
 HTML;
 }
 
-/**
- * HTML gövdenin düz metin karşılığını üretir (multipart'ın text/plain parçası).
- * Çağıran ELLE de verebilir; bu yardımcı yalnızca "hiç vermezse" devreye girer.
- * Sadece-HTML mailler spam puanını yükseltiyor — bu yüzden metin parçası
- * opsiyonel DEĞİL, her zaman gönderiliyor (bkz. src/mailer.php).
- */
 function bcc_mail_text_footer()
 {
-    // Kanallar HTML ızgarasıyla AYNI sırada ve aynı etiketlerle gruplanıyor
-    // (Web / Telefon / Destek / Adres) — iki parça yan yana okunduğunda
-    // birbirinin karşılığı olduğu görünsün.
+
     return "\n\n--\n"
         . "bcc İletişim Hizmetleri A.Ş.\n"
         . 'Web sitesi: ' . $GLOBALS['BCC_MAIL_SITE_URL'] . "\n"

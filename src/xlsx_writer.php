@@ -1,13 +1,4 @@
 <?php
-// Gerçek .xlsx üretimi — dış kütüphane (PhpSpreadsheet vb.) YOK, proje
-// kuralı gereği yasak. Bunun yerine PHP'nin kendi ZipArchive eklentisiyle
-// (xlsx aslında birkaç XML dosyasını içeren bir zip arşividir) minimal ama
-// Excel'in sorunsuz açtığı geçerli bir .xlsx elle inşa ediliyor.
-//
-// Basitleştirme: tüm hücreler "inlineStr" (satır-içi metin) olarak yazılıyor
-// — ayrı bir sharedStrings.xml tablosu YOK, sayı/tarih hücre tipi YOK (bu
-// export'lardaki veri zaten metin: e-posta, isim, "Evet/Hayır", tarih
-// string'i) — Excel'de düz metin olarak görünür, hesaplama gerekmiyor.
 
 function bcc_xlsx_col_letter($index)
 {
@@ -23,16 +14,6 @@ function bcc_xlsx_col_letter($index)
     return $letter;
 }
 
-// Bulunan gerçek bug: yalnızca &<>'" escape ediliyordu — XML 1.0'da GEÇERSİZ
-// olan kontrol karakterleri (tab/LF/CR hariç, ör. \x0B dikey sekme) hiç
-// temizlenmiyordu. Canlı test ile doğrulandı: full_name/email gibi alanlarda
-// gömülü bir kontrol karakteri varsa (trim() yalnızca baş/son karakterleri
-// kırpar, ARADAKİ bir kontrol karakterini asla temizlemez) üretilen sheet1.xml
-// gerçekten bozuk oluyordu (DOMDocument::loadXML() "PCDATA invalid Char value
-// 11" hatasıyla reddediyordu) — Excel'in "dosya bozuk, onarılsın mı?" diyaloğu
-// göstermesine ya da .xlsx'in hiç açılamamasına yol açardı. Bu karakterler
-// şimdi escape'ten ÖNCE kaldırılıyor (XML 1.0 Char üretim kuralı: yalnızca
-// #x9/#xA/#xD ve #x20 üzeri C0 kontrolleri geçerli).
 function bcc_xlsx_escape($text)
 {
     $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string) $text);
@@ -40,9 +21,6 @@ function bcc_xlsx_escape($text)
     return htmlspecialchars($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
-// $preamble: BASLIK SATIRININ DA USTUNE yazilan serbest satirlar (rapor adi,
-// donem araligi vb.). Varsayilani bos dizi — mevcut tum cagiricilar (view_export,
-// team_members_export) DEGISMEDEN calisir, ciktilari birebir ayni kalir.
 function bcc_xlsx_sheet_xml(array $headers, array $rows, array $preamble = array())
 {
     $allRows = array_merge($preamble, array($headers), $rows);
@@ -67,11 +45,6 @@ function bcc_xlsx_sheet_xml(array $headers, array $rows, array $preamble = array
     return $xml;
 }
 
-// Excel sheet adı kuralları: en fazla 31 karakter, \/?*[]: yasak, boş olamaz.
-// Önceden bu fonksiyon hep sabit literal başlıklarla çağrılıyordu
-// ('Kullanıcılar' vb.) ama view_export_xlsx.php artık kullanıcının tablo
-// adını geçiyor — sanitize edilmezse uzun/özel karakterli bir tablo adı
-// bozuk bir .xlsx üretirdi.
 function bcc_xlsx_sanitize_sheet_title($title)
 {
     $title = preg_replace('/[\\\\\/\?\*\[\]:]/', ' ', (string) $title);
@@ -81,11 +54,6 @@ function bcc_xlsx_sanitize_sheet_title($title)
     return $title !== '' ? $title : 'Sayfa1';
 }
 
-/**
- * $headers: sütun başlıkları düz dizi, örn. array('E-posta', 'Ad Soyad').
- * $rows: her biri $headers ile aynı sırada değerler içeren düz diziler.
- * Dönüş: geçici bir .xlsx dosyasının tam yolu (çağıran taraf gönderip silmeli).
- */
 function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows, array $preamble = array())
 {
     $sheetTitle = bcc_xlsx_sanitize_sheet_title($sheetTitle);
@@ -115,9 +83,6 @@ function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows, arra
         . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
         . '</Relationships>';
 
-    // Excel hücre stili tanımlamasa bile en az bir <xf> girişi bekler
-    // (varsayılan stil index 0) — hiçbir hücreye stil uygulamıyoruz, bu
-    // yüzden içerik sade ama geçerli.
     $stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         . '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
@@ -144,10 +109,6 @@ function bcc_xlsx_build_temp_file($sheetTitle, array $headers, array $rows, arra
     return $tmpPath;
 }
 
-/**
- * $headers/$rows bcc_xlsx_build_temp_file() ile aynı. HTTP başlıklarını
- * ayarlar, dosyayı tarayıcıya gönderir, geçici dosyayı temizler.
- */
 function bcc_send_xlsx($filename, $sheetTitle, array $headers, array $rows, array $preamble = array())
 {
     $tmpPath = bcc_xlsx_build_temp_file($sheetTitle, $headers, $rows, $preamble);

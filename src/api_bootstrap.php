@@ -1,12 +1,4 @@
 <?php
-// Ortak AJAX uçnokta önyükleyicisi. public/api/*.php dosyaları src/bootstrap.php'yi
-// AYRICA require ETMEZ — bu dosya zaten onu içeriyor, JSON header'ı basıyor ve
-// json_fail()'i tanımlıyor (önceden 18 dosyada birebir aynı şekilde kopyalanmıştı).
-//
-// POST/login/CSRF kontrolleri BURADA OTOMATİK ÇALIŞTIRILMAZ — bazı uçnoktalar
-// GET + salt-okunur (ör. interface_search.php: CSRF gerekmez), bu yüzden her
-// dosya kendi ihtiyacına göre aşağıdaki fonksiyonları sırayla çağırır. Davranış
-// (durum kodu, mesaj, çağrı sırası) önceki kopyaların HER BİRİYLE birebir aynı.
 
 require __DIR__ . '/bootstrap.php';
 

@@ -1,17 +1,5 @@
 <?php
-// Gerçek .xlsx OKUMA — dış kütüphane (PhpSpreadsheet vb.) YOK, proje kuralı
-// gereği yasak (bkz. xlsx_writer.php, aynı ilke, ters yön). ZipArchive ile
-// paketi aç, SimpleXML ile içindeki 3 parçayı oku: sharedStrings.xml (paylaşılan
-// metin havuzu), styles.xml (hangi hücre stilinin "tarih" biçimi olduğunu
-// anlamak için), ve ilk sheet'in XML'i (workbook.xml + workbook.xml.rels
-// üzerinden gerçek yolu çözülür, "sheet1.xml" sabit varsayılmaz).
-//
-// table_import_xlsx.php'nin ihtiyacı budur: satır 0 = başlık, sonrası veri —
-// tıpkı fgetcsv()'in ürettiği diziye benzer bir çıktı, tek fark hücre
-// pozisyonları (sparse <c r="C7">) sütun referansından çözülüp '' ile
-// doldurularak yoğunlaştırılıyor (boş hücreler sonraki sütunları kaydırmasın).
 
-// bcc_xlsx_col_letter()'ın (xlsx_writer.php) tersi: "AA" -> 26 (0-index).
 function bcc_xlsx_col_letters_to_index($letters)
 {
     $letters = strtoupper($letters);
@@ -23,8 +11,6 @@ function bcc_xlsx_col_letters_to_index($letters)
     return $index - 1;
 }
 
-// "C7" -> 2 (sütun kısmı, satır numarası burada kullanılmıyor — satırlar zaten
-// belge sırasıyla işleniyor).
 function bcc_xlsx_cell_ref_col_index($ref)
 {
     if (preg_match('/^([A-Z]+)\d+$/', $ref, $m) === 1) {
@@ -34,10 +20,6 @@ function bcc_xlsx_cell_ref_col_index($ref)
     return null;
 }
 
-// sharedStrings.xml: her <si> ya doğrudan <t> içerir ya da zengin metin
-// parçalarına (<r><t>...) bölünmüştür — ikinci durumda parçalar birleştirilir.
-// Kendi xlsx_writer.php'miz sharedStrings hiç üretmiyor (yalnızca inlineStr) —
-// bu tablo yalnızca GERÇEK Excel'de oluşturulmuş dosyalarda devreye girer.
 function bcc_xlsx_read_shared_strings(ZipArchive $zip)
 {
     $xmlStr = $zip->getFromName('xl/sharedStrings.xml');
@@ -67,10 +49,6 @@ function bcc_xlsx_read_shared_strings(ZipArchive $zip)
     return $strings;
 }
 
-// Format kodunun (ör. "dd.mm.yyyy" ya da "0.00") tarih/saat mi olduğunu anlamak
-// için: tırnak içi literal metinler ("gün " gibi) ve köşeli parantez bölümleri
-// ([Red], [$-41F] gibi renk/locale kodları) atılır, kalanda y/m/d/h/s karakteri
-// varsa tarih/saat sayılır.
 function bcc_xlsx_format_code_looks_like_date($code)
 {
     $stripped = preg_replace('/"[^"]*"/', '', (string) $code);
@@ -79,10 +57,6 @@ function bcc_xlsx_format_code_looks_like_date($code)
     return preg_match('/[ymdhs]/i', $stripped) === 1;
 }
 
-// styles.xml -> cellXfs listesindeki HER stil index'i (hücrenin s="N" attribute'ü
-// bu diziye göredir) için "bu bir tarih/saat biçimi mi" haritası. Built-in
-// numFmtId 14-22 ve 45-47 Excel'in standart tarih/saat biçimleridir; 164+
-// numFmtId'ler dosyaya özel (custom) biçimlerdir, <numFmts> içinde tanımlanır.
 function bcc_xlsx_read_date_style_map(ZipArchive $zip)
 {
     $xmlStr = $zip->getFromName('xl/styles.xml');
@@ -125,10 +99,6 @@ function bcc_xlsx_read_date_style_map(ZipArchive $zip)
     return $dateStyleMap;
 }
 
-// Excel'in seri tarih sayısını (gün 1 = 1900-01-01, Excel'in bilinen "1900 artık
-// yıl" hatasıyla birlikte) 'Y-m-d' metnine çevirir. 1899-12-30 epoch'u bu hatayı
-// zaten telafi ediyor — yaygın kabul gören standart dönüşüm budur (saat kısmı
-// varsa yok sayılır, bu alanların date tipi zaten yalnızca gün tutuyor).
 function bcc_xlsx_serial_to_date($serial)
 {
     $days = (int) floor((float) $serial);
@@ -138,9 +108,6 @@ function bcc_xlsx_serial_to_date($serial)
     return $date->format('Y-m-d');
 }
 
-// workbook.xml'deki İLK <sheet>'in r:id'sini workbook.xml.rels'te çözüp gerçek
-// worksheet XML yolunu döndürür — "sheet1.xml" sabit varsayılmaz (Excel sheet'i
-// silip yeniden eklerse ilk sheet'in dosya adı sheet2.xml olabilir).
 function bcc_xlsx_first_sheet_path(ZipArchive $zip)
 {
     $fallback = 'xl/worksheets/sheet1.xml';
@@ -183,11 +150,6 @@ function bcc_xlsx_first_sheet_path(ZipArchive $zip)
     return $fallback;
 }
 
-// Sheet XML'indeki <row>/<c> hücrelerini okuyup satır dizisine çevirir. Her
-// hücre tipine göre (inlineStr/paylaşılan string/formül sonucu/sayı/tarih)
-// metne çözülür; sütun pozisyonu hücre referansından (r="C7") gelir ki Excel'in
-// atladığı boş hücreler sonraki sütunları kaydırmasın — her satır, o dosyada
-// görülen EN GENİŞ satırın uzunluğuna göre '' ile doldurularak yoğunlaştırılır.
 function bcc_xlsx_parse_sheet_rows($sheetXmlStr, array $sharedStrings, array $dateStyleMap)
 {
     $xml = @simplexml_load_string($sheetXmlStr);
@@ -221,8 +183,7 @@ function bcc_xlsx_parse_sheet_rows($sheetXmlStr, array $sharedStrings, array $da
             } elseif ($cellType === 'b') {
                 $value = (isset($cellEl->v) && (string) $cellEl->v === '1') ? 'TRUE' : 'FALSE';
             } else {
-                // t attribute yoksa ya da t="n" — düz sayı hücresi (formüllerin
-                // önbelleklenmiş sonucu da buraya düşer).
+
                 $raw = isset($cellEl->v) ? (string) $cellEl->v : '';
                 $isDateStyle = isset($dateStyleMap[$styleIndex]) && $dateStyleMap[$styleIndex];
                 $value = ($raw !== '' && $isDateStyle && is_numeric($raw)) ? bcc_xlsx_serial_to_date($raw) : $raw;
@@ -249,18 +210,6 @@ function bcc_xlsx_parse_sheet_rows($sheetXmlStr, array $sharedStrings, array $da
     return $rows;
 }
 
-/**
- * Arsivin ACILMIS toplam boyutu (bayt). Dosya acilamazsa -1.
- *
- * NEDEN GEREKLI (olculdu): yukleme uc noktasi yalnizca SIKISTIRILMIS boyutu
- * kontrol ediyordu. .xlsx bir zip oldugu icin cok yuksek sikistirma oranlari
- * mumkun: 298 KB'lik gecerli bir dosya uretildi, icindeki sheet1.xml 300 MB
- * aciliyordu ve $zip->getFromName() onu tek seferde bellege aldigi icin istek
- * "Allowed memory size exhausted" ile oluyordu (xlsx_reader.php:269).
- * 10 MB'lik dosya siniri bunu HIC gormuyordu.
- *
- * Boyut zip merkezi dizininden okunur (icerik acilmaz), yani kontrol ucuzdur.
- */
 function bcc_xlsx_uncompressed_size($filePath)
 {
     $zip = new ZipArchive();
@@ -280,12 +229,6 @@ function bcc_xlsx_uncompressed_size($filePath)
     return $toplam;
 }
 
-/**
- * $filePath: yüklenen .xlsx'in geçici yolu (tmp_name). Dönüş: satır dizisi,
- * her satır 0-index'li hücre değerleri (string) dizisi — ilk satır başlık.
- * Dosya açılamazsa/bozuksa boş dizi döner (çağıran taraf bunu "0 satır"
- * olarak ele alıp kullanıcıya hata gösterir, exception fırlatılmaz).
- */
 function bcc_xlsx_read_first_sheet($filePath)
 {
     $zip = new ZipArchive();

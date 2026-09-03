@@ -293,8 +293,13 @@ try {
         substr_count($fnBody, 'bcc_begin_transaction') === 0 && substr_count($fnBody, 'bcc_commit') === 0,
         'begin: ' . substr_count($fnBody, 'bcc_begin_transaction') . ' commit: ' . substr_count($fnBody, 'bcc_commit'));
     check('E) Iki UPDATE hala fonksiyonun icinde', substr_count($fnBody, 'UPDATE {$tableName}') === 2);
-    check('E) Sozlesme yorumda yazili (cagiran transaction acmali)',
-        strpos($fnBody, 'çağıran taraf') !== false || strpos($schemaSrc, 'ARTIK KENDİ transaction') !== false);
+    // Burada eskiden "sozlesme YORUMDA yazili mi" diye bakan bir kontrol vardi.
+    // src/ turunda tum yorumlar kaldirildigi icin o kontrol artik davranisi
+    // degil, silinmis bir metni olcuyordu. Sozlesmenin KENDISI zaten uc
+    // davranis kontroluyle korunuyor: fonksiyon kendi transaction'ini acmiyor
+    // (yukarida), iki UPDATE hala icinde (yukarida) ve DORT cagiranin dordu de
+    // bcc_reorder_sibling'i bir transaction'in ICINDE cagiriyor (asagida).
+    // Metin kontrolu bunlarin hicbirini eklemiyordu.
 
     $callers = array(
         'base_tables.php' => __DIR__ . '/../public/base_tables.php',

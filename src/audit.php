@@ -18,13 +18,6 @@ function log_audit($action, $entityType = null, $entityId = null, $details = nul
     );
 }
 
-// "Son açılma" tarih filtresi (dashboard.php) audit_log'daki base.open olaylarından
-// türetilir. Her F5'te yeni satır oluşmasını önlemek için: aynı kullanıcı+base için
-// son 5 dakika içinde zaten bir base.open kaydı varsa onu (created_at'ini şimdiye
-// çekerek) GÜNCELLER, yoksa yeni satır ekler. audit_log'da bunu garanti eden bir
-// UNIQUE kısıt yok (DDL uygulanmıyor) — iki isteğin aynı anda ikisinin de INSERT
-// denemesi teorik olarak mümkün, ama sonucu en fazla bir fazla satır, işlevsel bir
-// hata değil (views.created_by'daki tekillik garantisi kadar kritik değil).
 function log_base_open($baseId, $teamId)
 {
     $user = current_user();
@@ -53,39 +46,18 @@ function log_base_open($baseId, $teamId)
     );
 }
 
-// Bildirim paneli (zil ikonu) — YENİ bir notifications tablosu YOK (onaylanan
-// "basit" model): audit_log salt-okunur gösterilir, KVKK team_id IN (...) ile
-// filtrelenir, yalnızca bu whitelist'teki action'lar bildirim sayılır — user.login
-// (368 satırın %66'sı) ve cell.update (%7'si) gibi gürültülü/kişisel olaylar
-// KASITLI olarak DIŞARIDA (bkz. PROJE-DURUM.md analiz notu).
-// Değer = bildirimin İZLEYİCİ KİTLESİ (aşağıdaki bcc_notification_audience_*
-// kapıları). Eskiden düz bir action listesiydi ve ekipteki HERKES hepsini
-// görüyordu; bulunan gerçek sorun buydu — viewer rolündeki bir kullanıcıya
-// "Slack bildirimi gönderilemedi" (yalnızca owner'ın açabildiği bir entegrasyon
-// ayarının hatası) ve "ekibe yeni bir üye ekledi" (yalnızca owner'ın
-// yapabildiği işlem) düşüyordu. İkisi de o kullanıcının ne görebildiği ne de
-// hakkında bir şey yapabildiği olaylar.
 $GLOBALS['BCC_NOTIFICATION_ACTIONS'] = array(
-    // VERİ olayları: dört rol de bu verinin kendisini zaten görüyor
-    // (require_team_access üyelikle geçer), dolayısıyla değiştiğini bilmek de
-    // dört rolün hakkı.
+
     'record.create' => 'data',
     'view.rename' => 'data',
-    // ENTEGRASYON: Slack ayarları owner-only (public/slack_settings.php ->
-    // require_role('owner') + bcc_can_manage_schema). "Gönderildi/gönderilemedi"
-    // yalnızca o ayarı açıp düzeltebilen kişiye anlamlı.
+
     'slack.notify_sent' => 'integration',
     'slack.notify_failed' => 'integration',
-    // ÜYELİK: ekleme/rol değiştirme owner-only (bcc_can_manage_members).
+
     'team_member.assign' => 'members',
     'team_member.role_change' => 'members',
 );
 
-// Bir rolün göreceği action'lar. EŞİKLER BURADA YENİDEN YAZILMAZ: her kitle,
-// ilgili işlemi yapmaya yetkili kılan src/auth.php yeteneğinin TA KENDİSİNE
-// sorulur. Böylece "üye yönetimi editor'a da açılsın" gibi bir karar tek yerde
-// (bcc_can_manage_members) verilince bildirim görünürlüğü de kendiliğinden
-// onunla birlikte kayar — panelin ayrı bir rol listesi tutmasına gerek yok.
 function bcc_notification_actions_for_role($role)
 {
     $actions = array();
@@ -95,7 +67,7 @@ function bcc_notification_actions_for_role($role)
 
         switch ($audience) {
             case 'data':
-                // Ekibin üyesi olmak yeter — rol farkı gözetilmez.
+
                 $visible = $role !== null;
                 break;
             case 'integration':
@@ -114,18 +86,6 @@ function bcc_notification_actions_for_role($role)
     return $actions;
 }
 
-// Bildirim GÖRÜNÜRLÜK koşulu — audit_log satırlarını hem panelin listesi hem de
-// "tek tek okundu" uçnoktasının yetki kontrolü bu TEK ifadeyle süzer
-// (public/api/notification_mark_one_read.php). Kural iki yere kopyalanırsa
-// biri değişince diğeri sessizce eski davranışta kalırdı — nitekim rol süzgeci
-// eklenmeden önceki hâlde ikisi de aynı düz listeyi ayrı ayrı kuruyordu.
-//
-// ⚠️ ROL EKİP BAŞINA DEĞİŞİR: aynı kullanıcı A ekibinde owner, B ekibinde viewer
-// olabilir. Bu yüzden tek bir "team_id IN (...) AND action IN (...)" YETMEZ —
-// her ekip kendi rolünün action kümesiyle ayrı bir OR grubu olur.
-//
-// Dönüş: array('sql' => '(...)', 'params' => array(...)) veya görünür hiçbir
-// şey yoksa null.
 function bcc_notification_scope_clause()
 {
     $teamRoles = current_user_team_roles();
@@ -157,8 +117,6 @@ function bcc_notification_scope_clause()
     return array('sql' => '(' . implode(' OR ', $groups) . ')', 'params' => $params);
 }
 
-// current_user_team_roles() (src/auth.php) ile AYNI kaynaktan — ikinci bir
-// "kullanıcının takımları" sorgusu YAZILMADI.
 function bcc_fetch_notifications($limit = 30)
 {
     $scope = bcc_notification_scope_clause();
@@ -176,13 +134,6 @@ function bcc_fetch_notifications($limit = 30)
     return bcc_fetch_all($sql, $scope['params']);
 }
 
-// TEK TEK "okundu" işaretlenmiş bildirimlerin id kümesi (migrations/021).
-// Dönüş: audit_log.id => true haritası — panel "bu satır okundu mu?" sorusunu
-// O(1) sorar, bildirim başına ayrı sorgu AÇILMAZ.
-//
-// ⚠️ SORGU BİLDİRİM LİSTESİYLE SINIRLI: kullanıcının tüm okundu geçmişi
-// (zamanla binlerce satır) çekilmez, yalnızca ekranda basılacak id'ler
-// sorulur. $auditIds boşsa hiç sorgu açılmaz.
 function bcc_read_notification_ids($auditIds)
 {
     $user = current_user();
@@ -206,8 +157,6 @@ function bcc_read_notification_ids($auditIds)
     return $map;
 }
 
-// Her action için okunabilir tek cümle — details JSON'undaki alanlar action'a
-// göre değişir (bkz. log_audit() çağrı noktaları), bu yüzden switch/case.
 function bcc_notification_message($row)
 {
     $actor = ($row['actor_name'] !== null && $row['actor_name'] !== '') ? $row['actor_name'] : 'Bir kullanıcı';

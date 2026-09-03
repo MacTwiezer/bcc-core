@@ -30,6 +30,12 @@ function temizle()
     bcc_execute('DELETE FROM login_attempts WHERE ip = :ip', array('ip' => bcc_client_ip_binary()));
 }
 
+// Test, GERCEK bir demo hesabina (viewer@bcc.local) bilerek ust uste yanlis
+// sifreyle giriyor ve esigi doldurup kilitliyor. temizle() bunu her bolum
+// sonunda siliyor ama yalnizca normal akista: betik ortada olurse hesap bu
+// makinenin IP'sinden 15 dakika kilitli kalirdi. Kapanisa da baglandi.
+register_shutdown_function('temizle');
+
 $VAR   = 'viewer@bcc.local';                  // gercek demo hesabi
 $YOK    = 'yok-' . bin2hex(random_bytes(4)) . '@bcc.local';
 $YANLIS = 'kesinlikle-yanlis-sifre-123';

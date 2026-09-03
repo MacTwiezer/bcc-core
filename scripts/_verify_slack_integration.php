@@ -206,14 +206,10 @@ $preExistingHooks = bcc_fetch_all(
     array('t' => $teamId)
 );
 
-foreach ($preExistingHooks as $h) {
-    bcc_execute('UPDATE slack_webhooks SET is_active = 0 WHERE id = :i', array('i' => $h['id']));
-}
-
-check('demo ekibindeki mevcut webhooklar test suresince pasife alindi (canli kanala mesaj gitmez)',
-    (int) bcc_fetch_column('SELECT COUNT(*) FROM slack_webhooks WHERE team_id = :t AND is_active = 1', array('t' => $teamId)) === 0,
-    'pasife alinan: ' . count($preExistingHooks));
-
+// SIRA ONEMLI: geri acma, pasife almadan ONCE baglanir. Ters sirada olsaydi
+// (once UPDATE, sonra register) aradaki her hata gercek webhooklari PASIF
+// birakirdi — asagidaki "HER DURUMDA geri ac" vaadi de o pencerede gecersiz
+// olurdu. Kapanis kancasi bos $preExistingHooks ile calissa bile zararsiz.
 $startAuditId = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 
 $createdTableIds = array();
@@ -244,6 +240,14 @@ register_shutdown_function(function () use (&$createdTableIds, &$createdFieldIds
     // Bu kosunun urettigi TUM audit satirlari (slack + entity) temizlenir.
     bcc_execute('DELETE FROM audit_log WHERE id > :since', array('since' => $startAuditId));
 });
+
+foreach ($preExistingHooks as $h) {
+    bcc_execute('UPDATE slack_webhooks SET is_active = 0 WHERE id = :i', array('i' => $h['id']));
+}
+
+check('demo ekibindeki mevcut webhooklar test suresince pasife alindi (canli kanala mesaj gitmez)',
+    (int) bcc_fetch_column('SELECT COUNT(*) FROM slack_webhooks WHERE team_id = :t AND is_active = 1', array('t' => $teamId)) === 0,
+    'pasife alinan: ' . count($preExistingHooks));
 
 // --- C1: webhook YOKKEN hicbir slack audit satiri olusmamali ---
 $r = post_as($ownerId, 'api/field_create.php', '', array(

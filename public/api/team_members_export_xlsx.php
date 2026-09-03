@@ -32,11 +32,11 @@ foreach ($members as $m) {
     $invitedBy = isset($invitedByMap[(int) $m['id']]) ? $invitedByMap[(int) $m['id']] : null;
 
     $rows[] = array(
-        bcc_csv_injection_guard($m['full_name']),
-        bcc_csv_injection_guard($m['email']),
-        bcc_csv_injection_guard($GLOBALS['BCC_ROLE_LABELS'][$m['role']]),
-        bcc_csv_injection_guard($invitedBy !== null ? $invitedBy : ''),
-        bcc_csv_injection_guard(date('d.m.Y', strtotime($m['created_at']))),
+        $m['full_name'],
+        $m['email'],
+        $GLOBALS['BCC_ROLE_LABELS'][$m['role']],
+        $invitedBy !== null ? $invitedBy : '',
+        date('d.m.Y', strtotime($m['created_at'])),
     );
 }
 

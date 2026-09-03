@@ -40,13 +40,13 @@ foreach ($rowsRaw as $r) {
 
     $rows[] = array(
 
-        bcc_csv_injection_guard($r['full_name'] !== null ? $r['full_name'] : 'Bilinmeyen kullanıcı'),
-        bcc_csv_injection_guard(isset($GLOBALS['BCC_ROLE_LABELS'][$r['role_at_view']])
+        $r['full_name'] !== null ? $r['full_name'] : 'Bilinmeyen kullanıcı',
+        isset($GLOBALS['BCC_ROLE_LABELS'][$r['role_at_view']])
             ? $GLOBALS['BCC_ROLE_LABELS'][$r['role_at_view']]
-            : $r['role_at_view']),
+            : $r['role_at_view'],
         date('d.m.Y H:i:s', strtotime($r['opened_at'])),
         $r['closed_at'] !== null ? date('d.m.Y H:i:s', strtotime($r['closed_at'])) : '',
-        bcc_csv_injection_guard($duration),
+        $duration,
 
         $r['duration_seconds'] !== null ? (string) (int) $r['duration_seconds'] : '',
     );
@@ -54,7 +54,7 @@ foreach ($rowsRaw as $r) {
 
 $preamble = array(
     array('Temsilci İnceleme Raporu'),
-    array('Not', bcc_csv_injection_guard($noteTitle)),
+    array('Not', $noteTitle),
     array('Dönem başlangıcı', date('d.m.Y H:i', $periodStart)),
     array('Dönem bitişi', date('d.m.Y H:i', $periodEnd)),
     array('Dönem uzunluğu', BCC_NOTE_VIEW_WINDOW_DAYS . ' gün'),

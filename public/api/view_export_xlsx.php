@@ -40,7 +40,7 @@ $fileName = $fileName !== '' ? $fileName : 'grid';
 
 $headerRow = array();
 foreach ($visibleFields as $f) {
-    $headerRow[] = bcc_csv_injection_guard($f['name']);
+    $headerRow[] = $f['name'];
 }
 
 $rows = array();
@@ -50,7 +50,7 @@ foreach ($records as $rec) {
     foreach ($visibleFields as $f) {
         if ($f['field_type'] === 'attachment') {
             $files = isset($attachmentsByRecord[$rec['id']][$f['id']]) ? $attachmentsByRecord[$rec['id']][$f['id']] : array();
-            $row[] = bcc_csv_injection_guard(implode(', ', array_column($files, 'name')));
+            $row[] = implode(', ', array_column($files, 'name'));
             continue;
         }
 
@@ -59,7 +59,7 @@ foreach ($records as $rec) {
         if ($f['field_type'] === 'long_text') {
             $displayText = strip_tags($displayText);
         }
-        $row[] = bcc_csv_injection_guard($displayText);
+        $row[] = $displayText;
     }
     $rows[] = $row;
 }

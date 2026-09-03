@@ -214,7 +214,7 @@
             resultsBox.appendChild(row);
             entries.push({
                 el: row,
-                text: (item.label + ' ' + item.meta + ' ' + item.type).toLowerCase(),
+                text: (item.label + ' ' + item.meta + ' ' + item.type).toLocaleLowerCase('tr'),
             });
         });
 
@@ -302,7 +302,7 @@
         }
 
         function applyFilter() {
-            var q = input.value.trim().toLowerCase();
+            var q = input.value.trim().toLocaleLowerCase('tr');
             var visible = 0;
 
             entries.forEach(function (entry) {

@@ -59,11 +59,11 @@
 
         var keys = rows.map(function (row) {
             var nameEl = row.querySelector('.hide-field-name');
-            return (nameEl ? nameEl.textContent : '').trim().toLowerCase();
+            return (nameEl ? nameEl.textContent : '').trim().toLocaleLowerCase('tr');
         });
 
         function applyFilter() {
-            var q = searchInput.value.trim().toLowerCase();
+            var q = searchInput.value.trim().toLocaleLowerCase('tr');
             var visible = 0;
 
             rows.forEach(function (row, i) {

@@ -46,7 +46,7 @@
 
         function buildHighlightedFragment(text, q) {
             var frag = document.createDocumentFragment();
-            var lower = text.toLowerCase();
+            var lower = text.toLocaleLowerCase('tr');
             var marks = [];
             var start = 0;
             var idx = lower.indexOf(q, start);
@@ -101,7 +101,7 @@
             var marks = [];
             textNodes.forEach(function (textNode) {
                 var text = textNode.nodeValue;
-                if (text === '' || text.toLowerCase().indexOf(q) === -1) {
+                if (text === '' || text.toLocaleLowerCase('tr').indexOf(q) === -1) {
                     return;
                 }
                 var result = buildHighlightedFragment(text, q);
@@ -174,7 +174,7 @@
         function runSearch() {
             refreshCellViews();
 
-            var q = input.value.trim().toLowerCase();
+            var q = input.value.trim().toLocaleLowerCase('tr');
 
             matches = [];
             activeIndex = -1;

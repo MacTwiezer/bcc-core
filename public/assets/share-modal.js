@@ -266,13 +266,13 @@
                 return;
             }
 
-            var q = inviteEmail.value.trim().toLowerCase();
+            var q = inviteEmail.value.trim().toLocaleLowerCase('tr');
             var matches = availableCandidates().filter(function (c) {
                 if (q === '') {
                     return true;
                 }
-                return String(c.email).toLowerCase().indexOf(q) !== -1
-                    || String(c.full_name).toLowerCase().indexOf(q) !== -1;
+                return String(c.email).toLocaleLowerCase('tr').indexOf(q) !== -1
+                    || String(c.full_name).toLocaleLowerCase('tr').indexOf(q) !== -1;
             }).slice(0, SUGGEST_LIMIT);
 
             suggestBox.textContent = '';

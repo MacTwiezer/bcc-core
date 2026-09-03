@@ -33,7 +33,18 @@ if (!is_file($path)) {
     exit(1);
 }
 
-$decoded = json_decode((string) base64_decode($paramsB64, true), true);
+// base64_decode() gecersiz girdide false doner; (string) false = '' olur ve
+// json_decode('') null verir, yani parametreler SESSIZCE bosalirdi. Uc nokta o
+// zaman "kayit bulunamadi" gibi bir hata doner ve test bunu yanlislikla
+// "yetki reddi" sanabilir — _post_as_case.php'de bu tam olarak yasandi
+// (bkz. oradaki base64 notu), ayni koruma buraya da kondu.
+$raw = base64_decode($paramsB64, true);
+if ($raw === false) {
+    fwrite(STDERR, "Parametreler cozulemedi (gecersiz base64).
+");
+    exit(1);
+}
+$decoded = json_decode($raw, true);
 $params = is_array($decoded) ? $decoded : array();
 
 session_start();

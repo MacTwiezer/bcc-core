@@ -68,6 +68,22 @@ foreach (array('owner', 'editor') as $rol) {
 }
 
 $baseId = bcc_create_base($teamId, $AD, '', $ownerId)['id'];
+
+// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-postalar rastgele ek
+// tasiyor (BtTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
+// Ctrl+C) kalan ekip/kullanicilari SONRAKI kosu de bulamaz.
+// Base'ler ayrica silinmiyor: bases.team_id -> teams FK'si CASCADE, ekip
+// silinince test sirasinda olusturulan TUM base'ler (sonradan eklenen ikinci
+// base dahil) kendiliginden gider.
+$cleanup = function () use ($teamId, $ownerId, $editorId, $SON, $COOKIE) {
+    bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "bt.%.$SON@bcc-test.local"));
+    bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $ownerId, 'b' => $editorId));
+    @unlink($COOKIE);
+};
+register_shutdown_function($cleanup);
 echo "Ortam: team=$teamId base=$baseId ('$AD')\n\n";
 
 function girisYap($BASE, $email, $sifre) {
@@ -119,13 +135,7 @@ $row = bcc_fetch_one('SELECT deleted_at FROM bases WHERE id = :i', array('i' => 
 check('deleted_at NULL oldu', $row && $row['deleted_at'] === null);
 
 // --- temizlik ---
-foreach (array($baseId, $ikinciId) as $b) { bcc_execute('DELETE FROM bases WHERE id = :i', array('i' => $b)); }
-bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "bt.%.$SON@bcc-test.local"));
-bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $ownerId, 'b' => $editorId));
-@unlink($COOKIE);
+$cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))
        + (int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE team_id = :t', array('t' => $teamId));

@@ -74,6 +74,18 @@ bcc_execute(
     array('e' => $EMAIL, 'h' => password_hash($ESKI, PASSWORD_DEFAULT), 'n' => 'Sifre Testi')
 );
 $UID = (int) bcc_last_insert_id();
+
+// Temizlik BURADA baglanir, sonda degil: e-posta rastgele ek tasiyor
+// (pwtest.<hex>@bcc-test.local), yani betik ortada olurse (Apache dusmesi,
+// fatal, Ctrl+C) kalan satiri SONRAKI kosu de bulamaz — artiklar birikir.
+$cleanup = function () use ($UID, $EMAIL, $COOKIE) {
+    bcc_execute('DELETE FROM audit_log WHERE user_id = :id', array('id' => $UID));
+    bcc_execute('DELETE FROM login_attempts WHERE email = :e', array('e' => $EMAIL));
+    bcc_execute('DELETE FROM users WHERE id = :id', array('id' => $UID));
+    @unlink($COOKIE);
+};
+register_shutdown_function($cleanup);
+
 echo "Test kullanicisi: $EMAIL (id=$UID)\n\n";
 
 // --- bekleyen bir sifirlama token'i yerlestir ---
@@ -136,12 +148,9 @@ check('yanit yeni PHPSESSID gonderdi', $r['sid'] !== null && $r['sid'] !== $sidO
     'once=' . substr((string) $sidOnce, 0, 10) . ' sonra=' . substr((string) $r['sid'], 0, 10));
 
 // --- temizlik ---
-bcc_execute('DELETE FROM audit_log WHERE user_id = :id', array('id' => $UID));
-bcc_execute('DELETE FROM login_attempts WHERE email = :e', array('e' => $EMAIL));
-bcc_execute('DELETE FROM users WHERE id = :id', array('id' => $UID));
+$cleanup();
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id = :id', array('id' => $UID));
 check('test kullanicisi silindi', $kalan === 0, $kalan);
-@unlink($COOKIE);
 
 echo "\n" . str_repeat('-', 50) . "\n";
 echo "GECTI: $gecti   KALDI: $kaldi\n";

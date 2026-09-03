@@ -27,6 +27,23 @@ function check($ad, $kosul, $ek = '')
 $SON = bin2hex(random_bytes(4));
 $temizlik = array('users' => array(), 'teams' => array());
 
+// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-postalar rastgele ek
+// tasiyor (AdminRmTest <hex>), yani betik ortada olurse (fatal, Ctrl+C) kalan
+// ekip/kullanicilari SONRAKI kosu de bulamaz. $temizlik REFERANSLA yakalanir,
+// boylece kayit listesi buyudukce kapanis da guncel kalir — henuz hicbir sey
+// olusturulmamisken calissa bile bos liste uzerinde donup hicbir sey yapmaz.
+$cleanup = function () use (&$temizlik) {
+    foreach ($temizlik['teams'] as $id) {
+        bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $id));
+        bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $id));
+        bcc_execute('DELETE FROM teams WHERE id = :i', array('i' => $id));
+    }
+    foreach ($temizlik['users'] as $id) {
+        bcc_execute('DELETE FROM users WHERE id = :i', array('i' => $id));
+    }
+};
+register_shutdown_function($cleanup);
+
 function testKullanici($etiket, $son)
 {
     global $temizlik;
@@ -151,10 +168,7 @@ $sayi = (int) bcc_fetch_column(
 check('assign/role_change audit kayitlari team scope tasiyor', $sayi >= 2, $sayi);
 
 // --- temizlik ---
-bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
-foreach ($temizlik['teams'] as $id) { bcc_execute('DELETE FROM teams WHERE id = :i', array('i' => $id)); }
-foreach ($temizlik['users'] as $id) { bcc_execute('DELETE FROM users WHERE id = :i', array('i' => $id)); }
+$cleanup();
 
 $kalanEkip = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :i', array('i' => $teamId));
 $kalanUser = (int) bcc_fetch_column(

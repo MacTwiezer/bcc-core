@@ -74,6 +74,21 @@ bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_ac
 $ownerId = (int) bcc_last_insert_id();
 bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t,:u,:r)', array('t' => $teamId, 'u' => $ownerId, 'r' => 'owner'));
 
+// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-posta rastgele ek
+// tasiyor (IfTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
+// Ctrl+C) kalan ekip/kullaniciyi SONRAKI kosu de bulamaz.
+// base/tablo/alan/kayit ayrica silinmiyor: FK zinciri CASCADE, ekip silinince
+// hepsi kendiliginden gider.
+$cleanup = function () use ($teamId, $ownerId, $SON, $COOKIE) {
+    bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "if.%.$SON@bcc-test.local"));
+    bcc_execute('DELETE FROM users WHERE id = :u', array('u' => $ownerId));
+    @unlink($COOKIE);
+};
+register_shutdown_function($cleanup);
+
 $baseId = bcc_create_base($teamId, 'IfBase ' . $SON, '', $ownerId)['id'];
 bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b,:n,0)', array('b' => $baseId, 'n' => 'Tablo'));
 $tableId = (int) bcc_last_insert_id();
@@ -144,17 +159,7 @@ $ids = idler($r['body']);
 check('"%" aramasi HER SEYI getirmiyor', is_array($ids) && count($ids) === 0, is_array($ids) ? count($ids) : $r['body']);
 
 // --- temizlik ---
-bcc_execute('DELETE FROM cell_values WHERE record_id IN (:a, :b)', array('a' => $kalan, 'b' => $silinecek));
-bcc_execute('DELETE FROM records WHERE table_id = :t', array('t' => $tableId));
-bcc_execute('DELETE FROM fields WHERE table_id = :t', array('t' => $tableId));
-bcc_execute('DELETE FROM tables_meta WHERE id = :t', array('t' => $tableId));
-bcc_execute('DELETE FROM bases WHERE id = :b', array('b' => $baseId));
-bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "if.%.$SON@bcc-test.local"));
-bcc_execute('DELETE FROM users WHERE id = :u', array('u' => $ownerId));
-@unlink($COOKIE);
+$cleanup();
 
 $k = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))
    + (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id = :u', array('u' => $ownerId));

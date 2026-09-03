@@ -40,8 +40,12 @@ if ($mode !== 'setup') {
 
 teardown();
 
-$team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
-$teamId = (int) $team['id'];
+// TY yoksa $team false doner; kontrolsuz $team['id'] $teamId'yi 0 yapar ve
+// kullanici/base team_id=0 ile yaratilirdi (hicbir ekibe ait olmayan cop veri).
+// _colresize_browse_fixture.php ile AYNI kontrol.
+$teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
+if (!$teamId) { echo "HATA: TY ekibi yok.
+"; exit(1); }
 
 bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 0, 1)',
     array(':e' => TEST_EMAIL, ':h' => password_hash(TEST_PASS, PASSWORD_DEFAULT), ':n' => 'GrupC1 Browse'));

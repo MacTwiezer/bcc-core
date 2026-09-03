@@ -75,6 +75,21 @@ bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b,:n,0)'
 $copTable = (int) bcc_last_insert_id();
 bcc_execute('UPDATE bases SET deleted_at = NOW() WHERE id = :i', array('i' => $copBase));
 
+// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-postalar rastgele ek
+// tasiyor (FcTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
+// Ctrl+C) kalan ekip/kullanicilari SONRAKI kosu de bulamaz.
+// bases/tables_meta/fields ayrica silinmiyor: FK zinciri CASCADE, ekip
+// silinince hepsi kendiliginden gider.
+$cleanup = function () use ($teamId, $ownerId, $editorId, $SON, $COOKIE) {
+    bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "fc.%.$SON@bcc-test.local"));
+    bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $ownerId, 'b' => $editorId));
+    @unlink($COOKIE);
+};
+register_shutdown_function($cleanup);
+
 echo "Ortam: aktif tablo=$aktifTable, cop kutusundaki tablo=$copTable\n\n";
 
 function girisYap($BASE, $email, $sifre) {
@@ -122,15 +137,7 @@ $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=99
 check('olmayan tablo -> 404', $r['code'] === 404, $r['code']);
 
 // --- temizlik ---
-foreach (array($aktifTable, $copTable) as $t) { bcc_execute('DELETE FROM fields WHERE table_id = :t', array('t' => $t)); }
-bcc_execute('DELETE FROM tables_meta WHERE base_id IN (:a, :b)', array('a' => $aktifBase, 'b' => $copBase));
-bcc_execute('DELETE FROM bases WHERE id IN (:a, :b)', array('a' => $aktifBase, 'b' => $copBase));
-bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "fc.%.$SON@bcc-test.local"));
-bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $ownerId, 'b' => $editorId));
-@unlink($COOKIE);
+$cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))
        + (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id IN (:a, :b)', array('a' => $ownerId, 'b' => $editorId));

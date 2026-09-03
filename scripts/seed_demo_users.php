@@ -35,6 +35,14 @@ const DEMO_BASE_MAIN = 'Demo CRM';
 const DEMO_BASE_SECOND = 'Demo Proje Plani';
 const DEMO_TABLE = 'Musteriler';
 
+// LISTEDEN CIKARILMIS eski demo hesaplari. bcc_demo_accounts() artik bunlari
+// dondurmedigi icin --remove onlara HIC dokunmuyordu: creator@bcc.local
+// veritabaninda AKTIF ve demo ekibinde owner rolunde kalmisti, yani betigin
+// "Temizlik tamam" ciktisi yaniltiyordu. Yeni bir hesap listeden cikarilirsa
+// e-postasi buraya eklenmeli. ('creator' diye bir ROL hicbir zaman olmadi —
+// bkz. src/demo_accounts.php'deki not; bu yalnizca artik bir HESAP satiri.)
+$DEMO_LEGACY_EMAILS = array('creator@bcc.local');
+
 $remove = in_array('--remove', $argv, true);
 $accounts = bcc_demo_accounts();
 
@@ -75,12 +83,13 @@ if ($remove) {
         line('- ekip silindi: ' . DEMO_TEAM);
     }
 
-    foreach ($accounts as $acc) {
-        $u = bcc_fetch_one('SELECT id FROM users WHERE email = :e LIMIT 1', array('e' => $acc['email']));
+    $silinecek = array_merge(array_column($accounts, 'email'), $DEMO_LEGACY_EMAILS);
+    foreach ($silinecek as $mail) {
+        $u = bcc_fetch_one('SELECT id FROM users WHERE email = :e LIMIT 1', array('e' => $mail));
         if ($u) {
             bcc_execute('DELETE FROM audit_log WHERE user_id = :i', array('i' => $u['id']));
             bcc_execute('DELETE FROM users WHERE id = :i', array('i' => $u['id']));
-            line('- kullanici silindi: ' . $acc['email']);
+            line('- kullanici silindi: ' . $mail);
         }
     }
 
@@ -214,9 +223,14 @@ $fieldSpecs = array(
     array(
         'name' => 'Durum',
         'type' => 'single_select',
+        // 'colors' KONUMSAL LISTE DEGIL, secim metni => renk anahtari HARITASI
+        // olmali: select_choice_colors_from_options() (src/schema.php) degeri
+        // dogrudan $renkler[$secim] diye okur. Liste yazilinca hicbir anahtar
+        // eslesmiyor ve bcc_resolved_choice_color_key() paletten SIRAYLA renk
+        // veriyordu — "Kazanildi" istenen green yerine teal cikiyordu.
         'options' => json_encode(array(
             'choices' => array('Yeni', 'Gorusuluyor', 'Kazanildi'),
-            'colors' => array('blue', 'yellow', 'green'),
+            'colors' => array('Yeni' => 'blue', 'Gorusuluyor' => 'yellow', 'Kazanildi' => 'green'),
         ), JSON_UNESCAPED_UNICODE),
     ),
     array('name' => 'Butce', 'type' => 'number', 'options' => null),
@@ -228,12 +242,20 @@ $pos = 0;
 
 foreach ($fieldSpecs as $spec) {
     $existing = bcc_fetch_one(
-        'SELECT id FROM fields WHERE table_id = :t AND name = :n LIMIT 1',
+        'SELECT id, options FROM fields WHERE table_id = :t AND name = :n LIMIT 1',
         array('t' => $tableId, 'n' => $spec['name'])
     );
 
     if ($existing) {
         $fieldIds[$spec['name']] = (int) $existing['id'];
+        // Kullanicilarda oldugu gibi alan secenekleri de bilinen duruma geri
+        // getirilir: eski kosular 'colors'i yanlis (konumsal) formatta yazmisti,
+        // betigi tekrar calistirmak onu kendiliginden duzeltsin.
+        if ($spec['options'] !== null && $existing['options'] !== $spec['options']) {
+            bcc_execute('UPDATE fields SET options = :o WHERE id = :i',
+                array('o' => $spec['options'], 'i' => $fieldIds[$spec['name']]));
+            line('  secenekler tazelendi: ' . $spec['name']);
+        }
     } else {
         bcc_execute(
             'INSERT INTO fields (table_id, name, field_type, options, position, is_required)
@@ -304,12 +326,17 @@ if ($recordCount > 0) {
 line('');
 line('Demo hesaplari hazir (ekip: ' . DEMO_TEAM . ' #' . $teamId . '):');
 line('');
+// Sifre BILEREK BASILMIYOR. Depodan cikarilmasinin gerekcesi (bkz.
+// src/demo_accounts.php) ekrana basmak icin de gecerli: cikti terminal
+// gecmisine, ekran goruntusune ve gunluklere dusuyor. Betigi calistiran kisi
+// degeri zaten config/app.local.php'ye KENDISI yazdi, tekrar gostermek bilgi
+// katmiyor.
 foreach ($accounts as $acc) {
     line(sprintf(
         '  %-9s %-20s %-13s rol=%s',
         $acc['label'],
         $acc['email'],
-        $acc['password'],
+        '(app.local)',
         $acc['role']
     ));
 }

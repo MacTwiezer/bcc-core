@@ -40,8 +40,12 @@ if ($mode !== 'setup') {
 
 teardown();
 
-$team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
-$teamId = (int) $team['id'];
+// TY yoksa $team false doner; kontrolsuz $team['id'] $teamId'yi 0 yapar ve
+// kullanici/base team_id=0 ile yaratilirdi (hicbir ekibe ait olmayan cop veri).
+// _colresize_browse_fixture.php ile AYNI kontrol.
+$teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
+if (!$teamId) { echo "HATA: TY ekibi yok.
+"; exit(1); }
 
 bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 0, 1)',
     array(':e' => TEST_EMAIL, ':h' => password_hash(TEST_PASS, PASSWORD_DEFAULT), ':n' => 'GrupA Browse'));
@@ -86,10 +90,14 @@ foreach ($rows as $i => $vals) {
     }
 }
 
-$viewId = (int) bcc_fetch_column('SELECT id FROM views WHERE table_id = :t ORDER BY id LIMIT 1', array(':t' => $tableId));
+// VIEW_ID BILEREK BASILMIYOR: varsayilan gorunumu uygulama TEMBEL olusturur
+// (src/schema.php, grid ilk acildiginda), veritabaninda tetikleyici yok ve bu
+// fikstur tablosunu ham SQL ile yaratiyor — yani burada views tablosunda HENUZ
+// satir yok. Eskiden buradaki sorgu HER ZAMAN 0 donuyor ve "VIEW_ID=0"
+// basiyordu; o degerle kurulan URL calismaz. Gorunum id'si gerekiyorsa
+// grid.php bir kez acildiktan SONRA okunmali.
 
 echo "TABLE_ID=" . $tableId . "\n";
-echo "VIEW_ID=" . $viewId . "\n";
 echo "URL_FIELD_ID=" . $fUrl . "\n";
 echo "MAIL_FIELD_ID=" . $fMail . "\n";
 echo "TEL_FIELD_ID=" . $fTel . "\n";

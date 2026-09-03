@@ -25,6 +25,13 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
+// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
+// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
+// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
+// kapanista geri acilir.
+require __DIR__ . '/_test_slack_guard.php';
+bcc_test_silence_slack();
+
 $results = array();
 
 function check($label, $passed, $detail = null)

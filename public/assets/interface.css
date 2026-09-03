@@ -1,46 +1,21 @@
-/* F3 — Duyuru (Interface / yayınlanmış görünüm), salt-okunur. Yalnızca
-   public/interface.php tarafından kullanılır; app'in normal ".home-" / ".gs-"
-   kabuğunu paylaşmaz (GEREKSINIMLER.md F3 kendi başına bağımsız bir ekran
-   tarifliyor: sol nav + orta liste + sağ detay + arama, başka hiçbir şey).
-
-   ⚠️ YORUM İÇİNDE "*" + "/" YAN YANA YAZMAYIN. Bu blok bir zamanlar
-   ".home-*[/].gs-*" yazıyordu; o dizilim yorumu TAM ORADA kapatıyor, kalan
-   satırlar ham metne dönüyor ve ayrıştırıcı ARDINDAN GELEN KURALI atıyordu —
-   yani aşağıdaki `* { box-sizing: border-box; }` bu sayfada hiç
-   uygulanmıyordu. Aynı tuzak bu dosyada iki, home.css'te bir yerde daha
-   vardı; hepsi düzeltildi. Joker anlatmak gerekirse tırnak içinde ve
-   aralarında boşlukla yazın. */
-
 * { box-sizing: border-box; }
-
 body.if-page {
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
     color: var(--bcc-text);
     background: var(--bcc-surface);
 }
-
 body.if-page a { text-decoration: none; color: inherit; }
 
 .if-shell {
     display: flex;
     height: var(--bcc-vh);
 }
-
-/* ---------- Sol: sarı nav paneli ---------- */
-
-/* Kenar çubuğu renk paleti — TEK KAYNAK. Dosyanın geri kalanı bu üç
-   değişkeni kullanır, hex'leri tekrar YAZMAZ; ton değiştirmek isteyen tek
-   yeri düzenler. (--bcc-* token'ları BU panelde kullanılmıyor: onlar açık/koyu
-   yüzeyler için ayarlı ve amber zeminde okunmuyor — bkz. .if-nav-group-label
-   yorumu.) */
 .if-nav {
-    --if-nav-bg: #ffba05;         /* panel geneli */
-    --if-nav-active-bg: #f3ac04;  /* seçili tablo öğesi */
-    --if-nav-footer-bg: #ffc11e;  /* alt araç çubuğu kabı */
-    /* İkon kutularının keskin dış hattı (bkz. .home-base-icon / .if-account). */
+    --if-nav-bg: #ffba05;
+    --if-nav-active-bg: #f3ac04;
+    --if-nav-footer-bg: #ffc11e;
     --if-nav-ink: #1e293b;
-
     width: 220px;
     flex-shrink: 0;
     background: var(--if-nav-bg);
@@ -49,16 +24,11 @@ body.if-page a { text-decoration: none; color: inherit; }
     padding: 1rem 0.75rem;
     transition: width 0.15s ease;
 }
-
-/* Yalnızca tablo listesi kayar — .if-nav'ın kendisi overflow'suz kalmalı,
-   yoksa .if-nav-bottom'daki bildirim/hesap panelleri (position:absolute,
-   .if-nav'ın dışına taşan) kırpılır. */
 .if-nav-scroll {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
 }
-
 .if-nav-top {
     display: flex;
     align-items: center;
@@ -66,11 +36,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin-bottom: 1rem;
 }
 
-/* E3 — "opsflow.bcccrm.com ▾" menüsü: .if-nav-back artık bir <a> değil, <details>
-   içindeki <summary> (bkz. .gs-table-tab-menu-panel'in varsayılan
-   position:absolute;top:100%;left:0'ı için position:relative burada). */
 .if-nav-menu { position: relative; }
-
 .if-nav-back {
     display: flex;
     align-items: center;
@@ -85,36 +51,12 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
     list-style: none;
 }
-
 .if-nav-back::-webkit-details-marker { display: none; }
-
 .if-nav-back span {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-/* Base ikonu (bcc_base_icon_svg) — dashboard'daki .home-base-icon'un (42px)
-   burada küçültülmüş hâli, .home-search-result .home-base-icon (30px) ile
-   AYNI "scoped override" deseni, ikinci bir bileşen YOK. flex-shrink:0 —
-   .if-nav-back span'ın nowrap/ellipsis'i metne (isim) özel, ikonu
-   etkilemesin diye ayrıca belirtildi.
-
-   ⚠️ BULUNAN GERÇEK BUG (bu düzenlemede yakalandı): bu yorum bloğu erken
-   kapanan bir yorum sonlandırıcısı içeriyordu, kalan satırlar yorum DIŞINDA
-   ham metne dönüyordu. CSS ayrıştırıcısı o çöpü görüp ARDINDAN GELEN KURALI
-   TAMAMEN ATIYORDU — yani aşağıdaki .if-nav-back .home-base-icon bloğu (22px
-   boyut dahil) hiç uygulanmıyordu; ikon home.css'in genel .home-base-icon
-   kuralına (42px) düşüyordu. Dosyanın en üstündeki nota bkz.
-
-   ZEMİN: eskiden interface.php satır içi `background: bcc_base_icon_color()`
-   basıyordu — base id'sinden türeyen CANLI dolu renk (bu base'de #06b6d4
-   turkuaz), amber panelde yabancı bir leke gibi duruyordu. Satır içi stil
-   olduğu için CSS'ten yumuşatılamıyordu da; o yüzden PHP'den kaldırıldı ve
-   zemin buraya alındı: panelin kendi diline ait, hafif açılmış amber.
-   Ayırt ediciliği artık RENK değil, kategori GLİFİ sağlıyor (glif korundu).
-   Glif `currentColor` ile çizilir — açık zeminde beyaz kaybolacağı için
-   `color` koyu mürekkebe çekildi (eski değer #fff idi). */
 .if-nav-back .home-base-icon {
     width: 22px;
     height: 22px;
@@ -128,22 +70,17 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
-
-/* Daraltılmış durumda tablo listesi yerine gösterilen dekoratif klasör ikonu —
-   genişken gizli, .if-nav.is-collapsed'de görünür (aşağıda). */
 .if-nav-list-icon {
     display: none;
     justify-content: center;
     padding: 0.5rem 0;
     margin-bottom: 0.5rem;
 }
-
 .if-nav-list {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
 }
-
 .if-nav-item {
     padding: 0.55rem 0.7rem;
     border-radius: 6px;
@@ -154,22 +91,11 @@ body.if-page a { text-decoration: none; color: inherit; }
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
 .if-nav-item:hover { background: rgba(255, 255, 255, 0.35); }
-
-/* Seçili öğe: panel zemininden bir tık koyu, DOLU amber (yarı saydam
-   rgba(74,59,0,0.14) değil) — böylece hangi tabloda olduğunuz panelin her
-   yerinde aynı tonda okunuyor, altındaki zemine göre değişmiyor. */
 .if-nav-item.is-active {
     background: var(--if-nav-active-bg);
     color: #4a3b00;
 }
-
-/* ---------- Sol nav: kategori başlığı ----------
-   Listeye derinlik veren büyük harf başlık. Renk sözlüğü bu kenar çubuğuna
-   ÖZEL (amber zemin + #5a4a00 metin) — burada --bcc-* token'ları KULLANILMAZ,
-   çünkü onlar açık/koyu yüzeyler için ayarlı ve sarı zeminde okunmuyor.
-   Dosyanın geri kalanı da aynı yerel sözlüğü kullanıyor. */
 .if-nav-group-label {
     margin: 0 0 0.35rem;
     padding: 0 0.7rem;
@@ -179,13 +105,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-transform: uppercase;
     color: rgba(90, 74, 0, 0.62);
 }
-
 .if-nav.is-collapsed .if-nav-group-label { display: none; }
-
-/* Alt bölgedeki tüm ikon/summary butonlarının TABANI. <summary> için
-   list-style:none + ::-webkit-details-marker gizleme ŞART — yoksa tarayıcı
-   kendi ▶ üçgenini basar (bu blok bir düzenlemede yanlışlıkla silindiğinde
-   tam olarak bu oldu, ekranda görüldü). */
 .if-nav-icon-btn {
     background: none;
     border: none;
@@ -200,7 +120,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
     list-style: none;
 }
-
 .if-nav-icon-btn::-webkit-details-marker { display: none; }
 .if-nav-icon-btn::marker { content: ''; }
 
@@ -214,15 +133,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-/* ---------- Sol nav alt bölge: TEK SATIRLIK "footer" kabı ----------
-   Avatar · boşluk · Paylaş · Bağlantı · bildirim · daralt(≪) — hepsi kendi
-   zemin rengine sahip bir şeritte.
-
-   Şerit panelin TAM genişliğini kaplasın diye .if-nav'ın yatay padding'i
-   (0.75rem) ve alt padding'i negatif margin ile geri alınıp kabın KENDİ
-   padding'i olarak veriliyor; yoksa zemin, panelin ortasında kenarlara
-   değmeyen bir kutu gibi dururdu. */
 .if-nav-bottom {
     margin: auto -0.75rem -1rem;
     padding: 0.6rem 0.75rem;
@@ -231,123 +141,59 @@ body.if-page a { text-decoration: none; color: inherit; }
     flex-direction: column;
     gap: 0.4rem;
 }
-
-/* Satır: profil · boşluk · Paylaş · Bağlantı · bildirim · daralt.
-   `order` KORUNDU — daraltılmış hâlde sütuna dönüp sıra değiştiği için
-   DOM sırası tek başına yetmiyor (bkz. aşağıdaki .is-collapsed blokları). */
 .if-nav-util-row {
     display: flex;
     align-items: center;
     gap: 0.25rem;
 }
-
 .if-account { order: 1; }
 .if-nav-spacer { order: 2; flex: 1; }
 .if-nav-collab-share { order: 3; }
 .if-nav-util-row .home-notif { order: 5; }
 .if-nav-collapse-btn { order: 6; }
 .if-nav-expand-btn { order: 7; }
-
-/* ⚠️ "Paylaş" bu satırda İKON-YALNIZ (etiketi aşağıda gizleniyor).
-   Bu, bilinçli bir geri adım: bir dönem tam genişlikte METİNLİ buton olarak
-   kendi satırındaydı, çünkü daha da öncesinde etiketli hâliyle tek satıra
-   sığmayıp taşıyordu. Artık tekrar tek satırda ama etiketsiz — ölçülen
-   genişlik 156px, kullanılabilir alan 190px. Etiketi geri açan biri o taşmayı
-   da geri getirir; testte satır taşma kontrolü var. */
 .if-nav-collab-share-btn {
     padding: 0.4rem;
     border-radius: 6px;
 }
-
-/* Genişlet (≫) YALNIZCA daraltılmış hâlde görünür.
-   AÇIK KURAL ŞART: butonda `hidden` özniteliği var ama .if-nav-icon-btn'in
-   `display: flex`i tarayıcının `[hidden] { display: none }` varsayılanını
-   EZİYOR — bu satır silindiğinde ≪ ve ≫ yan yana göründü (ekranda yakalandı). */
 .if-nav-expand-btn { display: none; }
-
-/* Alt satırdaki paylaşım düğmesi ikon-yalnız: metin etiketi öğeleri
-   220px'e sığdırmayı imkânsız kılıyor. title + aria-label duruyor,
-   yani ipucu ve erişilebilirlik korunuyor. (Bu kural eskiden İKİ düğmeyi
-   kapsıyordu; "Bağlantı" düğmesi kaldırıldı.) */
 .if-nav-collab-share .if-nav-bottom-label { display: none; }
 
-/* ---------- Daraltılmış durum (.if-nav.is-collapsed) ---------- */
-
-/* Bu blok bir düzenlemede yanlışlıkla silinmişti (ekranda yakalandı: daraltma
-   düğmesine basınca kenar çubuğu 220px kalıyor, tablo listesi ve "Paylaş"
-   etiketi gizlenmiyordu). Genişlik/gizleme kuralları geri getirildi; iki
-   satırlı yeni alt bölge için sıralama aşağıda güncellendi. */
 .if-nav.is-collapsed {
     width: 64px;
     padding: 1rem 0.5rem;
     align-items: center;
 }
-
 .if-nav.is-collapsed .if-nav-top { justify-content: center; }
-
-/* Yalnızca base ADI gizlenir, İKON KALIR.
-   Önceki kural `.if-nav-back span` idi ve base ikonu da bir <span> olduğu için
-   onu da gizliyordu: daraltılmış başlıkta yapayalnız bir ▾ oku kalıyordu
-   (ekranda görüldü). :not(.home-base-icon) ikonu korur. */
 .if-nav.is-collapsed .if-nav-back span:not(.home-base-icon),
 .if-nav.is-collapsed .if-nav-back > svg,
 .if-nav.is-collapsed .if-nav-list,
 .if-nav.is-collapsed .if-nav-bottom-label {
     display: none;
 }
-
 .if-nav.is-collapsed .if-nav-back { flex: none; padding: 0.5rem; }
 .if-nav.is-collapsed .if-nav-list-icon { display: flex; }
-
-/* Daraltılmışken alt bölge dikey ikon yığınına döner. Sıra:
-   Avatar — ≫ — Bildirim — Bağlantı — Paylaş; aç/kapa düğmesi avatarın hemen
-   altında kalsın diye ≫ ikinci sırada.
-   Footer zemini burada da TAM genişlikte olsun diye negatif margin dar
-   padding'e (0.5rem) göre yeniden hesaplanıyor. */
-/* `align-self: stretch` ŞART: .if-nav.is-collapsed `align-items: center`
-   taşıyor, yani çocuklar içerik genişliğine büzülür — `width: auto` ile
-   footer şeridi 45px'lik bir ada olarak kalıyordu (ölçüldü), zemin rengi dar
-   rayı kaplamıyordu. stretch ile içerik kutusunu doldurur, negatif margin de
-   kalan yatay padding'in üstüne taşırır. */
 .if-nav.is-collapsed .if-nav-bottom {
     align-self: stretch;
     align-items: center;
     margin: auto -0.5rem -1rem;
     padding: 0.6rem 0.5rem;
 }
-
 .if-nav.is-collapsed .if-nav-util-row {
     flex-direction: column;
     width: 100%;
 }
-
-/* Kapalıyken bildirim, "Paylaş"tan ÖNCE gelir (açıkken tam tersi). */
 .if-nav.is-collapsed .if-nav-util-row .home-notif { order: 3; }
 .if-nav.is-collapsed .if-nav-collab-share { order: 5; }
 .if-nav.is-collapsed .if-nav-spacer { display: none; }
 .if-nav.is-collapsed .if-nav-collapse-btn { display: none; }
 .if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }
-
-/* Bildirim/hesap panelleri varsayılan olarak tetikleyicinin ALTINDA-SAĞINDA
-   açılır (bkz. home.css .home-notif-panel top:calc(100%+8px)) — burada
-   tetikleyici sol sütunun EN ALTINDA olduğu için grid.php'nin .gs-rail
-   .home-notif-panel'iyle AYNI düzeltme: panel sağa doğru açılır. */
 .if-nav-bottom .home-notif-panel {
     top: auto;
     bottom: 0;
     left: calc(100% + 8px);
     right: auto;
 }
-
-/* Paylaş/Bağlantı popover'ları (style.css'teki .share-popover-form/
-   .collab-popover-form) AYNI sorunu yaşıyordu: tetikleyici sol sütunun
-   EN ALTINDA olduğu için varsayılan top:100%+left:0 (ya da
-   .share-popover-trigger/.collab-popover-trigger'ın right:0 override'ı)
-   ekranın ALTINA/SOLUNA taşıp kırpılıyordu (bulunan gerçek bug — ekran
-   görüntüsüyle bildirildi). .home-notif-panel'le AYNI düzeltme: sağa doğru
-   açılır. Üç sınıflı seçici, style.css'teki iki sınıflı .share-popover-trigger
-   .share-popover-form kuralını özgüllükle KESİN yener (kaynak sırasına
-   bağlı kalınmaz). */
 .if-nav-bottom .share-popover-trigger .share-popover-form,
 .if-nav-bottom .collab-popover-trigger .collab-popover-form {
     top: auto;
@@ -355,12 +201,8 @@ body.if-page a { text-decoration: none; color: inherit; }
     left: calc(100% + 8px);
     right: auto;
 }
-
 .if-account { position: relative; }
 
-/* Kenarlık: kenar çubuğundaki DİĞER ikon kutusuyla (.home-base-icon) aynı
-   keskin dış hat — amber footer şeridi üzerinde ikisi de aynı dili konuşsun
-   diye. Rengi/zemini DEĞİŞMEDİ; yalnızca sınırı tanımlandı. */
 .if-avatar {
     width: 28px;
     height: 28px;
@@ -376,7 +218,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     justify-content: center;
     flex-shrink: 0;
 }
-
 .if-account-menu {
     display: none;
     position: absolute;
@@ -392,19 +233,15 @@ body.if-page a { text-decoration: none; color: inherit; }
     overflow-y: auto;
     z-index: 40;
 }
-
 .if-account-menu.is-open { display: block; }
 
 .if-account-info {
     padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .if-account-name { font-weight: 600; font-size: 0.9rem; }
 .if-account-email { font-size: 0.8rem; color: var(--bcc-text-muted); margin-top: 0.15rem; }
-
 .if-account-section { padding: 0.3rem; }
-
 .if-account-item {
     display: flex;
     align-items: center;
@@ -420,13 +257,9 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
     color: var(--bcc-text);
 }
-
 .if-account-item:hover { background: var(--bcc-surface-hover); }
-
 .if-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
-
 .if-account-logout { padding: 0.4rem; }
-
 .if-account-logout button {
     width: 100%;
     text-align: left;
@@ -439,11 +272,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
     color: var(--bcc-danger);
 }
-
 .if-account-logout button:hover { background: var(--bcc-danger-soft); }
-
-/* ---------- Orta: kayıt listesi + arama ---------- */
-
 .if-list-panel {
     width: 340px;
     flex-shrink: 0;
@@ -452,7 +281,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     flex-direction: column;
     overflow: hidden;
 }
-
 .if-search {
     display: flex;
     align-items: center;
@@ -463,7 +291,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     border-radius: 8px;
     flex-shrink: 0;
 }
-
 .if-search input {
     border: none;
     background: transparent;
@@ -473,11 +300,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-family: inherit;
     color: var(--bcc-text);
 }
-
-/* ---------- Grupla / Filtrele / Sırala araç çubuğu ----------
-   Arama kutusunun hemen ALTINDA, kayıt listesinin ÜSTÜNDE. Renkler token'la
-   (bu dosyadaki .grid-search-mark dersi): sabit hex koyu temayı bozardı. */
-
 .if-tools {
     display: flex;
     align-items: center;
@@ -485,9 +307,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin: 0 0.85rem 0.6rem;
     flex-shrink: 0;
 }
-
 .if-tool { position: relative; }
-
 .if-tool-btn {
     display: inline-flex;
     align-items: center;
@@ -504,7 +324,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 .if-tool-btn::-webkit-details-marker { display: none; }
 .if-tool-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text); }
 .if-tool[open] .if-tool-btn { background: var(--bcc-surface-hover); color: var(--bcc-text); }
-
 .if-tool-badge {
     display: inline-flex;
     align-items: center;
@@ -521,14 +340,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 
 .if-tool-badge[hidden] { display: none; }
 
-/* Bulunan gerçek bug: panel önce `position: absolute` idi ve .if-list-panel'in
-   `overflow: hidden`i onu 340px'lik kenar çubuğunun sınırında KESİYORDU —
-   ekran görüntüsünde filtre satırının "Değer" kutusu yarıda kalıyordu.
-   Çözüm, bu depoda AYNI sorun için zaten kullanılan desen: position:fixed +
-   açılışta konumu JS'in hesaplaması (bkz. style.css'teki .grid-th-menu-panel /
-   .grid-add-field-panel / .gs-view-row-menu-panel notları). fixed olduğu için
-   hiçbir atanın overflow'u onu kırpamaz. Konum: assets/interface.js
-   positionToolPanel(). */
 .if-tool-panel {
     position: fixed;
     z-index: 40;
@@ -539,19 +350,16 @@ body.if-page a { text-decoration: none; color: inherit; }
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
-
 .if-tool-hint {
     margin: 0 0 0.45rem;
     font-size: 0.74rem;
     color: var(--bcc-text-muted);
 }
-
 .if-tool-rows {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
 }
-
 .if-tool-row {
     display: flex;
     align-items: center;
@@ -570,18 +378,15 @@ body.if-page a { text-decoration: none; color: inherit; }
     color: var(--bcc-text);
     min-width: 0;
 }
-
 .if-tool-row .if-tool-field { flex: 1.2; }
 .if-tool-row .if-tool-cond { flex: 1; }
 .if-tool-row .if-tool-value { flex: 1; }
 .if-tool-row .if-tool-dir { flex: 1; }
 .if-tool-row .if-tool-value[hidden] { display: none; }
-
 .if-tool-logic {
     width: 100%;
     margin-bottom: 0.4rem;
 }
-
 .if-tool-del {
     flex-shrink: 0;
     width: 20px;
@@ -594,9 +399,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-size: 0.95rem;
     line-height: 1;
 }
-
 .if-tool-del:hover { background: var(--bcc-surface-hover); color: var(--bcc-text); }
-
 .if-tool-add {
     margin-top: 0.45rem;
     border: none;
@@ -609,7 +412,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
 }
 
-/* Grup başlıkları — istemcide üretiliyor (interface.js renderItems). */
 .if-group-header {
     display: flex;
     align-items: center;
@@ -626,28 +428,23 @@ body.if-page a { text-decoration: none; color: inherit; }
     letter-spacing: 0.03em;
 }
 
-/* İç seviyeler girintili — çok seviyeli gruplamada hiyerarşi görünsün. */
 .if-group-level-1 { margin-left: 0.75rem; }
 .if-group-level-2 { margin-left: 1.5rem; }
-
 .if-group-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .if-group-count {
     flex-shrink: 0;
     color: var(--bcc-text-muted);
     font-weight: 600;
 }
-
 .if-record-list {
     flex: 1;
     overflow-y: auto;
     padding: 0 0.5rem 1rem;
 }
-
 .if-record-row {
     display: block;
     width: 100%;
@@ -659,35 +456,21 @@ body.if-page a { text-decoration: none; color: inherit; }
     cursor: pointer;
     font: inherit;
 }
-
-/* [hidden] tek başına yetmez: yukarıdaki display:block, author-stylesheet
-   olarak UA'nın [hidden]{display:none} varsayılanını her zaman ezer (aynı
-   ders — bkz. home.css .home-search-result[hidden]) — burada açıkça geri
-   kazanılıyor. Arama eşleşmeyen satırları bununla gizler. */
 .if-record-row[hidden] { display: none; }
 
 .if-record-row:hover { background: var(--bcc-surface-sunken); }
-
 .if-record-row.is-selected { background: #fff8e1; }
-
-/* Bulunan gerçek bug: seçili satırın metni .if-record-title/-summary/-date
-   üzerinden var(--bcc-text)/--bcc-text-muted) alıyordu — koyu temada bu
-   neredeyse-beyaz olur, sabit açık krem arka planla (#fff8e1) neredeyse
-   görünmez olurdu (bkz. grid-shell.css .grid-search-mark'taki AYNI ders).
-   Sabit koyu (nav'ın kendi amber-metin tonu) renk her iki temada da okunur. */
 .if-record-row.is-selected .if-record-title,
 .if-record-row.is-selected .if-record-summary,
 .if-record-row.is-selected .if-record-date {
     color: #4a3b00;
 }
-
 .if-record-title {
     font-weight: 700;
     font-size: 0.92rem;
     color: var(--bcc-text);
     margin-bottom: 0.2rem;
 }
-
 .if-record-summary {
     font-size: 0.82rem;
     color: var(--bcc-text-muted);
@@ -696,12 +479,10 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-overflow: ellipsis;
     margin-bottom: 0.25rem;
 }
-
 .if-record-date {
     font-size: 0.74rem;
     color: var(--bcc-text-muted);
 }
-
 .if-empty,
 .if-no-results {
     padding: 2rem 1rem;
@@ -709,29 +490,23 @@ body.if-page a { text-decoration: none; color: inherit; }
     color: var(--bcc-text-muted);
     font-size: 0.88rem;
 }
-
-/* ---------- Sağ: detay paneli ---------- */
-
 .if-detail-panel {
     flex: 1;
     min-width: 0;
     overflow-y: auto;
     padding: 2rem 2.5rem;
 }
-
 .if-detail-placeholder {
     color: var(--bcc-text-muted);
     font-size: 0.95rem;
     padding-top: 2rem;
     text-align: center;
 }
-
 .if-detail-header {
     display: flex;
     align-items: flex-start;
     gap: 0.6rem;
 }
-
 .if-detail-title {
     flex: 1;
     min-width: 0;
@@ -739,7 +514,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     margin: 0 0 1rem;
     word-break: break-word;
 }
-
 .if-detail-meta {
     display: flex;
     gap: 0.4rem;
@@ -749,9 +523,7 @@ body.if-page a { text-decoration: none; color: inherit; }
     padding-bottom: 1.2rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .if-detail-meta-label { font-weight: 600; }
-
 .if-detail-field { margin-bottom: 1.1rem; }
 
 .if-detail-field-label {
@@ -761,32 +533,18 @@ body.if-page a { text-decoration: none; color: inherit; }
     color: var(--bcc-text-muted);
     margin-bottom: 0.3rem;
 }
-
 .if-detail-field-value {
     font-size: 0.92rem;
     color: var(--bcc-text);
     white-space: pre-wrap;
     word-break: break-word;
 }
-
-/* ---------------------------------------------------------------------------
-   Temsilci İnceleme Geçmişi (.if-audit) — detay panelindeki açılır alan.
-   Blok interface.php'de yalnızca yetkili role basılır, bkz. $canViewNoteAudits.
-
-   .if-tool ile AYNI <details> deseni ama position:absolute YOK: .if-detail-panel
-   kaydırılabilir bir sütun, mutlak konumlu panel kırpılırdı (aynı ders:
-   .if-nav-scroll yorumu). Panel AKIŞ İÇİNDE açılır, alanlar aşağı kayar.
-
-   Renkler theme.css token'larından — sabit renk yazılmaz, yoksa koyu temada
-   okunmaz hale gelir (bu dosyanın geri kalanıyla AYNI kural).
-   --------------------------------------------------------------------------- */
 .if-audit {
     margin-bottom: 1.5rem;
     border: 1px solid var(--bcc-border);
     border-radius: 6px;
     background: var(--bcc-surface-sunken);
 }
-
 .if-audit-summary {
     display: flex;
     align-items: center;
@@ -799,13 +557,9 @@ body.if-page a { text-decoration: none; color: inherit; }
     list-style: none;
     user-select: none;
 }
-
-/* <summary>'nin varsayılan üçgen işareti — iki tarayıcı ailesi için de
-   kapatılır (bu dosyada .if-tool-btn/.if-nav-back'te AYNI ikili kural). */
 .if-audit-summary::-webkit-details-marker { display: none; }
 
 .if-audit-summary:hover { color: var(--bcc-text); }
-
 .if-audit-count {
     min-width: 1.15rem;
     padding: 0 0.3rem;
@@ -816,20 +570,16 @@ body.if-page a { text-decoration: none; color: inherit; }
     line-height: 1.15rem;
     text-align: center;
 }
-
-/* Ok, açıkken 180° döner — .if-tool ile aynı görsel dil. */
 .if-audit-chevron {
     margin-left: auto;
     transition: transform 0.15s ease;
 }
-
 .if-audit[open] .if-audit-chevron { transform: rotate(180deg); }
 
 .if-audit-panel {
     padding: 0 0.7rem 0.6rem;
     border-top: 1px solid var(--bcc-border);
 }
-
 .if-audit-note,
 .if-audit-empty,
 .if-audit-error {
@@ -837,10 +587,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-size: 0.76rem;
     color: var(--bcc-text-muted);
 }
-
-/* Açıklama metni + "Excel indir" düğmesi aynı satırda, uçlara yaslı.
-   flex-wrap: dar panelde (kullanıcı sürükleyerek daraltabiliyor) düğme
-   metnin altına iner, taşmaz. */
 .if-audit-head {
     display: flex;
     align-items: center;
@@ -848,7 +594,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     gap: 0.5rem;
     flex-wrap: wrap;
 }
-
 .if-audit-export {
     display: inline-flex;
     align-items: center;
@@ -863,18 +608,12 @@ body.if-page a { text-decoration: none; color: inherit; }
     text-decoration: none;
     white-space: nowrap;
 }
-
 .if-audit-export:hover { background: var(--bcc-accent-soft); border-color: var(--bcc-accent); }
-
-/* Hiçbir not seçili değilken indirilecek rapor da yok. Tıklama ayrıca JS'te
-   iptal ediliyor (<a> etiketinin 'disabled' özniteliği yoktur). */
 .if-audit-export[aria-disabled="true"] {
     opacity: 0.45;
     pointer-events: none;
 }
-
 .if-audit-error { color: var(--bcc-danger); }
-
 .if-audit-item {
     display: flex;
     align-items: baseline;
@@ -883,20 +622,16 @@ body.if-page a { text-decoration: none; color: inherit; }
     font-size: 0.82rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .if-audit-item:last-child { border-bottom: 0; }
-
 .if-audit-item-name {
     font-weight: 600;
     color: var(--bcc-text);
-    /* Uzun ad diğer iki sütunu ezmesin; kısalarak yer açar. */
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .if-audit-item-date {
     flex: 0 0 auto;
     color: var(--bcc-text-muted);
@@ -910,8 +645,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     color: var(--bcc-text);
     font-variant-numeric: tabular-nums;
 }
-
-/* Tamamlanmamış inceleme (closed_at NULL) — süresi yok, sessizce ayrışsın. */
 .if-audit-item-duration.is-open {
     color: var(--bcc-text-muted);
     font-style: italic;

@@ -1,23 +1,3 @@
-/* table_fields.php'ye ÖZGÜ kurallar.
- *
- * ORTAK iskelet (sayfa kabı, breadcrumb, kart, veri tablosu, hayalet ikon
- * butonları, sayaç rozeti, form alanları, birincil buton, boş durum)
- * assets/settings-page.css'te ve base_tables.php ile PAYLAŞILIYOR — burada
- * KOPYASI YOK. Bu dosyada yalnızca alan tipi kavramına ait olanlar var:
- * tip hapı, "zorunlu" rozeti ve alan tipi seçicisi.
- *
- * ⚠️ Kapsam yine `.sp-page` (ortak dosyayla AYNI sarmalayıcı) — gerekçe için
- * settings-page.css başlığına bakın.
- *
- * ⚠️ ALAN TİPİ GRID'İ (.field-type-grid / .field-type-option) src/partials/
- * field_type_wizard_fields.php'den geliyor ve grid.php'nin "+" POPUP'IYLA
- * PAYLAŞILIYOR (dar, ~260px'lik bir popover). Bu yüzden o sınıfların
- * theme.css'teki taban stilleri DEĞİŞTİRİLMEDİ; buradaki iyileştirmeler de
- * `.sp-page` altında kalıyor, popup eski görünümünü koruyor.
- */
-
-/* ---------- Alan tipi rozeti (hap) ---------- */
-
 .sp-page .tf-type-pill {
     display: inline-flex;
     align-items: center;
@@ -31,17 +11,12 @@
     white-space: nowrap;
 }
 
-/* İkon .field-type-badge'den (theme.css, background-image) geliyor — burada
-   yalnızca hap içindeki ölçüsü ayarlanıyor, ikon tanımı KOPYALANMIYOR. */
 .sp-page .tf-type-pill .field-type-badge {
     width: 0.95rem;
     height: 0.95rem;
     background-size: 13px 13px;
     margin: 0;
 }
-
-/* ---------- Zorunlu sütunu ---------- */
-
 .sp-page .tf-required-yes {
     display: inline-flex;
     align-items: center;
@@ -50,31 +25,16 @@
     font-size: 0.78rem;
     font-weight: 600;
 }
-
-/* ---------- "Yeni Alan": tip seçici ---------- */
-
-/* KÖK NEDEN — sayfanın sonsuz uzamasının sebebi buydu: #new-field-form
-   `.settings-form-stacked` sınıfını taşıyor ve o sınıfın `max-width: 420px`i
-   VAR. Tip grid'i formun İÇİNDE olduğu için 420px'e sıkışıyor, auto-fill
-   minmax(150px) iki sütuna düşüyor ve ~21 tip alt alta uzuyordu. Tip adımı tam
-   genişliğe açılıyor; ikinci adım (isim/seçenekler) dar kalıyor, çünkü uzun
-   form alanları geniş satırlarda okunmaz.
-   (Aynı sınıfın flex-wrap tuzağı ORTAK dosyada düzeltildi — bkz.
-   settings-page.css `.sp-page .settings-form-stacked`.) */
 .sp-page #new-field-form { max-width: none; }
 .sp-page #new-field-details-step { max-width: 460px; }
 
 .sp-page #new-field-type-step > .hint {
     margin: 0 0 0.7rem;
 }
-
-/* Arama kutusu — table-fields.js tarafından ÇALIŞMA ANINDA ekleniyor
-   (paylaşılan partial'a dokunmamak için, bkz. o dosyanın başlığı). */
 .sp-page .tf-type-search {
     position: relative;
     margin: 0 0 0.85rem;
 }
-
 .sp-page .tf-type-search svg {
     position: absolute;
     left: 0.65rem;
@@ -83,7 +43,6 @@
     color: var(--bcc-text-muted);
     pointer-events: none;
 }
-
 .sp-page .tf-type-search input {
     box-sizing: border-box;
     width: 100%;
@@ -97,26 +56,21 @@
     border-radius: 8px;
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-
 .sp-page .tf-type-search input:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .sp-page .tf-type-empty {
     margin: 0.2rem 0 0;
     color: var(--bcc-text-muted);
     font-size: 0.85rem;
 }
-
-/* Tip kartları */
 .sp-page .field-type-grid {
     grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: 0.5rem;
     margin-top: 0;
 }
-
 .sp-page .field-type-option {
     gap: 0.6rem;
     padding: 0.6rem 0.75rem;
@@ -125,45 +79,21 @@
     font-size: 0.86rem;
     transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
-
 .sp-page .field-type-option:hover {
     border-color: var(--bcc-accent);
     background: var(--bcc-surface);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.06);
 }
-
 .sp-page .field-type-option:focus-visible {
     outline: 2px solid var(--bcc-accent);
     outline-offset: 1px;
 }
-
-/* Arama filtresiyle elenen kartlar. [hidden]+display çakışması tuzağına
-   girmemek için ayrı bir sınıf kullanılıyor (projede daha önce birkaç kez
-   yaşanan ders) — .field-type-grid display:grid olduğu için [hidden]'ın
-   display:none'ı zaten ezilirdi. */
 .sp-page .field-type-option.tf-hidden { display: none; }
-
 .sp-page .field-type-option .field-type-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-/* ---------- "Yeni Alan" 2. adımı: sayfa içi pencere ---------------------- */
-/* Tip seçilince açılan isim/seçenek formu artık sayfanın akışında DEĞİL, bir
-   pencerede. Perde ve başlık satırı assets/table-fields.js tarafından çalışma
-   anında ekleniyor — src/partials/field_type_wizard_fields.php grid.php'nin
-   "+" popup'ıyla PAYLAŞILDIĞI için ona dokunulmadı (orada 2. adım zaten yüzen
-   bir panelin içinde).
-
-   ⚠️ İKİNCİ SORUN: partial'daki alanlar çıplak <label>/<input> — .settings-field
-   sınıfı YOK, o yüzden settings-page.css'teki kurallar (.sp-page .settings-field
-   input) HİÇ eşleşmiyordu ve form "css'siz" görünüyordu. Aşağıdaki kurallar aynı
-   görünümü doğrudan bu adıma veriyor. */
-
-/* .sp-page ile KAPSANMAZ: perdeyi JS doğrudan <body>'ye ekliyor (formun içinde
-   olsaydı tıklama hedefi form alanlarıyla karışırdı), yani .sp-page'in altında
-   değil. Sınıf adı yalnızca bu sayfanın JS'i tarafından üretiliyor, çakışma yok. */
 .tf-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -171,9 +101,6 @@
     background: rgba(0, 0, 0, 0.45);
 }
 
-/* Pencere <form>'un İÇİNDE kalıyor (fixed konumlandırma DOM ebeveyninden
-   bağımsızdır) — dışarı taşınsaydı alanlar forma dahil olmaz, gönderim boş
-   giderdi. */
 .sp-page #new-field-details-step:not([hidden]) {
     position: fixed;
     top: 50%;
@@ -192,14 +119,9 @@
     border-radius: 12px;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
 }
-
-/* max-width kuralı artık pencerenin width'iyle çakışıyordu. */
 .sp-page #new-field-details-step { max-width: none; }
 
-/* .sp-page bir <div>; body onun ALTINDA değil, o yüzden kapsam YOK. */
 body.tf-modal-open { overflow: hidden; }
-
-/* ---- Başlık satırı ---- */
 .sp-page .tf-modal-head {
     display: flex;
     align-items: center;
@@ -208,7 +130,6 @@ body.tf-modal-open { overflow: hidden; }
     padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .sp-page .tf-modal-title {
     margin: 0;
     flex: 1 1 auto;
@@ -217,12 +138,6 @@ body.tf-modal-open { overflow: hidden; }
     font-weight: 600;
     color: var(--bcc-text);
 }
-
-/* "Tip değiştir" — BUTON değil, METİN gibi görünmeli.
-   ⚠️ .link-btn kuralı style.css'te tanımlı ama bu sayfa style.css'i YÜKLEMİYOR
-   (yalnızca theme/home/settings-page/table-fields). Yani sınıf hiç stil almıyor
-   ve tarayıcının VARSAYILAN <button> görünümü (gri zemin + kenarlık + padding)
-   çıkıyordu. Buton görünümü burada tamamen sıfırlanıyor. */
 .sp-page .tf-modal-head .link-btn {
     flex: 0 0 auto;
     -webkit-appearance: none;
@@ -238,11 +153,9 @@ body.tf-modal-open { overflow: hidden; }
     text-decoration: underline;
     cursor: pointer;
 }
-
 .sp-page .tf-modal-head .link-btn:hover {
     color: var(--bcc-accent-strong);
 }
-
 .sp-page .tf-modal-close {
     flex: 0 0 auto;
     display: inline-flex;
@@ -257,15 +170,11 @@ body.tf-modal-open { overflow: hidden; }
     color: var(--bcc-text-muted);
     cursor: pointer;
 }
-
 .sp-page .tf-modal-close:hover {
     background: var(--bcc-surface-hover);
     color: var(--bcc-text);
 }
 
-/* ---- Form alanları ---- */
-/* .settings-field ile AYNI görünüm; partial o sınıfı basmadığı için kurallar
-   burada eleman seçicileriyle veriliyor. */
 .sp-page #new-field-details-step > label,
 .sp-page #new-field-details-step > div > label {
     display: flex;
@@ -275,25 +184,9 @@ body.tf-modal-open { overflow: hidden; }
     font-weight: 600;
     color: var(--bcc-text-muted);
 }
-
-/* ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): "Oluşturan" gibi seçeneği OLMAYAN
-   bir alan tipi seçilince pencerede "Seçenekler (her satıra bir seçenek)"
-   kutusu duruyordu.
-   Sebep JS DEĞİL — field-type-wizard.js `hidden` özniteliğini doğru koyuyor
-   (ölçüldü: hidden=true), ama YUKARIDAKİ kural `display:flex` verdiği için
-   tarayıcının `[hidden] { display: none }` varsayılanını EZİYOR ve eleman
-   görünmeye devam ediyordu. Yalnızca bu sayfada oluyordu: grid.php'nin "+"
-   popup'ı bu dosyayı yüklemiyor, orada kutu doğru gizleniyordu.
-   Aynı sınıf hata bu projede daha önce de yaşandı (bkz. home.css
-   `.home-notif-item[hidden]`), çözüm de aynı: gizlemeyi açıkça geri kazandır.
-   Kural yalnızca `label` için değil, sihirbazdaki TÜM gizli satırlar için
-   yazıldı — currency/percent/rating satırları bugün <div> oldukları için
-   şanseseri etkilenmiyordu, biri <label>'a dönerse sessizce aynı tuzağa
-   düşerdi. */
 .sp-page #new-field-details-step [hidden] {
     display: none;
 }
-
 .sp-page #new-field-details-step input[type="text"],
 .sp-page #new-field-details-step input[type="number"],
 .sp-page #new-field-details-step textarea {
@@ -307,7 +200,6 @@ body.tf-modal-open { overflow: hidden; }
     border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
 }
-
 .sp-page #new-field-details-step input[type="text"]:focus,
 .sp-page #new-field-details-step input[type="number"]:focus,
 .sp-page #new-field-details-step textarea:focus {
@@ -315,27 +207,23 @@ body.tf-modal-open { overflow: hidden; }
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .sp-page #new-field-details-step textarea {
     resize: vertical;
     min-height: 5rem;
 }
 
-/* Currency/percent/rating satırları: iki alan yan yana. */
 .sp-page #new-field-currency-row:not([hidden]),
 .sp-page #new-field-percent-row:not([hidden]),
 .sp-page #new-field-rating-row:not([hidden]) {
     display: flex;
     gap: 0.75rem;
 }
-
 .sp-page #new-field-currency-row > label,
 .sp-page #new-field-percent-row > label,
 .sp-page #new-field-rating-row > label {
     flex: 1 1 0;
 }
 
-/* "Zorunlu alan" — onay kutusu yatay, diğerleri dikey. */
 .sp-page #new-field-required-row:not([hidden]) {
     flex-direction: row;
     align-items: center;
@@ -343,8 +231,6 @@ body.tf-modal-open { overflow: hidden; }
     font-weight: 500;
     color: var(--bcc-text);
 }
-
-/* ---- Gönder ---- */
 .sp-page #new-field-details-step button[type="submit"] {
     align-self: flex-end;
     margin-top: 0.2rem;
@@ -358,7 +244,6 @@ body.tf-modal-open { overflow: hidden; }
     border-radius: 6px;
     cursor: pointer;
 }
-
 .sp-page #new-field-details-step button[type="submit"]:hover {
     background: var(--bcc-accent-strong);
 }

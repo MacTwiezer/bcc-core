@@ -1,16 +1,4 @@
-/* Paylaşılan tema değişkenleri — Açık/Koyu/Sistem (bkz. account.php "Görünüm"
-   satırı + assets/theme-init.js). TEK doğruluk kaynağı burası; home.css,
-   grid-shell.css, interface.css, login.css, style.css bu değişkenleri
-   kullanır, kendi kopyalarını TUTMAZ. Yıldız sarısı (#f5b400), seçim chip
-   renkleri (PHP BCC_CHOICE_COLORS) gibi marka/semantik renkler buraya
-   alınmadı — yalnızca UI kroması (yüzey/kenarlık/metin/vurgu) temalanır. */
-
 :root {
-    /* Sayfa ZEMİNİ — yüzeyden (kart) bir ton daha çökük. Bento ızgarasında
-       kartların "kalkık" okunması buna bağlı: eskiden zemin de --bcc-surface
-       (#fff) olduğu için kartı yalnızca ince kenarlık ayırıyordu. surface ile
-       surface-sunken ikilisi DEĞİŞTİRİLMEDİ, yalnızca bu üçüncüsü eklendi
-       (success/danger ikililerindeki AYNI additive desen). */
     --bcc-canvas: #f7f7f9;
     --bcc-surface: #fff;
     --bcc-surface-sunken: #fafafb;
@@ -22,54 +10,19 @@
     --bcc-accent: #2d7ff9;
     --bcc-accent-strong: #1a56db;
     --bcc-accent-soft: #e8f0fe;
-    /* Zengin metnin İÇİNDEKİ <a> — accent'ten AYRI bir token, çünkü accent
-       "etkileşimli UI kroması" (seçili sekme, odak kenarlığı, birincil buton),
-       bu ise "tıklanabilir köprü metni". Aynı değişkeni paylaşsalardı, birinin
-       tonunu değiştirmek diğerini de bozardı. success/warning ikilileriyle AYNI
-       desende EKLENDİ: mevcut hiçbir token değiştirilmedi. Koyu temada #1d4ed8
-       koyu zeminde okunmaz olurdu, bu yüzden orada açık tona çevrilir. */
     --bcc-link: #1d4ed8;
     --bcc-link-hover: #1e40af;
     --bcc-danger: #c62828;
     --bcc-danger-soft: #fdecea;
-    /* Durum yesili — "aktif/etkin" gostergeleri icin (ilk tuketici:
-       slack_settings.php durum haplari). danger ikilisiyle AYNI desende
-       EKLENDI: mevcut hicbir token degistirilmedi, yalnizca ikisi yeni. */
     --bcc-success: #1b7e3c;
     --bcc-success-soft: #e6f4ea;
-    /* Owner rol rozeti — dort rolun (viewer/commenter/editor/owner) hap
-       renkleri birbirinden ayrilsin diye. Digerleri mevcut token'lardan
-       geliyor (editor=accent, commenter=success, viewer=sunken); yalnizca
-       owner icin palette karsilik yoktu. success ikilisiyle AYNI desende
-       EKLENDI: mevcut hicbir token degistirilmedi. */
     --bcc-role-owner: #6b3fa0;
     --bcc-role-owner-soft: #f1ebfa;
-    /* Grid'de SÜRÜKLEYEREK seçilen hücre alanının dolgusu — accent-soft'tan
-       AYRI bir token, çünkü accent-soft "seçili satır/aktif öğe" zemini olarak
-       DOLU (opak) bir ton ve hücre seçimi onun ÜSTÜNE de binebiliyor (seçili
-       bir satırdan hücre süründüğünde). Yarı saydam olması, altındaki satır
-       vurgusunun/hover'ın kaybolmamasını sağlıyor — üst üste iki opak zemin
-       "hangi satır seçiliydi" bilgisini siliyordu. */
     --bcc-cell-select-fill: rgba(45, 127, 249, 0.12);
-    /* Uyari (amber) — HATA degil DIKKAT anlami tasiyan kutular icin
-       (ilk tuketici: form_edit.php "bu linke sahip herkes kayit
-       ekleyebilir" uyarisi). danger kirmizisi burada yanlis olurdu:
-       ortada bir hata yok, bilincli bir risk var. */
     --bcc-warning: #8a5a00;
     --bcc-warning-soft: #fff8e6;
-    /* Renkli (accent/danger) zeminler üzerindeki metin/ikon için — BİLEREK
-       koyu temada da AYNI (#fff) kalır, :root[data-theme="dark"] altında
-       YENİDEN TANIMLANMAZ. Bulunan gerçek bug: birçok yerde bunun yerine
-       var(--bcc-surface) kullanılmıştı — o değişken "sayfa zemini" anlamına
-       geldiği için koyu temada koyulaşır, böylece mavi/kırmızı bir buton
-       üzerindeki metin koyu-üstüne-koyu haline gelip neredeyse okunmaz
-       oluyordu (ör. login-submit, account-btn-danger, gs-btn-primary).
-       accent/danger'ın kendisi zaten iki temada da orta-açık tonda kalacak
-       şekilde ayarlı, o yüzden üzerindeki metin sabit beyaz kalabilir. */
     --bcc-on-accent: #fff;
 }
-
-/* Kullanıcı "Koyu" seçtiğinde (theme-init.js <html data-theme="dark"> yazar). */
 :root[data-theme="dark"] {
     --bcc-canvas: #141416;
     --bcc-surface: #1e1e21;
@@ -94,9 +47,6 @@
     --bcc-warning-soft: #3a2f18;
     --bcc-cell-select-fill: rgba(76, 148, 251, 0.18);
 }
-
-/* "Sistem" seçili (veya hiç seçim yapılmamış) VE işletim sistemi koyu tema
-   istiyorsa — data-theme="light" açıkça seçiliyse bu bloğu ATLAR. */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]):not([data-theme="dark"]) {
         --bcc-canvas: #141416;
@@ -123,13 +73,6 @@
     --bcc-cell-select-fill: rgba(76, 148, 251, 0.18);
     }
 }
-
-/* Ortak form kontrolü tabanı — select/text girdileri/textarea artık tarayıcı
-   varsayılanıyla (çıplak OS dropdown/kutu) DEĞİL, tutarlı bir görünümle
-   render ediliyor. Daha spesifik bir sınıf (ör. .cell-input, .filter-field-select)
-   zaten varsa CSS özgüllüğü sayesinde onu ezmez, yalnızca hiç sınıfı olmayan
-   ham form elemanlarını (filtrele/sırala/alanları gizle panelleri, alan
-   sihirbazı, "Yeni Alan" formu vb.) kapsar. */
 select,
 input[type="text"],
 input[type="number"],
@@ -147,7 +90,6 @@ textarea {
     border-radius: 6px;
     padding: 0.4rem 0.6rem;
 }
-
 select:focus,
 input[type="text"]:focus,
 input[type="number"]:focus,
@@ -162,7 +104,6 @@ textarea:focus {
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 select {
     appearance: none;
     -webkit-appearance: none;
@@ -172,35 +113,22 @@ select {
     background-position: right 0.65rem center;
     cursor: pointer;
 }
-
-/* Genel buton polishi — hiçbir özel sınıfı (.gs-btn-primary, .gs-tool-btn,
-   .btn-sm vb.) olmayan çıplak <button>'lar için taban. Daha spesifik bir
-   sınıf zaten varsa onu ezmez (CSS özgüllüğü). */
 button {
     font: inherit;
 }
-
 .btn-sm {
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 .btn-sm:not(:disabled):hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-border-strong);
 }
-
-/* Alan tipi sihirbazı (field_type_wizard_fields.php) — style.css (grid.php,
-   table_fields.php'nin ESKİ hâli) VE home.css (table_fields.php'nin
-   home-shell hâli) sayfalarınca PAYLAŞILIR, bu yüzden burada — ikinci bir
-   kopya YOK. .field-badge tabanı (grid sütun başlığı, küçük boyut) hâlâ
-   style.css'te; --field-icon modifier'ları buradan HER iki bağlama da uygulanır. */
 .field-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 0.5rem;
     margin-top: 0.5rem;
 }
-
 .field-type-option {
     display: flex;
     align-items: center;
@@ -215,7 +143,6 @@ button {
     font-size: 0.9rem;
     text-align: left;
 }
-
 .field-type-option:hover {
     border-color: var(--bcc-accent-strong);
     background: var(--bcc-surface-hover);
@@ -234,11 +161,6 @@ button {
     background-position: center;
     background-size: 16px 16px;
 }
-
-/* Alan tipi ikonları (field-badge: grid başlığı/gruplama, field-type-badge:
-   sihirbaz tip seçici) — AYNI --field-icon değişkeni, iki farklı boyut/yerleşim.
-   SVG'ler inline data URI (currentColor stroke, badge'in `color`'ını miras alır
-   — açık/koyu tema için ayrı ikon gerekmez). */
 .field-badge--single_line_text, .field-type-badge--single_line_text {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 7 4 4 20 4 20 7'/%3E%3Cline x1='9' y1='20' x2='15' y2='20'/%3E%3Cline x1='12' y1='4' x2='12' y2='20'/%3E%3C/svg%3E");
 }
@@ -260,27 +182,17 @@ button {
 .field-badge--multiple_select, .field-type-badge--multiple_select {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='9' y1='6' x2='21' y2='6'/%3E%3Cline x1='9' y1='12' x2='21' y2='12'/%3E%3Cline x1='9' y1='18' x2='21' y2='18'/%3E%3Cline x1='4' y1='6' x2='4' y2='6'/%3E%3Cline x1='4' y1='12' x2='4' y2='12'/%3E%3Cline x1='4' y1='18' x2='4' y2='18'/%3E%3C/svg%3E");
 }
-/* created_time/last_modified_time AYNI saat ikonunu paylaşıyor (yeni SVG
-   çizilmedi) — OpsFlow'da da "Created time"/"Last modified time" ikonları
-   "Time" alanınınkiyle aynı ruhta (saat/zaman damgası). */
 .field-badge--time, .field-type-badge--time,
 .field-badge--created_time, .field-type-badge--created_time,
 .field-badge--last_modified_time, .field-type-badge--last_modified_time {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpolyline points='12 7 12 12 15.5 14'/%3E%3C/svg%3E");
 }
-/* created_by/last_modified_by AYNI kişi ikonunu paylaşıyor — 'user' alanıyla
-   aynı kavram (bir kullanıcıya referans), yeni SVG çizilmedi. */
+
 .field-badge--user, .field-type-badge--user,
 .field-badge--created_by, .field-type-badge--created_by,
 .field-badge--last_modified_by, .field-type-badge--last_modified_by {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
 }
-/* Currency/Percent/Rating (Grup C1) ve Autonumber (Grup C2) ikonları.
-   Bulunan gerçek bug: C1'in üç tipi eklenirken bu blok yazılmamıştı — .field-type-badge
-   `background-image: var(--field-icon)` kullanıyor ve YEDEK değeri YOK, yani tanımsız
-   değişken görüntüyü geçersiz kılıp rozeti BOŞ 1.4rem'lik bir kutu olarak bırakıyordu
-   (alan ekleme sihirbazının tip grid'inde ve grid sütun başlıklarında ikonsuz görünüyordu).
-   Autonumber aynı hatayı tekrarlamasın diye dördü birlikte tanımlandı. */
 .field-badge--currency, .field-type-badge--currency {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cpath d='M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/%3E%3C/svg%3E");
 }
@@ -290,16 +202,9 @@ button {
 .field-badge--rating, .field-type-badge--rating {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/%3E%3C/svg%3E");
 }
-/* autonumber: 'number' ile AYNI kavram ailesinden ama ayırt edilebilir olmalı —
-   "#" işareti + artan bir çubuk (sayaç), OpsFlow'un autonumber ikonuyla aynı ruhta. */
 .field-badge--autonumber, .field-type-badge--autonumber {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='8' x2='15' y2='8'/%3E%3Cline x1='3' y1='14' x2='15' y2='14'/%3E%3Cline x1='8' y1='3' x2='6' y2='19'/%3E%3Cline x1='13' y1='3' x2='11' y2='19'/%3E%3Cpolyline points='18 15 21 18 18 21'/%3E%3C/svg%3E");
 }
-/* Görünüm türü rozetleri (Grup View-Form) — alan tipi rozetleriyle AYNI
-   mekanizma: background-image: var(--view-icon), yedeği YOK, yani tanımsız
-   bırakılırsa rozet BOŞ kutu çizilir. Yeni bir görünüm türü (Kanban/Calendar)
-   eklenirken buraya da giriş yapılması ŞART (bkz. BCC_VIEW_TYPES yorumundaki
-   dört maddelik kontrol listesi). */
 .view-type-badge {
     display: inline-flex;
     align-items: center;
@@ -313,22 +218,15 @@ button {
     background-position: center;
     background-size: 15px 15px;
 }
-/* grid: tablo/ızgara — sol panelde eskiden satır içi yazılan SVG ile aynı ruh. */
 .view-type-badge--grid {
     --view-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cline x1='3' y1='9' x2='21' y2='9'/%3E%3Cline x1='9' y1='3' x2='9' y2='21'/%3E%3C/svg%3E");
 }
-/* kanban: yan yana üç sütun, farklı yüksekliklerde kart yığınları. */
 .view-type-badge--kanban {
     --view-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='5' height='13' rx='1'/%3E%3Crect x='10' y='4' width='5' height='9' rx='1'/%3E%3Crect x='17' y='4' width='4' height='16' rx='1'/%3E%3C/svg%3E");
 }
-/* form: doldurulacak satırları olan bir belge + onay işareti (gönderim). */
 .view-type-badge--form {
     --view-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='3' width='16' height='18' rx='2'/%3E%3Cline x1='8' y1='8' x2='16' y2='8'/%3E%3Cline x1='8' y1='12' x2='16' y2='12'/%3E%3Cpolyline points='8 16 10 18 14 15'/%3E%3C/svg%3E");
 }
-
-/* Grup A — URL/E-posta/Telefon. (C1'in düştüğü tuzağın tekrarlanmaması için
-   tipler eklenirken bu blok da AYNI turda yazıldı: --field-icon tanımsız kalırsa
-   rozet boş bir kutu olarak çizilir, background-image'in yedeği YOK.) */
 .field-badge--url, .field-type-badge--url {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
 }
@@ -341,60 +239,15 @@ button {
 .field-badge--attachment, .field-type-badge--attachment {
     --field-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E");
 }
-
-/* ---------------------------------------------------------------------------
-   Ekrana göre ORANTILI ölçek (tüm sayfalar)
-   ---------------------------------------------------------------------------
-   SORUN: arayüzün ölçüleri sabit (px/rem karışık, ~yarı yarıya). Dizüstünde
-   (mantıksal ~1536px) dolu görünen bir sayfa, büyük monitörde (1920/2560/4K)
-   aynı piksel boyutunda kalıp ekranın küçük bir köşesine sıkışıyordu — yazılar
-   ve satırlar oransal olarak küçülüyordu.
-
-   ÇÖZÜM: kök öğeye `zoom`. Neden font-size/rem DEĞİL: bu depodaki CSS'in
-   yaklaşık yarısı px ile yazılmış (ölçüldü: px≈1465, rem≈1665 tüm assets/*.css
-   içinde), kök font-size büyütmek yalnızca rem'leri ölçekler; yazı büyürken
-   ikon kutuları, dolgular ve kenarlıklar sabit kalır, düzen ORANTISI bozulurdu.
-   `zoom` her şeyi (px dahil) tek bir oranla ölçekler — tarayıcı yakınlaştırması
-   ne yapıyorsa aynısı, ama kullanıcı her açılışta elle yapmak zorunda kalmadan.
-
-   ⚠️ MEDYA SORGULARI ZOOM'DAN ETKİLENMEZ (ölçüldü): 1920px'lik ekranda
-   `zoom: 1.25` uygulandığında `min-width: 1900px` HÂLÂ eşleşiyor (sorgu gerçek
-   viewport'a bakar), yalnızca yerleşim genişliği 1536'ya iner. Yani kural kendi
-   kendini kapatıp açan bir salınım YARATMAZ.
-
-   HEDEF: her adımda yerleşim ~1536x864'e (yaygın dizüstü mantıksal çözünürlüğü)
-   yakın kalsın — "dizüstünde ne görüyorsam monitörde de o boyda" isteği bu.
-
-   YÜKSEKLİK KOŞULU ŞART: yalnızca genişliğe bakılsaydı 3440x1440 gibi ULTRA
-   GENİŞ ama kısa ekranlarda oran 2.2'ye çıkar, dikeyde 1440/2.2 ≈ 654px kalır
-   ve dizüstünden DAHA AZ satır görünürdü. Her adım hem genişlik hem yükseklik
-   ister; ultra geniş ekran bu yüzden bir alt basamakta durur.
-
-   Sıra ÖNEMLİ: hepsi aynı özgüllükte, en sondaki eşleşen kural kazanır — bu
-   yüzden basamaklar küçükten büyüğe yazılı. 1700px altındaki hiçbir ekran
-   (dizüstü, tablet, telefon) ETKİLENMEZ: orada ölçek 1'de kalır.
-
-   ⚠️ vh BİRİMİ ZOOM'DAN ETKİLENMEZ (ölçüldü) — bu yüzden --bcc-vh var:
-   `zoom: 1.25` altında `100vh` hâlâ 1080 CSS px'tir ama ekranda 1080 × 1.25 =
-   1350 piksel yer kaplar, yani "tam ekran yüksekliği" kuralı sayfayı ekrandan
-   TAŞIRIR (her sayfada 270px'lik sahte dikey kaydırma çubuğu). Bu yüzden
-   assets/*.css içindeki TÜM yükseklik kuralları 100vh/70vh yerine
-   var(--bcc-vh) üzerinden yazılır; değişken zoom'a bölerek gerçek görünür
-   yüksekliği verir. Yeni bir kural yazarken de vh DEĞİL --bcc-vh kullanın. */
 :root {
     --bcc-zoom: 1;
     zoom: var(--bcc-zoom);
     --bcc-vh: calc(100vh / var(--bcc-zoom));
 }
-
 @media (min-width: 1700px) and (min-height: 800px)  { :root { --bcc-zoom: 1.1; } }
 @media (min-width: 1900px) and (min-height: 900px)  { :root { --bcc-zoom: 1.25; } }
 @media (min-width: 2200px) and (min-height: 1000px) { :root { --bcc-zoom: 1.45; } }
 @media (min-width: 2500px) and (min-height: 1150px) { :root { --bcc-zoom: 1.65; } }
 @media (min-width: 3000px) and (min-height: 1350px) { :root { --bcc-zoom: 1.95; } }
 @media (min-width: 3400px) and (min-height: 1800px) { :root { --bcc-zoom: 2.5; } }
-
-/* Yazdırmada ölçek 1: kâğıt/PDF sayfa boyutu ekrandan bağımsız, zoom orada
-   yalnızca içeriği taşırırdı. Grid'in "PDF olarak indir" akışı window.print()
-   üzerinden gittiği için bu kural onu da kapsar. */
 @media print { :root { --bcc-zoom: 1; } }

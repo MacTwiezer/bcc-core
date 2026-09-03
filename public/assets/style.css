@@ -8,19 +8,11 @@ body {
 a { color: var(--bcc-accent-strong); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* ÖLÜ KOD TEMİZLİĞİ: eski üst gezinme çubuğu (.topnav / .topnav a /
-   .topnav .navuser / .navuser-avatar / .navlogout) buradan KALDIRILDI —
-   sayfalar home-shell (src/partials/home_shell_top.php) ve grid-shell
-   kabuklarına taşındığında bu blok geride kalmıştı; hiçbir .php/.js dosyası
-   bu sınıflardan hiçbirine artık referans vermiyor (denetimde doğrulandı).
-   Admin paneli (.admin-*) da AYNI nedenle daha önce home.css'e taşınmıştı. */
-
 .page {
     max-width: 900px;
     margin: 2rem auto;
     padding: 0 1.5rem;
 }
-
 .card {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
@@ -29,10 +21,8 @@ a:hover { text-decoration: underline; }
     margin-bottom: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-
 h1 { font-size: 1.5rem; }
 h2 { font-size: 1.15rem; }
-
 table {
     border-collapse: collapse;
     width: 100%;
@@ -43,19 +33,15 @@ td, th {
     padding: 0.4rem 0.75rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .ok { color: #1a7f37; font-weight: 600; }
 .error { color: var(--bcc-danger); font-weight: 600; }
-
 form.stacked label {
     display: block;
     margin-bottom: 1rem;
     font-weight: 600;
     font-size: 0.85rem;
 }
-
 form.stacked [hidden] { display: none; }
-
 form.stacked input,
 form.stacked select,
 form.stacked textarea {
@@ -74,7 +60,6 @@ form.stacked textarea {
     background: var(--bcc-surface);
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-
 form.stacked input:focus,
 form.stacked select:focus,
 form.stacked textarea:focus {
@@ -82,20 +67,12 @@ form.stacked textarea:focus {
     border-color: var(--bcc-accent-strong);
     box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14);
 }
-
-/* Dikey hiza: bkz. login.css'teki ayrıntılı gerekçe.
-   BURADA EK BİR TUZAK VARDI: `margin-top: 0.35rem` input'un ÜZERİNDEYDİ, yani
-   sarmalayıcının İÇİNDE. Sarmalayıcı bu yüzden input'tan 5.6px daha uzun
-   oluyordu ve top:50% input'un değil "boşluk + input"un ortasını gösterirdi
-   (düğme ~3px aşağı kayardı). Margin sarmalayıcıya taşındı: etiketle arasındaki
-   boşluk aynı kaldı, sarmalayıcı artık tam olarak input kadar. */
 form.stacked .input-with-toggle {
     position: relative;
     display: block;
     max-width: 360px;
     margin-top: 0.35rem;
 }
-
 form.stacked .input-with-toggle input {
     display: block;
     width: 100%;
@@ -104,7 +81,6 @@ form.stacked .input-with-toggle input {
     margin-top: 0;
     padding-right: 40px;
 }
-
 .input-toggle-btn {
     position: absolute;
     top: 50%;
@@ -121,16 +97,13 @@ form.stacked .input-with-toggle input {
     align-items: center;
     justify-content: center;
 }
-
 .input-toggle-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text-muted); }
-
 .form-actions {
     display: flex;
     align-items: center;
     gap: 0.85rem;
     margin-top: 0.4rem;
 }
-
 form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn) {
     background: var(--bcc-accent-strong);
     color: var(--bcc-on-accent);
@@ -141,20 +114,11 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     font-size: 0.88rem;
     cursor: pointer;
 }
-
 form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn):hover { background: var(--bcc-accent-strong); }
-
-/* .form-cancel-link KALDIRILDI (ölü kod denetimi): hiçbir sayfa "İptal"
-   bağlantısını bu sınıfla basmıyor. */
-
 .hint {
     color: var(--bcc-text-muted);
     font-size: 0.9rem;
 }
-
-/* .field-type-grid/.field-type-option/.field-type-badge (+ --field-icon
-   modifier'ları) artık theme.css'te — grid.php VE table_fields.php (home-shell)
-   TARAFINDAN PAYLAŞILIR, ikinci bir kopya YOK. */
 
 .link-btn {
     background: none;
@@ -166,16 +130,13 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     padding: 0;
     text-decoration: underline;
 }
-
 .row-actions {
     white-space: nowrap;
 }
-
 .row-actions form {
     display: inline-block;
     margin-right: 0.25rem;
 }
-
 .btn-sm {
     background: var(--bcc-border);
     color: var(--bcc-text);
@@ -187,18 +148,15 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     text-decoration: none;
     display: inline-block;
 }
-
 .btn-sm:disabled {
     opacity: 0.4;
     cursor: default;
 }
-
 .btn-danger {
     background: var(--bcc-danger-soft);
     border-color: #f3c1bc;
     color: var(--bcc-danger);
 }
-
 .pill {
     display: inline-block;
     background: var(--bcc-border);
@@ -206,24 +164,6 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     padding: 0.1rem 0.6rem;
     font-size: 0.85rem;
 }
-
-/* ---- Grid (Faz 3) ---------------------------------------------------- */
-
-/* Tam genişlik/yükseklik (OpsFlow "edge-to-edge"). Bu kutu YALNIZCA
-   grid.php'de var (interface.php'de yalnızca bir yorumda geçiyor), bu yüzden
-   kural doğrudan burada tam-kanama olacak şekilde tanımlandı; ayrı bir
-   modifier sınıfı yok.
-
-   flex:1 + min-height:0 -> .gs-main'in (flex sütun) kalan TÜM yüksekliğini
-   alır; önceden yalnızca içerik boyundaydı ve altında 361px boşluk kalıyordu.
-   min-height:0 olmadan flex çocuğunun varsayılan min-height:auto'su kutunun
-   içeriğinden küçülmesini engeller, yani kaydırma hiç oluşmaz ve tablo
-   pencereden taşardı.
-
-   Kenarlık/yuvarlatma/alt boşluk KALDIRILDI: pencere kenarına dayanan bir
-   kutuda yuvarlak köşe ve dış çerçeve "kart" izlenimi verip tam-kanamayı
-   bozuyordu. Üstteki ayrım çizgisini .gs-view-toolbar'ın kendi border-bottom'u,
-   iç yapıyı ise hücrelerin kendi kenarlıkları taşıyor. */
 .grid-wrap {
     background: var(--bcc-surface);
     border: none;
@@ -231,24 +171,15 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     overflow: auto;
     flex: 1;
     min-height: 0;
-    /* Sütun genişliği şeritlerinin (.grid-col-resize-layer, grid-column-resize.js)
-       konum atası. GÜVENLİ: bu kutunun içindeki TEK mutlak konumlu öğeler
-       başlığın kendi çocukları (dondurma/boyutlandırma tutamaçları — atası
-       zaten sticky <th>), gerisi (richtext ve dosya-eki popover'ları)
-       position:fixed. Yani hiçbir mevcut öğenin koordinat kaynağı değişmiyor. */
     position: relative;
-    /* Kalın/gri, işletim sistemi varsayılanı sürükleme çubuğu yerine ince,
-       OpsFlow bir kaydırma çubuğu (bkz. ::-webkit-scrollbar altta) —
-       Firefox için standart karşılığı. */
+
     scrollbar-width: thin;
     scrollbar-color: var(--bcc-border-strong) transparent;
 }
-
 .grid-wrap::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
-
 .grid-wrap::-webkit-scrollbar-track {
     background: transparent;
 }
@@ -258,19 +189,12 @@ form.stacked button:not(.field-type-option):not(.link-btn):not(.input-toggle-btn
     border-radius: 999px;
     border: 2px solid var(--bcc-surface);
 }
-
 .grid-wrap::-webkit-scrollbar-thumb:hover {
     background-color: var(--bcc-text-muted);
 }
-
 .grid-wrap::-webkit-scrollbar-corner {
     background: transparent;
 }
-
-/* Yoğunluk (OpsFlow davranışı): ölçüler rem DEĞİL px. rem, kullanıcının
-   tarayıcı yazı boyu ayarıyla ölçekleniyor ve "32px satır" hedefi o zaman
-   tutmuyor; veri ızgarasında satır adımının sabit kalması okunabilirlikten
-   önce geliyor (OpsFlow de sabit px kullanır). */
 table.grid {
     border-collapse: separate;
     border-spacing: 0;
@@ -291,32 +215,11 @@ table.grid thead th {
     padding: 4px 8px;
     height: 32px;
     font-size: 12px;
-    /* line-height:1 — satır kutusunun "strut"unu (görünmez taban kutu)
-       küçültür. 1.3 mirası bırakılsaydı strut 15.6px olur, en uzun çocukla
-       (16px menü düğmesi) üst üste binerek kutuyu 32'nin üstüne taşırdı. */
     line-height: 1;
     font-weight: 600;
 }
-
-/* Bulunan gerçek bug: height:32px verilmesine rağmen başlık 35.6px kalıyordu.
-   Sebep <th>'nin satır kutusu: çocukların vertical-align'ları KARIŞIKTI
-   (.field-badge -2px, .grid-th-label bottom, .grid-th-menu middle). `bottom`
-   ile `middle` aynı satır kutusunda buluşunca kutu ikisini de sığdırmak için
-   büyüyor — 15.6px'lik satır 25.6px'e çıkıp dolgu+kenarlıkla 35.6'yı
-   veriyordu.
-   <th>'ye display:flex VERİLMEDİ: bu dosyadaki .grid-rownum-inner notunun
-   anlattığı hata aynen burada da olurdu (flex'e çevrilen bir tablo hücresi,
-   tablonun otomatik yükseklik eşitlemesinin DIŞINDA kalır). Bunun yerine
-   hizalama tek bir değere sabitleniyor — satır kutusu artık en uzun çocuk
-   kadar (16px) ve başlık tam 32px'e oturuyor.
-
-   İkinci seçici ŞART: .grid-th-label'a `vertical-align: bottom` veren kural
-   `table.grid.grid-has-col-widths .grid-th-label` (üç sınıf) ve çıplak
-   `table.grid thead th > *` (tek sınıf) ondan ZAYIF kalıyordu — yani ilk
-   denemede başlık 35.6px'te kalmıştı. */
 table.grid thead th > *,
 table.grid.grid-has-col-widths thead th > .grid-th-label { vertical-align: middle; }
-
 .field-badge {
     display: inline-block;
     width: 13px;
@@ -329,24 +232,16 @@ table.grid.grid-has-col-widths thead th > .grid-th-label { vertical-align: middl
     background-position: center;
     background-size: 13px 13px;
 }
-
 .req-mark {
     color: var(--bcc-danger);
     margin-left: 0.15rem;
 }
-
-/* D4 — sütun başlığı "▾" menüsü: grid-add-field-panel/gs-view-row-menu ile
-   AYNI "position:fixed + JS'de açılışta konum hesapla" tekniği (.grid-wrap
-   overflow:auto olduğu için position:absolute kırpılırdı). Öğeler
-   .gs-table-tab-menu-item/.gs-table-tab-menu-divider — ikinci bir kopya
-   YOK, mevcut sınıflar tekrar kullanılıyor. */
 .grid-th-menu {
     display: inline-block;
     position: relative;
     vertical-align: middle;
     margin-left: 0.25rem;
 }
-
 .grid-th-menu-btn {
     display: inline-flex;
     align-items: center;
@@ -358,9 +253,7 @@ table.grid.grid-has-col-widths thead th > .grid-th-label { vertical-align: middl
     opacity: 0;
     list-style: none;
 }
-
 .grid-th-menu-btn::-webkit-details-marker { display: none; }
-
 table.grid thead th:hover .grid-th-menu-btn,
 .grid-th-menu[open] .grid-th-menu-btn {
     opacity: 1;
@@ -376,19 +269,10 @@ table.grid thead th:hover .grid-th-menu-btn,
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
     padding: 0.4rem;
     min-width: 210px;
-    /* <th>'den miras kalan font-weight:600/white-space:nowrap sıfırlanır —
-       .gs-table-tab-menu-item'ın "font: inherit" ile aldığı değer bu olsun. */
     font-weight: 400;
     white-space: normal;
     text-align: left;
 }
-
-/* height burada ASGARİ gibi davranır (tablo hücresi içeriğinden küçülemez):
-   satır adımının gerçekten 32px olması, .cell-view'ün dolgu+satır yüksekliği
-   toplamının 32'yi AŞMAMASINA bağlı — 13px * 1.3 = 16.9 + 2*4 = ~25px, yani
-   sınırın altında kalıyor ve satır tam 32px'e oturuyor. Eskiden .cell-view
-   dolgusu 6.4px ve yazı 14.4px olduğu için içerik 32'yi aşıp satırı 37px'e
-   itiyordu. */
 table.grid td {
     border-right: 1px solid var(--bcc-border);
     border-bottom: 1px solid var(--bcc-border);
@@ -396,7 +280,6 @@ table.grid td {
     vertical-align: middle;
     height: 32px;
 }
-
 table.grid .grid-rownum {
     position: sticky;
     left: 0;
@@ -407,58 +290,22 @@ table.grid .grid-rownum {
     padding: 4px 6px;
     border-right: none;
     min-width: 40px;
-    /* Bulunan gerçek bug: grid-freeze-columns.js'teki yorum burada "statik CSS
-       zaten hallediyor, dokunma" diyordu, ama border-right hep none'du — yatay
-       kaydırmada donuk satır-no sütununun sağında HİÇBİR ayraç/gölge yoktu,
-       arkadan kayan sütun içeriği ona yapışık/üst üste biniyormuş gibi
-       görünüyordu. .grid-frozen-edge'in kullandığı sert border yerine OpsFlow
-       referansındaki gibi yumuşak bir "kaldırma" gölgesi — donuk sütun az da
-       olsa altındaki içerikten ayrışıyor. */
     box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.18);
 }
-
 table.grid thead .grid-rownum {
     z-index: 3;
     text-align: left;
     border-right: none;
 }
-
 table.grid thead .grid-rownum-selectall { vertical-align: middle; }
-
 table.grid tbody tr:hover td {
     background: var(--bcc-surface-sunken);
 }
 
-/* Satır seçim checkbox'ı + genişlet ikonu: sayı üzerine gelen hover'da yer
-   değiştirir (sayı gizlenir, checkbox görünür); checkbox işaretliyken
-   (.is-row-selected) hover'dan bağımsız görünür kalır — Starred kartındaki
-   yıldız ikonuyla AYNI opacity/display deseni. */
 table.grid tbody .grid-rownum {
-    /* 3.8rem (60.8px) -> 40px: yoğunluk için. İçerik hover'da YER
-       DEĞİŞTİRİYOR (sayı gizlenir, checkbox+genişlet gelir), yani ikisi asla
-       yan yana durmuyor — 13px checkbox + 12px genişlet + 6px aralık + 2*6px
-       dolgu = ~40px yetiyor. */
     min-width: 40px;
 }
 
-/* Bulunan gerçek bug: satır no/checkbox/genişlet düğmesini yan yana dizmek
-   için flex düzeni ÖNCEDEN doğrudan bu <td>'ye (display:flex) veriliyordu.
-   table.grid td { height: 2rem } sabit yüksekliği, <td> flex'e geçtiği için
-   tablonun "hücreleri satırın en uzun içeriğine göre otomatik eşitle"
-   mekanizmasının DIŞINDA kalıyordu (display:table-cell olan diğer hücreler
-   bunu otomatik yapar, flex container'a çevrilmiş bir <td> yapmaz — height:
-   100% ile zorlamak da denendi, tabloya özgü bu köşe durumda işe yaramadı).
-   Sonuç: uzun metin/yorum gibi bir hücre satırı 2 satıra çıkarıp taşıyınca
-   (row-h-short'ta bile), donuk satır-no sütunu eski (kısa) yükseklikte
-   kalıyor, satırın alt kısmında donuk sütunun arkasını KAPATMAYAN bir boşluk
-   oluşuyordu — komşu (dondurulmamış) hücrenin taşan/ikinci satır metni tam o
-   boşluktan görünür oluyordu (yatay kaydırmada "üst üste binme/karman
-   çorman" hissi buradan geliyordu). Çözüm: flex düzeni <td>'nin kendisinden
-   ÇIKARILIP src/schema.php'de eklenen .grid-rownum-inner sarmalayıcıya
-   taşındı — <td> artık normal bir tablo hücresi (display: table-cell,
-   varsayılan) olarak kalıyor, diğer hücrelerle birebir AYNI otomatik
-   yükseklik eşitlemesine katılıyor; iç sarmalayıcı da height:100% ile o
-   (artık doğru) yüksekliği doldurup içeriği dikey ortalıyor. */
 table.grid tbody .grid-rownum-inner {
     display: flex;
     align-items: center;
@@ -467,21 +314,16 @@ table.grid tbody .grid-rownum-inner {
     height: 100%;
     box-sizing: border-box;
 }
-
 .grid-rownum-number { flex: 1; text-align: left; }
-
 .grid-row-select {
     display: none;
     flex-shrink: 0;
     margin: 0;
 }
-
 table.grid tbody tr:hover .grid-row-select,
 table.grid tbody tr.is-row-selected .grid-row-select { display: inline-block; }
-
 table.grid tbody tr:hover .grid-rownum-number,
 table.grid tbody tr.is-row-selected .grid-rownum-number { display: none; }
-
 .grid-row-expand {
     flex-shrink: 0;
     width: 18px;
@@ -496,21 +338,10 @@ table.grid tbody tr.is-row-selected .grid-rownum-number { display: none; }
     cursor: pointer;
     opacity: 0;
 }
-
 table.grid tbody tr:hover .grid-row-expand { opacity: 1; }
-
 .grid-row-expand:hover { background: var(--bcc-surface-hover); }
-
-/* Bulunan gerçek bug: sabit açık mavi (#eef4fe/#e3ecfc) kullanılıyordu —
-   koyu temada hücre metni (var(--bcc-text)) neredeyse beyaz olduğundan bu
-   sabit açık zeminle neredeyse görünmez oluyordu. Uygulamanın "seçili/aktif"
-   durumlar için zaten kullandığı tema-duyarlı vurgu rengiyle (bkz.
-   .hide-fields-btn-active, .gs-view-drawer-row.is-selected) değiştirildi. */
 table.grid tbody tr.is-row-selected td { background: var(--bcc-accent-soft); }
 table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-soft); }
-
-/* ---------- Satır genişletme paneli (detail modal) ---------- */
-
 .grid-detail-overlay {
     position: fixed;
     inset: 0;
@@ -521,12 +352,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     justify-content: center;
 }
 
-/* [hidden] tek başına yetmez: yukarıdaki display:flex, author-stylesheet
-   olarak UA'nın [hidden]{display:none} varsayılanını her zaman ezer (aynı
-   ders: bkz. home.css .home-search-result[hidden]) — burada açıkça geri
-   kazanılıyor. */
 .grid-detail-overlay[hidden] { display: none; }
-
 .grid-detail-modal {
     width: 760px;
     max-width: 92vw;
@@ -549,13 +375,11 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     border-bottom: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
-
 .grid-detail-nav {
     display: flex;
     gap: 0.15rem;
     flex-shrink: 0;
 }
-
 .grid-detail-nav-btn,
 .grid-detail-close {
     width: 26px;
@@ -571,7 +395,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 
 .grid-detail-nav-btn:hover,
 .grid-detail-close:hover { background: var(--bcc-surface-hover); }
-
 .grid-detail-nav-btn:disabled { opacity: 0.35; cursor: default; }
 .grid-detail-nav-btn:disabled:hover { background: none; }
 
@@ -584,19 +407,11 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .grid-detail-close { margin-left: auto; flex-shrink: 0; }
-
-/* "..." (Diğer seçenekler) menüsü — mevcut .gs-table-tab-menu-panel/
-   .gs-table-tab-menu-item (grid-shell.css) desenini yeniden kullanır, yeni
-   panel/kalem stili YAZILMADI. Yalnızca konumlandırma (sağa hizalı, .grid-th-menu
-   ile AYNI position:relative sarmalayıcı deseni) ve <summary> disclosure
-   üçgenini gizleme burada. */
 .grid-detail-more-menu {
     position: relative;
     flex-shrink: 0;
 }
-
 .grid-detail-more-menu summary { list-style: none; cursor: pointer; }
 .grid-detail-more-menu summary::-webkit-details-marker { display: none; }
 
@@ -604,24 +419,18 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     left: auto;
     right: 0;
 }
-
 .grid-detail-body {
     flex: 1;
     min-height: 0;
     display: flex;
 }
-
 .grid-detail-fields {
     flex: 1;
     min-width: 0;
     overflow-y: auto;
     padding: 1rem 1.1rem;
 }
-
-/* OpsFlow davranış: kutular arası dikey boşluk önceki 0.9rem'den daha
-   ferah (bkz. PROJE-DURUM.md "Kayıt detay modalı" notu). */
 .grid-detail-field { margin-bottom: 1.4rem; }
-
 .grid-detail-field-label {
     display: flex;
     align-items: center;
@@ -631,37 +440,22 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     margin-bottom: 0.4rem;
 }
 
-/* .field-badge (theme.css) zaten kendi margin-right'ını taşıyor — burada
-   ikinci bir boşluk kuralı eklenmiyor, ikon+etiket arası tek kaynaktan geliyor. */
 .grid-detail-field-label .field-badge { flex-shrink: 0; }
-
-/* OpsFlow davranış: birincil alan (index 0, JS'te ayrılıyor) tam genişlik/
-   etiket-üstte kalır; diğer TÜM alanlar sol dar etiket / sağ değer iki
-   sütununa geçer. */
 .grid-detail-field-inline {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
 }
-
 .grid-detail-field-inline .grid-detail-field-label {
     flex: 0 0 150px;
     margin-bottom: 0;
     padding-top: 0.65rem;
 }
-
 .grid-detail-field-inline .grid-detail-field-value {
     flex: 1;
     min-width: 0;
 }
-
-/* Bulunan/tekrarlanan proje tuzağı: [hidden] tek başına bazı yerlerde
-   display:flex/block tarafından eziliyordu (bkz. .grid-detail-overlay[hidden]
-   ve .home-search-result[hidden] notları). Bu satır şu an hiçbir yerde
-   hidden attribute'u almıyor (grep ile doğrulandı) ama ileride biri
-   eklerse display:flex'in üstüne çıkması için açıkça geri kazanılıyor. */
 .grid-detail-field-inline[hidden] { display: none !important; }
-
 .grid-detail-field-value .cell-input,
 .grid-detail-field-value select,
 .grid-detail-field-value input[type="text"],
@@ -676,12 +470,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font: inherit;
     font-size: 0.9rem;
 }
-
-/* OpsFlow davranış: birincil alanın (grid-detail-field-primary, JS'te index
-   0'a veriliyor) DEĞERİ öne çıkar — etiket (.grid-detail-field-label)
-   BİLEREK burada hedeflenmiyor, küçük/gri kalmaya devam ediyor. Kutunun
-   kendisi (border/padding) diğer alanlarla tutarlı kalsın diye burada
-   değiştirilmiyor, sadece yazı büyüklüğü/kalınlığı. */
 .grid-detail-field-primary .grid-detail-field-value .cell-input,
 .grid-detail-field-primary .grid-detail-field-value select,
 .grid-detail-field-primary .grid-detail-field-value input[type="text"],
@@ -694,32 +482,12 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-weight: 600;
     line-height: 1.3;
 }
-
-/* Auto-grow (grid-row-detail.js autoGrowTextarea): JS height'i içeriğe göre
-   ayarlar, buradaki max-height GÜVENLİK ÜST SINIRI — çok uzun bir değer
-   (yüzlerce satır) modalı kullanılamaz hale getirmesin diye. Tavana çarpınca
-   tarayıcı textarea'nın NATIVE scrollbar'ını otomatik gösterir, ayrı bir
-   overflow kuralı gerekmez. resize:vertical BİLEREK KALDIRILDI — sürekli
-   auto-grow (input event) elle sürüklemeyle çakışırdı (kullanıcı elle
-   büyütse bile bir sonraki tuş vuruşunda auto-grow onu ANINDA ezerdi).
-   Bulunan gerçek bug: taban .grid-detail-textarea (0,1,0) yerine burada
-   .grid-detail-field-value içinde tanımlandı (0,2,0) — textarea.cell-input
-   (satır ~1546, 0,1,1) BUNDAN DAHA SPESİFİK olduğu için resize:none'ı
-   ezerdi, sıradan .grid-detail-textarea selector'ı yeterli olmazdı.
-   max-height: 60vh yerine SABİT 600px seçildi — canlı testte 720px'lik
-   standart bir viewport'ta 60vh (432px) gerçek bir 27 satırlık değeri
-   (561px, record_id=421) bile kırpıyordu; 600px o değeri rahat karşılıyor,
-   50+ satırlık aşırı uzun bir değeri yine de sınırlıyor. */
 .grid-detail-field-value .grid-detail-textarea {
     min-height: 5rem;
     max-height: 600px;
     resize: none;
 }
 
-/* Salt-okunur panel (viewer/commenter): grid-row-detail.js canlı <td>'nin
-   .cell-view içeriğini AYNEN kopyalar — ama .cell-view grid hücresi (sabit
-   yükseklik/tek satır/ellipsis) için tasarlanmıştı, panelde bunlar anlamsız
-   (height:100% ebeveyni olmadığı için 0'a çöker, uzun metin gereksiz kırpılır). */
 .grid-detail-field-value-readonly .cell-view {
     height: auto;
     padding: 0;
@@ -738,14 +506,8 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     flex-direction: column;
     padding: 1rem;
 }
-
-/* Yorum ikonu toggle'ı — [hidden] attribute'una DOKUNULMADI (projenin bilinen
-   [hidden]+display çakışması tuzağı), ayrı bir sınıfla gizleniyor. */
 .grid-detail-comments.is-collapsed { display: none; }
 
-/* position:absolute — flex akışına (nav/başlık/butonlar) katılmıyor, header
-   düzenini bozmuyor; .grid-detail-header'daki position:relative'e göre
-   konumlanıyor. */
 .grid-detail-toast {
     position: absolute;
     top: 100%;
@@ -760,13 +522,11 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 5;
 }
-
 .grid-detail-comments-header {
     font-weight: 600;
     font-size: 0.85rem;
     margin-bottom: 0.75rem;
 }
-
 .grid-detail-comments-empty {
     flex: 1;
     display: flex;
@@ -779,13 +539,10 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-size: 0.82rem;
     padding: 0 0.5rem;
 }
-
 .grid-detail-comments-empty-icon {
     color: var(--bcc-border-strong);
 }
-
 .grid-detail-comments-empty p { margin: 0; }
-
 .grid-detail-comments-list {
     flex: 1;
     overflow-y: auto;
@@ -794,7 +551,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     gap: 0.6rem;
     margin-bottom: 0.75rem;
 }
-
 .grid-detail-comment {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border);
@@ -804,10 +560,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     align-items: flex-start;
     gap: 0.5rem;
 }
-
-/* .ws-collab-avatar (home.css) taban stilini kullanır — burada yalnızca
-   yorum kartına uygun küçük boyut override edilir, ikinci bir avatar
-   bileşeni YAZILMAZ (grid.php zaten home.css'i yüklüyor). */
 .grid-detail-comment-avatar {
     width: 24px;
     height: 24px;
@@ -818,37 +570,31 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     flex: 1;
     min-width: 0;
 }
-
 .grid-detail-comment-meta {
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;
     margin-bottom: 0.25rem;
 }
-
 .grid-detail-comment-author {
     font-weight: 600;
     font-size: 0.78rem;
 }
-
 .grid-detail-comment-date {
     font-size: 0.72rem;
     color: var(--bcc-text-muted);
     flex-shrink: 0;
 }
-
 .grid-detail-comment-body {
     font-size: 0.85rem;
     white-space: pre-wrap;
     word-break: break-word;
 }
-
 .grid-detail-comment-actions {
     display: flex;
     gap: 0.6rem;
     margin-top: 0.35rem;
 }
-
 .grid-detail-comment-edit,
 .grid-detail-comment-delete {
     background: none;
@@ -861,23 +607,19 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     cursor: pointer;
     text-decoration: none;
 }
-
 .grid-detail-comment-delete:hover,
 .grid-detail-comment-edit:hover {
     color: var(--bcc-text);
     background: var(--bcc-surface-hover);
 }
-
 .grid-detail-comment-edit-input {
     margin: 0.2rem 0;
 }
-
 .grid-detail-comments-form {
     display: flex;
     gap: 0.4rem;
     flex-shrink: 0;
 }
-
 .grid-detail-comments-form input {
     flex: 1;
     min-width: 0;
@@ -890,7 +632,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     background: var(--bcc-surface);
     color: var(--bcc-text);
 }
-
 .grid-detail-comments-form button {
     flex-shrink: 0;
     font-size: 0.8rem;
@@ -902,36 +643,17 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     color: var(--bcc-on-accent);
     cursor: pointer;
 }
-
 .grid-detail-comments-form button:hover { background: var(--bcc-accent-strong); }
-
 .grid-detail-comments-hint {
     flex-shrink: 0;
     margin: 0;
 }
-
-/* "Kaydı yazdır" — ekranda hep gizli, yalnızca @media print'te (aşağıda)
-   .grid-detail-overlay:not([hidden]) şartıyla gösteriliyor. */
 .grid-detail-print-meta,
 .grid-detail-print-value {
     display: none;
 }
 
-/* Kayıt yazdırma (grid-row-detail.js "Kaydı yazdır" → preparePrintView() +
-   window.print()) — TAMAMI ":not([hidden])" ile şartlı: overlay kapalıyken
-   (normal grid/"Görünümü yazdır" akışı, bkz. grid-shell.css @media print)
-   bu blok hiçbir şeye dokunmuyor, [hidden] zaten kendi display:none'ını
-   koruyor. table.grid overlay'in DOM kardeşi olmadığı için :has() ile
-   hedefleniyor (modern Chromium — hem yerel geliştirme hem /browse aynı motor). */
 @media print {
-    /* body.gs-body { display:flex } (grid-shell.css) — overlay'i position:static
-       yapmak onu bu flex satırına SOKUYOR, .gs-main-col (topbar/sekmeler/
-       toolbar/grid — hepsi görünür içeriği tek tek gizlense de KENDİSİ hâlâ
-       flex:1 alan kaplıyordu) yanında dar bir sütuna sıkışıyordu (bulunan
-       gerçek bug — ilk denemede içerik sayfanın sağ yarısına kaymıştı).
-       Kök çözüm: .gs-main-col'un TAMAMINI gizle (tek tek table.grid/
-       gs-table-tabs/gs-fields-link yerine — hepsini zaten sarmalıyor) ve
-       body'yi flex'ten çıkar, overlay normal blok akışında tam genişlik alsın. */
     body:has(.grid-detail-overlay:not([hidden])) {
         display: block !important;
     }
@@ -939,14 +661,12 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     body:has(.grid-detail-overlay:not([hidden])) .gs-main-col {
         display: none !important;
     }
-
     .grid-detail-overlay:not([hidden]) {
         position: static;
         background: #fff;
         display: block;
         width: 100%;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-modal {
         width: auto;
         max-width: none;
@@ -957,25 +677,18 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
         display: block;
         overflow: visible;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-header,
     .grid-detail-overlay:not([hidden]) .grid-detail-comments {
         display: none !important;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-body {
         display: block;
         overflow: visible;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-fields {
         overflow: visible;
         padding: 0.5rem 0;
     }
-
-    /* background-color (background KISALTMASI DEĞİL): kısaltma .field-badge'in
-       background-image ikonunu da SIFIRLARDI (bulunan gerçek bug — ilk
-       denemede ikonlar bu yüzden hiç basılmadı). */
     .grid-detail-overlay:not([hidden]) .grid-detail-fields,
     .grid-detail-overlay:not([hidden]) .grid-detail-fields * {
         color: #000 !important;
@@ -983,10 +696,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
         box-shadow: none !important;
     }
 
-    /* input/select/textarea/dosya-eki yöneticisi/readonly cell-view print'te
-       kırpılabilir/boş çıkabilir (ör. textarea kendi scroll alanı) — bunun
-       yerine preparePrintView()'ın o anki DEĞERDEN ürettiği düz metin
-       (.grid-detail-print-value, üstteki genel kural görünür yapıyor) basılır. */
     .grid-detail-overlay:not([hidden]) .grid-detail-field-value input,
     .grid-detail-overlay:not([hidden]) .grid-detail-field-value select,
     .grid-detail-overlay:not([hidden]) .grid-detail-field-value textarea,
@@ -994,40 +703,28 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     .grid-detail-overlay:not([hidden]) .grid-detail-field-value .cell-view {
         display: none !important;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-print-value {
         display: block;
         white-space: pre-wrap;
     }
-
-    /* .field-badge ikonları background-image (theme.css) — tarayıcıların
-       "Arka plan grafikleri" print ayarı kapalıyken varsayılan olarak
-       basılmaz, bu iki özellik ayardan bağımsız zorluyor. */
     .grid-detail-overlay:not([hidden]) .field-badge {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-
     .grid-detail-overlay:not([hidden]) .grid-detail-print-meta {
         display: block;
         color: #444 !important;
         font-size: 0.8rem;
         margin: 0 0 0.75rem;
     }
-
     #grid-detail-print-meta-bottom {
         margin: 1.5rem 0 0;
         word-break: break-all;
     }
 }
-
-/* ---------- "Kaydı gönder" modalı (OpsFlow "Send record" davranışı) ---------- */
-
 .grid-send-overlay {
     position: fixed;
     inset: 0;
-    /* Kayıt detay overlay'inin (z-index:60) ÜSTÜNDE durmalı — ikisi aynı anda
-       açık olabiliyor (gönder modalı kayıt modalının üstünde açılıyor). */
     z-index: 70;
     background: rgba(15, 15, 20, 0.4);
     display: flex;
@@ -1035,10 +732,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     justify-content: center;
 }
 
-/* [hidden] tek başına yetmez — .grid-detail-overlay'de bulunan AYNI tuzak
-   (yukarıdaki display:flex, UA'nın [hidden]{display:none} varsayılanını ezer). */
 .grid-send-overlay[hidden] { display: none; }
-
 .grid-send-modal {
     width: 480px;
     max-width: 92vw;
@@ -1050,7 +744,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     flex-direction: column;
     overflow: hidden;
 }
-
 .grid-send-header {
     position: relative;
     display: flex;
@@ -1060,20 +753,17 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     border-bottom: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
-
 .grid-send-title {
     flex: 1;
     font-weight: 600;
     font-size: 0.95rem;
 }
-
 .grid-send-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding: 1rem;
 }
-
 .grid-send-label {
     display: block;
     font-size: 0.76rem;
@@ -1081,9 +771,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     color: var(--bcc-text-muted);
     margin: 0.9rem 0 0.4rem;
 }
-
 .grid-send-label:first-child { margin-top: 0; }
-
 .grid-send-input {
     width: 100%;
     box-sizing: border-box;
@@ -1095,25 +783,19 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     background: var(--bcc-surface);
     color: var(--bcc-text);
 }
-
 .grid-send-textarea {
     min-height: 4.5rem;
     resize: vertical;
 }
-
 .grid-send-error {
     color: var(--bcc-danger);
     font-size: 0.78rem;
     margin-top: 0.3rem;
 }
-
-/* .grid-send-body dışında (footer'ın hemen üstünde) — backend hatası
-   scroll'a bağlı olmadan her zaman görünsün. */
 .grid-send-form-error {
     padding: 0 1rem;
     margin: 0.6rem 0 0;
 }
-
 .grid-send-preview {
     margin-top: 0.9rem;
     border: 1px solid var(--bcc-border);
@@ -1121,10 +803,8 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     padding: 0.8rem 0.9rem;
     background: var(--bcc-surface-sunken);
 }
-
 .grid-send-preview-field { margin-bottom: 0.7rem; }
 .grid-send-preview-field:last-child { margin-bottom: 0; }
-
 .grid-send-preview-label {
     display: flex;
     align-items: center;
@@ -1133,9 +813,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     color: var(--bcc-text-muted);
     margin-bottom: 0.2rem;
 }
-
 .grid-send-preview-label .field-badge { flex-shrink: 0; }
-
 .grid-send-preview-value {
     font-size: 0.88rem;
     color: var(--bcc-text);
@@ -1151,10 +829,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     font-size: 0.88rem;
     cursor: pointer;
 }
-
-/* Projede hazır bir toggle-switch bileşeni yok — native checkbox görsel
-   olarak gizlenip (opacity:0, ama erişilebilirlik için DOM'da/tıklanabilir
-   kalır) yerine bu iki eleman (track + ::before ile thumb) konuyor. */
 .grid-send-toggle-switch {
     position: relative;
     display: inline-block;
@@ -1162,7 +836,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     height: 20px;
     flex-shrink: 0;
 }
-
 .grid-send-toggle-switch input {
     position: absolute;
     inset: 0;
@@ -1170,7 +843,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     margin: 0;
     cursor: pointer;
 }
-
 .grid-send-toggle-track {
     position: absolute;
     inset: 0;
@@ -1178,7 +850,6 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     border-radius: 999px;
     transition: background 0.15s;
 }
-
 .grid-send-toggle-track::before {
     content: '';
     position: absolute;
@@ -1190,15 +861,12 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     background: #fff;
     transition: transform 0.15s;
 }
-
 .grid-send-toggle-switch input:checked + .grid-send-toggle-track {
     background: var(--bcc-accent);
 }
-
 .grid-send-toggle-switch input:checked + .grid-send-toggle-track::before {
     transform: translateX(14px);
 }
-
 .grid-send-footer {
     display: flex;
     justify-content: flex-end;
@@ -1207,93 +875,27 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
     border-top: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
-
-/* Sütun dondurma: satır no kolonu (.grid-rownum) zaten her zaman sticky/left:0 —
-   buraya dokunulmuyor (frozen_column_count=1 = bugünkü varsayılan davranışla
-   birebir aynı). .grid-frozen-cell yalnızca EK dondurulmuş veri kolonlarına
-   (assets/grid-freeze-columns.js tarafından dinamik olarak) uygulanır; sol
-   konumu (left) satırın genişliğine göre değiştiği için satır içi stil olarak
-   JS'den gelir, geri kalan her şey burada. */
 .grid-frozen-cell {
     position: sticky;
     z-index: 1;
     background: var(--bcc-surface);
 }
-
 table.grid thead th.grid-frozen-cell {
-    /* Bulunan gerçek bug: thead'de TÜM <th>'ler (dondurulmuş olsun olmasın)
-       dikey sticky-header için position:sticky + z-index:2 alıyor (yukarıdaki
-       genel "table.grid thead th" kuralı). Bu sınıf da z-index:2 verdiği için
-       dondurulmuş sütunla (ör. "Ad") hemen sağındaki DONDURULMAMIŞ, kayan
-       sütun (ör. "Notlar") AYNI z-index'te eşitleniyordu — eşitlikte tarayıcı
-       DOM sırasına göre boyuyor, DOM'da SONRA gelen (kayan) sütun ÜSTTE
-       kalıp donuk sütunun başlığını kaplıyor/metnini sızdırıyordu. tbody'de
-       bu sorun yok (dondurulmamış hücreler orada position:static, sticky
-       öğelerin her zaman altında kalır) — sorun yalnızca thead'e özgü.
-       z-index'i satır-no ile eşitleyip (3) genel kuralın (2) üzerine çıkarmak
-       donuk sütunun her zaman üstte kalmasını garanti eder. */
     z-index: 3;
     background: var(--bcc-surface);
 }
-
 table.grid tbody tr:hover td.grid-frozen-cell {
     background: var(--bcc-surface-sunken);
 }
-
-/* Donuk grubun SAĞ KENARI — "buradan sonrası kayıyor" işareti.
-   `table.grid` öneki ŞART: çıplak `.grid-frozen-edge` (0,1,0) selector'ı
-   `table.grid td`'nin (0,1,1) `border-right: 1px solid var(--bcc-border)`
-   kuralına YENİLİYORDU, yani bu çizgi GÖVDE satırlarında hiç görünmüyordu.
-   Varsayılan dondurma 1 (yalnızca satır no) olduğu sürece hiçbir gövde
-   hücresi bu sınıfı almadığı için sorun gizli kalmıştı; varsayılan 2'ye
-   çıkınca ortaya çıktı. */
 table.grid .grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }
 
-/* ---------------------------------------------------------------------------
-   YÜZEN PANEL BARINDIRAN HÜCRE — sınıfı JS ekler/kaldırır
-   (bcc_raiseFloatingHost, assets/dismissable-panel.js).
-
-   ⚠️ BULUNAN GERÇEK BUG (kullanıcı bildirdi): "Şehir" sütununun ▾ menüsü
-   açıldığında donuk sütunun kenar çizgisi ve sütun genişliği tutamaçları
-   menünün ÜSTÜNE biniyordu.
-
-   KÖK NEDEN — panelin kendi `z-index: 30`'u ÇARE DEĞİL: panel bir <th>/<td>
-   içinde ve grid hücreleri `position: sticky` + z-index taşıyor (sticky başlık
-   2, donuk hücreler 1/3). z-index'li konumlandırılmış her öğe KENDİ YIĞILMA
-   BAĞLAMINI kurar; panelin 30'u yalnızca o hücrenin İÇİNDE geçerlidir.
-   Dışarıdaki `.grid-col-resize-layer` (4) ve komşu sticky hücrelerle yarışan
-   şey panel değil, BARINDIRAN HÜCREdir — o yüzden yükselmesi gereken odur.
-   (position:fixed de kurtarmaz: fixed öğe viewport'a göre KONUMLANIR ama
-   yığılma bağlamından ÇIKMAZ.)
-
-   50 SEÇİLDİ: grid iç kromunun (resize katmanı 4, araç çubuğu panelleri 5,
-   dondurma tutamacı 15) ÜSTÜNDE, ama modal/overlay ailesinin (60, kayıt detayı
-   70) ALTINDA — açık bir menü modalin üzerine ÇIKMAMALI.
-
-   DÖRT panel bu kuraldan yararlanıyor: sütun başlığı ▾ menüsü, "+ alan ekle",
-   "+ yeni görünüm" (üçü ortak bcc_bindFloatingPanel'den) ve grid.js'in iki
-   hücre popover'ı (metin + dosya eki) — sonuncular donuk sütunlarda AYNI
-   hatayı taşıyordu, bu turda birlikte düzeltildi.
-   --------------------------------------------------------------------------- */
-/* ⚠️ ÜÇ SEÇİCİ, ÖZGÜLLÜK YÜZÜNDEN: `table.grid thead th.grid-frozen-cell`
-   (0,2,3) donuk BAŞLIĞA z-index:3 yazıyor. Sade `table.grid th.grid-floating-host`
-   (0,2,2) ondan DÜŞÜK kalırdı, yani düzeltme tam da en çok gerektiği yerde
-   (donuk sütun) sessizce çalışmazdı. Ortadaki bileşik seçici (0,3,3) o kuralı
-   kesin olarak yeniyor — dosya SIRASINA güvenmeye gerek kalmıyor. */
 table.grid thead th.grid-floating-host,
 table.grid thead th.grid-frozen-cell.grid-floating-host,
 table.grid td.grid-floating-host {
     z-index: 50;
 }
 
-/* Satır-no sütununun "kaldırma" gölgesi (yukarıda) donuk grubun SONUNU
-   işaretler. Bir VERİ sütunu da donduğunda (varsayılan durum) grup satır
-   no'da bitmiyor — gölge grubun ORTASINDA kalıp ikinci bir ayraç gibi
-   görünüyordu. Bu durumda gölge kapatılır; sınırı yukarıdaki
-   .grid-frozen-edge çizgisi taşır. Sınıfı grid-freeze-columns.js
-   frozenCount > 1 iken tabloya ekliyor. */
 table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
-
 .grid-freeze-handle {
     position: absolute;
     top: 0;
@@ -1303,7 +905,6 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
     cursor: grab;
     z-index: 10;
 }
-
 .grid-freeze-handle::after {
     content: '';
     position: absolute;
@@ -1314,61 +915,29 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
     background: var(--bcc-accent);
     opacity: 0;
 }
-
 .grid-freeze-handle:hover::after,
 .grid-freeze-handle.is-dragging::after {
     opacity: 1;
 }
-
 .grid-freeze-handle.is-dragging { cursor: grabbing; }
-
-/* ---- Sütun genişliği sürükleme (grid-column-resize.js) -------------------
-   Dondurma tutamacıyla (yukarıda) AYNI görsel bölgede duruyor ama BAŞKA bir iş
-   yapıyor; ayırt edilebilir olması bilinçli bir gereklilik:
-
-     dondurma  : 12px şerit, cursor:grab,        MAVİ  (--bcc-accent) çizgi, tabloda TEK,
-                 yalnızca BAŞLIK yüksekliğinde
-     genişlik  :  9px şerit, cursor:col-resize,  GRİ   (--bcc-border-strong) çizgi,
-                 HER veri sütununda, TABLONUN TAM BOYUNDA
-
-   Şerit artık <th>'nin çocuğu DEĞİL: .grid-wrap'in mutlak konumlu çocuğu olan
-   tek bir katmanda (.grid-col-resize-layer) duruyor ve tablonun tamamı boyunca
-   uzuyor — böylece başlık kadar gövde hücrelerinin arasındaki ayıraç da
-   yakalanabiliyor. Konum/yükseklik JS'te hesaplanıyor (sütun genişlikleri
-   sürüklenirken değişiyor, statik CSS ile ifade edilemez).
-
-   İkisi aynı çizgide buluştuğunda (donmuş kenar sütunu) üst üste binmesinler
-   diye genişlik şeridi orada 12px sola kaydırılıyor (JS: FREEZE_CLEARANCE) —
-   böylece imleç/çizgi rengi hangisinin sürükleneceğini belirsiz bırakmıyor.
-   grid-freeze-columns.js'e ve .grid-freeze-handle kurallarına DOKUNULMADI. */
 .grid-col-resize-layer {
     position: absolute;
     top: 0;
     left: 0;
-    /* 0×0: kutunun kendisi yer kaplamıyor, yalnızca çocukları için (0,0)
-       kaynağı — .grid-wrap'in kaydırılabilir alanını BÜYÜTMEMESİ şart. */
     width: 0;
     height: 0;
-    /* 4: sticky başlık (z-index 2), donmuş hücreler (2) ve satır no başlığının
-       (3) ÜSTÜNDE — yoksa şerit başlık satırında hiç yakalanmazdı. Araç çubuğu
-       panellerinin (z-index 5) ise ALTINDA: açık bir filtre/sıralama paneli
-       tablonun üzerine taştığında 9px'lik şeritler tıklamayı çalamaz. */
+
     z-index: 4;
     pointer-events: none;
 }
-
 .grid-col-resize-handle {
     position: absolute;
     width: 9px;
     cursor: col-resize;
-    /* Katman pointer-events:none — yalnızca şeritlerin kendisi olayları alır,
-       aradaki boşluklarda hücreler normal davranır (tıkla-düzenle, satır hover). */
     pointer-events: auto;
-    /* Dokunmatik/kalemde tarayıcının kaydırma jestini devralmasını engeller;
-       etkileşim tek eksenli kalır. */
+
     touch-action: none;
 }
-
 .grid-col-resize-handle::after {
     content: '';
     position: absolute;
@@ -1379,51 +948,19 @@ table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }
     background: var(--bcc-border-strong);
     opacity: 0;
 }
-
-/* Donmuş kenar sütunu: şerit (tıklama alanı) dondurma tutamacına yer açmak
-   için 12px sola kaçırılıyor (grid-column-resize.js FREEZE_CLEARANCE). Çizgi de
-   onunla kayınca genişlik çubuğu sütun sınırının üstünde DEĞİL gibi duruyordu.
-   Yalnızca görsel çizgi aynı miktarda geri alınıyor: 3px + 12px = 15px.
-   ⚠️ 15 SABİT DEĞİL, TÜRETİLMİŞ: FREEZE_CLEARANCE değişirse burası da değişmeli. */
 .grid-col-resize-handle.is-frozen-edge::after { left: 15px; }
-
 .grid-col-resize-handle:hover::after,
 .grid-col-resize-handle.is-dragging::after {
     opacity: 1;
 }
-
-/* Sürükleme sırasında imleç fare şeridin dışına çıksa da col-resize kalsın —
-   sınıfı grid-column-resize.js onStart/onEnd'de ekleyip kaldırıyor. Metin
-   seçimini bcc_bindColumnDrag zaten kapatıyor (userSelect). */
 body.is-col-resizing,
 body.is-col-resizing * {
     cursor: col-resize !important;
 }
-
-/* Kaydedilmiş genişlik VARKEN: sütunlar <colgroup>'tan gelir ve içerik onları
-   genişletemez. `min-width: 100%` BURADA KAPATILMAK ZORUNDA — açık kalsaydı
-   tablo kapsayıcıya esner, fixed layout artan alanı sütunlara oransal dağıtır
-   ve kullanıcının sürüklediği piksel değeri BOZULURDU. Toplam genişlik
-   grid.php'de (ilk render) / grid-column-resize.js'te (sürüklerken) inline
-   yazılıyor. Harita boşken bu sınıf HİÇ eklenmez ve tablo bugünkü otomatik
-   yerleşiminde kalır — özellik opt-in. */
 table.grid.grid-has-col-widths {
     table-layout: fixed;
     min-width: 0;
 }
-
-/* Sabit yerleşimde içerik sütunu artık GENİŞLETEMEZ, yani dar bir sütunda
-   taşar — kırpmak gerekiyor. Ama kırpma yerini seçmek gerekti:
-
-   (a) <th>'ye overflow:hidden VERİLEMEZ — hem dondurma hem genişlik tutamacı
-       hücrenin sağ kenarından DIŞARI taşan (right:-6px / right:-3px) mutlak
-       konumlu çocuklar; th kırpılsaydı ikisi de yarıdan kesilirdi. Bunun
-       yerine yalnızca ALAN ADI (.grid-th-label) kırpılıyor, hücre değil.
-   (b) <td> kırpılabilir, ÇÜNKÜ tek mutlak konumlu çocuğu olan dosya-eki
-       popover'ı (.attachment-popover, grid.js td.appendChild) hücrenin
-       ALTINA sarkıyor ve kırpılırdı — bu yüzden düzenleme hâlindeki hücre
-       (.editing, tüm düzenleme yolları bu sınıfı ekliyor) muaf tutuluyor.
-       Zengin metin popover'ı position:fixed olduğu için zaten etkilenmiyor. */
 table.grid.grid-has-col-widths .grid-th-label {
     display: inline-block;
     max-width: 100%;
@@ -1431,7 +968,6 @@ table.grid.grid-has-col-widths .grid-th-label {
     text-overflow: ellipsis;
     vertical-align: bottom;
 }
-
 table.grid.grid-has-col-widths td { overflow: hidden; }
 table.grid.grid-has-col-widths td.editing { overflow: visible; }
 
@@ -1440,7 +976,6 @@ table.grid.grid-has-col-widths td.editing { overflow: visible; }
     padding: 1rem !important;
     text-align: center;
 }
-
 .cell-view {
     box-sizing: border-box;
     height: 100%;
@@ -1452,22 +987,14 @@ table.grid.grid-has-col-widths td.editing { overflow: visible; }
     max-width: 320px;
     cursor: default;
 }
-
 td.editable {
     cursor: text;
 }
-
-/* Grup A (url/email/phone) — hücrede metin + hover'da beliren "yeni sekmede aç"
-   ikonu. .cell-view'ın nowrap/ellipsis'i flex ile devralınır (.attachment-cell-view
-   ile AYNI desen) — metin yine kırpılır, ikon kırpılmaz.
-   Metnin KENDİSİ link DEĞİL: hücreye tıklamak her zaman düzenlemeyi açar,
-   yalnızca ikona tıklamak linke gider (bkz. grid.js .cell-link-icon dalı). */
 .cell-view-linkified {
     display: flex;
     align-items: center;
     gap: 0.35rem;
 }
-
 .cell-view-linkified .cell-link-text {
     flex: 1 1 auto;
     min-width: 0;
@@ -1476,30 +1003,17 @@ td.editable {
     white-space: nowrap;
 }
 
-/* Kullanıcı hücresi (user / created_by / last_modified_by): adın SOLUNDA profil
-   avatarı. Yerleşim .cell-view-linkified ile AYNI kalıp (flex + taşan metin
-   kırpma), avatarın KENDİSİ ise home.css'teki paylaşılan .ws-collab-avatar —
-   burada yalnızca hücreye uygun boyut veriliyor (grid-shell.css'teki
-   .gs-share-avatar ile aynı desen, ikinci bir avatar bileşeni yazılmadı). */
 .cell-user-view {
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
-
-/* ⚠️ SEÇİCİ İKİ SINIFLI (.cell-user-view .cell-user-avatar) — ÖLÇÜLDÜ: çıplak
-   .cell-user-avatar (0,1,0), .ws-collab-avatar'ın (0,1,0) 30px'ini YENEMİYOR
-   çünkü home.css style.css'ten SONRA yükleniyor ve eşit özgüllükte sıra
-   kazanıyor; daire 30px kalıp 32px'lik satırı dolduruyordu. */
 .cell-user-view .cell-user-avatar {
     width: 20px;
     height: 20px;
     font-size: 0.65rem;
-    /* Satır yüksekliği kısa modda 32px; 20px'lik daire hücreyi büyütmesin diye
-       kendi satır yüksekliğini dayatmıyor. */
     line-height: 1;
 }
-
 .cell-user-name {
     flex: 1 1 auto;
     min-width: 0;
@@ -1507,9 +1021,6 @@ td.editable {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-/* visibility (display DEĞİL): ikon gizliyken de yer kaplar, böylece hover'da
-   metin yana KAYMAZ — rating yıldızlarındaki "genişlik kaymasın" kararıyla aynı. */
 .cell-link-icon {
     flex: none;
     display: inline-flex;
@@ -1519,32 +1030,18 @@ td.editable {
     text-decoration: none;
     cursor: pointer;
 }
-
 td:hover .cell-link-icon,
 .cell-link-icon:focus-visible {
     visibility: visible;
 }
-
 .cell-link-icon:hover {
     color: var(--bcc-accent-strong);
 }
 
-/* Detay panelinin salt-okunur görünümü canlı <td>'nin innerHTML'ini AYNEN
-   kopyalıyor (grid-row-detail.js) — orada hover edilecek bir <td> olmadığı için
-   ikon her zaman görünür olmalı, aksi halde link hiç erişilemezdi. */
 .grid-detail-field-value-readonly .cell-link-icon {
     visibility: visible;
 }
 
-/* Color: tekli/çoklu seçim hücrelerindeki renkli "chip"ler. */
-
-/* ⚠️ BULUNAN GERÇEK BUG (koyu temada "Durum" yazıları görünmüyordu):
-   rozetin ZEMİNİ tema-bağımsız SABİT bir pastel — src/schema.php'deki
-   BCC_CHOICE_COLORS paletinden inline style ile basılıyor ve on rengin HEPSİ
-   açık (#cfe2ff … #e6e6e9). Metin rengi ise var(--bcc-text) idi: koyu temada
-   bu değişken neredeyse beyaza (#f0f0f2) dönüyor ve açık pastel zeminin
-   üstünde OKUNMAZ hâle geliyordu (açık temada sorun yoktu, orada zaten koyu).
-   Zemin sabit olduğu için metin de sabit koyu olmalı — tema değişkeni DEĞİL. */
 .choice-chip {
     display: inline-block;
     padding: 2px 8px;
@@ -1555,44 +1052,21 @@ td:hover .cell-link-icon,
     margin: 0 0.25rem 0.15rem 0;
     white-space: nowrap;
 }
-
-/* Bulunan gerçek bug: sabit açık mavi (#f0f7ff) — koyu temada hücre metni
-   neredeyse beyaz olduğundan neredeyse görünmez oluyordu (gerçek CDP hover
-   ile canlı doğrulandı). Diğer hover'larla AYNI tema-duyarlı zemin. */
 td.editable .cell-view:hover {
     background: var(--bcc-surface-hover);
 }
-
 td.editable.editing {
     padding: 0;
-    /* ⚠️ ESKİDEN "box-shadow: inset 0 0 0 2px" idi ve YALNIZCA ÜST/ALT
-       kenarları görünüyordu: iç gölge hücrenin kendi katmanına çizilir, içindeki
-       .cell-input ise ÜSTÜNE boyanır. Girdi yatayda hücreyi tam doldurduğu için
-       sol/sağ şeritleri kapatıyor, dikeyde daha kısa olduğu için üst/alt
-       şeritler görünmeye devam ediyordu.
-       outline BOYAMA SIRASINDA EN SONDA, torunların da ÜSTÜNDE çizilir — dört
-       kenar da görünür. offset -2px ile içeride kalır, hücre genişliğini
-       değiştirmez (.is-paste-anchor'da AYNI teknik). */
     outline: 2px solid var(--bcc-accent-strong);
     outline-offset: -2px;
 }
-
-/* Zengin metin (long_text — F6, "ilk aşama") düzenleme popover'ı. Mevcut
-   panel popover deseniyle (.hide-fields-form/.group-form) aynı görsel dil. */
-
 td.editable.richtext-editing {
     position: relative;
-    /* Gösterge popover'ın kendisi — hücrenin ayrıca çerçevelenmesi istenmiyor.
-       ⚠️ "box-shadow: none" TEK BAŞINA YETMEZ: td.editable.editing göstergesi
-       artık outline (eskiden inset box-shadow). İkisi de bastırılmalı. */
     box-shadow: none;
     outline: none;
 }
-
 .richtext-popover {
     position: fixed;
-    /* Yardımcı, ne yukarı ne aşağı tam sığmayan panele max-height verir;
-       overflow-y olmadan bu, içeriği kırpmak anlamına gelirdi. */
     overflow-y: auto;
     z-index: 15;
     background: var(--bcc-surface);
@@ -1604,7 +1078,6 @@ td.editable.richtext-editing {
     cursor: default;
     white-space: normal;
 }
-
 .richtext-toolbar {
     display: flex;
     align-items: center;
@@ -1613,7 +1086,6 @@ td.editable.richtext-editing {
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .richtext-toolbar-btn {
     width: 28px;
     height: 28px;
@@ -1629,35 +1101,25 @@ td.editable.richtext-editing {
     font-family: inherit;
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 .richtext-toolbar-btn:hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-border);
 }
 
-/* Satır içi link çubuğu — window.prompt()'un yerini alır (bkz. grid.js
-   startRichTextEdit). Araç çubuğunun HEMEN ALTINDA, editörün ÜSTÜNDE açılır.
-   [hidden] çalışsın diye kapsayıcıya display VERİLMEZ (flex yalnızca iç
-   satırda); aksi halde .richtext-link-bar kuralı UA'nın [hidden]{display:none}
-   kuralını ezer ve çubuk hiç gizlenmezdi. */
-
 .richtext-link-bar {
     margin-bottom: 0.4rem;
 }
-
 .richtext-link-bar[hidden] {
     display: none;
 }
-
 .richtext-link-row {
     display: flex;
     align-items: center;
     gap: 0.3rem;
 }
-
 .richtext-link-input {
     flex: 1;
-    min-width: 0; /* flex öğesi: uzun URL çubuğu taşırmasın */
+    min-width: 0;
     border: 1px solid var(--bcc-border-strong);
     border-radius: 6px;
     padding: 0.25rem 0.4rem;
@@ -1666,18 +1128,15 @@ td.editable.richtext-editing {
     font: inherit;
     font-size: 0.85rem;
 }
-
 .richtext-link-input:focus {
     outline: none;
     border-color: var(--bcc-accent-strong);
 }
-
 .richtext-link-add {
     padding: 0.25rem 0.6rem;
     font-size: 0.8rem;
     white-space: nowrap;
 }
-
 .richtext-link-cancel {
     width: 24px;
     height: 24px;
@@ -1699,19 +1158,14 @@ td.editable.richtext-editing {
     border-color: var(--bcc-border);
     color: var(--bcc-text);
 }
-
-/* window.alert() yerine satır içi hata — çubuk açık kalır, kullanıcı yazdığı
-   URL'yi düzeltebilir. */
 .richtext-link-error {
     margin: 0.25rem 0 0;
     color: var(--bcc-danger);
     font-size: 0.78rem;
 }
-
 .richtext-link-error[hidden] {
     display: none;
 }
-
 .richtext-editable {
     min-height: 4.5rem;
     max-height: 12rem;
@@ -1722,38 +1176,15 @@ td.editable.richtext-editing {
     font: inherit;
     outline: none;
 }
-
 .richtext-editable:focus {
     border-color: var(--bcc-accent-strong);
 }
-
 .richtext-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.5rem;
 }
-
-/* Zengin metin linkleri — long_text içeriğinin göründüğü ÜÇ yüzeyde de AYNI
-   görünüm: grid hücresi (.rich-text-view), düzenleyici (.richtext-editable) ve
-   Duyuru ekranının salt-okunur detay paneli (.if-detail-field-value, bkz.
-   interface.js is_rich dalı — interface.php bu dosyayı da yüklüyor). Böylece
-   kullanıcı yazarken gördüğü şeyi kaydedince de görür.
-   BİLEREK dar kapsam: çıplak "td a" yazılsaydı hücredeki diğer <a>'lar
-   (.attachment-chip dosya kutucukları, .cell-link-icon "yeni sekmede aç"
-   ikonu) da mavi+altı çizili olurdu — onlar köprü metni değil, kendi
-   tasarımları var. :not(.attachment-cell-view) da AYNI gerekçe: o sınıf detay
-   panelindeki dosya-eki listesine veriliyor. */
-
-/* ⚠️ Seçiciler BİLEREK İKİ SINIFLI (.cell-view.rich-text-view /
-   .richtext-popover .richtext-editable): grid-shell.css'in en üstündeki
-   `body.gs-body a { text-decoration: none; color: inherit }` kuralı (özgüllük
-   0,0,1,2) tek sınıflı bir `.rich-text-view a`yı (0,0,1,1) YENER — link gövde
-   metni rengine döner ve altı çizgisi kalkar. Canlı olarak yaşandı: computed
-   color rgb(29,29,31), text-decoration none. İki sınıf (0,0,2,1) o kuralı
-   geçer. AYNI ders, aynı kural yüzünden .gs-rail .gs-rail-home'da da alındı
-   (bkz. grid-shell.css'teki not) — üçüncü kez düşülmesin.
-   .if-detail-field-value zaten :not(...) ile iki sınıf değerinde. */
 
 .cell-view.rich-text-view a,
 .richtext-popover .richtext-editable a,
@@ -1763,19 +1194,12 @@ td.editable.richtext-editing {
     text-underline-offset: 2px;
     cursor: pointer;
 }
-
 .cell-view.rich-text-view a:hover,
 .richtext-popover .richtext-editable a:hover,
 .if-detail-field-value:not(.attachment-cell-view) a:hover {
     color: var(--bcc-link-hover);
-    /* Hover'da altı çizgi KALINLAŞIR (kaybolmaz) — linkin tıklanabilirliği
-       hover'a bağlı bir ipucu olmamalı, hover yalnızca onu pekiştirir. */
     text-decoration-thickness: 2px;
 }
-
-/* Dosya eki (attachment) hücresi: küçük resim (image/*) ya da rozet+ad "chip"i,
-   birden fazla dosya yan yana. .cell-view'ın nowrap/ellipsis'ini flex ile geçersiz
-   kılar (metin değil, dosya kutucukları). */
 
 .attachment-cell-view {
     display: flex;
@@ -1784,7 +1208,6 @@ td.editable.richtext-editing {
     overflow-x: auto;
     white-space: nowrap;
 }
-
 .attachment-chip {
     display: inline-flex;
     align-items: center;
@@ -1798,13 +1221,9 @@ td.editable.richtext-editing {
     flex-shrink: 0;
 }
 
-/* Bulunan gerçek bug: sabit açık gri (#e6e6ea) — koyu temada .attachment-chip
-   metni (var(--bcc-text)) neredeyse görünmez oluyordu. Diğer hover'larla
-   AYNI tema-duyarlı zemin. */
 .attachment-chip:hover {
     background: var(--bcc-surface-hover);
 }
-
 .attachment-thumb {
     width: 24px;
     height: 24px;
@@ -1812,7 +1231,6 @@ td.editable.richtext-editing {
     border-radius: 4px;
     display: block;
 }
-
 .attachment-badge {
     display: inline-block;
     padding: 0.05rem 0.35rem;
@@ -1823,31 +1241,16 @@ td.editable.richtext-editing {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
-
 .attachment-name {
     max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-/* Dosya eki yükle/sil popover'ı — .richtext-popover ile AYNI görsel dil. */
-
 td.editable.attachment-editing {
     position: relative;
-    /* Bkz. td.editable.richtext-editing: gösterge popover, hücre çerçevesiz.
-       outline da bastırılmalı (gösterge box-shadow'dan outline'a taşındı). */
     box-shadow: none;
     outline: none;
 }
-
-/* Beyaz arka plan + zayıf kenarlık/gölge grid zeminiyle neredeyse ayırt
-   edilemiyordu, kullanıcıya "CSS'siz" bir ekran gibi görünüyordu. */
-/* position:fixed (eskiden absolute): absolute iken .grid-wrap { overflow:auto }
-   kutusuna KIRPILIYORDU — alt satırlardaki ve en sağdaki hücrelerde popover
-   görünmez oluyordu. Konumu artık grid.js hesaplıyor (bcc_positionFloating),
-   bu yüzden buradaki sabit top/left kaldırıldı; ikisi de JS'ten geliyor.
-   overflow-y: yardımcı hiçbir tarafa sığmayan panele max-height verir; onsuz
-   max-height içeriği kırpardı. */
 .attachment-popover {
     position: fixed;
     overflow-y: auto;
@@ -1861,7 +1264,6 @@ td.editable.attachment-editing {
     cursor: default;
     white-space: normal;
 }
-
 .attachment-popover-list {
     display: flex;
     flex-direction: column;
@@ -1870,23 +1272,19 @@ td.editable.attachment-editing {
     overflow-y: auto;
     margin-bottom: 0.5rem;
 }
-
 .attachment-popover-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.4rem;
 }
-
 .attachment-popover-row .attachment-chip {
     flex: 1;
     min-width: 0;
 }
-
 .attachment-popover-row .attachment-name {
     max-width: 140px;
 }
-
 .attachment-remove-btn {
     border: none;
     background: none;
@@ -1897,24 +1295,10 @@ td.editable.attachment-editing {
     padding: 0.1rem 0.3rem;
     flex-shrink: 0;
 }
-
-/* Bulunan gerçek bug: sabit açık pembe (#fbdbd7) — kardeşi .group-remove-btn:hover
-   zaten var(--bcc-danger-soft) kullanıyordu, burası gözden kaçmıştı. Koyu
-   temada .attachment-remove-btn'in rengi (var(--bcc-danger)) bu sabit açık
-   zeminle düşük kontrastlıydı. */
 .attachment-remove-btn:hover {
     background: var(--bcc-danger-soft);
     border-radius: 4px;
 }
-
-/* Bulunan gerçek bug: eski .attachment-file-input (çıplak <input type=file>)
-   yalnızca tarayıcının küçük native butonuyla tıklanabiliyordu, çevresindeki
-   dolgu dekoratifti. Artık gizli input bir <label class="attachment-dropzone">
-   içinde — TÜM kutu native olarak tıklanabilir + sürükle-bırak destekli
-   (grid.js buildAttachmentManager). Taban kural burada dar popover (260px,
-   .attachment-popover) bağlamı için — kompakt kalması BİLİNÇLİ, önceki
-   oturumda o dar bağlama dokunulmaması kararı korunuyor, yalnızca DAVRANIŞ
-   (tıklanabilirlik/drag-drop) düzeltildi, BOYUT büyütülmedi. */
 .attachment-dropzone {
     display: flex;
     align-items: center;
@@ -1929,77 +1313,38 @@ td.editable.attachment-editing {
     padding: 0.4rem 0.6rem;
     cursor: pointer;
 }
-
 .attachment-dropzone:hover,
 .attachment-dropzone.is-dragover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-accent);
 }
-
 .attachment-popover-close {
     margin-top: 0.5rem;
 }
-
-/* Satır genişletme panelindeki (grid-row-detail.js) attachment widget'ı — popover
-   çerçevesi olmadan, panelin normal akışında. */
-
 .attachment-manager .attachment-popover-list {
     max-height: 10rem;
 }
 
-/* Yalnızca kayıt detay panelindeki (geniş) bağlam — sıkışık 260px popover'a
-   (.attachment-popover) dokunulmadı, oradaki taban .attachment-dropzone
-   kompakt kalıyor. Bu, önceki oturumdaki dashed-box görünümünün AYNISI
-   (yalnızca selector adı .attachment-file-input'tan .attachment-dropzone'a
-   değişti — davranış artık tüm kutuyu kapsıyor). */
 .attachment-manager .attachment-dropzone {
     border-radius: 8px;
     padding: 0.65rem 0.8rem;
     background: var(--bcc-surface-sunken);
     font-size: 0.85rem;
 }
-
-/* ⚠️ SEÇİCİLER BİLEREK ELEMAN ADIYLA: theme.css'te kapsamsız bir
-   "input[type='text'], input[type='number'], … , textarea" tabanı var ve onun
-   özgüllüğü (0,1,1) düz ".cell-input"i (0,1,0) EZİYORDU. O dosyadaki yorum
-   "daha spesifik bir sınıf varsa ezmez" diyor ama hesap tersine: öznitelik
-   seçicisi + eleman, tek sınıftan YÜKSEK.
-   Sonuç: grid hücre düzenleyicisi theme.css'ten 1px kenarlık, 6px köşe
-   yarıçapı ve odakta 3px halka alıyordu — hücrenin içinde yuvarlak mavi bir
-   kutu beliriyor ve kutu hücreden taşıyordu.
-   "input.cell-input" (0,1,1) ile berabere kalınıp style.css theme.css'ten
-   SONRA yüklendiği için burası kazanıyor. */
 input.cell-input,
 textarea.cell-input,
 select.cell-input {
     width: 100%;
-    /* ⚠️ ESKİDEN "min-width: 140px" idi ve DÜZENLEYİCİYİ HÜCREDEN TAŞIRIYORDU.
-       Grid'de kayıtlı sütun genişliği varsa tablo "table-layout: fixed"e geçer;
-       o modda sütun içeriğe göre BÜYÜMEZ, dolayısıyla 140px'ten dar bir sütunda
-       (ör. "Sayı") girdi hücrenin dışına taşıyordu — width:100% + border-box
-       hesabını min-width eziyor. Genişliği sütun belirlesin. */
     min-width: 0;
     box-sizing: border-box;
-    /* Hücre düzenleyicisi çerçevesiz olmalı: görsel odak göstergesi HÜCRENİN
-       kendisinde (td.editable.editing { outline: 2px solid }) ve KÖŞESİZ.
-       İçeride ikinci bir yuvarlak kutu istenmiyor. */
     border: none;
     border-radius: 0;
     padding: 0.35rem 0.7rem;
     font: inherit;
     background: var(--bcc-surface);
-    /* Bulunan gerçek bug: color hiç belirtilmemişti — form kontrolleri
-       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
-       kullanılır. Koyu temada background koyulaşıyor ama metin siyah
-       kalıyordu (grid'in ANA hücre düzenleyicisi — neredeyse görünmezdi). */
     color: var(--bcc-text);
 }
 
-/* Odak halkası da AYNI özgüllük sorunundaydı: theme.css'in
-   "input[type='…']:focus" kuralı (0,2,1) düz ".cell-input:focus"u (0,2,0)
-   eziyor ve hücrenin içine 3px'lik yuvarlak mavi halka çiziyordu.
-   Odak göstergesi hücrenin KENDİSİNDE (td.editable.editing) — burada hepsi
-   açıkça sıfırlanıyor. */
 input.cell-input:focus,
 textarea.cell-input:focus,
 select.cell-input:focus {
@@ -2008,7 +1353,6 @@ select.cell-input:focus {
     border-radius: 0;
     box-shadow: none;
 }
-
 textarea.cell-input {
     min-height: 4.5rem;
     resize: vertical;
@@ -2019,88 +1363,39 @@ textarea.cell-input {
     width: 1rem;
     height: 1rem;
 }
-
-/* Rating (Grup C1) — checkbox İLE AYNI ruh: hücrede her zaman görünür, doğrudan
-   tıklanabilir gerçek elemanlar (startEdit()'in input-aç/blur-kaydet akışına
-   girmez). Yıldızlar TEK karakterden (★) ibaret; "boş" yıldız ayrı bir ☆ glifi
-   DEĞİL, aynı ★'ın soluk rengi — böylece dolu/boş arası genişlik kaymaz ve
-   hover önizlemesi (grid.js updateRatingStars) titremez.
-   .rating-view-editable YOKSA (canEdit=false) cursor/hover yok: salt-okunur
-   olduğu görsel olarak da belli olur. */
 .rating-view {
     display: flex;
     align-items: center;
     gap: 0.1rem;
     line-height: 1;
 }
-
 .rating-star {
     color: #dadce0;
     font-size: 1rem;
     user-select: none;
     transition: color 0.08s ease-in-out;
 }
-
 .rating-star-filled {
     color: #f5b301;
 }
-
 .rating-view-editable .rating-star {
     cursor: pointer;
 }
-
 @keyframes cellFlashOk {
     0% { background: #d3f3dd; }
     100% { background: transparent; }
 }
-
 @keyframes cellFlashError {
     0% { background: #fbdada; }
     100% { background: transparent; }
 }
-
 td.cell-flash-ok {
     animation: cellFlashOk 0.7s ease-out;
 }
-
 td.cell-flash-error {
     animation: cellFlashError 0.7s ease-out;
 }
 
-/* ---- Hücre seçimi: seçili alan ve çapa -------------------------------- */
-/* Amaç: kullanıcı NE seçtiğini ve yapıştırmanın NEREDEN başlayacağını
-   görsün. İşlem bitince ikisi de kalkar (grid-cell-select.js clearSelection).
-   Renkler tema token'larından — sabit renk yazılırsa koyu temada okunmaz olur.
- *
- * ⚠️ ESKİ GÖRÜNÜM VE NEDEN DEĞİŞTİ (kullanıcı "çok kaba duruyor" dedi):
- *   1. Seçili alan yalnızca DOLGUYLA gösteriliyordu — dikdörtgenin nerede
- *      bittiği belirsizdi, kenarı olmayan bir mavi leke gibi duruyordu.
- *   2. Çapa "yürüyen karınca" olsun diye outline-offset'i -2px ↔ -6px arasında
- *      animasyonluyordu. Bu ANTS DEĞİL: karınca çizgisi kenar boyunca AKAR,
- *      burada ise kutunun kendisi büyüyüp küçülüyordu (nefes alan kesik
- *      çizgi) — hem huzursuz hem de her karede outline yeniden çizildiği için
- *      boşuna boyama maliyeti.
- * Yeni model Excel/Airtable'daki gibi: seçili alanın DIŞ SINIRINDA tek parça
- * ince çerçeve + yarı saydam dolgu, çapa hücresi ise DOLGUSUZ kalır (çok
- * hücreli seçimde "aktif hücre" olarak kendini belli eder). Animasyon YOK. */
-
-/* Dört kenar ayrı ayrı değişken; kutu gölgeleri TEK bildirimde birleşir.
-   Neden box-shadow: border hücre genişliğini değiştirip tüm sütunu kaydırırdı
-   (bu dosyadaki column-resize kuralları piksel hassas), outline ise dört kenarı
-   birden çizer — dikdörtgenin ORTASINDAKİ hücrelerde kenar İSTEMİYORUZ.
-   inset gölge yerleşimi etkilemez ve kenar kenar kontrol edilebilir.
-   Kenar sınıflarını (is-sel-t/r/b/l) yalnızca sınırdaki hücrelere
-   grid-cell-select.js paintSelection() koyar. */
-/* ⚠️ SEÇİCİ ÖNEKİ ("table.grid tbody") ŞART — bulunan gerçek bug: kurallar
-   çıplak "td.grid-cell.is-paste-range" (0,2,1) iken satır hover'ı
-   ("table.grid tbody tr:hover td", 0,2,4) ve seçili satır zemini
-   (tr.is-row-selected td) bunları YENİYORDU. Yani fare seçimin İÇİNDEN
-   geçerken o satırın dolgusu kayboluyordu; tam da sürükleme sırasında,
-   kullanıcının seçimi izlediği anda. Önekli hâl (0,3,3) sınıf sayısıyla
-   kazanır.
-   ⚠️ DOLGU background-color DEĞİL background-image (düz renk gradyan):
-   böylece hover/seçili-satır zemininin ÜSTÜNE binen bir katman olur, onu
-   SİLMEZ — hangi satırın seçili olduğu seçim boyanınca da okunur kalır. */
 table.grid tbody td.grid-cell.is-paste-range {
     --sel-t: 0px;
     --sel-r: 0px;
@@ -2113,57 +1408,26 @@ table.grid tbody td.grid-cell.is-paste-range {
         inset 0 calc(-1 * var(--sel-b)) 0 0 var(--bcc-accent),
         inset var(--sel-l) 0 0 0 var(--bcc-accent);
 }
-
 table.grid tbody td.grid-cell.is-sel-t { --sel-t: 2px; }
 table.grid tbody td.grid-cell.is-sel-r { --sel-r: 2px; }
 table.grid tbody td.grid-cell.is-sel-b { --sel-b: 2px; }
 table.grid tbody td.grid-cell.is-sel-l { --sel-l: 2px; }
-
-/* Dikdörtgenin dört köşesi hafif yuvarlatılır — kaba "blok" hissini alan asıl
-   ayrıntı bu. table.grid'de border-collapse:separate olduğu için hücrede
-   border-radius GEÇERLİ (collapse olsaydı yok sayılırdı). */
 table.grid tbody td.grid-cell.is-sel-t.is-sel-l { border-top-left-radius: 3px; }
 table.grid tbody td.grid-cell.is-sel-t.is-sel-r { border-top-right-radius: 3px; }
 table.grid tbody td.grid-cell.is-sel-b.is-sel-l { border-bottom-left-radius: 3px; }
 table.grid tbody td.grid-cell.is-sel-b.is-sel-r { border-bottom-right-radius: 3px; }
-
-/* Çapa = yapıştırmanın başlayacağı hücre. Çok hücreli seçimde DOLGUSUZ kalarak
-   kendini belli eder (Excel'in "aktif hücre"si) — altındaki zemin (hover,
-   seçili satır ya da düz yüzey) olduğu gibi görünür.
-   ⚠️ box-shadow BURADA YENİDEN TANIMLANMAZ: çapa her zaman dikdörtgenin bir
-   KÖŞESİDİR, yani kenar çizgilerini taşır — bu kural onları ezseydi çerçevede
-   köşe eksik kalırdı. Yalnızca dolgu katmanı kalkar. */
 table.grid tbody td.grid-cell.is-paste-anchor {
     background-image: none;
 }
 
-/* AYNI TUZAK, AYNI ÇÖZÜM (tarihsel not): bu iki kural hücreye
-   position:relative veriyor (popover'ları konumlandırmak için) ve donmuş
-   sütunda satır içi left'i (grid-freeze-columns.js) sticky ofsetinden GÖRELİ
-   KAYDIRMAYA çevirip hücreyi tam ofset kadar sağa itiyordu (ölçüm: 44px).
-   Bu kural DOSYADA SONRA gelmeli — özgüllükleri eşit (0,2,1), kazanan sıraya
-   göre belirleniyor.
-   Not: eskiden .is-paste-anchor da position:relative veriyordu (kesik çizgi
-   komşu kenarlıkların üstünde kalsın diye) ve AYNI kaymayı üretiyordu; yeni
-   çizim iç gölgeye dayandığı için o kural — ve onun için yazılmış
-   ".is-paste-anchor.grid-frozen-cell { position: sticky }" yaması — artık
-   gereksiz olduğu için kaldırıldı. */
 td.grid-frozen-cell.richtext-editing,
 td.grid-frozen-cell.attachment-editing {
     position: sticky;
 }
-
-/* Düzenleme açıkken çapa göstergesi düzenleme göstergesiyle çakışıyor — biri
-   kazanmalı, düzenleme kazanır. Düzenlenen hücre kendi çizgisini (td.editable.
-   editing, 2px solid) zaten çiziyor; burada yalnızca seçim çerçevesi ve dolgu
-   susturulur, yoksa girdi kutusunun içinde ikinci bir mavi kenar görünürdü. */
 table.grid tbody td.grid-cell.is-paste-range.editing {
     box-shadow: none;
     background-image: none;
 }
-
-/* ---- Grid araç çubuğu: arama + sıralama (Faz 4) ----------------------- */
-
 .grid-toolbar {
     display: flex;
     align-items: flex-start;
@@ -2171,7 +1435,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     margin-bottom: 0.75rem;
     flex-wrap: wrap;
 }
-
 .grid-search {
     padding: 0.4rem 0.6rem;
     border: 1px solid var(--bcc-border-strong);
@@ -2180,18 +1443,15 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font: inherit;
     box-sizing: border-box;
 }
-
 .sort-panel,
 .filter-panel {
     position: relative;
 }
-
 .sort-panel summary,
 .filter-panel summary {
     list-style: none;
     cursor: pointer;
 }
-
 .sort-panel summary::-webkit-details-marker,
 .filter-panel summary::-webkit-details-marker {
     display: none;
@@ -2201,7 +1461,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
 .filter-panel[open] summary {
     background: var(--bcc-surface-hover);
 }
-
 .sort-form {
     position: absolute;
     top: calc(100% + 0.35rem);
@@ -2214,17 +1473,12 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     padding: 0.85rem;
     min-width: 320px;
 }
-
-/* Siralama paneli kurallari dosyanin SONUNA tasindi (OpsFlow davranışı
-   yeniden tasarimi) — eski .sort-row/.sort-actions kurallari kaldirildi. */
-
 .grid-row-count {
     align-self: center;
     color: var(--bcc-text-muted);
     font-size: 0.85rem;
     margin-left: auto;
 }
-
 .filter-panel .filter-form {
     position: absolute;
     top: calc(100% + 0.35rem);
@@ -2238,29 +1492,22 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     min-width: 420px;
 }
 
-/* Filtre paneli kurallari dosyanin SONUNA tasindi (OpsFlow davranışı
-   yeniden tasarimi). .filter-logic-row KALDIRILDI: alt taraftaki radyo
-   dugmeleri yerini 2. satirdaki bagac <select>'ine birakti. */
-
 .hide-fields-panel,
 .group-panel,
 .row-height-panel {
     position: relative;
 }
-
 .hide-fields-panel summary,
 .group-panel summary,
 .row-height-panel summary {
     list-style: none;
     cursor: pointer;
 }
-
 .hide-fields-panel summary::-webkit-details-marker,
 .group-panel summary::-webkit-details-marker,
 .row-height-panel summary::-webkit-details-marker {
     display: none;
 }
-
 .hide-fields-panel[open] summary,
 .group-panel[open] summary,
 .row-height-panel[open] summary {
@@ -2276,7 +1523,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
 }
-
 .hide-fields-form,
 .group-form,
 .row-height-form,
@@ -2295,11 +1541,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     max-height: 360px;
     overflow-y: auto;
 }
-
-/* Share popover'ları (D1 "Paylaş"/collab-popover, D2 "Bağlantı"/share-popover) —
-   sağ tarafta oturan tetikleyicilerden açıldığı için (topbar sağı / araç çubuğu
-   sağı) sola doğru taşmasın diye sağa hizalı; grid.php'nin sağ-üst köşesindeki
-   popup'lar için ayrıca overflow olmaması adına daha geniş min-width. */
 .share-popover-trigger .share-popover-form,
 .collab-popover-trigger .collab-popover-form {
     left: auto;
@@ -2308,45 +1549,11 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     overflow: visible;
 }
 
-/* Bağlantı paylaşım popover'ları — katılımcı popover'ından DAHA GENİŞ.
-   320px'te ÖLÇÜLEN gerçek durum: URL metni 323px yer istiyor, input yalnızca
-   215px veriyordu (108px taşma). Kutu, "Kopyala" butonu + boşluk + dolgular
-   için sabit 124px harcıyor, gerisi input'a kalıyor. İki tetikleyicinin de
-   sığması gereken genişlik ölçüldü:
-
-     grid.php "Bağlantı"        http://localhost/interface.php?base_id=741
-                                metin 304px -> kutu 429px
-     grid.php "Paylaş ve Senk." http://localhost/grid.php?table_id=857&view_id=809
-                                metin 375px -> kutu 500px
-     interface.php "Bağlantı"   http://localhost/interface.php?base_id=741&table_id=857
-                                metin 409px -> kutu 534px  (en uzunu)
-
-   Üçü de AYNI sınıfı kullanıyor, yani tek sayı üçünü birden bağlıyor: 560px
-   en uzun olanına ~26px pay bırakıyor. Katılımcı popover'ı 320px'te KALIYOR
-   (yukarıdaki ortak kural) — orada sığmayan bir metin yok, boşuna büyümesin.
-
-   Daha uzun bir URL (gerçek alan adı, dört haneli id'ler) hâlâ taşabilir: o
-   durumda input kaydırılır, ama tıklayınca TAMAMI seçildiği ve "Kopyala" her
-   zaman input.value'nun tamamını aldığı için İŞLEV kaybı olmaz — kırpılma
-   yalnızca görseldir. max-width dar ekranlarda popover'ın görüntü alanından
-   taşmasını engelliyor.
-
-   `width` + `min-width: 0`, `min-width: 560px` DEĞİL — CSS'te min-width,
-   max-width'i EZER: min-width:560px yazıldığında 600px'lik bir ekranda
-   `max-width: 90vw` (540px) hiç devreye girmiyor ve kutu (sağa hizalı olduğu
-   için) SOL kenardan taşıyordu (ölçüldü: left = -50px, yani URL'nin başı
-   ekran dışında kalıyordu). width olarak yazılınca max-width gerçekten
-   kısıtlıyor; ortak kuraldan gelen min-width: 320px de burada sıfırlanıyor
-   ki çok dar ekranlarda aynı tuzağa düşülmesin. */
 .share-popover-trigger .share-popover-form {
     width: 560px;
     min-width: 0;
     max-width: 90vw;
 }
-
-/* ---------- D1 "Paylaş" popup (OpsFlow Share davranışı) ----------
-   Konumlandırma/kutu stili yukarıdaki .share-popover-form ile PAYLAŞILIYOR
-   (kopya yok); burada yalnızca içeriğe özgü kurallar var. */
 
 .collab-popover-title {
     font-size: 0.9rem;
@@ -2354,7 +1561,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     color: var(--bcc-text);
     margin-bottom: 0.7rem;
 }
-
 .collab-popover-assign {
     display: flex;
     flex-wrap: wrap;
@@ -2363,21 +1569,11 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     margin-bottom: 0.7rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
-/* .collab-popover-field / -field-role / -field select KURALLARI KALDIRILDI
-   (denetimde bulundu): popover'daki hizli rol atama formu team_members.php'ye
-   tam sayfa POST ediyordu ve paylasim modaline tasinirken markup silinmisti;
-   stiller geride kalmisti. Uc secici de kod tabaninda HIC gecmiyor. */
-
 .collab-popover-note {
     font-size: 0.8rem;
     color: var(--bcc-text-muted);
     margin: 0 0 0.7rem;
 }
-
-/* Artık <a> DEĞİL <button> (team_members.php'ye yönlendirmiyor, "Paylaş"
-   modalını açıyor) — tarayıcı buton varsayılanları sıfırlanıp önceki
-   bağlantı görünümü birebir korunuyor. */
 .collab-popover-people {
     display: flex;
     align-items: center;
@@ -2394,10 +1590,7 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     text-align: left;
     cursor: pointer;
 }
-
 .collab-popover-people:hover { background: var(--bcc-surface-hover); }
-
-/* Popup'taki hızlı atama formunun yerini alan tek buton (modalı açar). */
 .collab-popover-add-btn {
     display: block;
     width: 100%;
@@ -2414,11 +1607,7 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
 }
 
 .collab-popover-add-btn:hover { background: var(--bcc-surface-hover); }
-
 .collab-popover-avatars { display: flex; }
-
-/* .ws-collab-avatar (home.css) TABAN stilini kullanır — burada yalnızca
-   önizleme boyutu (30px→22px) ve üst üste binen "yığın" görünümü ekleniyor. */
 .collab-popover-avatar {
     width: 22px;
     height: 22px;
@@ -2426,26 +1615,21 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     border: 2px solid var(--bcc-surface);
     margin-left: -0.45rem;
 }
-
 .collab-popover-avatar:first-child { margin-left: 0; }
-
 .collab-popover-people-label {
     font-size: 0.8rem;
     color: var(--bcc-text-muted);
 }
-
 .share-popover-label {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
     margin-bottom: 0.5rem;
 }
-
 .share-popover-row {
     display: flex;
     gap: 0.4rem;
 }
-
 .share-popover-input {
     flex: 1;
     min-width: 0;
@@ -2457,42 +1641,23 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text);
 }
-
 .share-popover-note {
     font-size: 0.76rem;
     color: var(--bcc-text-muted);
     margin: 0.5rem 0 0;
 }
-
-/* Grid'in en sağındaki "+" (yeni sütun) başlık hücresi — Bölüm A'daki
-   tip-önce-isim-sonra sihirbazının AYNISI, panel yalnızca sağa hizalanmış
-   (sütun tablonun en ucunda, soldan açılsa taşardı). */
-
 .grid-add-field-th {
     width: 40px;
     text-align: center;
     padding: 0 !important;
 }
-
 .grid-add-field-menu { position: relative; }
-
-/* Bulunan gerçek bug: bu düğme 2.1rem (33.6px) SABİT yükseklikteydi ve
-   .grid-add-field-th'nin dolgusu 0 olduğu için başlık satırının EN UZUN
-   içeriği oydu. Tablo satırı en uzun hücreye göre boylandığından, <th>'lere
-   height:32px verilmesine rağmen başlık 35.6px'te takılı kalıyordu — üstelik
-   suçlu, ölçtüğüm sütun değil tablonun EN SAĞINDAKİ "+" sütunuydu.
-   Sabit yükseklik yerine hücreyi doldurur: başlık yoğunluğu ileride yine
-   değişirse düğme kendiliğinden uyar, ikinci bir sabit güncellenmez. */
 .grid-add-field-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    /* height:100% bir tablo hücresinin torununda güvenilir çözülmüyor (yüzde,
-       ölçüsü belirsiz bir ataya dayanamıyor) — bu yüzden asıl ölçüyü
-       min-height veriyor. 30px = 32px başlık eksi 2px alt kenarlık, yani
-       hücrenin İÇ yüksekliğinin tamamı: hover zemini başlığı tam dolduruyor
-       ama satırı 32'nin üstüne İTMİYOR. */
+
     height: 100%;
     min-height: 30px;
     cursor: pointer;
@@ -2500,15 +1665,8 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font-size: 1.1rem;
     list-style: none;
 }
-
 .grid-add-field-btn::-webkit-details-marker { display: none; }
-
 .grid-add-field-btn:hover { background: var(--bcc-surface-hover); }
-
-/* .grid-wrap { overflow: auto } sütun başlığının torunu olan absolute bir
-   paneli kırpardı (bkz. .home-base-more-panel/.gs-view-row-menu-panel'deki AYNI
-   düzeltme) — position:fixed + açılışta JS'in hesapladığı top/right (bkz.
-   grid-add-field.js) bunu atlar. */
 .grid-add-field-panel {
     position: fixed;
     z-index: 30;
@@ -2525,7 +1683,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font-weight: normal;
     white-space: normal;
 }
-
 .hide-fields-search {
     display: block;
     width: 100%;
@@ -2536,18 +1693,12 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font: inherit;
     margin-bottom: 0.5rem;
 }
-
-/* .hide-field-row'un YERLESIMI .hide-fields-form ile nitelenmis olarak
-   asagida (OpsFlow davranışı bolumu). Toggle gorseli (asagidaki
-   .hide-field-toggle kurallari) DEGISMEDI. */
-
 .hide-field-toggle-input {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
 }
-
 .hide-field-toggle {
     position: relative;
     width: 32px;
@@ -2557,7 +1708,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     border-radius: 999px;
     transition: background 0.15s ease;
 }
-
 .hide-field-toggle::before {
     content: '';
     position: absolute;
@@ -2570,30 +1720,22 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     transition: transform 0.15s ease;
 }
-
 .hide-field-toggle-input:checked + .hide-field-toggle {
     background: var(--bcc-accent);
 }
-
 .hide-field-toggle-input:checked + .hide-field-toggle::before {
     transform: translateX(14px);
 }
-
 .hide-field-toggle-input:focus-visible + .hide-field-toggle {
     outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
-
 .hide-field-name {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-/* Color: "Alanı Düzenle" seçenek renk seçicisi artık home.css'te
-   (table_fields.php dışında kullanan kalmadı — ikinci bir kopya YOK). */
-
 .hide-fields-actions {
     display: flex;
     align-items: center;
@@ -2603,15 +1745,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     border-top: 1px solid var(--bcc-border);
 }
 
-/* ---------- "Grupla" paneli (OpsFlow "Group" davranışı) ---------------------
-   Eskiden İKİ AYRI görünüm vardı: gruplama yokken bir alan listesi, varken
-   <select>'li bir form. Artık TEK panel: üstte aktif seviyeler (rozet + yön
-   düğmesi + kaldır), altta her zaman görünen aranabilir alan listesi.
-
-   Sunucu sözleşmesi (group_field_N / group_dir_N) DEĞİŞMEDİ; sadece bunları
-   bir <form> yerine önceden kurulmuş bağlantılar taşıyor, yani "Uygula" yok
-   ve panel JS'siz de çalışıyor. */
-
 .group-panel .group-panel-box {
     min-width: 320px;
     max-width: 380px;
@@ -2619,9 +1752,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     max-height: none;
     overflow: visible;
 }
-
-/* ---- Boş durum rehberi ---- */
-
 .group-hint {
     margin: 0;
     padding: 0.7rem 0.8rem;
@@ -2630,22 +1760,17 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     line-height: 1.45;
     color: var(--bcc-text-muted);
 }
-
-/* ---- Aktif seviyeler ---- */
-
 .group-active {
     padding: 0.7rem 0.75rem;
     border-bottom: 1px solid var(--bcc-border);
     background: var(--bcc-surface-sunken);
 }
-
 .group-active-head {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     margin-bottom: 0.5rem;
 }
-
 .group-active-title {
     font-size: 0.72rem;
     font-weight: 700;
@@ -2660,10 +1785,8 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     gap: 0.4rem;
     margin-bottom: 0.35rem;
 }
-
 .group-active-row:last-child { margin-bottom: 0; }
 
-/* Seviye numarası — çok seviyeli gruplamada sıra tek bakışta okunsun. */
 .group-level-badge {
     display: inline-flex;
     align-items: center;
@@ -2678,8 +1801,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font-weight: 700;
 }
 
-/* AKTİF alan rozeti: accent zemin — "bu alana göre gruplanıyor" durumunu
-   listedeki sıradan satırlardan ayıran ana ipucu. */
 .group-active-field {
     display: inline-flex;
     align-items: center;
@@ -2692,13 +1813,11 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
 }
-
 .group-active-field .field-badge {
     margin-right: 0;
     vertical-align: 0;
     flex-shrink: 0;
 }
-
 .group-active-name {
     font-size: 0.82rem;
     font-weight: 600;
@@ -2707,9 +1826,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     white-space: nowrap;
 }
 
-/* Yön düğmesi: iki durumlu bir ayar için <select> fazladan bir tık istiyordu.
-   Etiket alan TİPİNE göre geliyor (BCC_GROUP_DIR_LABELS): "A → Z", "1 → 9",
-   "Erken → Geç"... */
 .group-dir-toggle {
     display: inline-flex;
     align-items: center;
@@ -2726,14 +1842,12 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     white-space: nowrap;
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 .group-dir-toggle:hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-accent);
     color: var(--bcc-accent-strong);
     text-decoration: none;
 }
-
 .group-remove-btn {
     display: inline-flex;
     align-items: center;
@@ -2745,12 +1859,10 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     color: var(--bcc-text-muted);
     transition: background-color 0.12s ease, color 0.12s ease;
 }
-
 .group-remove-btn:hover {
     background: var(--bcc-danger-soft);
     color: var(--bcc-danger);
 }
-
 .group-collapse-row {
     display: flex;
     gap: 0.35rem;
@@ -2758,7 +1870,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     padding-top: 0.5rem;
     border-top: 1px solid var(--bcc-border);
 }
-
 .group-mini-btn {
     flex: 1;
     padding: 0.32rem 0.4rem;
@@ -2772,32 +1883,20 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
-
 .group-mini-btn:hover { background: var(--bcc-surface-hover); }
-
-/* ---- Alan seçici ---- */
-
 .group-pick { padding: 0.6rem 0.75rem 0.35rem; }
-
 .group-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
     margin-bottom: 0.4rem;
 }
-
 .group-search-wrap svg {
     position: absolute;
     left: 0.5rem;
     color: var(--bcc-text-muted);
     pointer-events: none;
 }
-
-/* .group-panel ile NITELENDI (tek sinif YETMIYOR): theme.css'te
-   input[type="text"] hedefleyen genel bir kural var ve ozgullugu (0,1,1)
-   tek sinifli .group-search'i (0,1,0) EZIYORDU — sol dolgu 1.65rem yerine
-   0.6rem kaliyor ve arama IKONU yer tutucu metnin UZERINE biniyordu
-   (olculdu: ikon sagi 837px, metin baslangici 826px). */
 .group-panel .group-search {
     width: 100%;
     box-sizing: border-box;
@@ -2809,15 +1908,12 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     font: inherit;
     font-size: 0.83rem;
 }
-
 .group-panel .group-search::placeholder { color: var(--bcc-text-muted); }
-
 .group-panel .group-search:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .group-field-list {
     display: flex;
     flex-direction: column;
@@ -2826,7 +1922,6 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     overflow-y: auto;
     scrollbar-width: thin;
 }
-
 .group-field-option {
     display: flex;
     align-items: center;
@@ -2838,18 +1933,15 @@ table.grid tbody td.grid-cell.is-paste-range.editing {
     text-decoration: none;
     transition: background-color 0.12s ease;
 }
-
 a.group-field-option:hover {
     background: var(--bcc-surface-hover);
     text-decoration: none;
 }
-
 .group-field-option .field-badge {
     margin-right: 0;
     vertical-align: 0;
     flex-shrink: 0;
 }
-
 .group-field-name {
     flex: 1;
     min-width: 0;
@@ -2857,16 +1949,12 @@ a.group-field-option:hover {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-/* Zaten gruplanmış alan: listede accent'li görünür ama tıklanamaz (aynı alan
-   iki seviyede olamaz). Kaç. seviyede olduğunu de söyler. */
 .group-field-option.is-active {
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
     font-weight: 600;
     cursor: default;
 }
-
 .group-field-flag {
     flex-shrink: 0;
     font-size: 0.7rem;
@@ -2875,17 +1963,12 @@ a.group-field-option:hover {
     opacity: 0.85;
 }
 
-/* 3 seviye dolduğunda: liste eksik görünmesin ama eklenemesin. */
 .group-field-option.is-disabled {
     color: var(--bcc-text-muted);
     opacity: 0.55;
     cursor: default;
 }
-
-/* Aramada elenen satır — [hidden] DEĞİL ayrı sınıf (flex öğesine uygulanan
-   display, [hidden]'ın display:none'ını ezer). */
 .group-field-option.is-filtered-out { display: none; }
-
 .group-empty {
     margin: 0;
     padding: 0.8rem 0.45rem;
@@ -2893,7 +1976,6 @@ a.group-field-option:hover {
     font-size: 0.8rem;
     color: var(--bcc-text-muted);
 }
-
 .group-empty[hidden] { display: none; }
 
 .group-max-note {
@@ -2901,14 +1983,10 @@ a.group-field-option:hover {
     font-size: 0.73rem;
     color: var(--bcc-text-muted);
 }
-
-/* ---- Alt eylem ---- */
-
 .group-actions {
     padding: 0.6rem 0.75rem;
     border-top: 1px solid var(--bcc-border);
 }
-
 .group-clear-btn {
     display: block;
     width: 100%;
@@ -2924,16 +2002,12 @@ a.group-field-option:hover {
     text-decoration: none;
     transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-
 a.group-clear-btn:hover {
     background: var(--bcc-danger-soft);
     border-color: var(--bcc-danger);
     color: var(--bcc-danger);
     text-decoration: none;
 }
-
-/* Gruplama yokken görünür ama etkisiz — alt satır seçime göre zıplamasın
-   ("Alanları gizle"/"Filtrele" panellerindeki AYNI karar). */
 .group-clear-btn.is-disabled {
     background: var(--bcc-surface-sunken);
     border-color: var(--bcc-border);
@@ -2942,13 +2016,10 @@ a.group-clear-btn:hover {
     opacity: 0.7;
 }
 
-/* Row height paneli (Grid araçları Adım 3). */
-
 .row-height-form {
     min-width: 200px;
     padding: 0.4rem;
 }
-
 .row-height-option {
     display: flex;
     align-items: center;
@@ -2960,37 +2031,27 @@ a.group-clear-btn:hover {
     color: inherit;
     text-decoration: none;
 }
-
 .row-height-option:hover {
     background: var(--bcc-surface-hover);
 }
-
 .row-height-check {
     flex-shrink: 0;
 }
-
 .row-height-divider {
     height: 1px;
     background: var(--bcc-border);
     margin: 0.35rem 0.2rem;
 }
 
-/* Grid satır yükseklikleri (Grid araçları Adım 3): grup başlığı satırları
-   (.group-header-row) her zaman sabit yükseklikte kalır, bu yüzden aşağıdaki
-   yükseklik/sarma kuralları yalnızca normal veri satırlarını hedefler. */
-
 table.grid.row-h-medium tbody tr:not(.group-header-row) td {
     height: 4.2rem;
 }
-
 table.grid.row-h-tall tbody tr:not(.group-header-row) td {
     height: 6.6rem;
 }
-
 table.grid.row-h-extra tbody tr:not(.group-header-row) td {
     height: 9.4rem;
 }
-
 table.grid.row-h-medium .cell-view,
 table.grid.row-h-tall .cell-view,
 table.grid.row-h-extra .cell-view {
@@ -3000,7 +2061,6 @@ table.grid.row-h-extra .cell-view {
     text-overflow: ellipsis;
     -webkit-box-orient: vertical;
 }
-
 table.grid.row-h-medium .cell-view {
     -webkit-line-clamp: 2;
 }
@@ -3012,43 +2072,14 @@ table.grid.row-h-tall .cell-view {
 table.grid.row-h-extra .cell-view {
     -webkit-line-clamp: 6;
 }
-
-/* Bulunan gerçek bug: kısa satır yükseklikte (taban .cell-view, satır ~1249)
-   white-space:nowrap yalnızca DOĞAL kelime kaydırmasını engelliyor — gerçek
-   <br> etiketleri (long_text zengin metin alanları) buna RAĞMEN satır
-   atlatıyor, sonuç sabit kısa yükseklikte hizasız/kırpık bir görünümdü
-   (docs/PROJE-DURUM.md teşhis notu). Orta/uzun/ekstra'nın ZATEN kullandığı
-   line-clamp deseni (yukarıda) burada TEK SATIRLIK hâliyle YENİDEN
-   KULLANILIYOR — <br> artık doğru sayılıp ilk satırdan sonra temiz "..." ile
-   kesiliyor. Yalnızca .rich-text-view (long_text) hedeflendi — taban
-   .cell-view'a EKLENMEDİ, diğer alan tipleri (sayı/tarih/düz metin/tekli
-   seçim) etkilenmiyor. */
 table.grid.row-h-short .cell-view.rich-text-view {
-    /* Taban .cell-view'ın nowrap/overflow/ellipsis'i AYNEN geçerli — burada
-       yalnızca tekrar YAZILIYOR ki bu bloğun ne garanti ettiği tek yerden
-       okunabilsin (eski hâli bu üçünü -webkit-box + white-space:normal ile
-       EZİYORDU, aşağıdaki nota bkz.). */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-/* <br>: TARAYICIDA ölçüldü — white-space:nowrap bir <br>'yi DURDURMUYOR
-   (kutu 3 satıra çıkıyordu), satır atlamayı engelleyen TEK yol display:none.
-   display:inline, display:inline-block + width ve content:"" üçü de denendi,
-   üçü de atlatmaya devam etti. Ayırıcı BOŞLUK burada konamaz (display:none bir
-   öğe ::before/::after üretmez) — onu sunucu koyuyor (bcc_rich_text_grid_html).
-   Bu kural o dönüşümü atlayan/eski bir render yolu için güvenlik ağı: boşluk
-   kaybolur ama hücre TEK SATIR kalır. */
 table.grid.row-h-short .cell-view.rich-text-view br {
     display: none;
 }
-
-/* Blok elemanlar SATIR İÇİ akar: sütun genişledikçe sonraki paragraf/madde
-   YAN YANA ortaya çıkar, alt satıra kaçıp gizlenmez.
-   SAVUNMA AMAÇLI: bugünkü temizleyici whitelist'i (bcc_sanitize_rich_text)
-   p/div/ul/ol/li'yi zaten düşürüyor — whitelist bir gün genişletilirse hücre
-   kendiliğinden çok satıra dönmesin diye şimdiden yazıldı. */
 table.grid.row-h-short .cell-view.rich-text-view p,
 table.grid.row-h-short .cell-view.rich-text-view div,
 table.grid.row-h-short .cell-view.rich-text-view ul,
@@ -3059,39 +2090,24 @@ table.grid.row-h-short .cell-view.rich-text-view li {
     padding: 0;
     list-style: none;
 }
-
-/* Madde imi satır içi öğede ÇİZİLMEZ (list-style yalnızca blok kutuda görünür) —
-   ardışık maddeler birbirine yapışmasın diye görünür bir ayırıcı konuyor. */
 table.grid.row-h-short .cell-view.rich-text-view li + li::before {
     content: ' • ';
     color: var(--bcc-text-muted);
 }
 
-/* Sütun genişletildiğinde (grid-has-col-widths = kullanıcı tutamağı sürükledi)
-   taban .cell-view'ın 320px tavanı zengin metinde KALDIRILIR. Tavan otomatik
-   yerleşim için var (tek uzun hücre sütunu şişirmesin); sabit yerleşimde sütun
-   genişliği zaten <colgroup>'tan geliyor ve <td> kırpıyor. Kalsaydı sütun
-   320px'in ötesine çekildiğinde metin genişlemeyi İZLEMEZ, "..." olduğu yerde
-   kalırdı — yani "genişletince daha fazlası görünsün" hiç çalışmazdı. */
 table.grid.grid-has-col-widths .cell-view.rich-text-view {
     max-width: none;
 }
-
 table.grid.wrap-headers thead th {
     white-space: normal;
 }
-
-/* Grid içindeki grup başlığı satırı (Grid araçları Adım 2a). */
-
 .group-header-row {
     background: var(--bcc-surface-sunken);
 }
-
 .group-header-row td {
     padding: 0;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .group-header-toggle {
     display: flex;
     align-items: center;
@@ -3104,22 +2120,18 @@ table.grid.wrap-headers thead th {
     text-align: left;
     font: inherit;
 }
-
 .group-header-chevron {
     flex-shrink: 0;
     transition: transform 0.15s ease;
 }
-
 .group-header-toggle[aria-expanded="false"] .group-header-chevron {
     transform: rotate(-90deg);
 }
-
 .group-header-info {
     display: flex;
     flex-direction: column;
     gap: 0.05rem;
 }
-
 .group-header-field-name {
     font-size: 0.7rem;
     font-weight: 600;
@@ -3127,13 +2139,11 @@ table.grid.wrap-headers thead th {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
-
 .group-header-value {
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--bcc-text);
 }
-
 .group-header-count {
     margin-left: auto;
     flex-shrink: 0;
@@ -3142,20 +2152,7 @@ table.grid.wrap-headers thead th {
     color: var(--bcc-text-muted);
 }
 
-/* ---------- "Alanları gizle" paneli (OpsFlow "Hide fields" davranışı) --------
-   ⚠️ KAPSAM UYARISI: .hide-fields-search ve .hide-fields-actions sınıflarını
-   GRUPLAMA paneli de kullanıyor (grid.php'deki .group-form). Bu yüzden aşağıdaki
-   yeni görünüm kuralları .hide-fields-form ile NİTELENDİ — çıplak yazılsalardı
-   gruplama panelinin arama kutusu ve buton satırı da sessizce değişirdi.
-
-   Panelin kendisi de burada yeniden tanımlanıyor: ortak popover kuralı
-   (.hide-fields-form, .group-form, ... ortak bloğu) tüm kutuya padding verip
-   TAMAMINI kaydırılabilir yapıyor. Burada padding sıfırlanıp bölümlere
-   dağıtılıyor ve kaydırma YALNIZCA listeye bırakılıyor: arama kutusu ve
-   eylem butonları uzun listede de sabit kalsın. */
-
 .hide-fields-form {
-    /* İstenen 280-320px aralığı: uzun alan adları kırpılmadan sığsın. */
     min-width: 300px;
     max-width: 360px;
     padding: 0;
@@ -3163,42 +2160,32 @@ table.grid.wrap-headers thead th {
     overflow: visible;
 }
 
-/* ---- Üst bölüm: arama + sayaç ---- */
-
 .hide-fields-form .hide-fields-top {
     padding: 0.7rem 0.75rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .hide-fields-form .hide-fields-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
 }
-
 .hide-fields-form .hide-fields-search-wrap svg {
     position: absolute;
     left: 0.5rem;
     color: var(--bcc-text-muted);
     pointer-events: none;
 }
-
-/* Ortak .hide-fields-search kuralının üzerine YALNIZCA bu panelde geçerli
-   olacak farklar: ikon için sol boşluk ve alt marjın kaldırılması (aradaki
-   boşluğu artık .hide-fields-top'un padding'i veriyor). */
 .hide-fields-form .hide-fields-search-wrap .hide-fields-search {
     padding-left: 1.65rem;
     margin-bottom: 0;
     border-radius: 7px;
     font-size: 0.85rem;
 }
-
 .hide-fields-form .hide-fields-search-wrap .hide-fields-search:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .hide-fields-form .hide-fields-counter {
     margin: 0.45rem 0 0;
     font-size: 0.74rem;
@@ -3206,56 +2193,40 @@ table.grid.wrap-headers thead th {
     color: var(--bcc-text-muted);
 }
 
-/* ---- Liste ---- */
-
 .hide-fields-form .hide-fields-list {
     padding: 0.35rem 0.4rem;
-    /* Kaydırma burada (tüm panelde değil) — üst ve alt bölümler sabit kalır. */
     max-height: 300px;
     overflow-y: auto;
     scrollbar-width: thin;
 }
-
 .hide-fields-form .hide-field-row {
     position: relative;
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    /* OpsFlow'daki gibi daha nefesli satır + tam genişlikte hover alanı. */
+
     padding: 0.4rem 0.45rem;
     border-radius: 7px;
     font-size: 0.87rem;
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
-
 .hide-fields-form .hide-field-row:hover {
     background: var(--bcc-surface-hover);
 }
-
-/* Klavyeyle gezinirken de aynı geri bildirim (toggle gizli bir input). */
 .hide-fields-form .hide-field-toggle-input:focus-visible ~ .hide-field-name {
     text-decoration: underline;
 }
-
-/* Alan tipi ikonu: ortak .field-badge bileşeni (theme.css). Burada yalnızca
-   satır içindeki hizası ayarlanıyor — ikonun KENDİSİ orada tanımlı, kopya yok. */
 .hide-fields-form .hide-field-row .field-badge {
     flex-shrink: 0;
     margin-right: 0;
     vertical-align: 0;
 }
-
-/* Gizli alanın adı soluk: hangi satırların kapalı olduğu tek bakışta okunsun
-   (toggle rengine ek ikinci bir ipucu). */
 .hide-fields-form .hide-field-toggle-input:not(:checked) ~ .hide-field-name {
     color: var(--bcc-text-muted);
 }
 
-/* Aramada elenen satır. [hidden]/display:none DEĞİL ayrı sınıf — satır flex
-   ve flex öğesine uygulanan display, [hidden]'ı ezer. */
 .hide-fields-form .hide-field-row.is-filtered-out { display: none; }
-
 .hide-fields-form .hide-fields-empty {
     margin: 0;
     padding: 0.8rem 0.45rem;
@@ -3263,14 +2234,9 @@ table.grid.wrap-headers thead th {
     font-size: 0.8rem;
     color: var(--bcc-text-muted);
 }
-
 .hide-fields-form .hide-fields-empty[hidden] { display: none; }
-
-/* ---- Alt bölüm: iki eylem YAN YANA ---- */
-
 .hide-fields-form .hide-fields-actions {
     display: grid;
-    /* İki eşit sütun: hangisinin etkin olduğuna bakılmaksızın düzen sabit. */
     grid-template-columns: 1fr 1fr;
     align-items: center;
     gap: 0.4rem;
@@ -3278,7 +2244,6 @@ table.grid.wrap-headers thead th {
     padding: 0.6rem 0.75rem;
     border-top: 1px solid var(--bcc-border);
 }
-
 .hide-fields-form .hide-fields-btn {
     display: flex;
     align-items: center;
@@ -3296,15 +2261,11 @@ table.grid.wrap-headers thead th {
     cursor: pointer;
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 .hide-fields-form a.hide-fields-btn:hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-text-muted);
     text-decoration: none;
 }
-
-/* Uygulanamayan taraf: görünür ama etkisiz. Butonu HİÇ basmamak yerine devre
-   dışı göstermek, iki sütunlu düzenin seçime göre zıplamasını önlüyor. */
 .hide-fields-form .hide-fields-btn.is-disabled {
     background: var(--bcc-surface-sunken);
     border-color: var(--bcc-border);
@@ -3312,9 +2273,6 @@ table.grid.wrap-headers thead th {
     cursor: default;
     opacity: 0.7;
 }
-
-/* "Uygula" yalnızca JS YOKKEN görünür (grid-hide-fields.js onu hidden yapıyor).
-   Göründüğünde iki sütunun ALTINDA tam genişlik kaplar. */
 .hide-fields-form .hide-fields-apply {
     grid-column: 1 / -1;
     background: var(--bcc-accent);
@@ -3324,62 +2282,36 @@ table.grid.wrap-headers thead th {
 
 .hide-fields-form .hide-fields-apply[hidden] { display: none; }
 
-/* Gönderim beklenirken (toggle sonrası kısa gecikme) panel "işleniyor"
-   görünür — kullanıcı ikinci kez tıklamaya çalışmasın. */
 .hide-fields-form.is-pending .hide-fields-list { opacity: 0.6; }
 .hide-fields-form.is-pending .hide-fields-actions { pointer-events: none; opacity: 0.6; }
 
-/* ---------- Filtre paneli (OpsFlow "Filter" davranışı) ----------------------
-   Sunucu sözleşmesi DEĞİŞMEDİ (filter_field_N/filter_cond_N/filter_value_N +
-   tek filter_logic); burada yalnızca panelin görünümü var.
-
-   Satırlar IZGARA: her satır aynı sütun şablonunu kullandığı için bağlaç,
-   alan, koşul ve değer kutuları satırlar arasında BİREBİR hizalı. Eskiden
-   flex + flex:1 vardı ve satırdaki kutular içeriklerine göre farklı
-   genişliklere kayıyordu.
-
-   .filter-row / .filter-actions bu panele ÖZEL (gizle/gruplama panelleriyle
-   paylaşılmıyor — kontrol edildi), bu yüzden niteleme gerekmedi. */
-
 .filter-panel .filter-form {
-    /* İstenen genişlik: seçiciler ve değer kutusu kırpılmadan sığsın. */
     min-width: 480px;
     max-width: 560px;
     padding: 0;
     max-height: none;
     overflow: visible;
 }
-
 .filter-panel .filter-rows {
     padding: 0.7rem 0.75rem 0.35rem;
     max-height: 300px;
     overflow-y: auto;
     scrollbar-width: thin;
 }
-
 .filter-row {
     display: grid;
-    /* bağlaç | tip rozeti | alan | koşul | değer | sil */
     grid-template-columns: 66px 15px minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr) 26px;
     align-items: center;
     gap: 0.35rem;
     margin-bottom: 0.4rem;
 }
-
 .filter-row:last-child { margin-bottom: 0; }
-
-/* Hücreler AÇIKÇA konumlandırılıyor. Sebep: değer kutusu "boş"/"boş değil"
-   operatörlerinde display:none oluyor ve ızgaradan tamamen çıkıyor — otomatik
-   yerleşimde bu, ONDAN SONRAKİ hücreyi (çöp kutusu) bir sütun sola kaydırıyordu
-   ve satırlar arasında hizasızlık oluşuyordu (ölçüldü). Sabit sütun numarasıyla
-   gizli değer kutusu kendi hücresini boş bırakıyor, komşuları yerinde kalıyor. */
 .filter-row .filter-conj { grid-column: 1; }
 .filter-row .filter-field-badge { grid-column: 2; }
 .filter-row .filter-field-select { grid-column: 3; }
 .filter-row .filter-cond-select { grid-column: 4; }
 .filter-row .filter-value-input { grid-column: 5; }
 .filter-row .filter-row-remove { grid-column: 6; }
-
 .filter-row select,
 .filter-row input {
     padding: 0.35rem 0.4rem;
@@ -3393,23 +2325,16 @@ table.grid.wrap-headers thead th {
     min-width: 0;
     width: 100%;
 }
-
 .filter-row select:focus,
 .filter-row input:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .filter-row select:disabled {
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text-muted);
 }
-
-/* Değer kutusu gizlendiğinde ("boş"/"boş değil" operatörleri) ızgara hücresi
-   boş kalır — display:none JS'ten geliyor, sütun genişliği korunur. */
-
-/* ---- Bağlaç sütunu ---- */
 
 .filter-conj {
     display: flex;
@@ -3417,19 +2342,12 @@ table.grid.wrap-headers thead th {
     justify-content: flex-start;
     min-width: 0;
 }
-
 .filter-conj-label {
     font-size: 0.76rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
     padding-left: 0.15rem;
 }
-
-/* 2. satırdaki GERÇEK kontrol (name="filter_logic"). Yansıtma rozetinden
-   GÖRSEL OLARAK AYRILMALI: ikisi de "VEYA" yazan gri kutu olduğunda kullanıcı
-   hangisinin değiştirilebilir olduğunu anlayamıyordu. Bu yüzden gerçek kontrol
-   normal yüzey + belirgin kenarlık (yani "form öğesi" dili), yansıtma ise
-   kenarlıksız düz metin. */
 .filter-row .filter-conj-select {
     padding: 0.3rem 0.2rem;
     font-size: 0.76rem;
@@ -3440,17 +2358,12 @@ table.grid.wrap-headers thead th {
     border-color: var(--bcc-accent);
     cursor: pointer;
 }
-
-/* 3+ satırlar: aynı değeri yansıtan pasif rozet. Bağlaç sunucuda TEK değer
-   olduğu için burada düzenlenebilir bir kontrol GÖSTERİLMİYOR — motorun
-   desteklemediği "satır başına mantık" izlenimi verirdi. */
 .filter-conj-mirror {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     padding: 0.3rem 0.25rem;
-    /* Kenarlık YOK: düzenlenebilir görünmesin (yukarıdaki nota bkz.). */
     border: 1px solid transparent;
     background: none;
     color: var(--bcc-text-muted);
@@ -3458,22 +2371,13 @@ table.grid.wrap-headers thead th {
     font-weight: 600;
     cursor: default;
 }
-
-/* ---- Alan tipi rozeti ----
-   Ortak .field-badge bileşeni (theme.css) — burada yalnızca ızgara hücresine
-   oturması ayarlanıyor. Native <option> içine ikon konulamadığı için rozet
-   select'in SOLUNDA duruyor ve seçili alanın tipini gösteriyor. */
 .filter-row .filter-field-badge {
     margin-right: 0;
     vertical-align: 0;
     justify-self: center;
 }
 
-/* Alan seçilmemişken rozet yer tutar ama boş görünür. */
 .filter-row .filter-field-badge.is-empty { opacity: 0; }
-
-/* ---- Satır sil ---- */
-
 .filter-row-remove {
     display: flex;
     align-items: center;
@@ -3488,14 +2392,10 @@ table.grid.wrap-headers thead th {
     cursor: pointer;
     transition: background-color 0.12s ease, color 0.12s ease;
 }
-
 .filter-row-remove:hover {
     background: var(--bcc-danger-soft);
     color: var(--bcc-danger);
 }
-
-/* ---- "+ Filtre ekle" ---- */
-
 .filter-add-row {
     display: flex;
     align-items: center;
@@ -3503,7 +2403,6 @@ table.grid.wrap-headers thead th {
     padding: 0.35rem 0.75rem 0.6rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .filter-add-btn {
     display: inline-flex;
     align-items: center;
@@ -3518,22 +2417,16 @@ table.grid.wrap-headers thead th {
     font-weight: 600;
     cursor: pointer;
 }
-
 .filter-add-btn:hover:not(:disabled) { background: var(--bcc-accent-soft); }
-
 .filter-add-btn:disabled {
     color: var(--bcc-text-muted);
     cursor: default;
 }
-
 .filter-slot-note {
     font-size: 0.74rem;
     color: var(--bcc-text-muted);
 }
-
 .filter-slot-note[hidden] { display: none; }
-
-/* ---- Alt eylemler ---- */
 
 .filter-actions {
     display: flex;
@@ -3541,7 +2434,6 @@ table.grid.wrap-headers thead th {
     gap: 0.4rem;
     padding: 0.6rem 0.75rem;
 }
-
 .filter-btn {
     display: inline-flex;
     align-items: center;
@@ -3558,7 +2450,6 @@ table.grid.wrap-headers thead th {
     cursor: pointer;
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 a.filter-btn:hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-text-muted);
@@ -3570,15 +2461,10 @@ a.filter-btn:hover {
     border-color: var(--bcc-accent);
     color: var(--bcc-on-accent);
 }
-
 .filter-btn--primary:hover {
     background: var(--bcc-accent-strong);
     border-color: var(--bcc-accent-strong);
 }
-
-/* Filtre yokken "Filtreleri temizle" görünür ama etkisiz — butonu hiç
-   basmamak yerine devre dışı göstermek alt satırın zıplamasını önlüyor
-   ("Alanları gizle" panelindeki AYNI karar). */
 .filter-btn.is-disabled {
     background: var(--bcc-surface-sunken);
     border-color: var(--bcc-border);
@@ -3586,9 +2472,6 @@ a.filter-btn:hover {
     cursor: default;
     opacity: 0.7;
 }
-
-/* Dar ekranda ızgara tek sütuna düşerse kutular okunmaz olurdu; panel yatayda
-   kaydırılabilir kalıyor (popover zaten viewport'a göre konumlanıyor). */
 @media (max-width: 620px) {
     .filter-panel .filter-form {
         min-width: 0;
@@ -3597,51 +2480,32 @@ a.filter-btn:hover {
     .filter-panel .filter-rows { overflow-x: auto; }
     .filter-row { min-width: 460px; }
 }
-
-/* ---------- Sıralama paneli (OpsFlow "Sort" davranışı) ---------------------
-   Sunucu sözleşmesi (sort_field_N / sort_dir_N) DEĞİŞMEDİ; burada yalnızca
-   panelin görünümü var. Satırlar IZGARA: sıra rozeti, tip ikonu, alan, yön ve
-   sil hücreleri satırlar arasında BİREBİR hizalı. Eskiden flex + flex:1 vardı
-   ve kutular içeriklerine göre farklı genişliklere kayıyordu.
-
-   .sort-row / .sort-actions bu panele ÖZEL (başka panel kullanmıyor —
-   kontrol edildi), bu yüzden ek niteleme gerekmedi. */
-
 .sort-panel .sort-form {
-    /* İstenen genişlik: alan seçicisi ve yön kutusu rahat sığsın. */
     min-width: 420px;
     max-width: 480px;
     padding: 0;
     max-height: none;
     overflow: visible;
 }
-
 .sort-panel .sort-rows {
     padding: 0.7rem 0.75rem 0.35rem;
     max-height: 280px;
     overflow-y: auto;
     scrollbar-width: thin;
 }
-
 .sort-row {
     display: grid;
-    /* sıra | tip ikonu | alan | yön | sil */
     grid-template-columns: 20px 15px minmax(0, 1fr) 116px 26px;
     align-items: center;
     gap: 0.4rem;
     margin-bottom: 0.4rem;
 }
-
 .sort-row:last-child { margin-bottom: 0; }
-
-/* Hücreler AÇIKÇA konumlanıyor — ileride bir hücre gizlenirse komşuları
-   yerinden kaymasın (filtre panelinde ölçülen tuzağın aynısı). */
 .sort-row .sort-level-badge { grid-column: 1; }
 .sort-row .sort-field-badge { grid-column: 2; }
 .sort-row .sort-field-select { grid-column: 3; }
 .sort-row .sort-dir-select { grid-column: 4; }
 .sort-row .sort-row-remove { grid-column: 5; }
-
 .sort-row select {
     padding: 0.35rem 0.4rem;
     border: 1px solid var(--bcc-border-strong);
@@ -3654,26 +2518,18 @@ a.filter-btn:hover {
     min-width: 0;
     width: 100%;
 }
-
 .sort-row select:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
 
-/* YÖN kutusu: bildirilen kusur "artan"/"azalan" metninin KIRPILMASIYDI.
-   Etiketler artık alan tipine göre ve daha uzun ("İşaretsiz → İşaretli" gibi),
-   bu yüzden sütun 116px sabit ve kutunun kendi alt sınırı da var. Ok işareti
-   için sağda pay bırakılıyor. */
 .sort-row .sort-dir-select {
     min-width: 96px;
     padding-right: 1.1rem;
     font-weight: 600;
     background: var(--bcc-surface-sunken);
 }
-
-/* Sıra rozeti: çok seviyeli sıralamada önceliği gösterir (1. kurala göre
-   sırala, eşit olanlarda 2. kurala bak...). */
 .sort-level-badge {
     display: inline-flex;
     align-items: center;
@@ -3686,9 +2542,6 @@ a.filter-btn:hover {
     font-size: 0.68rem;
     font-weight: 700;
 }
-
-/* Alan tipi rozeti — ortak .field-badge (theme.css); native <option> içine
-   ikon konulamadığı için select'in SOLUNDA duruyor. */
 .sort-row .sort-field-badge {
     margin-right: 0;
     vertical-align: 0;
@@ -3696,7 +2549,6 @@ a.filter-btn:hover {
 }
 
 .sort-row .sort-field-badge.is-empty { opacity: 0; }
-
 .sort-row-remove {
     display: flex;
     align-items: center;
@@ -3711,13 +2563,10 @@ a.filter-btn:hover {
     cursor: pointer;
     transition: background-color 0.12s ease, color 0.12s ease;
 }
-
 .sort-row-remove:hover {
     background: var(--bcc-danger-soft);
     color: var(--bcc-danger);
 }
-
-/* ---- "+ Sıralama ekle" ---- */
 
 .sort-add-row {
     display: flex;
@@ -3726,7 +2575,6 @@ a.filter-btn:hover {
     padding: 0.35rem 0.75rem 0.6rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .sort-add-btn {
     display: inline-flex;
     align-items: center;
@@ -3741,30 +2589,23 @@ a.filter-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
-
 .sort-add-btn:hover:not(:disabled) { background: var(--bcc-accent-soft); }
 
 .sort-add-btn:disabled {
     color: var(--bcc-text-muted);
     cursor: default;
 }
-
 .sort-slot-note {
     font-size: 0.74rem;
     color: var(--bcc-text-muted);
 }
-
 .sort-slot-note[hidden] { display: none; }
-
-/* ---- Alt eylemler ---- */
-
 .sort-actions {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.6rem 0.75rem;
 }
-
 .sort-btn {
     display: inline-flex;
     align-items: center;
@@ -3781,26 +2622,20 @@ a.filter-btn:hover {
     cursor: pointer;
     transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-
 a.sort-btn:hover {
     background: var(--bcc-surface-hover);
     border-color: var(--bcc-text-muted);
     text-decoration: none;
 }
-
 .sort-btn--primary {
     background: var(--bcc-accent);
     border-color: var(--bcc-accent);
     color: var(--bcc-on-accent);
 }
-
 .sort-btn--primary:hover {
     background: var(--bcc-accent-strong);
     border-color: var(--bcc-accent-strong);
 }
-
-/* Sıralama yokken görünür ama etkisiz — alt satır seçime göre zıplamasın
-   (diğer üç panelde alınan AYNI karar). */
 .sort-btn.is-disabled {
     background: var(--bcc-surface-sunken);
     border-color: var(--bcc-border);
@@ -3808,17 +2643,7 @@ a.sort-btn:hover {
     cursor: default;
     opacity: 0.7;
 }
-
-/* ---- Boş tablo: "alan yok" kartı tıklanabilir --------------------------- */
-/* Kartın TAMAMI bir <button> (grid.php) — kullanıcı metnin herhangi bir yerine
-   tıklayınca alan ekleme penceresi açılıyor. Eskiden yalnızca cümlenin
-   içindeki küçük bir bağlantı tıklanabilirdi ve başka sayfaya götürüyordu. */
 .gs-empty-fields-card {
-    /* display:flex ZATEN blok seviyesi yapar ve kalan genişliği doldurur —
-       width:100% VERİLMEZ. Verildiğinde kart, üstündeki "Alanları yönet"
-       satırının yatay boşluğunu (.gs-fields-link padding'i) hesaba katmadan
-       kapsayıcıyı doldurup SAĞDAN taşıyordu. İç boşluk artık margin ile ve
-       o satırla AYNI ölçüde (1rem). */
     display: flex;
     align-items: center;
     gap: 0.9rem;
@@ -3828,8 +2653,6 @@ a.sort-btn:hover {
     font: inherit;
     color: var(--bcc-text);
     cursor: pointer;
-    /* .card zaten zemin/kenarlık/yarıçap veriyor; burada yalnızca <button>'ın
-       tarayıcı varsayılanları eziliyor ve etkileşim işaretleri ekleniyor. */
     -webkit-appearance: none;
     appearance: none;
     background: var(--bcc-surface);
@@ -3840,12 +2663,10 @@ a.sort-btn:hover {
     border-color: var(--bcc-accent);
     background: var(--bcc-surface-hover);
 }
-
 .gs-empty-fields-card:focus-visible {
     outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
-
 .gs-empty-fields-icon {
     display: inline-flex;
     align-items: center;
@@ -3859,57 +2680,40 @@ a.sort-btn:hover {
     font-size: 1.35rem;
     line-height: 1;
 }
-
 .gs-empty-fields-text {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     min-width: 0;
 }
-
 .gs-empty-fields-text strong {
     font-size: 0.95rem;
     font-weight: 600;
 }
-
 .gs-empty-fields-text > span {
     font-size: 0.85rem;
     color: var(--bcc-text-muted);
 }
 
-/* Boş tablo "Yeni Alan" penceresi: varsayılan .home-modal 420px — alan tipi
-   ızgarası (18 tip, minmax(150px,1fr)) orada iki dar sütuna sıkışıyor ve liste
-   ekranın altından taşıyordu. Bu pencereye ÖZEL genişletiliyor; diğer
-   modallar (tablo oluştur/sil/yapıştır) 420px'te kalır. */
 #gs-empty-fields-modal .home-modal {
     max-width: 680px;
-    /* Uzun listede pencere ekranı aşmasın: kaydırma İÇERİDE olsun, sayfada
-       değil. Başlık sabit kalır, yalnızca form gövdesi kayar. */
     max-height: calc(var(--bcc-vh) - 2rem);
     display: flex;
     flex-direction: column;
 }
-
 #gs-empty-fields-modal .home-modal-head {
     flex: 0 0 auto;
 }
-
 #gs-empty-fields-modal .home-modal-form {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
 }
-
-/* Ardışık sütun ekleme: eklenenlerin listesi + "Tabloyu görüntüle" satırı.
-   İkisi de formun DIŞINDA (pencerenin dibinde) duruyor — form kayarken bunlar
-   sabit kalsın ve "bitir" düğmesi her zaman görünür olsun diye (flex: 0 0 auto,
-   başlık satırıyla AYNI teknik). */
 .gs-empty-fields-added,
 .gs-empty-fields-done-row {
     flex: 0 0 auto;
     padding: 0 1.1rem;
 }
-
 .gs-empty-fields-added {
     display: flex;
     align-items: center;
@@ -3919,24 +2723,15 @@ a.sort-btn:hover {
     border-top: 1px solid var(--bcc-border);
     margin-top: 0.2rem;
 }
-
-/* ⚠️ ŞART: yukarıdaki `display: flex` tarayıcının `[hidden] { display: none }`
-   varsayılanını ezer ve iki blok da sayfa açılır açılmaz görünürdü. Bu projede
-   AYNI tuzağa daha önce üç kez düşüldü (home.css .home-notif-item[hidden],
-   account.css .sp-page [hidden], table-fields.css #new-field-details-step
-   [hidden]) — her yeni display kuralında tekrar düşünmemek için hemen yanına
-   yazılıyor. */
 .gs-empty-fields-added[hidden],
 .gs-empty-fields-done-row[hidden] {
     display: none;
 }
-
 .gs-empty-fields-added-label {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--bcc-text-muted);
 }
-
 .gs-empty-fields-added-list {
     display: flex;
     flex-wrap: wrap;
@@ -3953,7 +2748,6 @@ a.sort-btn:hover {
     font-size: 0.76rem;
     font-weight: 600;
 }
-
 .gs-empty-fields-done-row {
     padding-top: 0.8rem;
     padding-bottom: 1.1rem;

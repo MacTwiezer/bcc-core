@@ -1,7 +1,3 @@
-/* OpsFlow Data ekranı benzeri kabuk/çerçeve — sadece grid.php tarafından kullanılır.
-   Grid işlevselliği (hücre düzenleme, arama, sıralama, filtre) style.css + grid*.js
-   içinde kalır; bu dosya yalnızca görünüm ekler. */
-
 * { box-sizing: border-box; }
 
 body.gs-body {
@@ -10,28 +6,10 @@ body.gs-body {
     background: var(--bcc-surface);
     color: var(--bcc-text);
     display: flex;
-    /* min-height DEĞİL height + overflow:hidden: kabuk TAM olarak pencere
-       kadar, sayfanın kendisi HİÇ kaymıyor — tek kaydırılan öğe .grid-wrap
-       (OpsFlow modeli). min-height olsaydı grid alanı "kalan yüksekliği
-       doldur" diyemezdi (esnek bir kutunun yüzdesi/flex'i, ölçüsü belirsiz
-       bir ataya dayanamaz) ve tablo bugünkü gibi yalnızca içerik boyunda
-       kalırdı.
-       body.gs-body YALNIZCA grid.php'de; interface.php body.if-page
-       kullanıyor, bu yüzden orası etkilenmiyor. */
     height: var(--bcc-vh);
     overflow: hidden;
 }
-
 body.gs-body a { text-decoration: none; color: inherit; }
-
-/* ---------- Sol dikey şerit ---------- */
-
-/* ⚠️ BULUNAN GERÇEK BUG: zemin "var(--bcc-text)" idi. Bu değişken KOYU temada
-   açık griye (#f0f0f2) dönüyor, yani şerit bembeyaz oluyordu ve üstündeki
-   beyaz ikonlar (ana sayfa, bildirim) görünmez hâle geliyordu. Şerit her iki
-   temada da koyu kalmalı — açık temadaki görünümüyle AYNI. Bu yüzden burada
-   bilerek SABİT bir değer var: rengin teması yok, her zaman koyu zemin +
-   beyaz ikon. */
 .gs-rail {
     width: 52px;
     flex-shrink: 0;
@@ -42,19 +20,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     justify-content: space-between;
     padding: 0.85rem 0;
 }
-
-/* Şeridin en üstündeki SABİT "Ana sayfa" düğmesi (eski .gs-rail-logo + hover'da
-   beliren .gs-rail-back-icon ikilisinin yerine). Simge DEĞİŞMEZ — hover yalnızca
-   zemini aydınlatır, tıpkı hemen altındaki .gs-rail-icon-btn'lerde olduğu gibi;
-   böylece şeridin tamamı tek bir etkileşim diline uyar.
-   Koyu şerit üstünde olduğu için renk açık; currentColor ile çizilen SVG bunu
-   otomatik izler. */
-/* ⚠️ Seçici BİLEREK iki sınıflı (.gs-rail .gs-rail-home): bu dosyanın en
-   üstündeki `body.gs-body a { color: inherit }` kuralı (özgüllük 0,0,1,2) tek
-   sınıflı bir `.gs-rail-home` (0,0,1,0) kuralını YENER ve simgeyi gövde metin
-   rengine (koyu) zorlar — koyu şerit üstünde ikon görünmez olur. Canlı olarak
-   yaşandı: computed color rgb(29,29,31), ekran görüntüsünde bomboş kare.
-   İki sınıf (0,0,2,0) o kuralı geçer. */
 .gs-rail .gs-rail-home {
     width: 32px;
     height: 32px;
@@ -65,25 +30,20 @@ body.gs-body a { text-decoration: none; color: inherit; }
     color: #e8e8ea;
     transition: background 0.12s ease, color 0.12s ease;
 }
-
 .gs-rail .gs-rail-home:hover {
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
 }
-
-/* Klavyeyle gezinenler için görünür odak halkası — koyu zeminde beyaz. */
 .gs-rail .gs-rail-home:focus-visible {
     outline: 2px solid #fff;
     outline-offset: 2px;
 }
-
 .gs-rail-bottom {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.9rem;
 }
-
 .gs-rail-icon-btn {
     background: none;
     border: none;
@@ -96,19 +56,13 @@ body.gs-body a { text-decoration: none; color: inherit; }
 }
 
 .gs-rail-icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
-
-/* Bildirim paneli (home.css'ten aynen gelir) — orada üst bardan AŞAĞI açılır,
-   burada dar sol şeridin EN ALTINDA olduğu için varsayılan top/right konumu
-   ekranın dışına taşardı; panel bunun yerine zilin sağına, yukarı doğru açılır. */
 .gs-rail .home-notif-panel {
     top: auto;
     bottom: 0;
     left: calc(100% + 8px);
     right: auto;
 }
-
 .gs-account { position: relative; }
-
 .gs-avatar {
     width: 30px;
     height: 30px;
@@ -123,7 +77,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     align-items: center;
     justify-content: center;
 }
-
 .gs-account-menu {
     display: none;
     position: absolute;
@@ -139,19 +92,15 @@ body.gs-body a { text-decoration: none; color: inherit; }
     overflow-y: auto;
     z-index: 40;
 }
-
 .gs-account-menu.is-open { display: block; }
-
 .gs-account-info {
     padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .gs-account-name { font-weight: 600; font-size: 0.9rem; }
 .gs-account-email { font-size: 0.8rem; color: var(--bcc-text-muted); margin-top: 0.15rem; }
 
 .gs-account-section { padding: 0.3rem; }
-
 .gs-account-item {
     display: flex;
     align-items: center;
@@ -169,14 +118,11 @@ body.gs-body a { text-decoration: none; color: inherit; }
 }
 
 .gs-account-item:hover { background: var(--bcc-surface-hover); }
-
 .gs-account-item-arrow, .gs-account-item-icon { flex-shrink: 0; }
 .gs-account-item-arrow { margin-left: auto; }
 
 .gs-account-divider { height: 1px; background: var(--bcc-border); margin: 0.3rem 0; }
-
 .gs-account-logout { padding: 0.4rem; }
-
 .gs-account-logout button {
     width: 100%;
     text-align: left;
@@ -189,10 +135,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
     color: var(--bcc-danger);
     font-family: inherit;
 }
-
 .gs-account-logout button:hover { background: var(--bcc-danger-soft); }
-
-/* ---------- Ana kolon ---------- */
 
 .gs-main-col {
     flex: 1;
@@ -200,8 +143,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     display: flex;
     flex-direction: column;
 }
-
-/* ---------- Üst bar ---------- */
 
 .gs-topbar {
     display: flex;
@@ -212,7 +153,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     background: var(--bcc-surface);
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .gs-topbar-left {
     display: flex;
     align-items: center;
@@ -224,18 +164,11 @@ body.gs-body a { text-decoration: none; color: inherit; }
     padding: 0.3rem 0.4rem;
     margin-left: -0.4rem;
     border-radius: 6px;
-    /* Artık /dashboard.php'ye dönen bir <a> (önceden tıklanamaz <span>'lerdi —
-       grid'den ana sayfaya dönmenin tarayıcı geri tuşu dışında yolu yoktu). */
     text-decoration: none;
     color: inherit;
     transition: background-color 0.12s ease;
 }
-
 .gs-topbar-left:hover { background: var(--bcc-surface-hover); }
-
-/* Zemin DOLU marka rengi (grid.php inline `background` basar) — glif
-   bcc_base_icon_svg() ile `currentColor` çizildiği için `color` beyaza
-   çekilmeli, yoksa gövdenin metin rengini miras alıp koyu zeminde kaybolurdu. */
 .gs-base-icon {
     width: 26px;
     height: 26px;
@@ -246,13 +179,11 @@ body.gs-body a { text-decoration: none; color: inherit; }
     flex-shrink: 0;
     color: #fff;
 }
-
 .gs-base-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
 .gs-topbar-right {
     display: flex;
     align-items: center;
@@ -272,35 +203,21 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-radius: 6px;
     cursor: pointer;
 }
-
 .gs-btn-ghost {
     background: var(--bcc-surface);
     border: 1px solid var(--bcc-border-strong);
     color: var(--bcc-text);
-    /* Bulunan gerçek bug: bu sınıf hem <a> (Launch) hem <summary> (Paylaş/
-       Bağlantı popover tetikleyicileri) üzerinde kullanılıyor ama <summary>'nin
-       tarayıcı varsayılan disclosure-üçgeni ve list-item display'i hiç
-       bastırılmamıştı — üçü de AYNI sınıfa rağmen Paylaş/Bağlantı düz metin +
-       ok işareti gibi görünüyordu, Launch ise düzgün buton gibiydi. .gs-tool-btn
-       (aynı dosyada) BUNU zaten çözüyordu, aynı yöntem burada da uygulanıyor. */
     display: inline-flex;
     align-items: center;
     list-style: none;
 }
-
 .gs-btn-ghost::-webkit-details-marker { display: none; }
-
 .gs-btn-ghost:hover { background: var(--bcc-surface-sunken); }
-
 .gs-btn-primary {
     background: var(--bcc-accent);
     color: var(--bcc-on-accent);
 }
-
 .gs-btn-primary:hover { background: var(--bcc-accent-strong); }
-
-/* ---------- Tablo sekme şeridi ---------- */
-
 .gs-table-tabs {
     display: flex;
     align-items: center;
@@ -308,13 +225,11 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-bottom: 1px solid var(--bcc-border);
     padding: 0 0.5rem;
 }
-
 .gs-table-tabs-scroll {
     display: flex;
     overflow-x: auto;
     flex: 1;
 }
-
 .gs-table-tab {
     padding: 0.6rem 0.9rem;
     font-size: 0.86rem;
@@ -326,22 +241,18 @@ body.gs-body a { text-decoration: none; color: inherit; }
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
 .gs-table-tab:hover { color: var(--bcc-text); background: var(--bcc-surface-sunken); }
-
 .gs-table-tab.is-active {
     color: var(--bcc-text);
     font-weight: 600;
     border-bottom-color: var(--bcc-accent);
     background: var(--bcc-accent-soft);
 }
-
 .gs-table-tab-wrap {
     position: relative;
     display: inline-flex;
     align-items: center;
 }
-
 .gs-table-tab-caret {
     display: flex;
     align-items: center;
@@ -354,9 +265,7 @@ body.gs-body a { text-decoration: none; color: inherit; }
     list-style: none;
     opacity: 0;
 }
-
 .gs-table-tab-caret::-webkit-details-marker { display: none; }
-
 .gs-table-tab-wrap:hover .gs-table-tab-caret,
 .gs-table-tab-wrap.is-active .gs-table-tab-caret,
 .gs-table-tab-menu[open] .gs-table-tab-caret {
@@ -364,7 +273,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
 }
 
 .gs-table-tab-caret:hover { background: var(--bcc-border); }
-
 .gs-table-tab-menu-panel {
     position: absolute;
     top: 100%;
@@ -378,7 +286,6 @@ body.gs-body a { text-decoration: none; color: inherit; }
     min-width: 170px;
     padding: 0.35rem;
 }
-
 .gs-table-tab-menu-item {
     display: flex;
     align-items: center;
@@ -394,19 +301,16 @@ body.gs-body a { text-decoration: none; color: inherit; }
     cursor: pointer;
     color: var(--bcc-text);
 }
-
 .gs-table-tab-menu-item svg { flex-shrink: 0; }
 
 .gs-table-tab-menu-item:hover { background: var(--bcc-surface-hover); }
 
 .gs-table-tab-menu-item-danger { color: var(--bcc-danger); }
-
 .gs-table-tab-menu-divider {
     height: 1px;
     background: var(--bcc-border);
     margin: 0.3rem 0.2rem;
 }
-
 .gs-table-tab-add {
     padding: 0.4rem 0.7rem;
     font-size: 1rem;
@@ -415,15 +319,12 @@ body.gs-body a { text-decoration: none; color: inherit; }
     margin-left: 0.25rem;
     flex-shrink: 0;
 }
-
 .gs-all-tables-menu {
     position: relative;
     flex-shrink: 0;
     margin-left: 0.25rem;
 }
-
 .gs-all-tables-caret { opacity: 1; }
-
 .gs-kbd-tooltip {
     display: none;
     position: absolute;
@@ -441,22 +342,18 @@ body.gs-body a { text-decoration: none; color: inherit; }
     border-radius: 6px;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
-
 .gs-all-tables-caret:hover .gs-kbd-tooltip,
 .gs-all-tables-caret:focus-visible .gs-kbd-tooltip,
 [data-tooltip-host]:hover .gs-kbd-tooltip,
 [data-tooltip-host]:focus-visible .gs-kbd-tooltip {
     display: flex;
 }
-
 .gs-table-tab-menu[open] .gs-kbd-tooltip { display: none !important; }
-
 .gs-kbd-tooltip-light {
     background: var(--bcc-surface);
     color: var(--bcc-text);
     border: 1px solid var(--bcc-border);
 }
-
 .gs-kbd-badge {
     display: inline-flex;
     align-items: center;
@@ -467,60 +364,32 @@ body.gs-body a { text-decoration: none; color: inherit; }
     font-size: 0.72rem;
     font-weight: 600;
 }
-
 .gs-kbd-mac { display: none; }
-
 html.is-mac .gs-kbd-mac { display: inline; }
 html.is-mac .gs-kbd-other { display: none; }
-
 .grid-add-row-plus {
     color: var(--bcc-text-muted);
     font-weight: 600;
 }
-
 .grid-add-row-hint { position: relative; }
-
 .grid-add-row-hint .gs-kbd-tooltip { left: 0; right: auto; }
 
-/* İpucu balonunun AĞIR gölgesi (0 6px 16px rgba(0,0,0,.2)) burada fazlaydı:
-   açık varyantın zaten kenarlığı var ve balon grid satırlarının üstüne
-   düştüğü için "tuhaf gölgelenme" olarak görünüyordu. Yalnızca BU balonda
-   hafifletiliyor — aynı sınıfı kullanan diğer ipuçları (üst bardaki
-   "Tüm tablolar" vb.) kendi gölgesini korur. */
 .grid-add-row-hint .gs-kbd-tooltip { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
 
 .grid-add-row:hover { background: var(--bcc-surface-sunken); cursor: pointer; }
-
-/* Satır numarası sütunu YAPIŞKAN ve kendi arka planı var
-   (table.grid .grid-rownum { position: sticky; background: var(--bcc-surface) })
-   — bu, satırın hover rengini eziyordu ve solda "beyaz şerit" gibi duruyordu.
-   Hover'da o hücre de aynı rengi alır. */
 .grid-add-row:hover .grid-rownum { background: var(--bcc-surface-sunken); }
 
-/* "+" sütununun (sütun ekleme başlığı) altındaki boş hücre: ipucu bandı oraya
-   UZAMASIN diye ayrı duruyor, görsel olarak TAMAMEN boş kalmalı.
-   ⚠️ "background: transparent" TEK BAŞINA YETMİYORDU: "table.grid td" her
-   hücreye border-right + border-bottom veriyor ve tablo "border-collapse:
-   separate" olduğu için bu hücre KENDİ kenarlıklarını çiziyordu. Sonuç: satır
-   ekleme bandının alt çizgisi veri sütunlarının bittiği yerden sonra "+"
-   sütunu kadar daha uzuyordu — kullanıcının gördüğü "sağdaki artıyı da dahil
-   ediyor" hatası. Kenarlıkları da sıfırlanıyor; bandın sağ ucunu ipucu
-   hücresinin kendi border-right'ı kapatır. */
 .grid-add-row-spacer {
     background: transparent;
     border: none;
 }
-
-/* Hover'da da boş kalsın: satır vurgusu "+" sütununun altına taşmasın. */
 .grid-add-row:hover .grid-add-row-spacer { background: transparent; }
-
 .gs-all-tables-panel {
     left: auto;
     right: 0;
     min-width: 240px;
     padding: 0.5rem;
 }
-
 .gs-all-tables-search {
     display: flex;
     align-items: center;
@@ -538,17 +407,12 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.85rem;
     font-family: inherit;
     width: 100%;
-    /* Bulunan gerçek bug: .gs-search input'taki AYNI sorun — color hiç
-       belirtilmemişti, koyu temada arkadaki koyu .gs-all-tables-search
-       zemininde siyah metin neredeyse görünmezdi. */
     color: var(--bcc-text);
 }
-
 .gs-all-tables-list {
     max-height: 280px;
     overflow-y: auto;
 }
-
 .gs-all-tables-row {
     display: flex;
     align-items: center;
@@ -558,38 +422,29 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.85rem;
     color: var(--bcc-text);
 }
-
 .gs-all-tables-row:hover { background: var(--bcc-surface-hover); }
-
 .gs-all-tables-row.is-active {
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
     font-weight: 600;
 }
-
 .gs-all-tables-row-check {
     width: 14px;
     flex-shrink: 0;
     text-align: center;
 }
-
 .gs-all-tables-row-name {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .gs-all-tables-empty {
     padding: 0.5rem 0.6rem;
     font-size: 0.85rem;
     color: var(--bcc-text-muted);
 }
-
 .gs-table-tab-add:hover { background: var(--bcc-surface-hover); }
-
-/* ---------- Görünüm/araç şeridi ---------- */
-
 .gs-view-toolbar {
     display: flex;
     align-items: center;
@@ -601,13 +456,11 @@ html.is-mac .gs-kbd-other { display: none; }
     gap: 0.4rem;
     position: relative;
 }
-
 .gs-view-toolbar-left {
     display: flex;
     align-items: center;
     gap: 0.6rem;
 }
-
 .gs-icon-btn {
     background: none;
     border: none;
@@ -618,35 +471,28 @@ html.is-mac .gs-kbd-other { display: none; }
     justify-content: center;
     cursor: pointer;
 }
-
 .gs-icon-btn:hover { background: var(--bcc-surface-hover); }
-
 .gs-view-trigger {
     position: relative;
     display: inline-flex;
     align-items: center;
 }
-
 .gs-view-options-menu {
     position: relative;
     flex-shrink: 0;
     margin-left: -0.15rem;
 }
-
 .gs-view-options-caret { opacity: 1; }
-
 .gs-view-options-panel {
     min-width: 260px;
     padding: 0.4rem;
 }
-
 .gs-view-options-collab {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.6rem;
 }
-
 .gs-view-options-collab-text {
     flex: 1;
     min-width: 0;
@@ -654,18 +500,15 @@ html.is-mac .gs-kbd-other { display: none; }
     flex-direction: column;
     gap: 0.15rem;
 }
-
 .gs-view-options-collab-label {
     font-size: 0.85rem;
     font-weight: 600;
 }
-
 .gs-view-options-collab-desc {
     font-size: 0.75rem;
     color: var(--bcc-text-muted);
     white-space: normal;
 }
-
 .gs-view-label {
     display: flex;
     align-items: center;
@@ -673,7 +516,6 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.86rem;
     font-weight: 600;
 }
-
 .gs-view-name-input {
     font: inherit;
     font-size: 0.86rem;
@@ -685,11 +527,6 @@ html.is-mac .gs-kbd-other { display: none; }
     min-width: 120px;
 }
 
-/* Görünüm bilgi popover'ı: saf CSS hover (JS yok — tık, gelecekteki seçenek
-   dropdown'ı (iş 4) için ayrı bir <details> menüsüne saklanıyor, çift tık ise
-   yeniden adlandırma (iş 5) için; ikisi de bu popover'ı tetiklemez). Gecikme
-   yalnızca AÇILIŞTA uygulanır (opacity/visibility transition-delay'i .gs-view-trigger:hover
-   kuralında override edilir) — fare üzerinden hızlıca geçerken zıplamaz, kapanış hızlıdır. */
 .gs-view-info-popover {
     position: absolute;
     top: 100%;
@@ -706,33 +543,27 @@ html.is-mac .gs-kbd-other { display: none; }
     visibility: hidden;
     transition: opacity 0.15s ease, visibility 0s linear 0.15s;
 }
-
 .gs-view-trigger:hover .gs-view-info-popover {
     opacity: 1;
     visibility: visible;
     transition-delay: 300ms;
 }
-
 .gs-view-info-title {
     font-size: 0.85rem;
     font-weight: 700;
     margin-bottom: 0.45rem;
 }
-
 .gs-view-info-row {
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
     font-size: 0.78rem;
 }
-
 .gs-view-info-label {
     color: var(--bcc-text-muted);
     font-weight: 600;
 }
-
 .gs-view-info-value { color: var(--bcc-surface-hover); }
-
 .gs-view-toolbar-right {
     display: flex;
     align-items: center;
@@ -754,26 +585,12 @@ html.is-mac .gs-kbd-other { display: none; }
     cursor: pointer;
     list-style: none;
 }
-
 .gs-tool-btn::-webkit-details-marker { display: none; }
-
 .gs-tool-btn:hover { background: var(--bcc-surface-hover); }
-
-/* Seçili satırları toplu silme butonu (grid-row-detail.js checkbox seçimiyle
-   gösterilir/gizlenir) — diğer .gs-tool-btn'lerle aynı taban, yalnızca renk
-   "yıkıcı işlem" için kırmızıya çekiliyor.
-   Bulunan gerçek bug: .gs-tool-btn'nin display:flex'i, tarayıcının [hidden]
-   için varsayılan display:none kuralıyla AYNI özgüllükte (ikisi de tek sınıf/
-   attribute selector) — kaynak sırası author stylesheet'i (yani display:flex)
-   kazandırıyordu, bu yüzden buton hidden="" olsa BİLE görsel olarak
-   görünmeye devam ediyordu (checkbox seçilmemişken bile "0 seçileni sil"
-   basılıydı). [hidden] burada AÇIKÇA display:none ile geri kazandırılıyor. */
 .gs-delete-selected-btn { color: var(--bcc-danger); }
 .gs-delete-selected-btn[hidden] { display: none; }
 .gs-delete-selected-btn:hover { background: var(--bcc-danger-soft); }
-
 .gs-tool-details { position: relative; }
-
 .gs-search {
     display: flex;
     align-items: center;
@@ -782,9 +599,7 @@ html.is-mac .gs-kbd-other { display: none; }
     border-radius: 6px;
     margin-left: 0.3rem;
 }
-
 .gs-search:focus-within { background: var(--bcc-surface-hover); }
-
 .gs-search input {
     border: none;
     background: transparent;
@@ -792,11 +607,6 @@ html.is-mac .gs-kbd-other { display: none; }
     font-size: 0.85rem;
     font-family: inherit;
     width: 110px;
-    /* Bulunan gerçek bug: color hiç belirtilmemişti — form kontrolleri
-       body'den metin rengini miras almaz, tarayıcı varsayılanı (siyah)
-       kullanılır. background:transparent koyu temada arkadaki koyu araç
-       çubuğunu gösterirken metin siyah kalıyordu (grid'in arama kutusu —
-       neredeyse görünmezdi). */
     color: var(--bcc-text);
 }
 
@@ -807,14 +617,12 @@ html.is-mac .gs-kbd-other { display: none; }
     padding-left: 0.35rem;
     border-left: 1px solid var(--bcc-border);
 }
-
 .gs-search-count {
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
     white-space: nowrap;
     margin-right: 0.1rem;
 }
-
 .gs-search-nav-btn {
     display: flex;
     align-items: center;
@@ -827,42 +635,21 @@ html.is-mac .gs-kbd-other { display: none; }
     cursor: pointer;
     padding: 0;
 }
-
 .gs-search-nav-btn:hover:not(:disabled) { background: var(--bcc-border); }
-
 .gs-search-nav-btn:disabled {
     cursor: default;
     opacity: 0.35;
 }
-
 .grid-search-mark {
     background: #fff2a8;
-    /* Sabit (tema bağımsız) açık sarı arka plan — "inherit" koyu temada
-       neredeyse-beyaz metin rengini alıp vurguyu okunaksız yapıyordu
-       (kontrast ~1:1). Metin rengi de sabitlenerek her iki temada da
-       yüksek kontrast garanti edilir. */
     color: #1d1d1f;
     border-radius: 2px;
     padding: 0 1px;
 }
-
 .grid-search-mark.is-active {
     background: #ffb300;
 }
 
-/* ---------- Görünüm listesi paneli (hamburger) ---------- */
-
-/* OpsFlow'da tablo sekmelerinin altında sol tarafta duran kalıcı görünüm
-   paneli — önceden #gs-view-panel-toggle'ın açtığı yüzen bir dropdown'du,
-   şimdi .gs-body-row'un normal-akış bir sütunu (bkz. grid.php). Daraltma,
-   Home sayfasının #home-sidebar-toggle'ıyla AYNI desen: width sıfırlanır,
-   dropdown gibi display:none/is-open YOK. */
-/* ⚠️ GENİŞLİK SATIR İÇİ STİLLE DEĞİL, CSS DEĞİŞKENİYLE veriliyor
-   (grid-drawer-resize.js --gs-drawer-w'yi <html> üzerinde günceller).
-   Gerekçe: satır içi bir width, aşağıdaki ".is-collapsed { width: 0 }"
-   kuralını EZERDİ ve panel bir kez sürüklendikten sonra HİÇ daralmazdı.
-   Değişken kullanınca daraltma kuralı normal özgüllük yarışını kazanmaya
-   devam eder. */
 .gs-view-drawer {
     width: var(--gs-drawer-w, 260px);
     flex-shrink: 0;
@@ -872,38 +659,22 @@ html.is-mac .gs-kbd-other { display: none; }
     overflow-y: auto;
     transition: width 0.15s ease;
 }
-
-/* ---------- Görünüm panelinin genişlik tutamacı ---------- */
-/* Panelle grid arasındaki ince dikey şerit. Kendi genişliği olan gerçek bir
-   flex öğesi (position:absolute DEĞİL): akışta durduğu için panelin sağ
-   kenarıyla hep hizalı kalır — daraltma/açma sırasında bile kaymaz. */
 .gs-view-drawer-resizer {
     flex: 0 0 5px;
     cursor: col-resize;
     background: transparent;
-    /* Dokunmatik/kalemde tarayıcının kaydırma jestini devralmasını engeller. */
     touch-action: none;
-    /* Sürükleme sırasında metin seçimi başlamasın. */
     user-select: none;
 }
-
 .gs-view-drawer-resizer:hover,
 .gs-view-drawer-resizer.is-dragging {
     background: var(--bcc-accent);
 }
-
-/* Panel daraltılmışken tutamacın anlamı yok — sürüklenecek bir kenar da. */
 .gs-view-drawer.is-collapsed + .gs-view-drawer-resizer {
     display: none;
 }
-
-/* Sürükleme sırasında: (1) width geçişi KAPANIR, yoksa panel imleci 0.15s
-   gecikmeyle takip edip "lastikli" hissettirirdi; (2) imleç tüm sayfada
-   col-resize kalır, kullanıcı şeritten dışarı çıksa bile.
-   Sınıf <body>'ye grid-drawer-resize.js tarafından eklenir. */
 body.gs-drawer-resizing { cursor: col-resize; user-select: none; }
 body.gs-drawer-resizing .gs-view-drawer { transition: none; }
-
 .gs-view-drawer.is-collapsed {
     width: 0;
     padding-left: 0;
@@ -925,23 +696,13 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     border-radius: 6px;
     cursor: pointer;
 }
-
 .gs-view-drawer-create:hover { background: var(--bcc-surface-hover); }
-
-/* Tip secici (Grup View-Form): '+ Yeni olustur...' artik bir <summary>.
-   Varsayilan ucgen isareti gizlenir — .gs-btn-ghost/.gs-table-tab-caret ile
-   AYNI iki satirlik desen. */
 .gs-view-drawer-create {
     list-style: none;
     display: block;
 }
 .gs-view-drawer-create::-webkit-details-marker { display: none; }
 
-/* YUZEN panel: position:fixed cunku sol panel (.gs-view-drawer) kendi kaydirma
-   kutusunu tasiyor — absolute konumlandirma paneli o kutuya kirpardi. Konum
-   JS'te hesaplanir (bcc_bindFloatingPanel). Gorunum .grid-th-menu-panel ile
-   AYNI dil (ayni golge/kenarlik/yaricap), ikinci bir popover stili icat
-   edilmedi. */
 .gs-view-create-panel {
     position: fixed;
     z-index: 30;
@@ -952,9 +713,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     padding: 0.35rem;
     min-width: 200px;
 }
-
-/* Menü başlığı: seçeneklerin yeni TABLO değil yeni GÖRÜNÜM açtığını söyler
-   (kullanıcılar "Tablo" seçeneğini yeni tablo sanıyordu). */
 .gs-view-create-hint {
     margin: 0.15rem 0.35rem 0.3rem;
     font-size: 0.72rem;
@@ -979,23 +737,16 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     text-align: left;
     cursor: pointer;
 }
-
 .gs-view-create-option:hover { background: var(--bcc-surface-hover); }
-
 .gs-view-create-option:disabled {
     opacity: 0.55;
     cursor: default;
 }
 
-/* "Boş tablo oluştur" satırı — görünüm türleriyle AYNI .gs-view-create-option
-   tabanını kullanır, yalnızca <a> döneminden kalan alt çizgi sıfırlaması ve
-   açık renk tanımı burada. Renk tema token'ından: sabit renk yazılırsa koyu
-   temada okunmaz olur (bu dosyanın geri kalanıyla AYNI kural). */
 .gs-view-create-option--table {
     text-decoration: none;
     color: var(--bcc-text);
 }
-
 .gs-view-create-plus {
     display: inline-flex;
     align-items: center;
@@ -1007,11 +758,9 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     line-height: 1;
     color: var(--bcc-text-muted);
 }
-
 .gs-view-create-option--table:hover .gs-view-create-plus {
     color: var(--bcc-text);
 }
-
 .gs-view-drawer-search {
     display: flex;
     align-items: center;
@@ -1029,12 +778,8 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     font-size: 0.83rem;
     font-family: inherit;
     width: 100%;
-    /* Bulunan gerçek bug: .gs-search input'taki AYNI sorun — color hiç
-       belirtilmemişti, koyu temada arkadaki koyu .gs-view-drawer-search
-       zemininde siyah metin neredeyse görünmezdi. */
     color: var(--bcc-text);
 }
-
 .gs-view-drawer-view {
     display: flex;
     align-items: center;
@@ -1043,31 +788,16 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     border-radius: 6px;
     font-size: 0.85rem;
 }
-
 .gs-view-drawer-view.is-selected {
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
     font-weight: 600;
 }
-
-/* ---------- Ana alan ---------- */
-
 .gs-body-row {
     display: flex;
     flex: 1;
     min-height: 0;
 }
-
-/* Tam genişlik/yükseklik (OpsFlow "edge-to-edge"): dolgu KALDIRILDI, artık
-   yatay boşluğu sayfanın kendisi değil İÇİNDEKİ öğeler (bkz. .gs-fields-link /
-   .gs-grid-footer) taşıyor — böylece .grid-wrap sağ ve alt pencere kenarına
-   kadar uzanabiliyor.
-
-   overflow:auto -> hidden + flex sütun: kaydırma tek bir yerde, .grid-wrap'te
-   toplanıyor. Aksi hâlde iç içe iki kaydırıcı olur ve sticky başlık/donmuş
-   sütunlar yanlış kaydırıcıya göre konumlanır.
-   min-height:0 ŞART: flex çocuğunun varsayılan min-height:auto değeri,
-   .grid-wrap'in kendi içeriğinden KÜÇÜLMESİNİ engelleyip taşmaya yol açardı. */
 .gs-main {
     flex: 1;
     min-width: 0;
@@ -1076,7 +806,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     flex-direction: column;
     overflow: hidden;
 }
-
 .gs-fields-link {
     margin: 0;
     padding: 0.6rem 1rem 0.5rem;
@@ -1084,11 +813,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     flex-shrink: 0;
 }
 
-/* .gs-main'in dolgusu tam-kanama için kaldırıldı; IZGARA DIŞINDAKİ çocukları
-   artık kendi yatay boşluklarını taşımak zorunda. Aksi hâlde flash mesajı
-   (src/partials/flash.php -> p.error / p.ok) ve "bu tabloda henüz alan yok"
-   kartı pencerenin sol kenarına yapışık çıkardı. flex-shrink:0 — bunlar
-   .grid-wrap gibi esnememeli, kendi boylarında kalmalı. */
 .gs-main > .card,
 .gs-main > .error,
 .gs-main > .ok {
@@ -1096,15 +820,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     margin-right: 1rem;
     flex-shrink: 0;
 }
-
 .gs-fields-link a { color: var(--bcc-accent); font-weight: 600; }
-
-/* Alt bilgi çubuğu ("N kayıt") artık akışın sonunda DEĞİL, .gs-main flex
-   sütununun sabit son öğesi: .grid-wrap flex:1 ile kalan yüksekliği aldığı
-   için bu çubuk her zaman pencerenin ALT KENARINA yapışık kalıyor ve tabloyla
-   birlikte kaymıyor (OpsFlow'daki gibi). Kenar çizgisi tam genişlikte,
-   yazının boşluğunu ise kendi yatay dolgusu veriyor (eskiden .gs-main'in
-   dolgusundan geliyordu). */
 .gs-grid-footer {
     display: flex;
     align-items: center;
@@ -1113,18 +829,14 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     margin-top: 0;
     flex-shrink: 0;
 }
-
 .gs-grid-footer .grid-row-count {
     font-size: 0.82rem;
     color: var(--bcc-text-muted);
 }
-
 .gs-grid-footer .grid-add-toast {
     margin: 0 0 0 0.75rem;
     font-size: 0.82rem;
 }
-
-/* ---------- Sol Views paneli — satır (favori/isim/⋯) ---------- */
 
 .gs-view-drawer-row {
     position: relative;
@@ -1133,25 +845,13 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     gap: 0.3rem;
     border-radius: 6px;
 }
-
 .gs-view-drawer-row[hidden] { display: none; }
 
 .gs-view-drawer-row:hover { background: var(--bcc-surface-hover); }
-
-/* Seçili görünüm satırı KOYU temada da AÇIK temadaki maviyi korur (kullanıcı
-   isteği). var(--bcc-accent-soft) koyu temada laciverte (#1c2b4d) dönüyordu;
-   burada sabit açık mavi kullanıldığı için metin de sabit koyu olmak ZORUNDA —
-   aksi hâlde koyu temanın beyaz metni bu açık zeminde okunmaz (aynı hata
-   .choice-chip'te vardı). color satır içindeki bağlantı/etiketlere de
-   inherit olur. */
 .gs-view-drawer-row.is-selected {
     background: #e8f0fe;
     color: #1d1d1f;
 }
-
-/* D1 — sürükle-bırak tutamacı: satır hover'lanmadıkça görünmez (yıldız/⋯
-   ikonlarıyla AYNI opacity deseni), sürüklenirken bcc_bindColumnDrag()
-   handle'a .is-dragging ekliyor (grid-freeze-handle ile AYNI cursor kuralı). */
 .gs-view-drag-handle {
     display: flex;
     align-items: center;
@@ -1161,20 +861,14 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: grab;
     opacity: 0;
 }
-
 .gs-view-drawer-row:hover .gs-view-drag-handle { opacity: 1; }
-
 .gs-view-drag-handle.is-dragging {
     cursor: grabbing;
     opacity: 1;
 }
-
-/* Sürüklenen satırın kendisi yerinde durur, soluklaşır — konum önizlemesi
-   ayrı bir "hologram" (.gs-view-drag-placeholder) ile fareyi takip eder. */
 .gs-view-drawer-row.is-drag-source {
     opacity: 0.35;
 }
-
 .gs-view-drag-placeholder {
     border: 1.5px dashed var(--bcc-accent);
     border-radius: 6px;
@@ -1182,18 +876,15 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     box-sizing: border-box;
     margin: 1px 0;
 }
-
 .gs-view-drawer-view {
     flex: 1;
     min-width: 0;
 }
-
 .gs-view-drawer-view span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .gs-view-star-btn,
 .gs-view-row-menu-btn {
     flex-shrink: 0;
@@ -1210,56 +901,35 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     opacity: 0;
     list-style: none;
 }
-
 .gs-view-row-menu-btn::-webkit-details-marker { display: none; }
-
 .gs-view-drawer-row:hover .gs-view-star-btn,
 .gs-view-drawer-row:hover .gs-view-row-menu-btn { opacity: 1; }
-
 .gs-view-star-btn[aria-pressed="true"] { opacity: 1; }
-
 .gs-view-star-btn:hover,
 .gs-view-row-menu-btn:hover { background: var(--bcc-surface-hover); }
 
 .gs-view-star-icon { fill: none; stroke: var(--bcc-text-muted); }
-
 .gs-view-star-btn[aria-pressed="true"] .gs-view-star-icon {
     fill: #f5b400;
     stroke: #f5b400;
 }
-
-/* .gs-view-drawer'ın overflow-y:auto olması nedeniyle position:absolute
-   (diğer .gs-table-tab-menu-panel'lerin varsayılanı) bu panel için satır
-   listenin altındaysa KIRPILIRDI — aynı ders, bkz. home.css .home-base-more-panel
-   (Starred işi). position:fixed + JS'de hesaplanan konum bunu atlıyor. */
 .gs-view-row-menu-panel {
     position: fixed;
     top: auto;
     left: auto;
 }
 
-/* Aynı ders burada da geçerli: .gs-table-tabs-scroll'a yalnızca overflow-x:auto
-   verilmiş olsa da CSS spec'i overflow-y'yi de "visible" yerine "auto" hesaplar
-   (overflow-x != visible olduğunda) — bu yüzden sekme sekmesi içindeki bu TEK
-   .gs-table-tab-menu-panel (diğer ikisi — gs-all-tables-menu/gs-view-options-menu
-   — bu sarmalayıcının İÇİNDE değil, onlara dokunulmadı) position:absolute ile
-   satır şeridinin altında KIRPILIYORDU. position:fixed + JS'de hesaplanan konum
-   (bkz. grid-table-data.js) bunu atlıyor. */
 .gs-table-tab-import-menu-panel {
     position: fixed;
     top: auto;
     left: auto;
 }
-
 .gs-view-drawer-empty {
     padding: 1rem 0.6rem;
     text-align: center;
     color: var(--bcc-text-muted);
     font-size: 0.82rem;
 }
-
-/* ---------- Edit view description popover ---------- */
-
 .gs-view-desc-overlay {
     position: fixed;
     inset: 0;
@@ -1269,9 +939,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     align-items: center;
     justify-content: center;
 }
-
 .gs-view-desc-overlay[hidden] { display: none; }
-
 .gs-view-desc-modal {
     width: 380px;
     max-width: 90vw;
@@ -1280,13 +948,11 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
     padding: 1rem;
 }
-
 .gs-view-desc-title {
     font-weight: 600;
     font-size: 0.92rem;
     margin-bottom: 0.6rem;
 }
-
 .gs-view-desc-textarea {
     width: 100%;
     min-height: 5rem;
@@ -1298,24 +964,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     font-size: 0.85rem;
     resize: vertical;
 }
-
 .gs-view-desc-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.7rem;
 }
-
-/* ---------- "Veri içe aktar (Excel)" modalı ----------
-   Kutu .gs-view-desc-modal'ı temel alıp .gs-import-modal ile GENİŞLETİYOR;
-   paylaşılan sınıfın kendisine dokunulmadı, çünkü "görünüm açıklamasını
-   düzenle" popover'ı da onu kullanıyor (380px ve dar dolgu ona doğru).
-
-   Renkler SABİT HEX yerine token: istenen açık tema görünümü zaten
-   token'ların değeriyle neredeyse birebir aynı (#f8fafc ~ --bcc-surface-sunken,
-   #cbd5e1 ~ --bcc-border-strong, #eff6ff ~ --bcc-accent-soft, #2563eb ~
-   --bcc-accent), ama sabit yazılsaydı koyu temada beyaz bir kutu koyu
-   zeminin üstünde kalırdı — bu dosyadaki .grid-search-mark notunun aynısı. */
 
 .gs-import-modal {
     width: 520px;
@@ -1324,14 +978,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     border-radius: 16px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.26);
 }
-
 .gs-import-header {
     display: flex;
     align-items: flex-start;
     gap: 0.7rem;
     margin-bottom: 1.1rem;
 }
-
 .gs-import-header-icon {
     display: flex;
     align-items: center;
@@ -1343,15 +995,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
 }
-
 .gs-import-header-text { flex: 1; min-width: 0; }
-
 .gs-import-title {
     font-size: 1.02rem;
     font-weight: 650;
     line-height: 1.3;
 }
-
 .gs-import-subtitle {
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
@@ -1373,14 +1022,10 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     transition: background-color 0.16s ease, color 0.16s ease;
 }
-
 .gs-import-close:hover {
     background: var(--bcc-surface-hover);
     color: var(--bcc-text);
 }
-
-/* ---- Sürükle-bırak alanı ---- */
-
 .gs-import-dropzone {
     display: flex;
     flex-direction: column;
@@ -1394,7 +1039,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
 }
-
 .gs-import-dropzone:hover,
 .gs-import-dropzone:focus-visible,
 .gs-import-dropzone.is-dragover {
@@ -1403,19 +1047,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     transform: scale(1.02);
     outline: none;
 }
-
-/* [hidden]'ı GERİ getirir. Bulunan gerçek bug: yukarıdaki display:flex,
-   hidden özniteliğinin tarayıcıdan gelen display:none'ını YENİYOR (sınıf
-   seçicisi 0,1,0 > öznitelik varsayılanı). Dosya seçildiğinde JS
-   dropzone.hidden = true yapıyordu ama kutu ekranda KALIYOR, dosya kartıyla
-   alt alta iki kutu görünüyordu — canlı testte ekran görüntüsüyle yakalandı,
-   JS tarafı "hidden=true" dediği için birim kontrolü bunu göremezdi.
-   .gs-import-file-card[hidden] için aynı kural aşağıda zaten var. */
 .gs-import-dropzone[hidden] { display: none; }
-
-/* Sürükleme sırasında imleç kutunun ÇOCUKLARININ üstündeyken de kutu
-   "dragover" durumunda kalmalı; alt öğeler kendi dragleave'lerini
-   üretmesin diye olayları yakalamıyorlar. */
 .gs-import-dropzone > * { pointer-events: none; }
 
 .gs-import-dropzone-icon {
@@ -1429,21 +1061,17 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-accent);
     border: 1px solid var(--bcc-border);
 }
-
 .gs-import-dropzone-text {
     font-size: 0.85rem;
     color: var(--bcc-text);
     line-height: 1.45;
 }
-
 .gs-import-dropzone-text strong { color: var(--bcc-accent-strong); }
-
 .gs-import-badges {
     display: flex;
     align-items: center;
     gap: 0.35rem;
 }
-
 .gs-import-badge {
     font-size: 0.7rem;
     font-weight: 600;
@@ -1459,9 +1087,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text-muted);
     font-weight: 500;
 }
-
-/* Dosya girişi GÖRÜNMEZ ama DOM'da/odaklanılabilir kalıyor: display:none
-   verilseydi bazı tarayıcılar label üzerinden odaklanmayı reddediyor. */
 .gs-import-file-input {
     position: absolute;
     width: 1px;
@@ -1469,9 +1094,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     opacity: 0;
     pointer-events: none;
 }
-
-/* ---- Seçilen dosya kartı ---- */
-
 .gs-import-file-card {
     display: flex;
     align-items: center;
@@ -1481,9 +1103,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     border-radius: 12px;
     background: var(--bcc-surface-sunken);
 }
-
 .gs-import-file-card[hidden] { display: none; }
-
 .gs-import-file-check {
     display: flex;
     align-items: center;
@@ -1492,33 +1112,27 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     height: 32px;
     flex-shrink: 0;
     border-radius: 50%;
-    /* Yeşil onay: temadan bağımsız sabit, çünkü "başarılı" rengi tema
-       token'ları arasında yok ve iki temada da aynı anlamı taşımalı. */
+
     background: rgba(16, 185, 129, 0.14);
     color: #0f9d6e;
 }
-
 .gs-import-file-meta {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
 }
-
 .gs-import-file-name {
     font-size: 0.84rem;
     font-weight: 600;
-    /* Uzun dosya adı kartı GENİŞLETMESİN — kırpılır. */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .gs-import-file-size {
     font-size: 0.74rem;
     color: var(--bcc-text-muted);
 }
-
 .gs-import-file-change {
     flex-shrink: 0;
     border: 1px solid var(--bcc-border-strong);
@@ -1532,11 +1146,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     transition: background-color 0.16s ease;
 }
-
 .gs-import-file-change:hover { background: var(--bcc-surface-hover); }
-
-/* ---- Bilgi kutusu ---- */
-
 .gs-import-callout {
     margin-top: 0.9rem;
     padding: 12px 16px;
@@ -1547,11 +1157,7 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     line-height: 1.5;
     color: var(--bcc-text-muted);
 }
-
 .gs-import-callout strong { color: var(--bcc-text); }
-
-/* ---- Aksiyon düğmeleri ---- */
-
 .gs-import-actions { margin-top: 1.1rem; }
 
 .gs-import-btn-secondary,
@@ -1564,15 +1170,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
-
 .gs-import-btn-secondary {
     border: 1px solid var(--bcc-border);
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text);
 }
-
 .gs-import-btn-secondary:hover { background: var(--bcc-surface-hover); }
-
 .gs-import-btn-primary {
     border: none;
     color: var(--bcc-on-accent);
@@ -1584,24 +1187,19 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     transform: translateY(-1px);
     box-shadow: 0 6px 16px -4px rgba(45, 127, 249, 0.4), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
-
 .gs-import-btn-primary:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
-
 .gs-import-btn-primary:disabled {
     cursor: default;
     opacity: 0.6;
 }
-
-/* Hareketi azalt tercihi: yükselti/ölçek kapanır, renk geçişleri kalır. */
 @media (prefers-reduced-motion: reduce) {
     .gs-import-dropzone,
     .gs-import-btn-primary {
         transition: border-color 0.16s ease, background-color 0.16s ease;
     }
-
     .gs-import-dropzone:hover,
     .gs-import-dropzone:focus-visible,
     .gs-import-dropzone.is-dragover,
@@ -1618,18 +1216,9 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     line-height: 1.4;
     background: var(--bcc-surface-sunken);
 }
-
 .gs-import-result-error {
     color: #c62828;
 }
-
-/* ---------- "Paylaş" modalı (OpsFlow Collaborators diyaloğu) ----------
-   Backdrop YENİDEN KULLANILIYOR: .gs-view-desc-overlay (yukarıda) — aynı
-   position:fixed/inset:0/z-index:60/blur'suz koyu zemin + [hidden] kuralı,
-   ikinci bir kopya YOK. grid-export.css o sınıfı zaten gizlediği için
-   yazdırma/PNG'de de bedavaya kayboluyor. Burada yalnızca İÇ KUTU farklı:
-   .gs-view-desc-modal 380px ve tek amaçlı, bu ise sekmeli ve daha geniş. */
-
 .gs-share-modal {
     width: 560px;
     max-width: 94vw;
@@ -1641,26 +1230,22 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
     padding: 1.1rem 1.15rem 0.9rem;
 }
-
 .gs-share-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
 }
-
 .gs-share-title {
     font-weight: 700;
     font-size: 1rem;
     color: var(--bcc-text);
 }
-
 .gs-share-subtitle {
     margin-top: 0.15rem;
     font-size: 0.8rem;
     color: var(--bcc-text-muted);
 }
-
 .gs-share-close {
     flex-shrink: 0;
     display: flex;
@@ -1674,21 +1259,17 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text-muted);
     cursor: pointer;
 }
-
 .gs-share-close:hover {
     background: var(--bcc-surface-hover);
     color: var(--bcc-text);
 }
-
 .gs-share-invite {
     margin-top: 0.9rem;
 }
-
 .gs-share-invite-row {
     display: flex;
     gap: 0.4rem;
 }
-
 .gs-share-invite-email,
 .gs-share-invite-role {
     font: inherit;
@@ -1699,9 +1280,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text);
 }
-
-/* Input + öneri kutusu ortak sarmalayıcı: kutu input'un ALTINA, tam onun
-   genişliğinde oturmalı (position:absolute'ün referansı bu kutu). */
 .gs-share-invite-field {
     position: relative;
     flex: 1;
@@ -1711,20 +1289,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
 .gs-share-invite-email { width: 100%; box-sizing: border-box; }
 .gs-share-invite-role { flex: 0 0 auto; }
 .gs-share-invite-btn { flex: 0 0 auto; }
-
-/* ---------- Davet önerileri (native <datalist> YERİNE) ----------
-   Yerleşik datalist'in görünümü tarayıcıya aitti: yüksekliği, konumu ve
-   tipografisi ayarlanamıyordu ve 35 hesapla sayfa boyunda bir şeride dönüşüp
-   modalın üstüne taşıyordu (kullanıcı bildirdi). Bu kutu modalın diline uyar,
-   input'a bağlıdır ve YÜKSEKLİĞİ SINIRLIDIR — uzun listede kendi içinde kayar,
-   sayfayı asla taşırmaz. */
 .gs-share-suggest {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
     right: 0;
     z-index: 40;
-    /* ~8 satır; fazlası kutunun İÇİNDE kayar. */
     max-height: 260px;
     overflow-y: auto;
     background: var(--bcc-surface);
@@ -1735,7 +1305,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
 }
 
 .gs-share-suggest[hidden] { display: none; }
-
 .gs-share-suggest-item {
     display: flex;
     flex-direction: column;
@@ -1749,27 +1318,22 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     font: inherit;
 }
-
 .gs-share-suggest-item:hover,
 .gs-share-suggest-item.is-active {
     background: var(--bcc-accent-soft);
 }
-
 .gs-share-suggest-name {
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--bcc-text);
 }
-
 .gs-share-suggest-mail {
     font-size: 0.75rem;
     color: var(--bcc-text-muted);
-    /* Uzun adresler kutuyu genişletmesin. */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .gs-share-invite-note,
 .gs-share-readonly-note {
     margin: 0.5rem 0 0;
@@ -1777,14 +1341,12 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     line-height: 1.45;
     color: var(--bcc-text-muted);
 }
-
 .gs-share-readonly-note {
     margin-top: 0.9rem;
     padding: 0.55rem 0.65rem;
     border-radius: 6px;
     background: var(--bcc-surface-sunken);
 }
-
 .gs-share-status {
     margin-top: 0.7rem;
     padding: 0.45rem 0.6rem;
@@ -1794,27 +1356,20 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
 }
-
 .gs-share-status.is-error {
     background: #fdecea;
     color: #c62828;
 }
-
-/* Sunucu isteği sürerken tıklamaları yut — çift gönderim (ör. rol
-   <select>'inde hızlı iki değişiklik) yarış oluşturmasın. JS ayrıca kendi
-   `busy` bayrağıyla ikinci isteği hiç başlatmıyor; bu onun görsel karşılığı. */
 .gs-share-overlay.is-busy .gs-share-modal {
     pointer-events: none;
     opacity: 0.6;
 }
-
 .gs-share-tabs {
     display: flex;
     gap: 0.25rem;
     margin-top: 1rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .gs-share-tab {
     display: flex;
     align-items: center;
@@ -1829,34 +1384,27 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text-muted);
     cursor: pointer;
 }
-
 .gs-share-tab:hover { color: var(--bcc-text); }
-
 .gs-share-tab.is-active {
     color: var(--bcc-accent-strong);
     border-bottom-color: var(--bcc-accent);
 }
-
 .gs-share-tab-count {
     padding: 0.05rem 0.35rem;
     border-radius: 999px;
     background: var(--bcc-surface-sunken);
     font-size: 0.72rem;
 }
-
 .gs-share-tab.is-active .gs-share-tab-count {
     background: var(--bcc-accent-soft);
 }
-
 .gs-share-list {
     flex: 1;
     min-height: 120px;
     overflow-y: auto;
     padding: 0.35rem 0;
 }
-
 .gs-share-list[hidden] { display: none; }
-
 .gs-share-row {
     display: flex;
     align-items: center;
@@ -1864,35 +1412,27 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     padding: 0.45rem 0.15rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .gs-share-row:last-child { border-bottom: none; }
-
-/* .ws-collab-avatar (home.css) TABAN stilini kullanır — .collab-popover-avatar
-   ile AYNI teknik, burada yalnızca boyut. */
 .gs-share-avatar {
     width: 30px;
     height: 30px;
     flex-shrink: 0;
 }
-
 .gs-share-row-info {
     flex: 1;
     min-width: 0;
 }
-
 .gs-share-row-name,
 .gs-share-row-email {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .gs-share-row-name {
     font-size: 0.86rem;
     font-weight: 500;
     color: var(--bcc-text);
 }
-
 .gs-share-row-email {
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
@@ -1904,9 +1444,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     align-items: center;
     gap: 0.4rem;
 }
-
-/* Sabit genişlik: seçili rol adı ("Owner" / "Commenter") kutuyu büyütmesin —
-   yoksa her satırın rol kutusu farklı ende olur ve sağ kenar tırtıklı görünür. */
 .gs-share-role-select {
     width: 108px;
     font: inherit;
@@ -1917,7 +1454,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     background: var(--bcc-surface-sunken);
     color: var(--bcc-text);
 }
-
 .gs-share-role-readonly {
     width: 108px;
     text-align: right;
@@ -1925,15 +1461,11 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text-muted);
 }
 
-/* "Çıkar" butonu basılmayan satırlarda (kendi satırınız, yetki dışı rütbe) rol
-   kutusu tek başına sağa yapışır ve diğer satırlarla hizası kayardı. Bu boşluk
-   yalnızca o 26px'i ayırır — tıklanabilir/odaklanabilir bir öğe DEĞİL. */
 .gs-share-remove-spacer {
     display: block;
     width: 26px;
     flex-shrink: 0;
 }
-
 .gs-share-remove-btn {
     display: flex;
     align-items: center;
@@ -1946,7 +1478,6 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text-muted);
     cursor: pointer;
 }
-
 .gs-share-remove-btn:hover {
     background: #fdecea;
     color: #c62828;
@@ -1960,60 +1491,31 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     line-height: 1.5;
     color: var(--bcc-text-muted);
 }
-
 .gs-share-foot {
     padding-top: 0.7rem;
     border-top: 1px solid var(--bcc-border);
 }
-
 .gs-share-foot-link {
     font-size: 0.8rem;
     color: var(--bcc-accent-strong);
     text-decoration: none;
 }
-
 .gs-share-foot-link:hover { text-decoration: underline; }
 
-/* ---------- Grid dışa aktarma: PDF (yazdır) + PNG ---------- */
-
-/* DİKKAT — bu bloğun ORTAK yarısı burada DEĞİL: assets/grid-export.css.
-   O dosya grid.php'ye media="print" ile bağlanıyor, yani yazdırmada JS'SİZ
-   çalışıyor; "PNG olarak indir" ise html2canvas'ın onclone KOPYASINDA aynı
-   link'in media'sını "all"a çevirerek AYNI kuralları kullanıyor (bkz.
-   grid-export-png.js). Böylece liste tek yerde duruyor ve print yolu bir JS
-   olayına (beforeprint) BAĞIMLI DEĞİL — JS hiç çalışmasa bile PDF doğru çıkar.
-
-   Aşağıda yalnızca GERÇEKTEN print'e özgü olanlar var: @page, sayfa bölme ve
-   sayfaya sığdırma. Bunlar PNG'ye bilerek uygulanmıyor (bkz. sığdırma notu). */
 @media print {
     @page {
         margin: 12mm 10mm;
     }
 
-    /* Tablo başlığı HER sayfada tekrarlasın. thead'in varsayılan display'i
-       zaten table-header-group ama style.css `thead th`'ye position:sticky
-       veriyor ve sticky bir başlık grubu tekrarlanmıyor — bu kural TEK BAŞINA
-       YETMEZ, sticky'yi grid-export.css kaldırdığı için iş görüyor. */
     table.grid thead {
         display: table-header-group;
     }
-
-    /* Satırlar sayfa sınırında ORTADAN bölünmesin. */
     table.grid tr,
     table.grid td,
     table.grid th {
         page-break-inside: avoid;
         break-inside: avoid;
     }
-
-    /* Yatay sığdırma — SADECE print. PNG'de uygulanmaz, çünkü PNG'nin sözleşmesi
-       "ekranda ne görünüyorsa o": burada sütunlar daraltılıp metin sarılıyor,
-       PNG'de ise ekrandaki genişlikler korunuyor.
-       Genişliği kâğıda kilitlemek şart: table.grid'in min-width:100% + nowrap
-       başlıkları (style.css) sayfadan taşan bir tabloyu kırpılmaya bırakırdı.
-       Çok sütunlu tablolarda buna EK olarak landscape devreye giriyor —
-       grid-view-manage.js ölçüyle karar verip @page'i enjekte ediyor
-       (@page bir sınıfa göre şartlanamıyor, bu yüzden CSS'te değil JS'te). */
     .grid-wrap,
     table.grid {
         width: 100% !important;
@@ -2021,25 +1523,15 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
         max-width: 100% !important;
     }
 
-    /* Kullanıcının sürükleyerek ayarladığı sütun genişlikleri (colgroup +
-       table-layout:fixed, bkz. style.css .grid-has-col-widths) KAĞITTA
-       ÇÖZÜLÜR: piksel genişlikler ekran için ölçüldü, sayfa genişliğiyle
-       ilgisi yok — sabit kalsalardı yukarıdaki "width:100%" bir işe yaramaz,
-       tablo yine taşardı. Otomatik yerleşime dönüldüğü için sütunlar sayfaya
-       göre yeniden dağılıyor. PNG'ye BİLEREK uygulanmıyor (o ekranı
-       yansıtıyor) — bu yüzden kural grid-export.css'te DEĞİL burada. */
     table.grid.grid-has-col-widths {
         table-layout: auto !important;
     }
-
     table.grid col {
         width: auto !important;
     }
-
     table.grid {
         font-size: 7.5pt;
     }
-
     table.grid thead th,
     table.grid tbody td {
         white-space: normal;
@@ -2048,28 +1540,14 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     }
 }
 
-/* Toplu satır ekleme kontrolü ("+" satırının içinde, ipucu bandının solunda).
-   ⚠️ Satırın KENDİSİ tıklanabilir (tek kayıt ekler) ve hover'da imleci
-   "pointer" yapıyor — kutunun üstünde bu yanıltıcı olurdu, o yüzden burada
-   imleç normale döndürülüyor; asıl tıklama hedefleri (input/buton) kendi
-   imlecini getiriyor. Tıklamanın satıra yayılmaması JS tarafında
-   (grid.js, [data-grid-add-bulk] kontrolü) engelleniyor. */
 .grid-add-row-bulk {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     cursor: default;
-    /* Dikey hizayı satırın kendi satır yüksekliğinden ALMASIN: kontrol
-       kendi yüksekliğini dayatırsa "+" satırı veri satırlarından daha
-       kalın görünüyordu (ekran görüntüsündeki şişkin bant). */
     line-height: 1;
     vertical-align: middle;
 }
-
-/* ⚠️ ÖZGÜLLÜK NOTU: theme.css'te "input[type='number']" (0,1,1) taban kuralı
-   var — padding 0.4rem/0.6rem, border-radius 6px, font: inherit veriyor ve
-   düz ".grid-add-row-bulk-input" (0,1,0) onu EZEMİYORDU; kutu bu yüzden
-   satırı şişiriyordu. Seçici bilerek (0,2,1) yapıldı. */
 .grid-add-row-bulk input[type="number"].grid-add-row-bulk-input {
     width: 2.9rem;
     height: 1.5rem;
@@ -2083,25 +1561,18 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     color: var(--bcc-text);
     cursor: text;
     box-sizing: border-box;
-    /* Sayı okları 2.9rem'lik kutuda rakamı sıkıştırıyordu; yazarak ve
-       yön tuşlarıyla artırma zaten çalışıyor. */
     -moz-appearance: textfield;
 }
-
 .grid-add-row-bulk input[type="number"].grid-add-row-bulk-input::-webkit-outer-spin-button,
 .grid-add-row-bulk input[type="number"].grid-add-row-bulk-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
-
 .grid-add-row-bulk input[type="number"].grid-add-row-bulk-input:focus {
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 2px var(--bcc-accent-soft);
 }
 
-/* Buton .btn-sm DEĞİL: o sınıf gri dolgu + kalın padding veriyor ve grid
-   satırının içinde ağır bir blok gibi duruyordu. Burada metin ağırlıklı,
-   yalnızca hover'da zemin alan hafif bir eylem. */
 .grid-add-row-bulk-btn {
     height: 1.5rem;
     padding: 0 0.4rem;
@@ -2115,12 +1586,10 @@ body.gs-drawer-resizing .gs-view-drawer { transition: none; }
     cursor: pointer;
     white-space: nowrap;
 }
-
 .grid-add-row-bulk-btn:hover:not(:disabled) {
     background: var(--bcc-accent-soft);
     border-color: var(--bcc-accent-soft);
 }
-
 .grid-add-row-bulk-btn:disabled {
     opacity: 0.45;
     cursor: default;

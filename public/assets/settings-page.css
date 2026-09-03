@@ -1,44 +1,12 @@
-/* Ayar/yönetim sayfalarının ORTAK tasarım sistemi (.sp-page).
- *
- * Tüketiciler: table_fields.php, base_tables.php.
- * (Bu dosya önce table-fields.css olarak yazıldı; base_tables.php aynı iskeleti
- * — breadcrumb → sayaçlı kart → satır aksiyonları → düzenle/oluştur formu —
- * paylaştığı için kurallar KOPYALANMADI, buraya çıkarıldı. Sayfaya ÖZGÜ olanlar
- * kendi dosyalarında kaldı, bkz. table-fields.css.)
- *
- * ⚠️ HER KURAL `.sp-page` ALTINA KAPSANMIŞTIR — BU BİLİNÇLİ.
- * Bu sayfalar `.settings-card` / `.settings-table` / `.settings-btn` /
- * `.settings-breadcrumb` sınıflarını kullanıyor ama bunlar PAYLAŞILAN sınıflar:
- * admin/index.php, admin/create_user.php, admin/create_team.php,
- * admin/assign_team.php, bases.php, form_edit.php, kanban.php ve
- * slack_settings.php da aynı sınıfları kullanıyor. home.css'teki tanımları
- * değiştirmek o sayfaları da sessizce yeniden tasarlardı. Kapsam sınıfı
- * sayesinde bu dosya YALNIZCA `.sp-page` saran sayfaları etkiliyor.
- *
- * Renkler: yalnızca mevcut --bcc-* token'ları. Yeni sabit renk YOK, böylece
- * koyu tema kendiliğinden çalışıyor.
- */
-
-/* ---------- Sayfa kabı ---------- */
-
-/* Sağdaki geniş ölü alanın kök nedeni: .home-main flex:1 ile tüm genişliği
-   kaplıyor ama içerik (birkaç sütunlu bir tablo) onu dolduramıyor. İçerik
-   ölçülü bir okuma genişliğine oturtuluyor ve ortalanıyor. */
 .sp-page {
     max-width: 1080px;
     margin: 0 auto;
 }
-
-/* ---------- Üst gezinme ---------- */
-
 .sp-page .settings-breadcrumb {
     gap: 0.15rem;
     margin-bottom: 1.15rem;
     font-size: 0.82rem;
 }
-
-/* Bağlantılar artık vurgu mavisi DEĞİL: bunlar sayfanın birincil eylemi değil,
-   ikincil gezinme. Sessiz gri + hover'da yüzey. */
 .sp-page .settings-breadcrumb a {
     display: inline-flex;
     align-items: center;
@@ -49,25 +17,19 @@
     font-weight: 500;
     transition: background-color 0.12s ease, color 0.12s ease;
 }
-
 .sp-page .settings-breadcrumb a:hover {
     background: var(--bcc-surface-hover);
     color: var(--bcc-text);
     text-decoration: none;
 }
-
 .sp-page .settings-breadcrumb a svg {
     flex: none;
     opacity: 0.75;
 }
-
 .sp-page .settings-breadcrumb > span {
     color: var(--bcc-border-strong);
     user-select: none;
 }
-
-/* ---------- Başlık ---------- */
-
 .sp-page .home-main-header {
     margin-bottom: 1.35rem;
 }
@@ -84,18 +46,13 @@
     font-size: 0.88rem;
     line-height: 1.5;
 }
-
-/* ---------- Kartlar ---------- */
-
 .sp-page .settings-card {
     border-radius: 12px;
     padding: 1.25rem 1.35rem 1.35rem;
     border-color: var(--bcc-border);
-    /* İki katmanlı yumuşak gölge: tek katman ya çok sert ya görünmez oluyordu. */
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05);
     margin-bottom: 1.15rem;
 }
-
 .sp-page .settings-card > h2 {
     display: flex;
     align-items: center;
@@ -106,7 +63,6 @@
     letter-spacing: -0.005em;
 }
 
-/* Başlıktaki sayaç ("Tablolar (7)") ayrı bir sessiz rozete taşındı. */
 .sp-page .sp-count {
     display: inline-flex;
     align-items: center;
@@ -121,20 +77,15 @@
     font-size: 0.72rem;
     font-weight: 600;
 }
-
-/* ---------- Veri tablosu ---------- */
-
 .sp-page .settings-table-wrap {
     border-radius: 10px;
     border-color: var(--bcc-border);
-    overflow: hidden; /* köşe yarıçapı satır zeminlerini kırpsın */
+    overflow: hidden;
     overflow-x: auto;
 }
-
 .sp-page .settings-table {
     font-size: 0.86rem;
 }
-
 .sp-page .settings-table thead th {
     padding: 0.6rem 0.85rem;
     font-size: 0.7rem;
@@ -142,31 +93,22 @@
     background: var(--bcc-surface-sunken);
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .sp-page .settings-table td {
     padding: 0.7rem 0.85rem;
     border-bottom: 1px solid var(--bcc-border);
 }
-
 .sp-page .settings-table tbody tr:last-child td { border-bottom: none; }
-
 .sp-page .settings-table tbody tr {
     transition: background-color 0.1s ease;
 }
-
 .sp-page .settings-table tbody tr:hover {
     background: var(--bcc-surface-hover);
 }
-
-/* Satırın birincil bilgisi (alan adı / tablo adı) — biraz daha ağır. */
 .sp-page .sp-primary-name {
     font-weight: 550;
     color: var(--bcc-text);
 }
 
-/* Tıklanabilir birincil ad (base_tables: tabloya git). Gezinme olduğu belli
-   olsun ama satırı mavi bir link tarlasına çevirmesin: normalde metin rengi,
-   hover'da vurgu + alt çizgi. */
 .sp-page .sp-primary-name a {
     display: inline-flex;
     align-items: center;
@@ -175,7 +117,6 @@
     text-decoration: none;
     border-radius: 5px;
 }
-
 .sp-page .sp-primary-name a:hover {
     color: var(--bcc-accent-strong);
     text-decoration: underline;
@@ -189,21 +130,12 @@
 }
 
 .sp-page .settings-table tbody tr:hover .sp-primary-name a svg { opacity: 0.6; }
-
-/* Boş hücreler ve ikincil metin sessizleşiyor. */
 .sp-page .sp-muted { color: var(--bcc-text-muted); }
-
-/* ---------- Satır aksiyonları (hayalet ikon butonlar) ---------- */
-
 .sp-page .settings-row-actions {
     flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 0.15rem;
 }
-
-/* Eski hâl: dolu zeminli, metinli "Düzenle"/"Sil" butonları + ↑/↓ karakterleri
-   satırın yarısını kaplıyordu. Artık hepsi aynı ölçüde, zeminsiz ikon butonu;
-   zemin yalnızca hover'da beliriyor. */
 .sp-page .sp-icon-btn {
     display: inline-flex;
     align-items: center;
@@ -231,36 +163,21 @@
     outline: 2px solid var(--bcc-accent);
     outline-offset: 1px;
 }
-
 .sp-page .sp-icon-btn:disabled {
     opacity: 0.28;
     cursor: default;
 }
-
 .sp-page .sp-icon-btn--danger:hover:not(:disabled) {
     background: var(--bcc-danger-soft);
     border-color: var(--bcc-danger);
     color: var(--bcc-danger);
 }
-
-/* Sıralama okları görsel olarak tek bir kümede toplansın. */
 .sp-page .sp-move-group {
     display: inline-flex;
     align-items: center;
     margin-right: 0.2rem;
 }
 
-/* ---------- Formlar ---------- */
-
-/* BULUNAN GERÇEK YERLEŞİM HATASI: `.settings-form` `flex-wrap: wrap` taşıyor
-   (yatay formlarda satır kaydırmak için doğru), `.settings-form-stacked` ise
-   yönü `column`a çeviriyor. SÜTUN yönlü bir flex container'da `wrap`,
-   tarayıcının sarmak için KESİN bir ana eksen (yükseklik) ölçüsüne ihtiyaç
-   duymasına yol açıyor; Chromium bunu ana bloktan devraldığı boş alandan
-   türetiyor ve kap içeriğinden ÇOK daha uzun oluyordu. table_fields.php'de
-   ölçüldü: içerik toplamı 358px iken form 1157px; `nowrap` verilince 383px.
-   Yalnızca `.sp-page` altında düzeltiliyor — paylaşılan `.settings-form`
-   kuralına dokunmak, ondan satır kaydırma bekleyen yatay formları bozardı. */
 .sp-page .settings-form-stacked {
     flex-wrap: nowrap;
     gap: 1rem;
@@ -272,7 +189,6 @@
     color: var(--bcc-text-muted);
     letter-spacing: 0.01em;
 }
-
 .sp-page .settings-field input[type="text"],
 .sp-page .settings-field input[type="number"],
 .sp-page .settings-field textarea,
@@ -282,7 +198,6 @@
     padding: 0.5rem 0.65rem;
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-
 .sp-page .settings-field input:focus,
 .sp-page .settings-field textarea:focus,
 .sp-page .settings-field select:focus {
@@ -290,36 +205,25 @@
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 3px var(--bcc-accent-soft);
 }
-
 .sp-page .settings-field input::placeholder,
 .sp-page .settings-field textarea::placeholder {
     color: var(--bcc-text-muted);
     opacity: 0.7;
 }
-
-/* Birincil eylem butonu */
 .sp-page .settings-btn-primary {
     border-radius: 8px;
     padding: 0.55rem 1.1rem;
     font-weight: 600;
     transition: background-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
 }
-
 .sp-page .settings-btn-primary:hover {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.10);
 }
-
 .sp-page .settings-btn-primary:active {
     transform: translateY(1px);
     box-shadow: none;
 }
 
-/* ---------- Durum hapı ---------- */
-
-/* "aktif" / "pasif" gibi ikili durumlar. Yeşil, theme.css'e EKLENEN
-   --bcc-success / --bcc-success-soft ikilisinden gelir (danger ikilisiyle aynı
-   desende eklendi; mevcut hiçbir token değiştirilmedi), böylece koyu temada da
-   doğru tonlanır. */
 .sp-page .sp-status {
     display: inline-flex;
     align-items: center;
@@ -342,20 +246,12 @@
     background: currentColor;
     flex: none;
 }
-
 .sp-page .sp-status-on {
     border-color: var(--bcc-success-soft);
     background: var(--bcc-success-soft);
     color: var(--bcc-success);
 }
 
-/* ---------- Rol hapı ---------- */
-
-/* Dört rolün (viewer / commenter / editor / owner) her biri ayrı tonda.
-   `.ws-collab-role` BİLEREK kullanılmadı: o sınıf team_members.php ve
-   grid/interface popover'larıyla paylaşılıyor, değiştirmek onları da etkilerdi.
-   Owner rengi theme.css'e EKLENEN --bcc-role-owner ikilisinden; diğerleri
-   mevcut token'lardan (editor=accent, commenter=success, viewer=sunken). */
 .sp-page .sp-role {
     display: inline-flex;
     align-items: center;
@@ -370,31 +266,22 @@
     letter-spacing: 0.01em;
     white-space: nowrap;
 }
-
 .sp-page .sp-role--owner {
     border-color: var(--bcc-role-owner-soft);
     background: var(--bcc-role-owner-soft);
     color: var(--bcc-role-owner);
 }
-
 .sp-page .sp-role--editor {
     border-color: var(--bcc-accent-soft);
     background: var(--bcc-accent-soft);
     color: var(--bcc-accent-strong);
 }
-
 .sp-page .sp-role--commenter {
     border-color: var(--bcc-success-soft);
     background: var(--bcc-success-soft);
     color: var(--bcc-success);
 }
 
-/* viewer taban stilde kalır (slate) — ayrı kural gereksiz. */
-
-/* ---------- Avatar ---------- */
-
-/* `.ws-collab-avatar` DEĞİL: o sınıf grid.php, interface.php, team_members.php
-   ve grid-row-detail.js tarafından da kullanılıyor. */
 .sp-page .sp-avatar {
     display: inline-flex;
     align-items: center;
@@ -408,31 +295,7 @@
     font-size: 0.85rem;
     font-weight: 600;
 }
-
-/* ---------- Toggle anahtarı ---------- */
-
-/* Tasarım sistemine ait ORTAK bileşen. Not: style.css'te "Kaydı gönder"
-   modalına ait `.grid-send-toggle-*` diye çalışan bir toggle daha var; o
-   sınıflar adlarıyla o modala bağlı olduğu için burada YENİDEN KULLANILMADI —
-   bunun yerine bileşen tasarım sistemine (.sp-toggle) taşındı, sonraki
-   sayfalar da buradan alsın diye.
-   <label class="sp-toggle"><input type="checkbox" ...><span class="sp-toggle-track"></span><span>Etiket</span></label> */
 .sp-page .sp-toggle {
-    /* ⚠️ BULUNAN GERÇEK BUG (ölçülerek doğrulandı). Aşağıdaki gizli <input>
-       `position: absolute` ve top/left VERİLMEMİŞ. Bu durumda konumu, en yakın
-       KONUMLANDIRILMIŞ ataya göre çözülür. Bu satır yokken o ata `.home-body`
-       ({ position: relative }, home.css) oluyordu — ama kaydıran kap
-       `.home-main`. Sonuç: sayfa kaydırılınca görünen anahtar hareket ediyor,
-       gizli input YERİNDE KALIYORDU (ölçüm: .home-main 700px kaydırılınca ikisi
-       arasındaki mesafe 10px'ten 780px'e çıkıyor).
-       Kullanıcı anahtara bastığında tarayıcı o gizli input'a odaklanıp onu
-       "görünür kılmak için" .home-main'i uçuk bir konuma kaydırıyor; ekranın
-       yarısı boş kalıyordu (kullanıcı bildirdi, ekran görüntüsüyle).
-       position: relative — input artık KENDİ etiketine bağlı, kaydırmayla
-       birlikte hareket ediyor.
-       ⚠️ YENİ BİLEŞEN YAZARKEN: görsel olarak gizlenmiş (position:absolute +
-       opacity:0) bir girdi koyuyorsanız SARMALAYICISINA position: relative
-       verin — yoksa aynı hata tekrarlar. */
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -444,8 +307,6 @@
     user-select: none;
 }
 
-/* Girdi görsel olarak gizlenir ama ERİŞİLEBİLİR kalır (display:none klavye
-   odağını ve ekran okuyucuyu keserdi). */
 .sp-page .sp-toggle input {
     position: absolute;
     width: 1px;
@@ -464,7 +325,6 @@
     background: var(--bcc-border-strong);
     transition: background-color 0.15s ease;
 }
-
 .sp-page .sp-toggle-track::after {
     content: '';
     position: absolute;
@@ -477,24 +337,16 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     transition: transform 0.15s ease;
 }
-
 .sp-page .sp-toggle input:checked + .sp-toggle-track {
     background: var(--bcc-accent);
 }
-
 .sp-page .sp-toggle input:checked + .sp-toggle-track::after {
     transform: translateX(16px);
 }
-
 .sp-page .sp-toggle input:focus-visible + .sp-toggle-track {
     outline: 2px solid var(--bcc-accent);
     outline-offset: 2px;
 }
-
-/* ---------- Bilgi kutusu ---------- */
-
-/* Açıklayıcı metin blokları için. Düz `.settings-hint` paragrafı yerine
-   ikonlu, sol şeritli sakin bir kutu — uzun açıklamalar okunur kalsın. */
 .sp-page .sp-note {
     display: flex;
     align-items: flex-start;
@@ -509,29 +361,21 @@
     font-size: 0.83rem;
     line-height: 1.5;
 }
-
 .sp-page .sp-note svg {
     flex: none;
     margin-top: 0.1rem;
     color: var(--bcc-accent);
 }
-
 .sp-page .sp-note a { color: var(--bcc-accent-strong); }
 
-/* Uyarı tonu — HATA değil DİKKAT. `.sp-note--warn` amber, `.sp-note--danger`
-   kırmızı. Taban `.sp-note` accent (bilgi) olarak kalır. */
 .sp-page .sp-note--warn {
     border-color: var(--bcc-warning-soft);
     border-left-color: var(--bcc-warning);
     background: var(--bcc-warning-soft);
     color: var(--bcc-text);
 }
-
 .sp-page .sp-note--warn svg { color: var(--bcc-warning); }
 .sp-page .sp-note--warn strong { color: var(--bcc-warning); }
-
-/* ---------- Maskeli sır / kod parçası ---------- */
-
 .sp-page .sp-code {
     display: inline-block;
     padding: 0.15rem 0.45rem;
@@ -544,8 +388,6 @@
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
-
-/* ---------- Boş durum ---------- */
 
 .sp-page .settings-empty {
     display: flex;

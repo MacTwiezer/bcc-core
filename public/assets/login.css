@@ -1,4 +1,3 @@
-/* Giriş sayfası görünümü — sadece login.php tarafından kullanılır. */
 
 .login-page {
     min-height: var(--bcc-vh);
@@ -7,13 +6,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Kartla aynı renk DEĞİL — kart aksi halde tamamen gölgeye bağımlı kalır
-       (bkz. .login-card box-shadow notu). Sunken/surface kontrastı kartı
-       ağır/koyu bir gölge olmadan da görünür kılar. */
     background: var(--bcc-surface-sunken);
     font-family: "Segoe UI", Arial, sans-serif;
 }
-
 .login-card {
     position: relative;
     z-index: 1;
@@ -24,26 +19,14 @@
     border: 1px solid var(--bcc-border);
     border-radius: 16px;
     overflow: hidden;
-    /* Kartın tanımını asıl BORDER + sunken sayfa kontrastı yapıyor; gölge
-       yalnızca "kaldırma" hissi veriyor. (Çok eski bir sürüm kart ile sayfa
-       aynı renkte olduğu için 0 24px 60px rgba(0,0,0,.45) gibi ağır bir
-       gölgeye mecburdu — o durum artık yok.)
-       Negatif yayılma (-5px) gölgeyi kartın altında toplayıp kenarlardan
-       çekiyor: yüksek ama dağılmamış, modern bir yükselti. */
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
 }
-
 .login-logo {
     display: flex;
     justify-content: center;
     padding: 2.25rem 2rem 0;
 }
 
-/* Marka işareti: YALNIZCA kurumsal logo, yanında yazı yok
-   (src/partials/brand_logo.php). Logo sabit renkli bir bitmap — koyu temada da
-   aynı görünür, çok renkli olduğu için okunurluk sorunu çıkarmaz.
-   44px = görselin GERÇEK yüksekliği (94x44): bire bir piksel, ölçeklenmediği
-   için en net hâli. */
 .login-logo .brand-logo {
     height: 44px;
     width: auto;
@@ -53,7 +36,6 @@
 .login-card-body {
     padding: 1.25rem 2.25rem 2rem;
 }
-
 .login-title {
     font-size: 1.6rem;
     font-weight: 700;
@@ -62,7 +44,6 @@
     color: var(--bcc-text);
     margin: 0 0 1.5rem;
 }
-
 .login-error {
     background: var(--bcc-danger-soft);
     border: 1px solid #f3c1bc;
@@ -72,7 +53,6 @@
     font-size: 0.9rem;
     margin: 0 0 1.25rem;
 }
-
 .login-info {
     background: #eaf7ee;
     border: 1px solid #bfe6c9;
@@ -82,11 +62,9 @@
     font-size: 0.9rem;
     margin: 0 0 1.25rem;
 }
-
 .login-field {
     margin-bottom: 1.1rem;
 }
-
 .login-field label {
     display: block;
     font-size: 0.85rem;
@@ -94,7 +72,6 @@
     color: var(--bcc-text);
     margin-bottom: 0.35rem;
 }
-
 .login-field input {
     width: 100%;
     box-sizing: border-box;
@@ -103,38 +80,18 @@
     border-radius: 10px;
     font-size: 0.95rem;
     font-family: inherit;
-    /* Odak halkası ANİDEN değil yumuşak açılsın. background/color da geçişte:
-       koyu temaya geçişte alan bir kare gibi zıplamıyor. */
     transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
-
-/* Şifre göster/gizle düğmesinin dikey hizası.
-   BULUNAN GERÇEK BUG: düğme `bottom: 0.32rem` ile ALTA sabitlenmişti. İki ayrı
-   sebeple ortadan kayıyordu:
-     1. bottom, input'un yüksekliğinden bağımsız — dolgu/font değiştiği anda
-        (login 0.7rem, hesap 0.4rem) elle ayarlanmış bu değer bozuluyordu.
-     2. input satır-içi bir eleman olduğu için sarmalayıcının altında bir
-        "descender" boşluğu kalıyor; sarmalayıcı input'tan birkaç piksel daha
-        uzun oluyordu, yani bottom input'un altına değil o boşluğun altına
-        yaslanıyordu.
-   Çözüm: input'u display:block yapıp sarmalayıcının yüksekliğini input'a
-   EŞİTLEMEK (1 ve 2'nin kaynağını kurutur), sonra top:50% + translateY(-50%)
-   ile gerçek merkeze koymak. Bu haliyle input yüksekliği değişse de hiza
-   kendiliğinden korunur. */
 .input-with-toggle {
     position: relative;
     display: block;
 }
-
 .input-with-toggle input {
     display: block;
     width: 100%;
     box-sizing: border-box;
-    /* Düğme sağdan 14px'te ve 28px genişliğinde: metin tam düğmenin
-       başladığı yerde bitsin diye 14 + 28 = 42px. */
     padding-right: 42px;
 }
-
 .input-toggle-btn {
     position: absolute;
     top: 50%;
@@ -151,24 +108,15 @@
     align-items: center;
     justify-content: center;
 }
-
 .input-toggle-btn:hover { background: var(--bcc-surface-hover); color: var(--bcc-text-muted); }
-
-/* Odak: mavi kenarlık + 4px'lik yumuşak halka. Halka `box-shadow` ile
-   çiziliyor (outline değil) — böylece 10px köşe yarıçapını takip ediyor.
-   outline: none tek başına bırakılmadı; halka görünür bir odak göstergesi
-   olarak onun YERİNE geçiyor (klavyeyle gezen kullanıcı alanı kaybetmez). */
 .login-field input:focus {
     outline: none;
     border-color: var(--bcc-accent);
     box-shadow: 0 0 0 4px var(--bcc-accent-soft);
 }
-
 .login-submit {
     width: 100%;
     background: var(--bcc-accent);
-    /* var(--bcc-surface) DEĞİL (bkz. theme.css --bcc-on-accent notu): o
-       değişken koyu temada koyu renge döner, buton metni okunmaz hale gelirdi. */
     color: var(--bcc-on-accent);
     border: none;
     padding: 0.85rem 1rem;
@@ -181,56 +129,39 @@
     transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
-/* Hover: 1px yukarı + renkli gölge. Ölçek 1.01'de bırakıldı — daha fazlası
-   tam genişlikteki bir butonda kenarları bulanıklaştırıp "titreme" hissi
-   veriyor. */
 .login-submit:hover {
     background: var(--bcc-accent-strong);
     transform: translateY(-1px) scale(1.01);
-    /* Renkli gölge SAYDAM accent ile: --bcc-accent-soft opak bir renk
-       (#e8f0fe / #1c2b4d), 16px bulanıklıkta yayıldığında gölge değil düz bir
-       mavi pus gibi görünüyordu. Odak halkasında ise opak olması sorun değil,
-       orada bulanıklık yok (bkz. theme.css'teki aynı desen). */
     box-shadow: 0 6px 16px -4px rgba(45, 127, 249, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
-
-/* Basılı halde yükselti geri alınıyor: tıklamanın fiziksel karşılığı. */
 .login-submit:active {
     transform: translateY(0) scale(1);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
-
 .login-submit:focus-visible {
     outline: none;
     box-shadow: 0 0 0 4px var(--bcc-accent-soft);
 }
-
-/* Hareketi azalt tercihi: dönüşüm/ölçek tamamen kapanır, renk geçişi kalır.
-   Vestibüler rahatsızlığı olan kullanıcılar için zıplayan buton sorun. */
 @media (prefers-reduced-motion: reduce) {
     .login-field input,
     .login-submit {
         transition: background-color 0.16s ease, border-color 0.16s ease;
     }
-
     .login-submit:hover,
     .login-submit:active {
         transform: none;
     }
 }
-
 .login-register {
     text-align: center;
     margin-top: 1.1rem;
     font-size: 0.9rem;
 }
-
 .login-register a {
     color: var(--bcc-accent);
     text-decoration: none;
     font-weight: 600;
 }
-
 .login-register a:hover {
     text-decoration: underline;
 }
@@ -241,14 +172,12 @@
     padding-top: 1.1rem;
     text-align: center;
 }
-
 .login-legal p {
     margin: 0 0 0.4rem;
     font-size: 0.78rem;
     color: var(--bcc-text-muted);
     line-height: 1.4;
 }
-
 .login-legal a {
     color: var(--bcc-text-muted);
     text-decoration: underline;
@@ -259,13 +188,6 @@
     color: var(--bcc-text-muted);
 }
 
-/* ---------------------------------------------------------------------------
-   Hızlı Demo Girişi — YALNIZCA $BCC_DEMO_LOGIN açıkken basılan blok
-   (bkz. config/app.php, public/login.php, assets/demo-login.js).
-   Kasıtlı olarak SÖNÜK: giriş formunun kendisiyle yarışmayan, "bu bir
-   geliştirme yardımcısı" izlenimi veren bir kutu.
-   --------------------------------------------------------------------------- */
-
 .login-demo {
     margin-top: 1.4rem;
     padding: 0.85rem 0.9rem 0.9rem;
@@ -273,7 +195,6 @@
     border-radius: 10px;
     background: var(--bcc-surface-sunken);
 }
-
 .login-demo-head {
     display: flex;
     align-items: center;
@@ -289,7 +210,6 @@
     text-transform: uppercase;
     color: var(--bcc-text-muted);
 }
-
 .login-demo-badge {
     flex: none;
     padding: 0.1rem 0.42rem;
@@ -300,13 +220,11 @@
     font-weight: 600;
     white-space: nowrap;
 }
-
 .login-demo-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.45rem;
 }
-
 .login-demo-btn {
     display: flex;
     flex-direction: column;
@@ -322,33 +240,26 @@
     cursor: pointer;
     transition: border-color 0.12s ease, background 0.12s ease;
 }
-
 .login-demo-btn:hover {
     border-color: var(--bcc-accent);
     background: var(--bcc-accent-soft);
 }
-
-/* Tıklanan rol — alanlara bakmadan hangi hesabın dolu olduğu görünsün. */
 .login-demo-btn.is-selected {
     border-color: var(--bcc-accent);
     background: var(--bcc-accent-soft);
     box-shadow: inset 0 0 0 1px var(--bcc-accent);
 }
-
 .login-demo-btn-label {
     font-size: 0.82rem;
     font-weight: 600;
 }
-
 .login-demo-btn-hint {
     font-size: 0.66rem;
     line-height: 1.25;
     color: var(--bcc-text-muted);
 }
-
 .login-demo-btn.is-selected .login-demo-btn-label,
 .login-demo-btn:hover .login-demo-btn-label { color: var(--bcc-accent-strong); }
-
 .login-demo-note {
     margin: 0.6rem 0 0;
     font-size: 0.7rem;
@@ -356,12 +267,9 @@
     color: var(--bcc-text-muted);
     text-align: center;
 }
-
-/* Giriş sayfasındaki Şifremi Unuttum linki */
 .login-forgot {
     margin: -0.5rem 0 0.9rem;
 }
-
 .login-forgot a {
     color: var(--bcc-text-muted);
     text-decoration: none;
@@ -372,8 +280,6 @@
     color: var(--bcc-accent);
     text-decoration: underline;
 }
-
-/* Başarı ekranındaki Giriş Sayfasına Dön Butonu */
 .login-submit-link {
     display: block;
     box-sizing: border-box;
@@ -381,7 +287,6 @@
     text-decoration: none;
     margin-top: 1.2rem;
 }
-
 .login-submit-link:hover {
     text-decoration: none;
 }

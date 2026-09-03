@@ -4550,21 +4550,37 @@ function bcc_page_identity_meta($baseId, $baseName, $contextName = null, $icon =
 // Sonuç istek başına bir kez hesaplanır: kabuk her sayfada bir kez çağırıyor,
 // ama dashboard.php yıldız durumunu kartlara dağıtmak için AYNI veriyi kabuktan
 // ÖNCE de istiyor — statik önbellek ikinci bir sorguyu engeller.
+//
+// ⚠️ ÖNBELLEK KULLANICI KİMLİĞİNE GÖRE ANAHTARLANIR. Eskiden tek bir
+// "static $cache" vardı; bir istek içinde oturumdaki kullanıcı DEĞİŞİRSE
+// (attempt_login() tam da bunu yapar: $_SESSION['user_id'] yazıp
+// current_user(true) çağırır) harita SIFIRLANMIYOR ve ikinci kullanıcıya
+// BİRİNCİNİN yıldızlı base'leri dönüyordu.
+//
+// BUGÜN WEB'DEN ERİŞİLEBİLİR DEĞİL: login.php attempt_login()'den hemen sonra
+// header('Location: ...') + exit yapıyor, yani kullanıcı değiştikten SONRA bu
+// istekte hiçbir sayfa render edilmiyor. Yani bu düzeltme yaşayan bir sızıntıyı
+// kapatmıyor, current_user_team_roles() ile AYNI sınıftaki bir mayını
+// kaldırıyor (bkz. src/auth.php'deki aynı gerekçe): ileride kullanıcı
+// değiştirdikten sonra render eden bir yol (ör. yönetici taklidi) eklenirse
+// sızıntı sessizce gerçek olurdu.
 function bcc_starred_bases_for_current_user($forceReload = false)
 {
-    static $cache = null;
-
-    if ($cache !== null && !$forceReload) {
-        return $cache;
-    }
+    static $cache = array();
 
     $user = current_user();
+    $uid = $user !== null ? (int) $user['id'] : 0;
+
+    if (isset($cache[$uid]) && !$forceReload) {
+        return $cache[$uid];
+    }
+
     $teamIds = current_user_team_ids();
 
     if ($user === null || empty($teamIds)) {
-        $cache = array();
+        $cache[$uid] = array();
 
-        return $cache;
+        return $cache[$uid];
     }
 
     // team_id + team_name BURADAN gelir (ayrı bir sorgu AÇILMAZ): sol panel
@@ -4574,7 +4590,7 @@ function bcc_starred_bases_for_current_user($forceReload = false)
     // çağırdığı için istek başına fazladan bir sorgu olurdu; teams JOIN'i
     // zaten var olan bases JOIN'inin üstüne bedavaya biniyor.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    $cache = bcc_fetch_all(
+    $cache[$uid] = bcc_fetch_all(
         "SELECT b.id, b.name, b.team_id, b.icon, b.icon_color, t.name AS team_name
          FROM user_starred_bases usb
          INNER JOIN bases b ON b.id = usb.base_id AND b.team_id IN ($placeholders) AND b.deleted_at IS NULL
@@ -4584,7 +4600,7 @@ function bcc_starred_bases_for_current_user($forceReload = false)
         array_merge($teamIds, array((int) $user['id']))
     );
 
-    return $cache;
+    return $cache[$uid];
 }
 
 // Yıldızlı base listesini ÇALIŞMA ALANINA (takıma) göre gruplar — sol paneldeki

@@ -78,6 +78,19 @@ $uidA = $mk(A_MAIL, 'AuthCache A', $teamA);
 $uidB = $mk(B_MAIL, 'AuthCache B', $teamB);
 check('A) iki atilir kullanici ve iki ayri ekip kuruldu', $uidA > 0 && $uidB > 0 && $teamA !== $teamB);
 
+// Her kullaniciya KENDI ekibinde bir yildizli base — F bolumu icin.
+$mkBase = function ($teamId, $ad, $uid) {
+    bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',
+        array(':t' => $teamId, ':n' => $ad, ':u' => $uid));
+    $bid = (int) bcc_last_insert_id();
+    bcc_execute('INSERT INTO user_starred_bases (user_id, base_id) VALUES (:u, :b)',
+        array(':u' => $uid, ':b' => $bid));
+
+    return $bid;
+};
+$baseA = $mkBase($teamA, 'ZZ AuthCache Base A', $uidA);
+$baseB = $mkBase($teamB, 'ZZ AuthCache Base B', $uidB);
+
 // ---------------------------------------------------------------------------
 echo "\nB) Kullanici A olarak oku\n";
 // ---------------------------------------------------------------------------
@@ -127,6 +140,40 @@ echo "\nE) Onbellek gercekten calisiyor (duzeltme onu bozmadi)\n";
 // anahtarlama sonucu degistirmemeli).
 $tekrar = current_user_team_roles();
 check('E) ayni kullanici icin sonuc kararli', $tekrar === current_user_team_roles());
+
+// ---------------------------------------------------------------------------
+echo "\nF) AYNI SINIFTAKI ikinci onbellek: yildizli base'ler\n";
+// ---------------------------------------------------------------------------
+// bcc_starred_bases_for_current_user() de kullaniciya gore anahtarlanmamis tek
+// bir "static $cache" kullaniyordu. Bugun web'den erisilebilir DEGIL (login.php
+// attempt_login'den hemen sonra yonlendirip cikiyor, kullanici degistikten
+// sonra bu istekte hicbir sayfa render edilmiyor) — ama ayni sinifta bir mayin
+// oldugu icin ayni sekilde anahtarlandi ve burada kilitlendi.
+$idler = function ($satirlar) {
+    $o = array();
+    foreach ($satirlar as $s) { $o[] = (int) $s['id']; }
+    sort($o);
+
+    return $o;
+};
+
+$_SESSION['user_id'] = $uidA;
+current_user(true);
+$yildizA = $idler(bcc_starred_bases_for_current_user());
+check('F) A kendi yildizli base ini goruyor', in_array($baseA, $yildizA, true), implode(',', $yildizA));
+check('F) A, B nin base ini GORMUYOR', !in_array($baseB, $yildizA, true), implode(',', $yildizA));
+
+$_SESSION['user_id'] = $uidB;
+current_user(true);
+$yildizB = $idler(bcc_starred_bases_for_current_user());
+check('F) B, A nin base ini GORMUYOR (onbellek bayat degil)',
+    !in_array($baseA, $yildizB, true), implode(',', $yildizB));
+check('F) B kendi base ini goruyor', in_array($baseB, $yildizB, true), implode(',', $yildizB));
+
+$_SESSION['user_id'] = $uidA;
+current_user(true);
+check('F) geri A ya donunce yine dogru',
+    $idler(bcc_starred_bases_for_current_user()) === $yildizA);
 
 echo "\n" . str_repeat('-', 56) . "\n";
 echo "GECTI: $gecti   KALDI: $kaldi\n";

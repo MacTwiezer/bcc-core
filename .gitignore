@@ -5,6 +5,13 @@
 /tmp/
 
 # Yerel gizli yapılandırma
+#
+# ⚠️ ÖNCE GENEL DESEN: config/ altındaki HER "*.local.php" sır içerir sayılır.
+# Aşağıdaki dört ad tarihsel olarak tek tek yazılmıştı; beşinci bir yerel dosya
+# eklendiğinde listeyi güncellemeyi unutmak onu izlenen dosya yapardı. Adlar
+# yine de bırakıldı: hangi dosyaların beklendiğini ve ne tuttuklarını belgeliyor.
+config/*.local.php
+
 config/database.local.php
 config/mail.local.php
 config/mail_record_send.local.php

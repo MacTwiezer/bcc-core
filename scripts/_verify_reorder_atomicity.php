@@ -73,9 +73,9 @@ $cleanup = function () {
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER));
 };
 
+// Onceki yarim kalmis kosudan artik varsa once temizle, sonra kapanisa bagla.
 $cleanup();
 register_shutdown_function($cleanup);
-$cleanup();
 
 // GERCEK base referans olcumu
 // Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da

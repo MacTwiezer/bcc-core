@@ -74,6 +74,11 @@ $cleanup = function () {
 
 $cleanup();
 
+// Temizlik kapanisa da baglanir: asagidaki try/catch yalnizca ISTISNALARI
+// yakaliyor, exit() ya da olumcul hatada calismazdi. Adlar sabit oldugu icin
+// sonraki kosu de temizlerdi, ama artik ilk kosunun sonunda temiz kaliyor.
+register_shutdown_function($cleanup);
+
 try {
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEST_TEAM));
     $teamId = (int) bcc_last_insert_id();

@@ -86,6 +86,11 @@ function cleanup()
 // Önceki başarısız bir çalıştırmadan kalıntı olabilir; baştan temizle.
 cleanup();
 
+// Temizlik kapanisa da baglanir: asagidaki try/catch yalnizca ISTISNALARI
+// yakaliyor, exit() ya da olumcul hatada calismazdi. Adlar sabit oldugu icin
+// sonraki kosu de temizlerdi, ama artik ilk kosunun sonunda temiz kaliyor.
+register_shutdown_function('cleanup');
+
 try {
     // --- Kurulum -------------------------------------------------------
     $teamRows = bcc_fetch_all("SELECT id, name FROM teams WHERE name IN ('TY', 'GULF')");

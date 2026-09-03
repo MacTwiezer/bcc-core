@@ -429,7 +429,7 @@
 
                         placeholder = document.createElement('div');
                         placeholder.className = 'gs-view-drag-placeholder';
-                        placeholder.style.height = row.getBoundingClientRect().height + 'px';
+                        placeholder.style.height = row.offsetHeight + 'px';
                         viewList.insertBefore(placeholder, row.nextSibling);
                         row.classList.add('is-drag-source');
                     },

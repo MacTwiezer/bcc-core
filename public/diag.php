@@ -2,12 +2,6 @@
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bulunan gerçek bug: bu dosya yalnızca config/database.php'yi dahil ediyordu,
-// src/bootstrap.php'yi DEĞİL — require_login()/require_admin() HİÇ
-// çağrılmıyordu. Sonuç: kimlik doğrulaması olmayan herkes DB sunucu sürümünü,
-// PHP sürümünü, aktif veritabanı adını ve TÜM tablo listesini (SHOW TABLES)
-// görebiliyordu. Diğer admin/*.php sayfalarıyla AYNI desen: yalnızca platform
-// admini erişebilir.
 require_admin();
 
 $dbError = null;
@@ -35,7 +29,6 @@ try {
         $tables[] = reset($tableRow);
     }
 
-    // Türkçe karakter round-trip testi: geçici tabloya yaz, oku, sil.
     bcc_execute("CREATE TEMPORARY TABLE bcc_turkce_test (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         deger VARCHAR(255) NOT NULL

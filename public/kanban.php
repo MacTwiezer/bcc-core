@@ -1,22 +1,4 @@
 <?php
-// Kanban görünümü (Grup View-Kanban) — oturumlu, grid ile AYNI rol modeli.
-//
-// NEDEN grid.php'nin İÇİNDE BİR DAL DEĞİL, AYRI SAYFA:
-// Form'u ayırmanın İKİ gerekçesi vardı; Kanban'da yalnızca biri geçerli ve
-// körü körüne kopyalamamak için ikisi ayrı ayrı değerlendirildi:
-//   (a) grid.php 1400+ satır ve ikinci yarısının TAMAMI tablo varsayımı
-//       (<table>, dondurulmuş sütunlar, satır yüksekliği, sütun sürükleme).
-//       Kanban bunların HİÇBİRİNİ kullanmaz.            -> GEÇERLİ
-//   (b) Anonim erişim require_role çağıran dosyada duramaz. -> GEÇERSİZ
-//       (Kanban oturumlu, Form'un aksine)
-// (a) tek başına yeterli: içine erken dal koymak dosyayı ~2000 satıra ve
-// birbirini dışlayan iki yarıya çıkarırdı, dördüncü tür (Calendar) durumu daha
-// da kötüleştirirdi.
-//
-// SUNUCU TARAFI PAYLAŞILIR, KOPYALANMAZ: find_table_or_404, require_team_access,
-// bcc_find_view, alan çekme sorgusu, bcc_build_grid_records_query (FİLTRE ve
-// soft-delete süzgeci BEDAVA gelir — ikinci bir kayıt sorgusu yolu açılmadı),
-// select_choices_from_options, bcc_build_choice_color_map, cell_display_text.
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -26,13 +8,9 @@ $user = current_user();
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : 0;
 $table = find_table_or_404($tableId);
 
-// KVKK ekip izolasyonu — grid.php ile AYNI kapı.
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-// grid.php:14 ile BİREBİR AYNI kural — Kanban'da sürüklemek "o hücreyi
-// düzenlemek" demek, yeni bir izin kavramı İCAT EDİLMEDİ.
-// Yetenekler tek kaynaktan (src/auth.php) — grid.php ile AYNI çift.
 $canEdit = bcc_can_edit_records($role);
 $canComment = bcc_can_comment($role);
 
@@ -43,8 +21,6 @@ if (!$view) {
     bcc_error_page('Görünüm bulunamadı', 'Aradığınız görünüm silinmiş ya da adresi değişmiş olabilir.', 404);
 }
 
-// Bu sayfa YALNIZCA kanban görünümleri içindir — grid.php'nin erken
-// yönlendirmesinin aynadaki karşılığı, TEK yönlendirme noktası kullanılır.
 if ($view['view_type'] !== 'kanban') {
     header('Location: ' . bcc_view_route_for($view['view_type'], $table['id'], $view['id']));
     exit;
@@ -60,7 +36,6 @@ foreach ($fields as $f) {
 }
 $primaryField = !empty($fields) ? $fields[0] : null;
 
-// Sütunlamaya UYGUN alanlar (yalnızca single_select — bkz. bcc_field_allowed_for_kanban)
 $kanbanEligibleFields = array();
 foreach ($fields as $f) {
     if (bcc_field_allowed_for_kanban($f['field_type'])) {
@@ -71,8 +46,6 @@ foreach ($fields as $f) {
 $kanbanConfig = bcc_kanban_config_from_view($view);
 $columnFieldId = $kanbanConfig['kanban_field_id'];
 
-// Yapılandırılmış alan silinmiş ya da tipi değişmişse "seçilmemiş"e düşülür —
-// beyaz ekran yerine yönlendirici boş durum (fail-safe).
 if ($columnFieldId > 0 && (!isset($fieldsById[$columnFieldId])
     || !bcc_field_allowed_for_kanban($fieldsById[$columnFieldId]['field_type']))) {
     $columnFieldId = 0;
@@ -80,8 +53,6 @@ if ($columnFieldId > 0 && (!isset($fieldsById[$columnFieldId])
 
 $columnField = $columnFieldId > 0 ? $fieldsById[$columnFieldId] : null;
 
-// Kartta gösterilecek EK alanlar (birincil alan her zaman ayrıca basılır).
-// Sütunlama alanı listeden çıkarılır — zaten kartın bulunduğu sütun onu söylüyor.
 $cardFields = array();
 foreach ($kanbanConfig['kanban_card_fields'] as $fid) {
     if (isset($fieldsById[$fid]) && $fid !== $columnFieldId
@@ -97,10 +68,6 @@ if ($columnField !== null) {
     $choices = select_choices_from_options($columnField['options']);
     $choiceColorMap = bcc_build_choice_color_map($choices, select_choice_colors_from_options($columnField['options']));
 
-    // Kayıtlar: grid'in KENDİ sorgusu. Filtre ve soft-delete süzgeci bedava
-    // gelir (bcc_build_grid_records_query WHERE'ine 'r.deleted_at IS NULL'
-    // gömülü), gruplama/sıralama boş geçilir — Kanban zaten gruplamanın kendisi,
-    // sütun içi sıralama bu turda kapsam dışı.
     $filterRules = parse_grid_filter_rules($_GET, $fieldsById);
     $filterLogic = (isset($_GET['filter_logic']) && $_GET['filter_logic'] === 'or') ? 'OR' : 'AND';
     list($recordsSql, $recordsParams) = bcc_build_grid_records_query($table['id'], array(), array(), $filterRules, $filterLogic);
@@ -111,9 +78,6 @@ if ($columnField !== null) {
     $cellsByRecord = bcc_fetch_cells_by_record($recordIds);
     $usersById = bcc_team_users_by_id($table['team_id']);
 
-    // "Atanmamış" EN BAŞTA ve ZORUNLU: hücresi hiç olmayan / NULL / boş kayıtlar
-    // aksi hâlde tahtada HİÇ GÖRÜNMEZDİ — kullanıcı verisinin sessizce
-    // kaybolması en kötü sonuç.
     $UNASSIGNED = '';
     $columns[$UNASSIGNED] = array('key' => $UNASSIGNED, 'label' => 'Atanmamış', 'color' => null, 'cards' => array());
     foreach ($choices as $choice) {
@@ -132,9 +96,6 @@ if ($columnField !== null) {
         $cellRow = isset($cellsForRecord[$columnFieldId]) ? $cellsForRecord[$columnFieldId] : null;
         $rawValue = ($cellRow !== null && $cellRow['value_text'] !== null) ? (string) $cellRow['value_text'] : '';
 
-        // choices'ta OLMAYAN bir değer (seçenek sonradan yeniden adlandırılmış):
-        // kart "Atanmamış"a düşer AMA ham değeri kartta gösterilir — yoksa
-        // kullanıcı "burada bir değer vardı" bilgisini kaybederdi.
         $staleValue = null;
         $columnKey = $UNASSIGNED;
         if ($rawValue !== '') {
@@ -182,18 +143,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             <h1><?php echo htmlspecialchars($view['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
 
             <?php if ($canEdit && !empty($kanbanEligibleFields)): ?>
-            <?php /* "Sütunlama" paneli — mevcut <details name="gs-table-tab-menu">
-                     grubuna KATILIR, böylece dışarı-tık / Escape / karşılıklı
-                     dışlama grid-table-tabs.js'ten BEDAVA gelir (o dosya artık
-                     sınıf adına değil name özniteliğine bakıyor). */ ?>
             <details class="gs-tool-details kanban-settings-menu" name="gs-table-tab-menu">
                 <summary class="settings-btn">Sütunlama</summary>
-                <?php /* ⚠️ data-view-id BURADA da duruyor (yalnızca tahtada
-                         değil): sütunlama alanı HENÜZ SEÇİLMEMİŞKEN tahta hiç
-                         basılmıyor (aşağıdaki boş durum dalı), yani panelin
-                         "Kaydet"i tahtadan okuyacak bir view id bulamazdı.
-                         Tam olarak yapılandırmanın YAPILAMADIĞI durumda
-                         yapılandırma paneli çalışmıyordu (kullanıcı bildirdi). */ ?>
                 <div class="kanban-settings-panel" data-kanban-settings data-view-id="<?php echo (int) $view['id']; ?>">
                     <p class="settings-hint">Hangi alana göre sütunlansın?</p>
                     <?php foreach ($kanbanEligibleFields as $ef): ?>
@@ -225,10 +176,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
 <?php if ($columnField === null): ?>
-        <?php /* BOŞ DURUM: tabloda hiç single_select yok (ya da seçilen alan
-                 silindi/tipi değişti). Görünümün OLUŞTURULMASI engellenmedi —
-                 kullanıcı "Kanban istiyorum ama neden yok?" çıkmazına düşmesin
-                 diye burada net bir yönlendirme veriliyor. */ ?>
         <div class="settings-card kanban-empty">
             <h2>Bu Kanban henüz sütunlanamıyor</h2>
             <?php if (empty($kanbanEligibleFields)): ?>
@@ -252,35 +199,14 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
              data-column-field-id="<?php echo (int) $columnFieldId; ?>"
              data-can-edit="<?php echo $canEdit ? '1' : '0'; ?>">
             <?php foreach ($columns as $col): ?>
-                <?php /* data-column-value: sürükle-bırakta cell_update.php'ye
-                         gönderilecek DEĞER. "Atanmamış" boş string gönderir —
-                         normalize_cell_value single_select'te boşu null'a
-                         çevirir, yani karta "seçimi temizle" anlamına gelir. */ ?>
                 <section class="kanban-column" data-kanban-column data-column-value="<?php echo htmlspecialchars($col['key'], ENT_QUOTES, 'UTF-8'); ?>">
                     <header class="kanban-column-head">
-                        <?php /* Renk ANAHTARI (bcc_build_choice_color_map) hex'e burada
-                                 çözülür — palette'te olmayan bir anahtar (elle kurcalanmış
-                                 options) noktayı hiç basmaz, style'a ham değer YAZILMAZ. */ ?>
                         <?php if ($col['color'] !== null && isset($GLOBALS['BCC_CHOICE_COLORS'][$col['color']])): ?>
                             <span class="kanban-column-dot" style="background: <?php echo htmlspecialchars($GLOBALS['BCC_CHOICE_COLORS'][$col['color']], ENT_QUOTES, 'UTF-8'); ?>"></span>
                         <?php endif; ?>
                         <span class="kanban-column-title"><?php echo htmlspecialchars($col['label'], ENT_QUOTES, 'UTF-8'); ?></span>
                         <span class="kanban-column-count" data-kanban-count><?php echo count($col['cards']); ?></span>
                     </header>
-                    <?php /* Kart arama — SÜTUNUN İÇİNDE, başlığın hemen altında
-                             (kullanıcı isteği: "sağa ekleme, Atanmamış'ın yanına
-                             ekle"). Süzme YALNIZCA bu sütunun kartlarında:
-                             kutu sütunun içinde duruyorken başka sütunları
-                             süzmek şaşırtıcı olurdu.
-                             ⚠️ HER sütunda değil, yalnızca kart YIĞILAN
-                             sütunlarda basılır (eşik: 8). Kullanıcının derdi
-                             147 kayıtlık "Atanmamış" yığınıydı; tek kartlık bir
-                             sütuna arama kutusu koymak yalnızca gürültü olurdu.
-                             Eşik sütuna özel değil, sayıya bağlı — yarın başka
-                             bir sütun şişerse kutu orada da kendiliğinden çıkar.
-                             Süzme tamamen istemcide ve HER TUŞ VURUŞUNDA
-                             (kullanıcı isteği): veri zaten DOM'da, ağ isteği
-                             yok, debounce gerekmiyor. */ ?>
                     <?php if (count($col['cards']) > 8): ?>
                         <div class="kanban-search">
                             <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -293,9 +219,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
                     <?php endif; ?>
                     <div class="kanban-column-body" data-kanban-dropzone>
-                        <?php /* Aramada bu sütunda hiç eşleşme kalmazsa görünür
-                                 (kanban.js açar) — boş bir sütun gövdesi "kart
-                                 yok" mu "hepsi süzüldü" mü belli olmuyordu. */ ?>
                         <p class="kanban-column-nomatch" data-kanban-nomatch hidden>Eşleşme yok</p>
                         <?php foreach ($col['cards'] as $card): ?>
                             <article class="kanban-card<?php echo $canEdit ? ' is-draggable' : ''; ?>"
@@ -303,8 +226,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                      data-record-id="<?php echo (int) $card['id']; ?>">
                                 <div class="kanban-card-primary"><?php echo htmlspecialchars($card['primary'] !== '' ? $card['primary'] : '(Adsız)', ENT_QUOTES, 'UTF-8'); ?></div>
                                 <?php if ($card['stale'] !== null): ?>
-                                    <?php /* Seçeneklerde artık bulunmayan değer — veri kaybı
-                                             görünümü olmasın diye ham hâliyle gösterilir. */ ?>
                                     <div class="kanban-card-stale" title="Bu değer alanın seçenek listesinde yok">
                                         <?php echo htmlspecialchars($card['stale'], ENT_QUOTES, 'UTF-8'); ?>
                                     </div>

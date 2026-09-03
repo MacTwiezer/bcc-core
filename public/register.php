@@ -9,18 +9,8 @@ if (is_logged_in()) {
 
 $error = null;
 
-// Doğrulanmamış bir hesap için etkinleştirme mailinin yeniden gönderilebilmesi
-// arasındaki en kısa süre (saniye). Çift tıklama / "geri"ye basıp tekrar
-// gönderme / iki sekme gibi durumlarda AYNI adrese ikinci bir mail çıkmasını
-// engeller; gerçekten maili kaçıran kullanıcı 2 dakika sonra tekrar deneyebilir.
 define('BCC_REGISTER_RESEND_COOLDOWN', 120);
 
-// Kayıt akışı artık şifreyi burada ALMAZ: kullanıcı Ad Soyad + E-posta girer,
-// e-postasına gelen tek kullanımlık bağlantıdan (/verify_email.php) kendi
-// şifresini oluşturur. Hesap o ana kadar is_active=0 kalır (giriş yapılamaz)
-// — password_hash kolonu NOT NULL olduğu için, hiç bilinmeyen/tahmin edilemeyen
-// rastgele bir değerle dolduruluyor (bkz. aşağı), gerçek şifre yalnızca
-// doğrulama linkinden ayarlanabiliyor.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
 
@@ -32,61 +22,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!bcc_is_valid_email($email)) {
         $error = 'Geçersiz e-posta adresi.';
     } elseif (mb_strlen($email, 'UTF-8') > 190) {
-        // users.email VARCHAR(190) — bu kontrol olmadan uzun bir e-posta hatasız
-        // sessizce kırpılıyordu (sql_mode'da STRICT_TRANS_TABLES yok). admin/create_user.php/
-        // account_update_email.php ile AYNI sınır/mesaj — bu dosya (kendi kendine kayıt
-        // formu) atlanmıştı.
         $error = 'E-posta en fazla 190 karakter olabilir.';
     } elseif (mb_strlen($fullName, 'UTF-8') > 150) {
-        // users.full_name VARCHAR(150) — admin/create_user.php/account_update_name.php
-        // ile AYNI sınır/mesaj.
         $error = 'Ad Soyad en fazla 150 karakter olabilir.';
     } else {
         $token = bin2hex(random_bytes(32));
-        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 24 saat
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400);
 
-        // Aynı adrese arka arkaya etkinleştirme maili atılmasını engelleyen
-        // bekleme süresi (saniye). Bir "yeniden gönder" isteğini tamamen
-        // yasaklamayacak kadar kısa, çift gönderimi/çift tıklamayı yakalayacak
-        // kadar uzun.
         $skipVerificationMail = false;
 
-        // email_verify_expires_at: aşağıdaki mükerrer gönderim kapısı bunu
-        // okuyor (veriliş anını buradan türetiyor) — SELECT'e eklendi.
         $existing = bcc_fetch_one(
             'SELECT id, is_active, email_verify_expires_at FROM users WHERE email = :email LIMIT 1',
             array('email' => $email)
         );
 
         if ($existing && (int) $existing['is_active'] === 1) {
-            // Zaten doğrulanmış/aktif bir hesap — normal "zaten kayıtlı" reddi.
             $error = 'Bu e-posta zaten kayıtlı.';
         } elseif ($existing) {
-            // Daha önce kayıt olmuş ama hiç doğrulamamış (mailini kaçırmış/linki
-            // kaybetmiş olabilir) — yeni hesap açmak yerine token'ı yenileyip
-            // e-postayı tekrar gönderiyoruz. Sessizce aynı "kaydınız alındı"
-            // akışına düşer, bir saldırgana "bu e-posta zaten var" bilgisini
-            // aktif/pasif ayrımı dışında sızdırmaz.
-            //
-            // MÜKERRER GÖNDERİM KAPISI (asıl koruma BURASI, istemci tarafı
-            // yalnızca UX): bu dal her POST'ta token'ı yenileyip YENİ bir mail
-            // atıyordu. Formu iki kez göndermek (çift tıklama, "geri" tuşuyla
-            // dönüp tekrar gönderme, iki sekme) alıcıya İKİ ayrı etkinleştirme
-            // maili demekti. Artık son token'ın üzerinden BCC_REGISTER_RESEND_COOLDOWN
-            // saniye geçmediyse yeni mail GÖNDERİLMEZ.
-            //
-            // Neden ayrı bir "gönderildi" kolonu YOK: token'ın veriliş anı
-            // email_verify_expires_at'ten türetilebiliyor (veriliş = son
-            // kullanma - 86400). Bu iş için DDL/migration eklemek gerekmedi —
-            // projedeki "kolon icat etmeden türet" kararıyla aynı çizgi.
-            // Karar saf bir fonksiyonda (src/mailer.php) — burada yalnızca
-            // sonucuna göre dallanıyoruz.
             if (!bcc_should_send_verification_mail($existing['email_verify_expires_at'], BCC_REGISTER_RESEND_COOLDOWN)) {
-                // Yakın zamanda zaten gönderilmiş: token'a ve son kullanma
-                // tarihine DOKUNULMAZ (aksi hâlde kullanıcının elindeki
-                // linki geçersiz kılardık) ve mail tekrar atılmaz.
-                // Kullanıcı yine aynı başarı ekranını görür — "gönderildi mi,
-                // gönderilmedi mi" belirsizliği yaratmamak için.
                 $skipVerificationMail = true;
                 bcc_execute(
                     'UPDATE users SET full_name = :full_name WHERE id = :id',
@@ -110,31 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($error === null) {
-            // Bağlantının tabanı ARTIK $_SERVER['HTTP_HOST']'tan kurulmuyor:
-            // bcc_app_base_url() önce config/app.local.php'deki $APP_BASE_URL'e
-            // bakar, yoksa eski davranışa (istek host'u) düşer. Gerekçe
-            // config/app.php'de: localhost'ta çalışan uygulamada mail'e giden
-            // link ALICI İÇİN ERİŞİLEMEZ oluyordu, ayrıca HTTP_HOST istemciden
-            // gelen bir başlık olduğu için e-postaya gömmek host-header
-            // enjeksiyonuna açık kapı bırakıyordu.
             $verifyLink = bcc_app_base_url() . '/verify_email.php?token=' . $token;
 
-            // Düz metin parçası ELLE yazılıyor (HTML'den strip_tags ile
-            // türetilmiyor) — multipart'ın text/plain tarafı da okunaklı olsun.
-            // Sadece-HTML mail spam puanını yükseltiyor, bu yüzden ikisi de var.
-            // Marka adı bcc_brand_name()'den (config/app.php) — eskiden burada
-            // ALAN ADI literal yazılıydı ("opsflow.bcccrm.com"). Kullanıcıya
-            // gösterilecek olan ÜRÜN ADIDIR; alan adı hem teknik hem de posta
-            // istemcilerinde otomatik bağlantıya dönüşüp yanlış yere
-            // götürüyordu (bkz. telif satırındaki aynı sorun).
             $bodyText = "Merhaba {$fullName},\n\n"
                 . bcc_brand_name() . " hesabınızı etkinleştirmek ve şifrenizi oluşturmak için aşağıdaki bağlantıyı açın:\n\n"
                 . $verifyLink . "\n\n"
                 . "Bu bağlantı 24 saat geçerlidir."
                 . bcc_mail_text_footer();
 
-            // $verifyLink'in kaçırılmış hâli ARTIK burada gerekmiyor: şablon
-            // hem butonda hem kopyalama kutusunda kendisi kaçırıyor.
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
 
             $introHtml = '<p style="margin: 0 0 14px;">Merhaba <strong>' . $safeName . '</strong>,</p>'
@@ -142,9 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . ' hesabınız oluşturuldu. Hesabınızı etkinleştirmek ve şifrenizi belirlemek için aşağıdaki butona tıklayın.</p>'
                 . '<p style="margin: 0;">Bu bağlantı <strong>24 saat</strong> geçerlidir.</p>';
 
-            // Not satırı KALDIRILDI (ürün kararı): "Bu kaydı siz yapmadıysanız
-            // bu e-postayı yok sayabilirsiniz." cümlesi çıkarıldı. null
-            // geçilince bcc_mail_html_shell() o satırı hiç basmaz.
             $noteHtml = null;
 
             $bodyHtml = bcc_mail_html_shell(
@@ -157,14 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $verifyLink
             );
 
-            // Konu sade ve net: eski "opsflow.bcccrm.com — e-postanızı doğrulayın"daki
-            // uzun tire ve ürün öneki spam filtrelerinde gereksiz gürültüydü.
-            //
-            // TEK ÇAĞRI, TEK GÖNDERİM: $skipVerificationMail yalnızca yukarıdaki
-            // "az önce zaten gönderildi" dalında true olur. Ardından gelen
-            // header()+exit (Post/Redirect/Get) tarayıcı yenilemesinin formu
-            // yeniden göndermesini de engelliyor — iki koruma birbirini
-            // tamamlıyor, birbirinin yerine geçmiyor.
             if (!$skipVerificationMail) {
                 bcc_send_mail($email, bcc_brand_name() . ' hesabınızı etkinleştirin', $bodyText, $bodyHtml);
             }
@@ -176,8 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php
-// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
-// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
 $authPageTitle = 'Kayıt ol';
 require __DIR__ . '/../src/partials/auth_shell_top.php';
 ?>
@@ -187,10 +110,8 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             <p class="login-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
 
-        <?php // data-once-submit: gönder düğmesini ilk tıklamada kilitler,
-              // yani ikinci bir POST hiç yola çıkmaz. Bu YALNIZCA UX katmanı —
-              // JS kapalıysa ya da istek elle tekrarlanırsa asıl korumayı
-              // sunucudaki BCC_REGISTER_RESEND_COOLDOWN kapısı sağlıyor. ?>
+        <?php
+              ?>
         <form method="post" action="/register.php" data-once-submit>
             <?php echo csrf_field(); ?>
             <div class="login-field">
@@ -209,14 +130,10 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             Zaten hesabın var mı? <a href="/login.php">Giriş yap</a>
         </p>
 
-<?php // Marka satırı ve kart kapanışı ARTIK ORTAK PARTIAL'DA
-      // (src/partials/auth_shell_bottom.php) — beş sayfada birebir aynıydı ve
-      // bu dosyadaki kopya bir dönem elle yazılmış literal markayı taşıyordu,
-      // yani tam da ayrışmanın örneğiydi. ?>
-<?php // Çift gönderim kilidi: form bir kez gönderildikten sonra düğme devre
-      // dışı kalır ve ikinci submit iptal edilir. Sunucudaki bekleme kapısının
-      // YERİNE değil, ÖNÜNE konan bir katman — ikisi de gerekli (bkz.
-      // BCC_REGISTER_RESEND_COOLDOWN yorumu). ?>
+<?php
+      ?>
+<?php
+      ?>
 <script>
 (function () {
     var form = document.querySelector('form[data-once-submit]');
@@ -232,9 +149,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
         submitted = true;
         var btn = form.querySelector('button[type="submit"]');
         if (btn) {
-            // disabled ATTRIBUTE'u submit'ten SONRA konmalı; hemen konursa
-            // tarayıcı düğmeyi göndermez (burada gövdeye dahil bir alan değil,
-            // yine de davranışı bir sonraki tura bırakmak en güvenlisi).
             window.setTimeout(function () {
                 btn.disabled = true;
                 btn.textContent = 'Gönderiliyor...';
@@ -244,9 +158,5 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
 })();
 </script>
 <?php
-// Ortak kapanış (auth_shell_bottom.php). Satır içi gönderim kilidi betiği
-// BU require'dan ÖNCE kalıyor: formu DOM'da arıyor, yani formdan sonra
-// çalışmalı. Partial'a taşınsaydı "bazı sayfalarda çalışan gizli
-// davranış" olurdu.
 require __DIR__ . '/../src/partials/auth_shell_bottom.php';
 

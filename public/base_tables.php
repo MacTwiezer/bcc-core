@@ -8,18 +8,16 @@ $user = current_user();
 $baseId = isset($_GET['base_id']) ? (int) $_GET['base_id'] : (isset($_POST['base_id']) ? (int) $_POST['base_id'] : 0);
 $base = find_base_or_404($baseId);
 
-// Her erişimde KVKK ekip izolasyonu: bu base'in ekibine üye olmayan hiçbir şey göremez.
 require_team_access($base['team_id']);
 
 $role = current_user_role_in_team($base['team_id']);
-$canEdit = bcc_can_manage_schema($role);  // tablo şeması — src/auth.php
+$canEdit = bcc_can_manage_schema($role);
 
 $error = null;
 $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
-    // Değiştirme yalnızca owner rolünde açık.
     require_role($base['team_id'], 'owner');
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
@@ -31,17 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '') {
             $error = 'Tablo adı boş olamaz.';
         } elseif (mb_strlen($name, 'UTF-8') > 150) {
-            // tables_meta.name VARCHAR(150) — bu kontrol olmadan uzun bir tablo adı
-            // hatasız sessizce kırpılıyordu (create_team.php/create_user.php'deki
-            // AYNI gerekçe, sql_mode'da STRICT_TRANS_TABLES kapalı olduğu için
-            // MySQL hata vermeden kesiyor).
             $error = 'Tablo adı en fazla 150 karakter olabilir.';
         } elseif (mb_strlen($description, 'UTF-8') > 500) {
-            // tables_meta.description VARCHAR(500) — aynı sessiz kırpılma riski.
             $error = 'Açıklama en fazla 500 karakter olabilir.';
         } elseif (bcc_name_taken('tables_meta', $base['id'], $name)) {
-            // Aynı base'de aynı tablo adı olamaz; BAŞKA bir base'de aynı ad
-            // serbesttir (bkz. src/schema.php bcc_name_taken() scope haritası).
             $error = bcc_name_taken_error('tables_meta', 'tablo');
         } else {
             $nextPos = (int) bcc_fetch_column(
@@ -49,12 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 array('base_id' => $base['id'])
             );
 
-            // INSERT + log_audit AYNI transaction'da — view_create.php/
-            // record_add.php/table_clear_data.php'de bulunan AYNI sınıf bug:
-            // ikisi ayrı commit edilseydi, log_audit() bir istisna atarsa
-            // (nadir ama mümkün) tablo satırı ZATEN yazılmış olurdu ve
-            // kullanıcı "Veritabanı hatası" görüp tekrar denerken ikinci bir
-            // tablo oluştururdu. Bu dosya o düzeltmeden pay almamıştı.
             try {
                 bcc_begin_transaction();
 
@@ -72,10 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 bcc_commit();
 
-                // Slack bildirimi — COMMIT'TEN SONRA, transaction'ın DIŞINDA
-                // (bcc_create_field()'daki AYNI gerekçe: geri alınmış bir tablo
-                // için bildirim gitmesin, Slack yavaşsa transaction açık kalmasın,
-                // gönderim hatası tablo oluşturmayı başarısız saymasın).
                 bcc_notify_slack_new_table((int) $newId, $user['full_name']);
 
                 $success = 'Tablo oluşturuldu: ' . $name;
@@ -103,13 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (mb_strlen($description, 'UTF-8') > 500) {
                 $error = 'Açıklama en fazla 500 karakter olabilir.';
             } elseif (bcc_name_taken('tables_meta', $base['id'], $name, $table['id'])) {
-                // Yeniden adlandırmada KAYDIN KENDİSİ hariç tutulur (4. argüman)
-                // — yoksa yalnızca açıklamayı değiştirip adı aynı bırakmak
-                // "bu ad zaten kullanılıyor" hatası verirdi.
                 $error = bcc_name_taken_error('tables_meta', 'tablo');
             } else {
-                // UPDATE + log_audit AYNI transaction'da — create_table/
-                // delete_table ile AYNI gerekçe.
                 try {
                     bcc_begin_transaction();
 
@@ -131,11 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } elseif ($action === 'delete_table') {
-            // DELETE + log_audit AYNI transaction'da (create_table ile AYNI
-            // gerekçe). Burada ekstra önemli: tables_meta silinince fields/
-            // records/views/cell_values CASCADE ile gidiyor — audit satırı
-            // yazılamazsa geriye "neyin silindiğini söyleyen hiçbir kayıt
-            // olmadan yok olmuş bir tablo" kalırdı.
             try {
                 bcc_begin_transaction();
 
@@ -151,15 +122,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'move_table') {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            // İKİ UPDATE + log_audit TEK transaction'da. bcc_reorder_sibling()
-            // artık kendi transaction'ını AÇMIYOR (iç içe transaction mysqli'de
-            // desteklenmiyor, içteki commit dıştakini erkenden commit ederdi) —
-            // sözleşme gereği transaction'ı ÇAĞIRAN açar.
-            //
-            // Kritik senaryo: takasın iki UPDATE'i yarım kalırsa iki satır AYNI
-            // position'da kalırdı. Ayrıca eskiden log_audit() commit'ten SONRA
-            // çalışıyordu, yani "sırası değişmiş ama hiçbir izi olmayan" satır
-            // mümkündü. İkisi de artık aynı sınırın içinde.
             try {
                 bcc_begin_transaction();
 
@@ -182,22 +144,10 @@ $tables = bcc_fetch_all(
     'SELECT id, name, description, position FROM tables_meta WHERE base_id = :base_id ORDER BY position, id',
     array('base_id' => $base['id'])
 );
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'bases';
-// Bu ekranın bir tablo/görünüm bağlamı yok (base'in tablo LİSTESİ), bu yüzden
-// ikinci parça boş: başlık "Base — opsflow.bcccrm.com" olur. Sekme ikonu ise base'in
-// kendi rozetine döner — base.php tablosuz bir base'e girilince buraya
-// yönlendirdiği için, kullanıcının base'e ilk açılan ekranı burasıdır.
 $homePageTitle = bcc_page_title($base['name']);
 $homeIdentityMeta = bcc_page_identity_meta($base['id'], $base['name'], null, isset($base['icon']) ? $base['icon'] : null, isset($base['icon_color']) ? $base['icon_color'] : null);
-// Sayfaya özel stylesheet. Bu ekranın .settings-* sınıfları sekiz başka sayfayla
-// PAYLAŞILIYOR (admin/*, bases, form_edit, kanban, slack_settings) — home.css'i
-// değiştirmek hepsini yeniden tasarlardı. Tüm yeni kurallar
-// assets/settings-page.css'te (table_fields.php ile PAYLAŞILAN ortak iskelet,
-// ikinci bir kopya YOK) ve .sp-page altına kapsanmış durumda.
 $homeExtraCss = array('settings-page.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -232,10 +182,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <tbody>
                         <?php foreach ($tables as $i => $t): ?>
                             <tr>
-                                <?php // Tablo adı sayfanın BİRİNCİL gezinme öğesi: satırın ana
-                                      // bilgisi olarak ağırlaştırıldı ve hover'da bir "git" oku
-                                      // beliriyor (table_fields.php'deki .sp-primary-name ile
-                                      // AYNI ortak sınıf, ikinci bir stil YAZILMADI). ?>
+                                <?php
+                                      ?>
                                 <td class="sp-primary-name">
                                     <a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>">
                                         <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
@@ -244,10 +192,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </td>
                                 <td class="<?php echo ((string) $t['description'] !== '') ? '' : 'sp-muted'; ?>"><?php echo ((string) $t['description'] !== '') ? htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8') : '—'; ?></td>
                                 <?php if ($canEdit): ?>
-                                <?php // Aksiyonlar: dolu zeminli metin butonları yerine eşit ölçülü
-                                      // HAYALET ikon butonları (table_fields.php ile AYNI .sp-icon-btn).
-                                      // POST mekanizması DEĞİŞMEDİ — her biri hâlâ kendi csrf'li
-                                      // <form>'u; yalnızca görünüm ve erişilebilir ad değişti. ?>
+                                <?php
+                                      ?>
                                 <td class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/base_tables.php">

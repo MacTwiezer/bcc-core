@@ -6,29 +6,13 @@ require_login();
 
 $user = current_user();
 
-// KVKK izolasyonu: kullanıcının üye olduğu ekipler -> yalnızca o ekiplerin base'leri.
-// Sorgu deseni bases.php / eski dashboard.php ile aynıdır, sadece görünüm için
-// tek düz bir listeye indirgenir.
-// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
-// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
-// ayrisma riski kalmasin diye tek yere alindi.
 $teams = bcc_teams_for_current_user();
 
-// Trash: yalnızca 'owner' rolündeki kullanıcı bir base'i silebilir/geri
-// yükleyebilir (OpsFlow davranışı) — kart "⋯" menüsündeki "Sil" öğesi bu
-// haritaya bakarak gösterilir/gizlenir. Aynı harita kartın rol rozetini de besler.
 $roleByTeamId = array();
 foreach ($teams as $t) {
     $roleByTeamId[(int) $t['id']] = $t['role'];
 }
 
-// "+ Yeni Base Oluştur" — base EKLEME yalnızca Owner'a
-// açıktır (bkz. src/auth.php bcc_can_manage_bases(); Editor kayıt/alan
-// düzenler ama base ekleyemez). Kullanıcının BİRDEN ÇOK çalışma alanı olabilir ve
-// her birinde farklı rolde olabilir; bu yüzden tek bir "yetkili mi" bayrağı
-// yetmez — modaldaki çalışma alanı seçicisi YALNIZCA yetkili olduklarını
-// listelemeli. $creatableTeams boşsa ne kutucuk ne modal basılır.
-// Not: bu liste $teams'ten süzülür, YENİ SORGU açılmaz.
 $creatableTeams = array();
 foreach ($teams as $t) {
     if (bcc_can_manage_bases($t['role'])) {
@@ -37,11 +21,6 @@ foreach ($teams as $t) {
 }
 $canCreateBase = !empty($creatableTeams);
 
-// Tarih filtresi: timeframe GET parametresi ASLA doğrudan SQL'e girmez —
-// yalnızca aşağıdaki sabit dizinin anahtarı olarak kullanılır (whitelist);
-// dizide olmayan/eksik bir değer sessizce 'anytime'a düşer. Eklenen SQL parçası
-// her zaman bu dizideki 4 sabit string'den biridir, kullanıcı girdisinden
-// üretilmez.
 $timeframeConditions = array(
     'today' => 'al.last_opened >= CURDATE()',
     '7days' => 'al.last_opened >= (NOW() - INTERVAL 7 DAY)',
@@ -69,11 +48,6 @@ if (!empty($teams)) {
         $teamIds[] = (int) $t['id'];
     }
 
-    // Ekip izolasyonu (team_id IN ...) her zaman ÖNCE gelir; tarih koşulu ancak
-    // whitelist'ten geçerliyse (anytime hariç) buna EK olarak eklenir, onun
-    // yerine geçmez. "Son açılma" kaydı olmayan (NULL) base'ler
-    // today/7days/30days koşullarında otomatik elenir (NULL >= ... => NULL/false),
-    // yalnızca 'anytime'da görünür.
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
     $sql = "SELECT b.id, b.team_id, b.name, b.description, b.icon, b.icon_color, b.created_at, al.last_opened
             FROM bases b
@@ -94,21 +68,11 @@ if (!empty($teams)) {
     $bases = bcc_fetch_all($sql, $teamIds);
 }
 
-// Yıldızlı base'ler — sorgu src/schema.php'de TEK yerde
-// (bcc_starred_bases_for_current_user); takım süzgeci ve deleted_at koşulunun
-// gerekçesi orada yazılı. Bu sayfa listeyi kabuktan ÖNCE de istiyor, çünkü
-// $starredBaseIds kart grid'ine yıldız durumunu dağıtıyor — fonksiyon statik
-// önbellekli olduğu için kabuk aynı veriyi ikinci kez sorgulamaz.
 $starredBases = bcc_starred_bases_for_current_user();
 $starredBaseIds = bcc_starred_base_ids_for_current_user();
 
-// Kart rozetindeki "N tablo" için tablo sayıları — TEK GROUP BY sorgusu
-// (bcc_base_table_counts), kart başına ayrı sorgu YOK. Base yoksa hiç
-// çalışmaz (fonksiyon boş dizide erken döner).
 $baseTableCounts = bcc_base_table_counts(array_column($bases, 'id'));
 
-// Liste görünümünün "Çalışma alanı" kolonu için — $teams zaten yukarıda çekildi,
-// yeni sorgu yazılmıyor.
 $teamNamesById = array();
 foreach ($teams as $t) {
     $teamNamesById[(int) $t['id']] = $t['name'];
@@ -116,11 +80,6 @@ foreach ($teams as $t) {
 
 $homeActiveNav = 'home';
 $homePageTitle = bcc_tab_title('Ana Sayfa');
-// home.css'ten SONRA yüklenir (bkz. home_shell_top.php). Bento IZGARASI artık
-// açılmıyor (aşağıdaki grid çağrısında $bento=false), ama bu dosya ızgaradan
-// ibaret değil: tipografi ölçeği, zemin ve kart cilası da burada. starred.php
-// AYNI dosyayı AYNI gerekçeyle yüklüyor — iki sayfa birebir aynı görünsün diye
-// bu satır ikisinde de duruyor.
 $homeExtraCss = array('home-bento.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -164,31 +123,18 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php
-        // Hiç ekibi olmayan kullanıcı (ör. yeni e-posta doğrulaması yapmış ama
-        // henüz bir yönetici tarafından bir ekibe eklenmemiş) için ayrı, daha
-        // açıklayıcı bir mesaj — "base yok" genel mesajı bu durumda yanıltıcı
-        // olurdu, çünkü ortada bakılacak bir ekip bile yok.
         $emptyMessage = empty($teams)
             ? 'Hesabınız etkin ama henüz bir ekibe eklenmediniz. Bir yöneticinin sizi bir ekibe eklemesini bekleyin.'
             : 'Henüz erişebileceğiniz bir base yok.';
         ?>
 
         <?php
-        // Birden çok çalışma alanı varsa kartlar ALANA GÖRE gruplanır ve her
-        // grubun başlığında alan adı durur. Tek alanı olan kullanıcıda gruplama
-        // yalnızca gereksiz bir başlık eklerdi — o yüzden eşik "> 1".
-        //
-        // Bu, platform yöneticisi TÜM ekipleri görmeye başlayınca ortaya çıktı:
-        // onlarca base tek düz listede karışıyor ve hangisinin hangi alana ait
-        // olduğu okunamıyordu.
         $groupByWorkspace = (count($teams) > 1);
         ?>
 
         <?php if (!empty($bases) && !$groupByWorkspace): ?>
-        <?php // Bölüm başlığı (Framer'daki "Featured Picks" satırının karşılığı):
-              // küçük etiket solda, sayaç sağda, üstünde saç teli çizgi.
-              // Gruplu modda BASILMAZ — orada başlığı her çalışma alanı kendi
-              // bölümünde taşır, tepede ikinci bir "Base'leriniz" fazlalık olurdu. ?>
+        <?php
+              ?>
         <div class="home-section-head">
             <h2 class="home-section-title">Base'leriniz</h2>
             <span class="home-section-meta"><?php echo count($bases); ?> base</span>
@@ -196,35 +142,14 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php endif; ?>
 
         <?php
-        // $bento = false: bento ızgarası KAPALI. Bir dönem ilk kart (b.name'e
-        // göre sıralı olduğu için "Demo CRM") 2x2 "feature" varyantıyla, kendi
-        // kapak/açıklama/rozet düzeni ve vurgulu zeminiyle basılıyordu. Bu,
-        // aynı ızgarada iki farklı kart boyutu ve iki farklı iç yapı demekti;
-        // hangi base'in öne çıkacağı da alfabetik sıranın yan etkisiydi, yani
-        // anlamlı bir "öne çıkan" seçimi değildi.
-        //
-        // Artık starred.php ile AYNI çağrı: tüm base kartları — ve $canCreateBase
-        // ile basılan "Yeni Base Oluştur" kutucuğu — tek tip, eşit ölçüde.
-        // Kart bileşeni ($variant='standard') ve "N tablo" rozeti iki sayfada da
-        // aynı; ayrı bir stil dalı kalmadı.
         bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emptyMessage, $roleByTeamId, $canCreateBase, false, $baseTableCounts, $groupByWorkspace);
         ?>
 
         <?php if ($canCreateBase): ?>
         <?php
-        // Base oluşturma modalı — SUNUCUDA koşullu basılır ($canCreateBase),
-        // yalnızca CSS ile gizlenmez: yetkisi olmayan bir kullanıcının
-        // kaynağında form/uçnokta adı hiç görünmez. Asıl yetki kararı yine de
-        // api/base_create.php'de tekrar verilir (gizleme != yetkilendirme).
-        //
-        // <form> gerçek bir action/method taşır: JS yüklenmemişse (veya hata
-        // verirse) modal <dialog>-vari değil düz bir form olarak /bases.php'ye
-        // POST eder ve akış orada tamamlanır — home.js submit'i araya girip
-        // AJAX'a çevirir (bkz. assets/home.js).
         ?>
-        <?php // Markup ARTIK BURADA DEĞİL: workspaces.php de aynı modalı
-              // kullanıyor, iki yere kopyalanmasın diye ortak partial'a alındı
-              // (create_team_modal.php ile AYNI desen). ?>
+        <?php
+              ?>
         <?php require __DIR__ . '/../src/partials/create_base_modal.php'; ?>
         <?php endif; ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

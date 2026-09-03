@@ -1,7 +1,4 @@
 <?php
-// F3 — Duyuru (Interface / yayınlanmış görünüm), GEREKSINIMLER.md. Salt-okunur:
-// F4 "Temsilci görünümü" bu SAME sayfayı düzenleme hakkı olmadan görür — burada
-// editor/viewer ayrımı YOK, hiçbir mutasyon (cell_update.php vb.) çağrılmaz.
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -12,7 +9,6 @@ $user = current_user();
 $baseId = isset($_GET['base_id']) ? (int) $_GET['base_id'] : 0;
 $base = find_base_or_404($baseId);
 
-// KVKK ekip izolasyonu: base.php ile AYNI zincir (base -> team_id -> require_team_access).
 require_team_access($base['team_id']);
 
 $tables = bcc_list_base_tables($baseId);
@@ -29,11 +25,6 @@ if ($tableId === 0 && !empty($tables)) {
     $tableId = (int) $tables[0]['id'];
 }
 
-// Sekme başlığı/favicon için aktif tablonun adı (bkz. bcc_page_title).
-// Yukarıdaki çözümleme $tableId'yi kesinleştirdikten SONRA aranır — istenen
-// tablo bu base'e ait değilse ilk tabloya düşülüyor, başlık da o tabloyu
-// göstermeli. Base'de hiç tablo yoksa boş kalır ve başlık yalnız base adını
-// taşır.
 $activeTableName = '';
 foreach ($tables as $t) {
     if ((int) $t['id'] === $tableId) {
@@ -66,31 +57,11 @@ if ($tableId) {
     $attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 }
 
-// D1 "Paylaş" — grid.php ile BİREBİR AYNI bileşen.
-//
-// ⚠️ ÖNCEKİ HÂLİ SAYFADAN ÇIKIYORDU: bu blok kendi katılımcı/aday
-// sorgularını yazıyor, popover da bir <form action="/team_members.php">
-// (tam sayfa POST) ve bir <a href="/team_members.php"> taşıyordu — yani
-// "Paylaş"a tıklayan kullanıcı Duyuru ekranını TERK EDİYORDU. grid.php aynı
-// yolu daha önce bırakmıştı; burası geride kalmıştı.
-//
-// Artık TEK kaynak: bcc_share_modal_payload() + src/partials/share_modal.php
-// + assets/share-modal.js. Kendi sorguları SİLİNDİ (ikinci bir hesap yok);
-// davet/rol değiştirme/çıkarma işleri modalın AJAX uçnoktalarından geçiyor
-// (api/team_member_assign.php, api/team_member_remove.php).
 require_once __DIR__ . '/../src/share_modal_payload.php';
 
 $shareRole = current_user_role_in_team($base['team_id']);
 $canManageMembers = bcc_can_manage_members($shareRole);
 
-// Temsilci not inceleme takibi (record_view_log — api/note_view_start.php,
-// note_view_end.php, note_view_list.php). $shareRole YUKARIDA zaten
-// hesaplandı; rol için İKİNCİ bir sorgu YAPILMAZ.
-//
-// İki AYRI soru, iki AYRI fonksiyon (bkz. src/auth.php'deki notlar):
-//   $trackNoteViews    -> "bu kişi temsilci mi" (izlenen taraf, commenter)
-//   $canViewNoteAudits -> "bu kişi geçmişi görebilir mi" (izleyen taraf, owner)
-// Bir kullanıcı bunların ikisine birden EVET olamaz.
 $trackNoteViews = bcc_is_representative($shareRole);
 $canViewNoteAudits = bcc_can_view_record_audits($shareRole);
 
@@ -102,8 +73,6 @@ $shareCollaborators = $shareModalPayload['collaborators'];
 $shareCollaboratorPreview = array_slice($shareCollaborators, 0, 4);
 $shareCollaboratorExtraCount = count($shareCollaborators) - count($shareCollaboratorPreview);
 
-// Davet kutusunun <datalist> önerileri — grid.php'deki AYNI süzgeç: takımın
-// (bekleyenler dahil) henüz üyesi OLMAYAN aktif kullanıcılar.
 $shareExistingIds = array_map('intval', array_column(
     array_merge($shareModalPayload['collaborators'], $shareModalPayload['pending']),
     'id'
@@ -122,29 +91,15 @@ if (!empty($shareExistingIds)) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo htmlspecialchars(bcc_page_title($base['name'], $activeTableName), ENT_QUOTES, 'UTF-8'); ?></title>
-<?php // Yedek ikon: page-identity.js base rozetiyle DEĞİŞTİRİR (JS kapalıysa bu kalır). ?>
 <link rel="icon" type="image/svg+xml" href="<?php echo bcc_asset_url('favicon.svg'); ?>">
 <?php echo bcc_page_identity_meta($base['id'], $base['name'], $activeTableName, isset($base['icon']) ? $base['icon'] : null, isset($base['icon_color']) ? $base['icon_color'] : null), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
-<!-- Dosya eki (attachment) rozet/küçük resim stilleri (.attachment-*) style.css'te
-     tanımlı (grid.php'de de kullanılıyor) — burada da AYNI kurallar, ikinci bir
-     kopya YAZILMADI. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
-<!-- E3: "opsflow.bcccrm.com ▾" menüsü grid.php'nin .gs-table-tab-menu-*
-     sınıflarını kullanıyor — ikinci bir kopya YAZILMADI, grid-shell.css bu
-     yüzden burada da yüklü (yalnızca .gs-* kapsamlı kurallar geçerli olur,
-     grid.php'ye özgü .gs-body/.gs-rail vb. bu sayfada hiç eşleşmez).
-     NOT: "Bağlantıyı paylaş" popover'ı bu sayfadan KALDIRILDI (işe yaramıyordu),
-     .share-popover-* kuralları artık burada kullanılmıyor. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('interface.css'); ?>">
-<!-- Bildirim paneli + hesap menüsü partial'ları home.css'teki .home-notif-*/
-     paylaşılan sınıfları kullanıyor (bkz. src/partials/notifications_panel.php
-     yorumu) — grid.php'nin de aynı gerekçeyle style.css/grid-shell.css'in
-     YANINDA home.css yüklemesiyle AYNI desen, ikinci bir kopya YOK. -->
 <link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
 </head>
 <body class="if-page">
@@ -152,24 +107,8 @@ if (!empty($shareExistingIds)) {
 <div class="if-shell">
     <nav class="if-nav" id="if-nav">
         <div class="if-nav-top">
-            <!-- E3 — OpsFlow davranışı (docs/GEREKSINIMLER.md — arayüz tasarımcısı,
-                 "Interface dropdown menu"): base adının yanındaki ok, "View data"
-                 (temel base/grid'e döner) ve "Back to home" (hesap ana ekranı)
-                 sunar. Bizde "Edit" YOK (interface builder'ımız yok). Diğer
-                 gs-table-tab-menu panelleriyle AYNI <details> deseni. -->
             <details class="if-nav-menu gs-table-tab-menu" name="if-nav-menu">
                 <summary class="if-nav-back" title="Menü">
-                    <!-- Dashboard/Starred kartındaki AYNI ikon (bcc_base_icon_svg,
-                         base ADINDAN türetilen kategori glifi) — src/schema.php'deki
-                         paylaşılan fonksiyon, ikinci bir kopya YAZILMADI.
-                         ⚠️ Satır içi `background: bcc_base_icon_color($baseId)`
-                         KALDIRILDI: base id'sinden türeyen dolu/canlı renk (bu
-                         base'de #06b6d4 turkuaz) amber kenar çubuğunda yabancı
-                         bir leke gibi duruyordu ve satır içi olduğu için hiçbir
-                         CSS kuralıyla yumuşatılamıyordu. Zemin+kenarlık artık
-                         interface.css'te (.if-nav-back .home-base-icon).
-                         Kategori GLİFİ değişmedi — base'ler hâlâ birbirinden
-                         ayırt edilebiliyor. -->
                     <span class="home-base-icon"><?php echo bcc_base_icon_svg(14, $base['name'], isset($base['icon']) ? $base['icon'] : null); ?></span>
                     <span><?php echo htmlspecialchars($base['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -181,21 +120,13 @@ if (!empty($shareExistingIds)) {
             </details>
         </div>
 
-        <!-- Kaydırma yalnızca BU sarmalayıcıda — .if-nav'ın kendisinde overflow
-             OLMAMALI, yoksa position:absolute açılan bildirim/hesap panelleri
-             (.if-nav-bottom altında) kırpılır (aynı ders: bkz. style.css
-             ".grid-wrap { overflow: auto }" yorumu, .grid-add-field-panel). -->
         <div class="if-nav-scroll">
-            <!-- Daraltılmış durumda tablo isimleri (metin) yerine tek bir dekoratif
-                 klasör ikonu gösterilir — CSS ile aç/kapa (bkz. interface.css). -->
             <div class="if-nav-list-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M2.5 5.5A1.5 1.5 0 014 4h3.4l1.4 1.7H16A1.5 1.5 0 0117.5 7v7.5A1.5 1.5 0 0116 16H4a1.5 1.5 0 01-1.5-1.5v-9z" stroke="#5a4a00" stroke-width="1.4" stroke-linejoin="round"/></svg>
             </div>
 
-            <?php // Kategori başlığı: listeye derinlik verir ve daraltılmış
-                  // hâlde (metin gizlenirken) klasör ikonuyla değişir.
-                  // "TABLOLAR" — bu liste GERÇEKTEN tabloları gösteriyor
-                  // (arayüz/görünüm değil), uydurma bir başlık kullanılmadı. ?>
+            <?php
+                  ?>
             <p class="if-nav-group-label">Tablolar</p>
 
             <div class="if-nav-list">
@@ -210,50 +141,24 @@ if (!empty($shareExistingIds)) {
             </div>
         </div>
 
-        <!-- E2 — sıralama tamamen CSS `order` ile sürülüyor (interface.css):
-             açıkken soldan sağa Avatar—boşluk—Share—Bildirim—≪, kapalıyken
-             yukarıdan aşağı Avatar—≫—Bildirim—Share (Share/Bildirim sırası
-             İKİ HÂLDE FARKLI olduğu için DOM sırası değil `order` kullanılır).
-             Daralt (≪) artık BURADA — önceki hâlde .if-nav-top'taydı, genişlet
-             (≫) ile aynı yuvada olmadığı için "karışık" hissi veriyordu.
-             Profil/bildirim: mevcut ortak partial'lar require edilir, ikinci
-             bir kopya YAZILMAZ. -->
-        <?php // ALT BÖLGE: TEK SATIR — avatar · boşluk · Paylaş · Bağlantı ·
-              // bildirim · daralt(≪), tamamı kendi zemin rengine (#ffc11e)
-              // sahip bir "footer" kabında.
-              //
-              // ⚠️ TARİHÇE: bu bölge bir dönem tek satırdı, "Paylaş"/"Bağlantı"
-              // METİN etiketleri yüzünden 220px'e sığmıyordu ve taşan kısım
-              // komşu panelin altında kayboluyordu; o yüzden "Paylaş" kendi tam
-              // genişlikteki satırına alınmıştı. Şimdi tekrar tek satıra
-              // dönüldü ama ESKİ HATAYA DÜŞMEDEN: satır içindeki "Paylaş" da
-              // "Bağlantı" gibi İKON-YALNIZ (etiketi CSS gizliyor,
-              // title/aria-label duruyor). Ölçüldü: 5 ikon + avatar = 156px,
-              // kullanılabilir genişlik 190px — taşma yok (bkz.
-              // scripts/_verify_interface_nav_ui.php, satır taşma kontrolü). ?>
+        <?php
+              ?>
         <div class="if-nav-bottom">
 
             <div class="if-nav-util-row">
-            <!-- D1 — grid.php'deki AYNI OpsFlow Share davranışı (collab-popover-*),
-                 ikinci bir kopya YOK. .if-nav-bottom içindeki konumlandırma
-                 düzeltmesi (sağa açılma) interface.css'te. -->
             <details class="if-nav-collab-share gs-tool-details collab-popover-trigger" name="if-nav-share">
                 <summary class="if-nav-icon-btn if-nav-collab-share-btn" aria-label="Paylaş" title="Paylaş">
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="15" cy="5" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="5" cy="10" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><circle cx="15" cy="15" r="2.2" stroke="#5a4a00" stroke-width="1.4"/><path d="M6.9 8.8l6.2-2.6M6.9 11.2l6.2 2.6" stroke="#5a4a00" stroke-width="1.4"/></svg>
                     <span class="if-nav-bottom-label">Paylaş</span>
                 </summary>
                 <?php
-                // grid.php ile AYNI gövde, tek partial'dan (collab_popover_form.php).
-                // Dış <details> ve ikonlu <summary> burada kalıyor: bu ekranda
-                // sağa açılıyor ve farklı konumlanıyor (interface.css).
                 $collabPopoverTitle = $base['name'];
                 require __DIR__ . '/../src/partials/collab_popover_form.php';
                 ?>
             </details>
 
-            <?php // Sıralama `order` ile sürülüyor (daraltılmış hâlde satır
-                  // sütuna dönüşüp sıra değiştiği için DOM sırası tek başına
-                  // yetmiyor — bkz. interface.css .if-nav-util-row order'ları). ?>
+            <?php
+                  ?>
             <?php
             $accountMenuPrefix = 'if';
             $accountMenuUser = $user;
@@ -274,7 +179,7 @@ if (!empty($shareExistingIds)) {
             <button type="button" class="if-nav-icon-btn if-nav-expand-btn" id="if-nav-expand" aria-label="Genişlet" title="Genişlet" hidden>
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M7.5 4.5L14 10l-6.5 5.5" stroke="#5a4a00" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            </div><!-- /.if-nav-util-row -->
+            </div>
         </div>
     </nav>
 
@@ -285,17 +190,6 @@ if (!empty($shareExistingIds)) {
         </div>
 
         <?php
-        // Grupla / Filtrele / Sırala — grid.php'nin panelleriyle AYNI PARAMETRE
-        // ADLARINI üretirler (group_field_N, filter_field_N/filter_cond_N/
-        // filter_value_N/filter_logic, sort_field_N/sort_dir_N) ve sunucuda
-        // grid.php'nin kullandığı AYNI ayrıştırma + SQL fonksiyonlarına gider
-        // (bkz. public/api/interface_records.php). Buradaki tek fark UYGULAMA
-        // BİÇİMİ: grid.php formu GET ile gönderip sayfayı yeniliyor, burada
-        // istemci aynı parametreleri fetch ile yolluyor ve mevcut satırları
-        // yeniden sıralayıp gösterip gizliyor — sayfa yenilenmiyor.
-        //
-        // Alanlar/operatörler JS'e SUNUCUDAN veriliyor: seçenek listesi ikinci
-        // kez (istemcide) tanımlanmıyor, tek kaynak BCC_FILTER_OPERATORS.
         $ifToolFields = array();
         foreach ($fields as $f) {
             $ifToolFields[] = array(
@@ -349,23 +243,12 @@ if (!empty($shareExistingIds)) {
                 sort: <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>,
                 group: 3
             };
-            // Temsilci not inceleme takibi — SUNUCUDAN gelen rol kararı.
-            // interface.js rolü kendi başına ÇÖZMEZ (istemcide rol mantığı
-            // kopyası olmaz); yalnızca bu bayrağa bakar. Bayrak false ise
-            // hiç istek atılmaz — owner/editor/viewer gezinirken boşuna
-            // trafik oluşmasın diye. Bu bir OPTİMİZASYON, güvenlik sınırı
-            // DEĞİL: api/note_view_start.php aynı kontrolü sunucuda TEKRAR
-            // yapar (önbellekten gelen eski bir sayfa bayrağı ezemesin).
             var BCC_IF_TRACK_VIEWS = <?php echo $trackNoteViews ? 'true' : 'false'; ?>;
             var BCC_IF_CAN_VIEW_AUDITS = <?php echo $canViewNoteAudits ? 'true' : 'false'; ?>;
         </script>
 
         <div class="if-record-list" id="if-record-list" data-table-id="<?php echo (int) $tableId; ?>">
             <?php if (empty($tables)): ?>
-                <!-- Bulunan gerçek bug: base'de HİÇ tablo yokken (henüz yeni oluşturulmuş,
-                     bkz. bases.php) bu sayfa "Bu tabloda henüz kayıt yok." diyordu —
-                     yanıltıcı, çünkü ortada bakılacak bir tablo bile yok. base_tables.php'nin
-                     AYNI durum için kullandığı mesajla tutarlı hale getirildi. -->
                 <div class="if-empty">Bu base'de henüz tablo yok.</div>
             <?php elseif (empty($records)): ?>
                 <div class="if-empty">Bu tabloda henüz kayıt yok.</div>
@@ -384,9 +267,6 @@ if (!empty($shareExistingIds)) {
                     $summaryPreview = '';
                     if ($summaryField) {
                         $summaryCell = isset($cellsForRecord[$summaryField['id']]) ? $cellsForRecord[$summaryField['id']] : null;
-                        // long_text'in ham çıktısı sanitize edilmiş HTML — burada yalnızca
-                        // TEK SATIR düz metin önizlemesi için strip_tags ile metne indirgenir,
-                        // sonra (artık düz metin olduğu için) her yerdeki gibi htmlspecialchars uygulanır.
                         $summaryPreview = strip_tags(cell_display_text('long_text', $summaryCell, $usersById));
                     }
 
@@ -395,10 +275,6 @@ if (!empty($shareExistingIds)) {
                         if ((int) $f['id'] === $primaryFieldId) {
                             continue;
                         }
-                        // 'attachment': değer cell_values'ta değil — dosya listesi
-                        // 'files' olarak ayrıca taşınır, interface.js küçük
-                        // resim/rozet + indirme linki olarak render eder (grid.php'nin
-                        // salt-okunur karşılığı, yükleme/silme YOK).
                         if ($f['field_type'] === 'attachment') {
                             $files = isset($attachmentsByRecord[$recordId][$f['id']]) ? $attachmentsByRecord[$recordId][$f['id']] : array();
                             $detailFields[] = array(
@@ -443,11 +319,6 @@ if (!empty($shareExistingIds)) {
     <aside class="if-detail-panel" id="if-detail-panel">
         <div class="if-detail-placeholder" id="if-detail-placeholder">Bir kayıt seçin</div>
         <div class="if-detail-content" id="if-detail-content" hidden>
-            <!-- E4 — grid.php'nin satır detay panelindeki ▲▼ (grid-row-detail.js)
-                 ile AYNI mantık/SVG'ler (style.css'teki .grid-detail-nav*
-                 sınıfları burada da yüklü, ikinci bir kopya YAZILMADI) — yalnızca
-                 arama gerçekten satır gizlediği için (grid.php'de gizlemiyor)
-                 interface.js kendi "görünür satırlar" listesini kullanır. -->
             <div class="if-detail-header">
                 <div class="grid-detail-nav">
                     <button type="button" class="grid-detail-nav-btn" id="if-detail-prev" aria-label="Önceki kayıt">
@@ -464,16 +335,8 @@ if (!empty($shareExistingIds)) {
                 <span id="if-detail-last-update"></span>
             </div>
 
-            <?php // Temsilci İnceleme Geçmişi — YALNIZCA yetkili role BASILIR.
-                  // CSS ile gizlenmiş bir blok DEĞİL: yetkisi olmayan kullanıcı
-                  // bu HTML'i kaynağında da göremez (interface.php:249-253'teki
-                  // "sunucu tarafı gate" deseniyle AYNI). Sunucu tarafı ayrıca
-                  // api/note_view_list.php'de de kontrol ediyor.
-                  //
-                  // .if-tool ile AYNI <details> deseni (bu sayfada zaten var),
-                  // ama position:absolute YOK — .if-detail-panel kaydırılabilir
-                  // bir sütun, mutlak konumlu panel kırpılırdı (bkz.
-                  // interface.css'teki .if-nav-scroll overflow notu). ?>
+            <?php
+                  ?>
             <?php if ($canViewNoteAudits): ?>
                 <details class="if-audit" id="if-audit">
                     <summary class="if-audit-summary">
@@ -485,11 +348,6 @@ if (!empty($shareExistingIds)) {
                     <div class="if-audit-panel">
                         <div class="if-audit-head">
                             <p class="if-audit-note">Son 15 gün gösterilir, en yeni inceleme en üstte.</p>
-                            <?php /* Excel indirme: <a download> DEĞİL, düz bir bağlantı — dosyayı
-                                     sunucu Content-Disposition: attachment ile gönderiyor
-                                     (api/note_view_export_xlsx.php), diğer export düğmeleriyle
-                                     AYNI desen. href'i interface.js açık nota göre günceller;
-                                     hiçbir not seçili değilken düğme devre dışı kalır. */ ?>
                             <a class="if-audit-export" data-audit-export href="#" aria-disabled="true"
                                title="Bu notun son 15 günlük inceleme kayıtlarını Excel olarak indir">
                                 <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v9m0 0l-3.2-3.2M10 12l3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 13.5v2a1.5 1.5 0 001.5 1.5h10a1.5 1.5 0 001.5-1.5v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -508,17 +366,11 @@ if (!empty($shareExistingIds)) {
     </aside>
 </div>
 
-<!-- Bildirim panelinin (home-notif) tab/arama/mark-all-read davranışı home.js'de
-     yaşıyor, ikinci bir kopya YAZILMAZ — home.js'deki TÜM diğer bloklar
-     (arama popover'ı, starred listesi, kart/liste görünüm) bu sayfada
-     bulunmayan elemanlara bakar ve null-check'li olduğu için no-op kalır. -->
-<?php // "Paylaş" modalı — grid.php ile BİREBİR AYNI partial ve AYNI JS.
-      // Overlay .gs-* sınıflarını kullanıyor; bu sayfa grid-shell.css'i zaten
-      // yüklüyor (bkz. <head>'deki not), ek bir stil dosyası GEREKMEDİ. ?>
+<?php
+      ?>
 <?php require __DIR__ . '/../src/partials/share_modal.php'; ?>
-<?php // Sayfa ici onay penceresi (native window.confirm yerine) — silme/geri
-      // alinamaz islemlerin HEPSI bunu kullanir, bkz. assets/confirm-modal.js.
-      // .home-modal-* sinifiyla ciziliyor, home.css bu sayfalarda zaten yukleniyor. ?>
+<?php
+      ?>
 <script src="<?php echo bcc_asset_url('confirm-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>

@@ -6,10 +6,6 @@ require_login();
 
 $user = current_user();
 
-// KVKK izolasyonu: dashboard.php ile AYNI desen (bkz. orada).
-// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
-// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
-// ayrisma riski kalmasin diye tek yere alindi.
 $teams = bcc_teams_for_current_user();
 
 $teamIds = array();
@@ -24,20 +20,10 @@ foreach ($teams as $t) {
     $roleByTeamId[(int) $t['id']] = $t['role'];
 }
 
-// Bu sayfanın TAMAMI zaten "kullanıcının yıldızladığı base'ler" — sol
-// panelin Starred alt-listesi İLE ana kart grid'i AYNI sorgudan beslenir
-// (ikinci bir sorgu YOK). Takımdan ayrılan ama base'i silinmemiş kullanıcı
-// için CASCADE devreye girmez; b.team_id IN (...) her seferinde yeniden
-// süzer (dashboard.php'deki ana base sorgusuyla aynı ilke).
 $bases = array();
 $starredBaseIds = array();
 if (!empty($teamIds)) {
     $placeholders = implode(',', array_fill(0, count($teamIds), '?'));
-    // t.name AS team_name: bu liste kabuğa $starredBases olarak da veriliyor ve
-    // sol panel yıldızları çalışma alanına göre grupluyor
-    // (bcc_group_starred_bases_by_team) — satır team_name taşımazsa o grup
-    // "Çalışma alanı #N" diye adsız görünürdü. $teamNamesById zaten burada var
-    // ama kabuk o değişkeni GÖRMEZ, veri satırın kendisiyle gitmeli.
     $bases = bcc_fetch_all(
         "SELECT b.id, b.team_id, b.name, b.created_at, al.last_opened, t.name AS team_name
          FROM user_starred_bases usb
@@ -58,17 +44,10 @@ if (!empty($teamIds)) {
     }
 }
 
-// BİLEREK elle ayarlanıyor: kabuk normalde listeyi kendisi çeker
-// (bcc_starred_bases_for_current_user), ama bu sayfanın ana grid sorgusu ZATEN
-// aynı kümeyi — üstelik daha fazla kolonla — getirdi. Atama yapılmazsa kabuk
-// aynı veri için İKİNCİ bir sorgu açardı. Kabuğun isset() kontrolü tam da bu
-// durum için duruyor (bkz. src/partials/home_shell_top.php).
 $starredBases = $bases;
 
 $homeActiveNav = 'starred';
 $homePageTitle = bcc_tab_title('Yıldızlılar');
-// Dashboard ile AYNI görsel katman: tipografi ölçeği, zemin ve kart cilası
-// burada da geçerli olsun (bento ızgarası açılmıyor, bkz. grid çağrısı).
 $homeExtraCss = array('home-bento.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -88,9 +67,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php
-        // Dashboard ile AYNI kart bileşeni ve AYNI "N tablo" rozeti — tek
-        // GROUP BY sorgusu. Bento KAPALI ($bento=false): burası "yıldızlılar"
-        // listesi, öne çıkarılacak tek bir base yok, hepsi eşit ağırlıkta.
         $starredTableCounts = bcc_base_table_counts(array_column($bases, 'id'));
         bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, 'Henüz yıldızladığınız bir base yok.', $roleByTeamId, false, false, $starredTableCounts);
         ?>

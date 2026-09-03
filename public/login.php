@@ -28,10 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($status === 'inactive') {
             $error = 'Hesabınız henüz yönetici tarafından onaylanmadı.';
         } elseif ($status === 'throttled') {
-            // Kalan süre attempt_login'den DEĞİL, buradan yeniden sorulur:
-            // attempt_login tek bir durum dizesi döndürüyor ve o sözleşmeyi
-            // (scripts/_verify_*.php dahil beş çağıran) bozmamak için imzası
-            // korundu. Ek sorgu YALNIZCA kilitli istekte çalışır.
             $kalanDakika = (int) ceil(bcc_login_retry_after($email) / 60);
             $error = 'Çok fazla başarısız giriş denemesi. '
                 . ($kalanDakika > 1 ? $kalanDakika . ' dakika' : 'Bir dakika')
@@ -47,8 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php
-// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
-// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
 $authPageTitle = 'Giriş';
 require __DIR__ . '/../src/partials/auth_shell_top.php';
 ?>
@@ -89,19 +83,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
 
         <?php if (bcc_demo_login_enabled()): ?>
             <?php
-            // Hızlı Demo Girişi — YALNIZCA $BCC_DEMO_LOGIN açıkken basılır
-            // (varsayılan false, bkz. config/app.php). Kapalıyken bu blok hiç
-            // çalışmaz: sabit şifreler sayfa kaynağında GÖRÜNMEZ.
-            //
-            // Butonlar oturum AÇMAZ, yalnızca yukarıdaki iki alanı doldurur —
-            // giriş yine normal POST + CSRF + attempt_login() yolundan geçer,
-            // yani kimlik doğrulamayı atlayan ikinci bir kapı açılmaz. Bu,
-            // bilinçli bir tercih (kullanıcı onayladı): yeni bir uç nokta
-            // eklemek, canlıda unutulursa gerçek bir güvenlik açığı olurdu.
-            //
-            // Kimlik bilgileri src/demo_accounts.php'den gelir — seed betiği
-            // (scripts/seed_demo_users.php) DE aynı listeyi kullanır, ikinci
-            // bir kopya YOK.
             ?>
             <div class="login-demo">
                 <div class="login-demo-head">
@@ -128,9 +109,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             </div>
         <?php endif; ?>
 <?php
-// Ortak kapanış (src/partials/auth_shell_bottom.php): marka satırı, kart
-// kapanışı ve </body></html> BEŞ sayfada aynıydı.
-// Demo giriş betiği KOŞULLU kalır: yalnızca $BCC_DEMO_LOGIN açıkken listeye girer.
 $authScripts = array('password-toggle.js');
 if (bcc_demo_login_enabled()) {
     $authScripts[] = 'demo-login.js';

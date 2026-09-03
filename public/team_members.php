@@ -1,17 +1,4 @@
 <?php
-// F10 (owner/editor/commenter/viewer izin seviyeleri) — takımın HER üyesi için
-// (owner'a özel değil) kendi rütbesi ve ALTINDAKİ (eşit dahil) kullanıcıları
-// yönetebildiği üye/rol yönetimi. admin/assign_team.php'nin (platform admin,
-// TÜM takımlar) YANINDA, ondan BAĞIMSIZ ek bir yetki katmanı — o dosyaya
-// dokunulmadı, hâlâ her şeyi atayabiliyor. OpsFlow'un "invite/assign at or
-// below your permission level" kuralı (docs/GEREKSINIMLER.md — base yetkileri,
-// "Invite users at or below your permission level" ✅ dört rolde de +
-// managing-billable-collaborators FAQ: "can also add collaborators at the SAME
-// or a lower permission level") burada BCC_ROLE_RANK üzerinden uygulanıyor —
-// eşit rütbe DAHİL. Erişim: workspaces.php'nin "Paylaş" butonu artık takımın
-// her üyesine aktif link olarak gösteriliyor (require_team_access zaten en dış
-// koruma); sayfa girişte çağıranın GERÇEK rütbesine göre neyi yönetebileceğine
-// karar veriyor.
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -29,24 +16,8 @@ if (!$team) {
 $myRole = current_user_role_in_team($teamId);
 $myRank = $GLOBALS['BCC_ROLE_RANK'][$myRole];
 
-// ÜYE YÖNETİMİ YETKİSİ — tek kaynak: src/auth.php bcc_can_manage_members()
-// (yalnızca owner). Sayfanın KENDİSİ dört role de açık kalır (herkes ekipte
-// kimin olduğunu ve rolünü GÖRÜR — OpsFlow'da da katılımcı listesi görünür),
-// ama listeyi DEĞİŞTİREN her şey bu bayrağa bağlıdır.
-//
-// Bulunan gerçek açık (canlı doğrulandı, bu satır eklenmeden önce): yetki
-// kontrolü yalnızca "rank(hedef) <= rank(ben)" hiyerarşisiydi; bu, viewer'ın
-// $assignableRoles = ['viewer'] ile ekibe İSTEDİĞİ aktif kullanıcıyı viewer
-// olarak eklemesine ve diğer viewer'ları çıkarmasına izin veriyordu
-// (POST -> 200 + "Atama kaydedildi" + team_members satırı oluştu). Editor
-// aynısını commenter/editor rolleriyle de yapabiliyordu.
 $canManageMembers = bcc_can_manage_members($myRole);
 
-// Atanabilecek roller: çağıranın GERÇEK rütbesi kadar ve altı (eşit dahil).
-// bcc_assignable_roles() (src/auth.php) — grid.php'nin Paylaş popup'ıyla
-// PAYLAŞILAN mantık, kopya YOK. Yetkisi olmayan için BOŞ dizi: aşağıdaki
-// in_array($role, $assignableRoles) kontrolü böylece ikinci bir savunma
-// katmanı olarak da her zaman başarısız olur.
 $assignableRoles = $canManageMembers ? bcc_assignable_roles($myRank) : array();
 
 $error = null;
@@ -55,9 +26,6 @@ $success = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
 
-    // ASIL KAPI. Arayüzde formu hiç görmeyen bir kullanıcı elle POST atsa da
-    // burada durur — "gizleme != yetkilendirme". 403 döndürülür ve sayfanın
-    // geri kalanı HİÇ çalıştırılmaz (die), yani hiçbir yazma yoluna girilmez.
     if (!$canManageMembers) {
         bcc_error_page('Yetkiniz yok', 'Üye yönetimi için Owner yetkisi gerekir.', 403);
     }
@@ -65,12 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
     $targetUserId = isset($_POST['user_id']) ? (int) $_POST['user_id'] : 0;
 
-    // ATAMA/ÇIKARMA MANTIĞI ARTIK BURADA DEĞİL: src/schema.php'deki
-    // bcc_team_member_assign() / bcc_team_member_remove_many() — grid.php'nin
-    // "Paylaş" modalı (api/team_member_assign.php, api/team_member_remove.php)
-    // AYNI fonksiyonları çağırıyor. Hiyerarşi kapısı, "kendini çıkaramama",
-    // "son owner" kuralı ve audit action adları tek yerde; bu sayfanın
-    // davranışı (mesajlar dahil) birebir korundu.
     if ($action === 'assign') {
         $role = isset($_POST['role']) ? $_POST['role'] : '';
         $result = bcc_team_member_assign($teamId, $targetUserId, $role, $myRank, $assignableRoles);
@@ -81,9 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Atama kaydedildi.';
         }
     } elseif ($action === 'remove' || $action === 'remove_bulk') {
-        // Tek satır "Çıkar" (remove) ve toplu seçim "Çıkar" (remove_bulk) AYNI
-        // sonuca varır (bir liste dolaşır) — burada tek/çoklu diye iki AYRI kod
-        // yolu yok, remove tek elemanlı bir liste olarak remove_bulk'a düşer.
         $targetUserIds = array();
         if ($action === 'remove_bulk') {
             $rawIds = isset($_POST['user_ids']) && is_array($_POST['user_ids']) ? $_POST['user_ids'] : array();
@@ -110,22 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// workspaces.php'nin BENZER sorgusu — is_active DAHİL (aynı ders: admin bir
-// kullanıcıyı pasif yaptığında team_members satırı SİLİNMEZ, pasif bir üye
-// aktif bir katılımcıdan ayırt edilebilsin) + tm.created_at ("Eklenme tarihi"
-// kolonu, client-side sıralanabilir).
 $members = bcc_team_members_with_roles($teamId);
 
-// "Ekleyen" kolonu — bkz. src/schema.php'deki fonksiyon yorumu.
 $invitedByMap = bcc_team_members_invited_by($teamId);
 
-// admin/assign_team.php ile AYNI sorgu — yeni HESAP oluşturma YOK (create_user.php
-// hâlâ yalnızca platform admin'de), yalnızca var olan aktif kullanıcılar arasından seçim.
 $allUsers = bcc_fetch_all('SELECT id, email, full_name FROM users WHERE is_active = 1 ORDER BY email');
 
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'workspaces';
 $homePageTitle = bcc_tab_title($team['name'] . ' Üyeleri');
@@ -165,10 +114,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </form>
             <?php else: ?>
                 <?php
-                // Yetkisi olmayan rol formu HİÇ GÖRMEZ (CSS ile gizlenmiş bir
-                // form değil — sunucu onu hiç basmaz, kaynakta da yoktur).
-                // Yerine neden göremediğini söyleyen tek satır: sessizce eksik
-                // bir arayüz "bozuk" gibi okunurdu.
                 ?>
                 <p class="tm-readonly-note">
                     Bu çalışma alanındaki rolünüz
@@ -207,9 +152,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <table class="tm-table">
                     <thead>
                         <tr>
-                            <?php // Seçim kolonu TOPLU ÇIKARMA içindir — yetki yoksa kolonun
-                                  // kendisi de basılmaz (boş bir onay kutusu sütunu bırakmak,
-                                  // "bir şey seçebilirim" izlenimi veren ölü bir arayüz olurdu). ?>
+                            <?php
+                                  ?>
                             <?php if ($canManageMembers): ?>
                             <th class="tm-col-check"><input type="checkbox" data-tm-select-all aria-label="Tümünü seç"></th>
                             <?php endif; ?>
@@ -222,9 +166,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <tbody data-tm-rows>
                         <?php foreach ($members as $m):
                             $memberRank = $GLOBALS['BCC_ROLE_RANK'][$m['role']];
-                            // İki koşul BİRLİKTE: önce yetenek (owner mıyım),
-                            // sonra hiyerarşi (hedef benden yüksek rütbede mi).
-                            // $canManageMembers false ise hiyerarşi hiç sorulmaz.
                             $manageable = $canManageMembers && $memberRank <= $myRank;
                             $isSelf = (int) $m['id'] === (int) $user['id'];
                             $invitedByName = isset($invitedByMap[(int) $m['id']]) && $invitedByMap[(int) $m['id']] !== null

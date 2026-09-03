@@ -1,20 +1,4 @@
 <?php
-// Slack otomasyonu ayar sayfası. Üç bağımsız bölüm yönetilir:
-// - Tablo-özel webhook'lar (table_id = bu tablo) — ARTIK BİR LİSTE: aynı
-//   tabloda birden fazla webhook olabilir (marka/operasyon başına bir tane,
-//   ör. "Trendyol kanalı", "Yves Rocher kanalı") — koşullu yönlendirme
-//   kuralları bunlardan birine işaret eder.
-// - Takım-geneli webhook (table_id NULL, team_id = bu takım) — takımın TÜM
-//   tablolarında tetiklenir, tek satır (OpsFlow'daki tek "Otherwise" yedek
-//   kanalı gibi) — DEĞİŞMEDİ.
-// - Koşullu yönlendirme kuralları (slack_routing_rules) — bir alanın (yalnızca
-//   tekli seçim tipi) DEĞERİNE göre hangi webhook'a gidileceğini belirler.
-//   İlk eşleşen kural (sıraya göre) kazanır — bkz. bcc_find_slack_webhook()
-//   (src/slack.php). Hiç kural yoksa/eşleşmezse ESKİ tablo-özel/ekip-geneli
-//   davranışa aynen düşülür.
-// GÜVENLİK: webhook_url kaydedildikten sonra HİÇBİR ZAMAN tam olarak geri
-// gösterilmez (yalnızca son 4 karakter) — form her zaman boş başlar, dolu
-// bırakılırsa "değiştirme" anlamına gelir, boş bırakılırsa mevcut URL korunur.
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -27,7 +11,7 @@ $table = find_table_or_404($tableId);
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = bcc_can_manage_schema($role);  // entegrasyon ayarı — src/auth.php
+$canEdit = bcc_can_manage_schema($role);
 
 $error = null;
 $success = null;
@@ -45,8 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $channelNameRaw = isset($_POST['channel_name']) ? trim($_POST['channel_name']) : '';
         $isActive = !empty($_POST['is_active']) ? 1 : 0;
 
-        // Var olan satırı düzenliyorsak, gerçekten bu tabloya/ekibe ait mi doğrula
-        // (base_tables.php'deki "bu tablo bu base'e ait değil" ile AYNI desen).
         $existing = null;
         if ($webhookIdRaw > 0) {
             $existing = ($scope === 'team')
@@ -58,16 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 bcc_error_page('Webhook bulunamadı', 'Bu webhook bu tabloya ya da ekibe ait değil.', 404);
             }
         } elseif ($scope === 'team') {
-            // Bulunan gerçek bug: webhook_id boş/0 gönderilirse (form state'i bayatlamış
-            // ya da elle POST edilmiş — normal UI akışı zaten var olan satırın id'sini
-            // her zaman gönderir) ve bu ekip için ZATEN bir takım-geneli webhook
-            // (table_id IS NULL) varsa, aşağıdaki "yeni ekle" dalı DB'de bunu engelleyen
-            // bir UNIQUE kısıt olmadığı için ikinci bir takım-geneli satır oluşturuyordu
-            // (canlı test ile doğrulandı). Sonuç: hangisinin "asıl" olduğu belirsizleşir
-            // — ayarlar sayfası LIMIT 1 ile arbitrer birini gösterir, bildirim gönderen
-            // bcc_find_slack_webhook() farklı birini seçebilir. "Ekip-geneli için her
-            // zaman tek satır" invariant'ı burada da (yalnızca UI'da değil) uygulanır:
-            // var olan satır varsa INSERT yerine ONA güncelleme uygulanır.
             $existing = bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE team_id = :team_id AND table_id IS NULL LIMIT 1', array('team_id' => $table['team_id']));
             $existing = $existing !== false ? $existing : null;
         }
@@ -82,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $channelName = $channelNameRaw !== '' ? $channelNameRaw : null;
 
             if ($existing) {
-                // Boş bırakılan webhook_url = "mevcut URL'i koru" (değiştirme).
                 $urlToSave = $webhookUrlRaw !== '' ? $webhookUrlRaw : $existing['webhook_url'];
 
                 bcc_execute(
@@ -92,9 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 log_audit('slack.webhook_update', 'table', $table['id'], array('scope' => $scope, 'channel_name' => $channelName, 'is_active' => $isActive), $table['team_id']);
                 $success = 'Webhook güncellendi.';
             } else {
-                // Tablo-özel kapsamda HER ZAMAN yeni satır (bu tabloda birden fazla
-                // webhook olabilir); ekip-geneli kapsamda tek satır kuralı (uygulama
-                // katmanında — bu form zaten yalnızca hiç yokken "yeni ekle" gösterir).
                 bcc_execute(
                     'INSERT INTO slack_webhooks (team_id, table_id, webhook_url, channel_name, is_active) VALUES (:team_id, :table_id, :url, :channel, :active)',
                     array(
@@ -110,12 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } elseif ($action === 'test_webhook') {
-        // "Bağlantıyı test et" — kayıtlı bir webhook satırına deneme mesajı
-        // gönderir ve SONUCU kullanıcıya bildirir. Kaydetme akışının bir parçası
-        // DEĞİL, ayrı bir aksiyon: kaydetmenin kendisi otomatik mesaj atsaydı
-        // her küçük düzenleme (ör. yalnızca kanal adını değiştirmek) kanala
-        // gürültü basardı. Yetki: yukarıdaki require_role('owner') bu POST'un
-        // TAMAMINI zaten kapsıyor.
         $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
 
         $testResult = bcc_slack_send_test($webhookIdRaw, $table['team_id'], $user['full_name']);
@@ -134,8 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             bcc_error_page('Webhook bulunamadı', 'Bu webhook bu ekibe ait değil.', 404);
         }
 
-        // Bu webhook'a bağlı bir yönlendirme kuralı varsa silme ENGELLENİR (sessiz
-        // cascade yerine açık hata) — bir kuralın hedefi aniden kaybolmasın.
         $ruleCount = (int) bcc_fetch_column('SELECT COUNT(*) AS c FROM slack_routing_rules WHERE webhook_id = :id', array('id' => $webhookIdRaw));
 
         if ($ruleCount > 0) {
@@ -153,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $field = bcc_fetch_one('SELECT id, options FROM fields WHERE id = :id AND table_id = :table_id AND field_type = \'single_select\' LIMIT 1', array('id' => $fieldIdRaw, 'table_id' => $table['id']));
 
-        // Webhook bu ekibe ait olmalı (tablo-özel VEYA ekip-geneli — ikisi de aynı team_id'ye bağlı).
         $webhook = bcc_fetch_one('SELECT id FROM slack_webhooks WHERE id = :id AND team_id = :team_id LIMIT 1', array('id' => $webhookIdRaw, 'team_id' => $table['team_id']));
 
         if (!$field || !$webhook) {
@@ -185,18 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Yönlendirme kuralı eklendi.';
         }
     } elseif ($action === 'save_watched_fields') {
-        // DÖRDÜNCÜ olay: hücre değişikliğinde bildirim — hangi alanların
-        // izleneceği (bkz. migrations/022_slack_watched_fields.sql).
-        //
-        // "Hepsini sil + seçilenleri ekle" deseni: form her zaman TAM listeyi
-        // gönderir (işaretsiz kutu POST'ta hiç görünmez), yani fark hesaplamak
-        // yerine tabloyu yeniden kurmak hem daha kısa hem de "işareti kaldırdım
-        // ama satır kaldı" sınıfı hataları imkânsız kılıyor. Tek transaction:
-        // silme başarılı olup ekleme patlarsa özellik sessizce kapanmış olurdu.
-        //
-        // ⚠️ GÜVENLİK: gelen id'ler bu TABLONUN alanlarına karşı süzülür
-        // ($fieldIdsInTable) — form_edit.php'nin form_fields[] süzgeciyle AYNI
-        // desen. Başka bir tablonun alan id'si POST edilse sessizce düşer.
         $postedWatch = isset($_POST['watched_fields']) && is_array($_POST['watched_fields']) ? $_POST['watched_fields'] : array();
 
         $fieldIdsInTable = array();
@@ -257,9 +204,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            // İKİ UPDATE + log_audit TEK transaction'da — bcc_reorder_sibling()
-            // artık transaction'ı ÇAĞIRANDAN bekliyor (bkz. o fonksiyonun
-            // sözleşmesi; iç içe transaction mysqli'de desteklenmiyor).
             try {
                 bcc_begin_transaction();
 
@@ -278,33 +222,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Tablo-özel: artık LİSTE — bu tabloya ait tüm webhook satırları (marka
-// başına bir tane olabilir), en eski önce.
 $tableWebhooks = bcc_fetch_all(
     'SELECT id, channel_name, is_active, webhook_url FROM slack_webhooks WHERE table_id = :table_id ORDER BY id',
     array('table_id' => $table['id'])
 );
 
-// Ekip-geneli: TASARIM GEREĞİ tek satır — ama artık "tek satır olduğuna
-// GÜVENİLMİYOR", ÖLÇÜLÜYOR.
-//
-// ⚠️ BULUNAN GERÇEK BUG (canlı veride doğrulandı): burada eskiden `LIMIT 1`
-// vardı ama `ORDER BY` YOKTU. Bir ekipte iki ekip-geneli satır oluştuğunda
-// (uygulamayı atlayarak doğrudan DB'ye yazılmış bir satır — yukarıdaki INSERT
-// koruması yalnızca bu formdan geçen yolu kapatır) sayfa MySQL'in garantisiz
-// satır sırasına göre RASTGELE birini gösteriyordu. Sonuç: ekranda
-// "#genel / pasif" yazarken bildirimler bambaşka, GÖRÜNMEYEN bir satıra
-// gidiyordu; o satır ne listeleniyor ne de silinebiliyordu (ekrandaki çöp
-// kutusu gösterilen satırı siler).
-//
-// İki değişiklik:
-//   1. ORDER BY id ASC — hangi satırın "asıl" olduğu artık deterministik VE
-//      bcc_find_slack_webhook()'un fallback sıralamasıyla AYNI (o da id ASC).
-//      Yani sayfanın gösterdiği satır ile bildirimin gittiği satır aynı kural
-//      tarafından seçiliyor.
-//   2. Satırların TAMAMI çekiliyor. Birden fazlaysa fazlalıklar aşağıda
-//      AÇIKÇA uyarı olarak listelenir ve silinebilir hâle gelir — sessizce
-//      yutulmaz.
 $teamWebhookRows = bcc_fetch_all(
     'SELECT id, channel_name, is_active, webhook_url FROM slack_webhooks
      WHERE team_id = :team_id AND table_id IS NULL
@@ -312,10 +234,8 @@ $teamWebhookRows = bcc_fetch_all(
     array('team_id' => $table['team_id'])
 );
 $teamWebhook = !empty($teamWebhookRows) ? $teamWebhookRows[0] : null;
-// Invariant ihlali: olması gerekenden fazla ekip-geneli satır. Normalde BOŞ.
 $extraTeamWebhooks = array_slice($teamWebhookRows, 1);
 
-// Düzenlenen tablo-özel webhook (varsa) — table_fields.php'deki "?edit=" deseniyle AYNI.
 $editWebhookId = isset($_GET['edit_webhook']) ? (int) $_GET['edit_webhook'] : 0;
 $editWebhook = null;
 foreach ($tableWebhooks as $w) {
@@ -325,15 +245,11 @@ foreach ($tableWebhooks as $w) {
     }
 }
 
-// Yönlendirme kuralı formunun "hedef webhook" seçeneği: bu tabloya özel VEYA
-// ekip-geneli — hangisi olursa olsun aynı ekibe ait, ikisi de geçerli hedef.
 $availableWebhooksForRules = $tableWebhooks;
 if ($teamWebhook) {
     $availableWebhooksForRules[] = $teamWebhook;
 }
 
-// Yönlendirme kuralı formunun "alan seç" seçeneği: yalnızca bu tablonun tekli
-// seçim alanları (koşul yalnızca ayrık değerlerde anlamlı).
 $fields = bcc_fetch_all('SELECT id, name, field_type, options FROM fields WHERE table_id = :table_id ORDER BY position, id', array('table_id' => $table['id']));
 $singleSelectFields = array();
 foreach ($fields as $f) {
@@ -342,10 +258,6 @@ foreach ($fields as $f) {
     }
 }
 
-// Hücre değişikliğinde bildirim için İZLENEN alanlar (dördüncü olay).
-// Tek kaynak: bcc_slack_watched_field_ids() (src/slack.php) — bildirim
-// gönderen cell_update.php de AYNI fonksiyonu çağırıyor, yani ekranda
-// işaretli görünen liste ile gerçekte tetikleyen liste ayrışamaz.
 $watchedFieldIds = bcc_slack_watched_field_ids($table['id']);
 
 $routingRules = bcc_fetch_all(
@@ -364,36 +276,18 @@ function bcc_slack_masked_url($webhook)
     return $webhook ? ('••••••••' . substr($webhook['webhook_url'], -4)) : null;
 }
 
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'fields';
 $homePageTitle = bcc_tab_title($table['name'] . ': Slack');
-// Ortak tasarım sistemi (table_fields / base_tables / account ile PAYLAŞILAN) +
-// yalnızca bu sayfaya ait yerleşim. Durum hapı, toggle, bilgi kutusu ve
-// maskeli-sır rozeti ORTAK dosyada (settings-page.css) — burada kopyası yok.
 $homeExtraCss = array('settings-page.css', 'slack-settings.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 
-// Küçük yardımcı: "aktif"/"pasif" durum hapı. Üç yerde (tablo webhook'ları,
-// takım webhook'u, yönlendirme kuralları) kullanılıyor — HTML üç kez yazılmıyor.
 function bcc_slack_status_pill($isActive)
 {
     $on = ((int) $isActive === 1);
     ?><span class="sp-status <?php echo $on ? 'sp-status-on' : ''; ?>"><?php echo $on ? 'aktif' : 'pasif'; ?></span><?php
 }
 
-// Ekip-geneli kartındaki TEK satır gösterimi: kanal adı + maskeli URL + durum
-// hapı + (yetkiliyse) test/sil aksiyonları.
-//
-// İKİ yerde kullanılır ve markup İKİ KEZ YAZILMAZ:
-//   1. "Bağlı kanal" — asıl (id ASC ile ilk) satır.
-//   2. Invariant ihlali varsa fazlalık satırlar — bunlar EskiDEN HİÇ
-//      GÖRÜNMÜYORDU, yani kullanıcının silmesi imkânsızdı.
-//
-// $isExtra: fazlalık satırlar için test butonu BASILMAZ — bir fazlalığa
-// "test mesajı at" demek anlamlı değil, tek yapılacak iş onu silmek.
 function bcc_render_slack_team_row($w, $table, $canEdit, $isExtra = false)
 {
     $hasChannel = ((string) $w['channel_name'] !== '');
@@ -403,8 +297,8 @@ function bcc_render_slack_team_row($w, $table, $canEdit, $isExtra = false)
         <span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span>
         <?php bcc_slack_status_pill($w['is_active']); ?>
         <?php if ($canEdit): ?>
-            <?php // Eskiden buradaki hizalama satır içi style="margin-left:auto"
-                  // ile yapılıyordu; artık .sl-row-actions (slack-settings.css). ?>
+            <?php
+                  ?>
             <span class="sl-row-actions">
                 <?php if (!$isExtra): ?>
                 <form method="post" action="/slack_settings.php">
@@ -432,12 +326,8 @@ function bcc_render_slack_team_row($w, $table, $canEdit, $isExtra = false)
     <?php
 }
 
-// Bir webhook için tam form (yeni ekleme VEYA düzenleme — $webhook null ise yeni).
-// Tablo-özel VE ekip-geneli kapsam AYNI bu fonksiyonu kullanır, HTML iki kez yazılmaz.
 function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
 {
-    // $masked KALDIRILDI: maskeli URL artık formun İÇİNDE tekrar edilmiyor —
-    // üstteki satır/tablo zaten gösteriyor, aynı ekranda iki kez çıkıyordu.
     ?>
     <form class="settings-form sl-webhook-form" method="post" action="/slack_settings.php">
         <?php echo csrf_field(); ?>
@@ -445,25 +335,13 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
         <input type="hidden" name="scope" value="<?php echo htmlspecialchars($scope, ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
         <input type="hidden" name="webhook_id" value="<?php echo $webhook ? (int) $webhook['id'] : ''; ?>">
-        <?php // ⚠️ İKİ ALANIN İLİŞKİSİ ARTIK EKRANDA YAZIYOR (kullanıcı sordu:
-              // "kanal adını Slack'teki kanalla aynı mı yazmak zorundayım?").
-              // Kısa cevap: hayır — HEDEF KANALI URL BELİRLER, kanal adı yalnızca
-              // bu sayfadaki etikettir. Uygulamanın Slack'e gönderdiği gövde
-              // {"text": ...}'ten ibaret, `channel` anahtarı YOK
-              // (bkz. bcc_slack_send_webhook(), src/slack.php). Eskiden ekranda
-              // sadece "opsiyonel, yalnızca gösterim" yazıyordu; teknik olarak
-              // doğruydu ama asıl karışan soruyu ("peki kanalı ne belirliyor?")
-              // yanıtsız bırakıyordu. ?>
+        <?php
+              ?>
         <label class="settings-field">
-            <?php // Etiket + rozet TEK sarmalayıcıda: .settings-field
-                  // `display:flex; flex-direction:column` (home.css) — sarmalayıcı
-                  // olmadan <span> AYRI bir flex öğesi olur ve rozet satırı tam
-                  // genişliğe yayılır (ölçüldü). ?>
-            <?php // Rozet ve ipucu DURUMA GÖRE. Eskiden ikisi de koşulsuzdu ve
-                  // düzenleme formunda "ZORUNLU" yazarken alan aslında boş
-                  // bırakılabiliyordu (input'ta `required` YOK) — ekran kendi
-                  // kendisiyle çelişiyordu. Ayrıca düzenlerken "Slack'te nereden
-                  // alınır" yönergesi gereksiz gürültü: adres zaten bağlı. ?>
+            <?php
+                  ?>
+            <?php
+                  ?>
             <span class="sl-label">Webhook URL
                 <?php if ($webhook): ?>
                     <span class="sl-opt">boş = değişmez</span>
@@ -472,9 +350,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 <?php endif; ?>
             </span>
             <?php if ($webhook): ?>
-                <?php // Maskeli URL burada TEKRAR EDİLMİYOR — üstteki satır/tablo
-                      // zaten gösteriyor. Eskiden ikisi de basılıyordu, aynı
-                      // ekranda "••••••••PRmx" iki kez görünüyordu. ?>
+                <?php
+                      ?>
                 <span class="sl-hint">Boş bırakırsanız <strong>mevcut adres korunur</strong> — sadece kanal adını ya da Aktif anahtarını değiştirmek için URL'i yeniden yapıştırmanız gerekmez. Yeni bir adres yapıştırırsanız <strong>hedef kanal da değişir</strong>.</span>
             <?php else: ?>
                 <span class="sl-hint">Slack &rarr; <em>Apps</em> &rarr; <em>Incoming Webhooks</em> &rarr; <em>Add New Webhook to Workspace</em> &rarr; kanalı seçin, size verilen adresi buraya yapıştırın. <strong>Hedef kanalı bu adres belirler</strong>; başka bir kanala göndermek için Slack'te yeni bir webhook oluşturmanız gerekir.</span>
@@ -488,8 +365,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
             <input type="text" name="channel_name" value="<?php echo $webhook ? htmlspecialchars((string) $webhook['channel_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="#trendyol-siparis">
         </label>
         <div class="sl-form-footer">
-            <?php // Ham checkbox yerine tasarım sisteminin toggle'ı. name/value
-                  // AYNEN korundu (is_active=1) — sunucu tarafı değişmedi. ?>
+            <?php
+                  ?>
             <label class="sp-toggle">
                 <input type="checkbox" name="is_active" value="1" <?php echo (!$webhook || (int) $webhook['is_active'] === 1) ? 'checked' : ''; ?>>
                 <span class="sp-toggle-track"></span>
@@ -555,15 +432,11 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 <td><span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span></td>
                                 <td><?php bcc_slack_status_pill($w['is_active']); ?></td>
                                 <?php if ($canEdit): ?>
-                                <?php // Aksiyonlar: dolu zeminli metin butonları yerine ortak
-                                      // .sp-icon-btn hayalet ikon butonları. POST/CSRF formları
-                                      // AYNEN korundu — yalnızca görünüm + aria-label değişti. ?>
+                                <?php
+                                      ?>
                                 <td class="settings-row-actions">
-                                    <?php // "Test et" — kaydedilmiş URL'e gerçek bir deneme
-                                          // mesajı atar ("Slack Integration Connected
-                                          // Successfully"). Kaydetme akışından AYRI: kaydetmek
-                                          // otomatik mesaj atsaydı her küçük düzenleme kanala
-                                          // gürültü basardı. ?>
+                                    <?php
+                                          ?>
                                     <form method="post" action="/slack_settings.php">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="test_webhook">
@@ -618,12 +491,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 <span>Yedek kanal: bu takımın <strong>tüm</strong> tablolarında (bu tablo dahil), tablo-özel bir webhook veya kural eşleşmemişse tetiklenir.</span>
             </div>
 
-            <?php // ---- SIRALAMA DEĞİŞTİ: ÖNCE "ne bağlı", SONRA "düzenle" ----
-                  // Eskiden form ÜSTTE, bağlı satır ALTTA idi: kullanıcı neyi
-                  // düzenlediğini görmeden düzenliyordu ve maskeli URL ikisinde
-                  // birden yazdığı için aynı ekranda iki kez çıkıyordu
-                  // (kullanıcı bildirdi: "gereksiz alan olmasın, hangi tarafa ne
-                  // gireceğim karışmasın"). Artık tek satır tek yerde. ?>
+            <?php
+                  ?>
             <?php if ($teamWebhook): ?>
                 <h3 class="sl-subhead sl-subhead--tight">Bağlı kanal</h3>
                 <?php bcc_render_slack_team_row($teamWebhook, $table, $canEdit); ?>
@@ -634,13 +503,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 </p>
             <?php endif; ?>
 
-            <?php // ---- INVARIANT İHLALİ UYARISI --------------------------------
-                  // "Ekip-geneli webhook tektir" kuralı bu formdan geçen yolda
-                  // zorlanıyor (bkz. save_webhook dalı), ama uygulamayı atlayarak
-                  // doğrudan DB'ye yazılan satırlar için geçerli değil. Böyle bir
-                  // satır ESKİDEN tamamen görünmezdi: sayfa birini gösteriyor,
-                  // bildirim başkasına gidiyordu. Artık fazlalık VARSA bağırıyor
-                  // ve silinebiliyor. Normal kurulumda bu blok HİÇ basılmaz. ?>
+            <?php
+                  ?>
             <?php if ($canEdit && !empty($extraTeamWebhooks)): ?>
                 <div class="sp-note sp-note--warn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
@@ -663,8 +527,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         Yedek kanal ekle
                     <?php endif; ?>
                 </h3>
-                <?php // Buton yazısı da duruma göre — "Kaydet" boş bir formda
-                      // ne yapacağını söylemiyordu. ?>
+                <?php
+                      ?>
                 <?php bcc_render_slack_webhook_form('team', $teamWebhook, $table, $teamWebhook ? 'Kaydet' : 'Ekle'); ?>
             <?php endif; ?>
         </div>
@@ -703,7 +567,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                     <td class="sl-operator"><?php echo htmlspecialchars($GLOBALS['BCC_SLACK_ROUTING_OPERATORS'][$r['operator']], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td class="sl-value"><?php echo htmlspecialchars($r['value'], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td><?php
-                                        // Kanal adı varsa düz metin; yoksa maskeli URL kod rozetiyle.
                                         if ((string) $r['webhook_channel_name'] !== '') {
                                             echo '<span class="sl-channel">' . htmlspecialchars((string) $r['webhook_channel_name'], ENT_QUOTES, 'UTF-8') . '</span>';
                                         } else {
@@ -772,11 +635,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         Yeni kural ekle
                     </h3>
-                    <?php // Dört alan artık ALT ALTA değil TEK SATIRDA (sl-rule-form,
-                          // yatay grid) — `settings-form-stacked` kaldırıldı. Dar
-                          // ekranda önce iki, sonra tek sütuna iner.
-                          // slack-routing.js'in bağlı olduğu id'ler (#routing-rule-field,
-                          // #routing-rule-value) AYNEN korundu. ?>
+                    <?php
+                          ?>
                     <form class="settings-form sl-rule-form" method="post" action="/slack_settings.php">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="add_routing_rule">
@@ -819,17 +679,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
         </div>
 
         <?php
-        // ---- DÖRDÜNCÜ OLAY: hücre değişikliğinde bildirim ------------------
-        // Üç "oluşturma" olayı (yeni kayıt/tablo/alan) koda gömülü ve her zaman
-        // açık; bu dördüncüsü AYARLA açılıyor çünkü tetiklenme sıklığı çok daha
-        // yüksek. Hiçbir alan işaretli değilse özellik KAPALIDIR — mevcut
-        // tablolar bu karttan etkilenmez (bkz. migrations/022).
-        //
-        // Salt-okunur/otomatik alanlar (oluşturulma zamanı, oluşturan, son
-        // değişiklik, otomatik numara) listeye HİÇ girmez: cell_update.php
-        // onları zaten yazamaz, yani işaretlense bile hiçbir zaman
-        // tetiklenmezdi — "çalışmayan ayar" göstermek yerine hiç gösterilmiyor.
-        // Aynı gerekçe form_edit.php'nin alan listesinde de var.
         $watchableFields = array();
         foreach ($fields as $wf) {
             if (!in_array($wf['field_type'], $GLOBALS['BCC_READONLY_FIELD_TYPES'], true)) {
@@ -862,10 +711,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                     </div>
                 <?php endif; ?>
             <?php else: ?>
-                <?php // Seçilebilir kart listesi — form_edit.php'nin .fe-field-list
-                      // deseniyle AYNI fikir, ama o dosyanın CSS'i .fe-page'e
-                      // kapsanmış durumda; bu sayfanın kendi (dar) sürümü
-                      // slack-settings.css'te .sl-watch-* olarak duruyor. ?>
+                <?php
+                      ?>
                 <form method="post" action="/slack_settings.php">
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="save_watched_fields">
@@ -878,13 +725,8 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 ? $GLOBALS['BCC_FIELD_TYPES'][$wf['field_type']]
                                 : $wf['field_type'];
                             ?>
-                            <?php // `sp-toggle` sınıfı BİLEREK burada: anahtar görselinin
-                                  // "açık" hâli (.sp-toggle input:checked + .sp-toggle-track,
-                                  // settings-page.css) o sınıfa bağlı. Yalnızca .sl-watch-item
-                                  // verilseydi kutu işaretliyken bile anahtar gri kalırdı
-                                  // (ölçüldü). İkinci bir toggle CSS'i yazmak yerine ORTAK
-                                  // olanı kullanıyoruz; .sl-watch-item yalnızca satır
-                                  // yerleşimini (kart görünümü, tip etiketi) ekliyor. ?>
+                            <?php
+                                  ?>
                             <label class="sl-watch-item sp-toggle">
                                 <input type="checkbox" name="watched_fields[]" value="<?php echo (int) $wf['id']; ?>" <?php echo in_array((int) $wf['id'], $watchedFieldIds, true) ? 'checked' : ''; ?>>
                                 <span class="sp-toggle-track"></span>

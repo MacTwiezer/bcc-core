@@ -8,11 +8,10 @@ $user = current_user();
 $tableId = isset($_GET['table_id']) ? (int) $_GET['table_id'] : (isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0);
 $table = find_table_or_404($tableId);
 
-// Her erişimde KVKK ekip izolasyonu: bu tablonun ekibine üye olmayan hiçbir şey göremez.
 require_team_access($table['team_id']);
 
 $role = current_user_role_in_team($table['team_id']);
-$canEdit = bcc_can_manage_schema($role);  // alan şeması — src/auth.php
+$canEdit = bcc_can_manage_schema($role);
 
 $fieldTypes = $GLOBALS['BCC_FIELD_TYPES'];
 
@@ -21,7 +20,6 @@ $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
-    // Değiştirme yalnızca owner rolünde açık.
     require_role($table['team_id'], 'owner');
 
     $action = isset($_POST['action']) ? $_POST['action'] : '';
@@ -36,26 +34,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_field') {
         $name = isset($_POST['name']) ? trim($_POST['name']) : '';
         $fieldType = isset($_POST['field_type']) ? $_POST['field_type'] : '';
-        // autonumber'da her zaman 0 — bcc_create_field()'ın kullandığı AYNI
-        // kural, tek fonksiyondan (bkz. bcc_normalize_is_required, src/schema.php).
         $isRequired = bcc_normalize_is_required($fieldType, isset($_POST['is_required']) ? $_POST['is_required'] : null);
         $optionsText = isset($_POST['options_text']) ? $_POST['options_text'] : '';
 
         if ($name === '') {
             $error = 'Alan adı boş olamaz.';
         } elseif (mb_strlen($name, 'UTF-8') > 150) {
-            // fields.name VARCHAR(150) — bcc_create_field()'ın (create_field aksiyonu)
-            // ZATEN yaptığı AYNI kontrol; bu dosyanın update_field aksiyonu atlanmıştı
-            // (sql_mode'da STRICT_TRANS_TABLES yok, uzun isim hatasız sessizce kırpılıyordu).
             $error = 'Alan adı en fazla 150 karakter olabilir.';
         } elseif (!isset($fieldTypes[$fieldType])) {
             $error = 'Geçersiz alan tipi.';
         } else {
-            // Color: seçenek başına renk yalnızca "Alanı Düzenle" formunda
-            // gönderilir (create formunda hiç renk seçici yok — yeni alanlar
-            // render sırasında palete otomatik sırayla düşer, bkz.
-            // bcc_resolved_choice_color_key). Aynı istekte hem metni hem rengi
-            // değiştirmek indeksleri kaydırabilir — kozmetik bir sınır.
             $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($_POST['colors']) ? $_POST['colors'] : null, $_POST);
 
             if (!$optionsResult['ok']) {
@@ -72,16 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     bcc_error_page('Alan bulunamadı', 'Bu alan bu tabloya ait değil.', 404);
                 }
 
-                // Aynı tabloda başka bir alan bu adı kullanıyor mu? KAYDIN
-                // KENDİSİ hariç tutulur (4. argüman) — yoksa yalnızca tipini
-                // değiştirip adı aynı bırakmak "zaten kullanılıyor" hatası
-                // verir ve alan hiç düzenlenemezdi.
                 if (bcc_name_taken('fields', $table['id'], $name, $fieldId)) {
                     $error = bcc_name_taken_error('fields', 'alan');
                 } else {
-                    // Transaction (Grup C2): bcc_create_field() ile AYNI gerekçe —
-                    // tip autonumber'a çevrildiğinde UPDATE + backfill + sayaç
-                    // güncellemesi ATOMİK olmalı.
                     try {
                         bcc_begin_transaction();
 
@@ -96,12 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             )
                         );
 
-                        // Mevcut bir alanın TİPİ autonumber'a çevrildiğinde de backfill
-                        // şart — atlanırsa alan var ama tüm kayıtlar boş görünürdü.
-                        // bcc_backfill_autonumber_field() yalnızca NUMARASI OLMAYAN
-                        // kayıtları doldurur ve sayacı GERİ SARMAZ, bu yüzden
-                        // autonumber -> number -> autonumber çevriminde eski numaralar
-                        // KORUNUR (tasarım kararı) ve bu çağrı zararsız bir no-op olur.
                         if ($fieldType === 'autonumber') {
                             bcc_backfill_autonumber_field($fieldId, (int) $table['id']);
                         }
@@ -131,8 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'delete_field') {
-            // DB satırı (ve attachments'taki karşılıkları) CASCADE ile siliniyor ama
-            // diskteki fiziksel dosyalar otomatik silinmez — bu yüzden DELETE'ten ÖNCE.
             bcc_delete_attachment_files_by_field($field['id']);
             bcc_execute('DELETE FROM fields WHERE id = :id', array('id' => $field['id']));
             log_audit('field.delete', 'field', $field['id'], array('name' => $field['name']), $table['team_id']);
@@ -140,9 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $direction = isset($_POST['direction']) ? $_POST['direction'] : '';
 
-            // İKİ UPDATE + log_audit TEK transaction'da — bcc_reorder_sibling()
-            // artık transaction'ı ÇAĞIRANDAN bekliyor (bkz. o fonksiyonun
-            // sözleşmesi; iç içe transaction mysqli'de desteklenmiyor).
             try {
                 bcc_begin_transaction();
 
@@ -176,18 +146,9 @@ if ($canEdit && $editId > 0) {
         }
     }
 }
-// Sol panelin "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
 
 $homeActiveNav = 'fields';
 $homePageTitle = bcc_tab_title($table['name'] . ': Alanlar');
-// Sayfaya ÖZEL stylesheet. Bu ekranın .settings-* sınıfları dokuz başka sayfayla
-// PAYLAŞILIYOR (admin/*, bases, base_tables, form_edit, kanban, slack_settings) —
-// home.css'i değiştirmek hepsini yeniden tasarlardı. Bu yüzden tüm yeni kurallar
-// assets/settings-page.css (ORTAK iskelet, base_tables.php ile paylaşılıyor) +
-// assets/table-fields.css (yalnızca alan tipi kavramına ait olanlar) içinde ve
-// hepsi .sp-page altına kapsanmış durumda.
 $homeExtraCss = array('settings-page.css', 'table-fields.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -235,9 +196,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         ?>
                             <tr>
                                 <td class="sp-primary-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <?php // Tip rozeti hap biçiminde: ikon .field-type-badge'in KENDİ
-                                      // background-image'ından geliyor (theme.css), burada yalnızca
-                                      // saran hap eklendi — ikon tanımı kopyalanmadı. ?>
+                                <?php
+                                      ?>
                                 <td>
                                     <span class="tf-type-pill">
                                         <span class="field-type-badge field-type-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
@@ -256,10 +216,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     <?php endif; ?>
                                 </td>
                                 <?php if ($canEdit): ?>
-<?php // Aksiyonlar: dolu zeminli metin butonları yerine eşit ölçülü HAYALET ikon
-                                      // butonları (zemin yalnızca hover'da). POST mekanizması DEĞİŞMEDİ —
-                                      // her biri hâlâ kendi csrf'li <form>'u; yalnızca butonun görünümü ve
-                                      // erişilebilir adı (aria-label/title) değişti. ?>
+<?php
+                                      ?>
                                 <td class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/table_fields.php">
@@ -330,16 +288,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
                         </label>
                         <?php
-                        // Currency/Percent/Rating (Grup C1) — input name'leri
-                        // src/partials/field_type_wizard_fields.php ile BİREBİR AYNI
-                        // (currency_symbol / currency_decimal_places /
-                        // percent_decimal_places / max_rating); bcc_build_field_options()
-                        // tek bir yerden bu adları okuyor, ikinci bir eşleme YOK.
-                        // Bulunan gerçek bug: bu satırlar hiç yoktu — mevcut bir currency
-                        // alanının yalnızca ADINI değiştirmek bile $_POST'ta sembol/ondalık
-                        // bulunmadığı için options'ı sessizce varsayılana (₺, 2) sıfırlıyordu.
-                        // Değerler kayıtlı options'tan ön-doldurulduğu için "değiştirmeden
-                        // kaydet" artık AYNI değerleri geri yazar.
                         $editFieldOptions = json_decode((string) $editField['options'], true);
                         $editFieldOptions = is_array($editFieldOptions) ? $editFieldOptions : array();
                         ?>
@@ -386,13 +334,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <?php /* autonumber'da "Zorunlu alan" gizlenir — alan ekleme
-                                sihirbazının (field-type-wizard.js) AYNI davranışı.
-                                Gönderilse bile bcc_normalize_is_required() 0'a
-                                zorluyor; bu yalnızca anlamsız bir kutuyu ekrandan
-                                kaldırıyor. Burada sunucu tarafında yapılıyor çünkü
-                                bu form, tipi seçildikten SONRA yeniden render edilen
-                                tam sayfa formu (sihirbazın canlı JS geçişi yok). */ ?>
                         <?php if ($editField['field_type'] !== 'autonumber'): ?>
                             <label class="settings-field settings-field-checkbox">
                                 <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?>>
@@ -414,14 +355,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
                     <?php
                     $fieldTypeLabels = $fieldTypes;
-                    // "Zorunlu alan" onay kutusu ALAN OLUŞTURMADA gösterilmiyor
-                    // (ürün kararı) — grid.php'nin "+" popup'ı bu bayrağı zaten
-                    // false veriyordu, aynı mekanizma. Paylaşılan partial'a
-                    // DOKUNULMADI.
-                    //
-                    // Yetenek kaybolmuyor: alan oluşturulduktan sonra "Düzenle"
-                    // formunda "Zorunlu alan" kutusu duruyor (bu dosyada, edit
-                    // dalında). Yeni alan zaten is_required=0 ile oluşuyor.
                     $fieldWizardShowRequired = false;
                     require __DIR__ . '/../src/partials/field_type_wizard_fields.php';
                     ?>
@@ -431,10 +364,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
             </script>
             <script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
-            <?php // Alan tipi arama kutusu — YALNIZCA bu sayfada. Paylaşılan
-                  // partial'a ve grid.php'nin "+" popup'ına dokunulmasın diye
-                  // kutuyu çalışma anında #new-field-type-step'in içine ekliyor
-                  // (bkz. assets/table-fields.js başlığı). ?>
+            <?php
+                  ?>
             <script src="<?php echo bcc_asset_url('table-fields.js'); ?>" defer></script>
         <?php else: ?>
             <p class="settings-hint">Bu ekipte alan oluşturmak/düzenlemek için owner rolü gerekir.</p>

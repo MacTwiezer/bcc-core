@@ -1,10 +1,4 @@
 <?php
-// "Workspaces" — OpsFlow'un "All Workspaces" ekranının karşılığı. YENİ bir
-// varlık/DDL YOK: mevcut teams/team_members üzerine kurulu (bkz. PROJE-DURUM.md
-// analiz notu — "team" zaten workspace'in KVKK-izole edilmiş, collaborators'lı
-// karşılığı). Create/Settings hâlâ PASİF (onaylanmış karar, kapsam dışı) — Paylaş
-// artık takımın HER üyesine açık (bkz. team_members.php'nin hiyerarşik rol
-// yönetimi, require_team_access zaten en dış koruma).
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -12,12 +6,6 @@ require_login();
 
 $user = current_user();
 
-// Liste ROLÜ de taşır: sağdaki aksiyon butonlarının (Katılımcıları yönet /
-// Base oluştur / Ayarlar) görünürlüğü seçili alandaki role bağlı ve bilgi
-// zaten burada — current_user_role_in_team() ile AYRI bir sorgu açılmaz.
-// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
-// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
-// ayrisma riski kalmasin diye tek yere alindi.
 $teams = bcc_teams_for_current_user();
 
 $teamIds = array();
@@ -34,10 +22,6 @@ if (!empty($teamIds)) {
     }
 }
 
-// Seçili takım: ?team_id= yalnızca kullanıcının ERİŞEBİLDİĞİ bir takımsa kabul
-// edilir (yukarıdaki $teams listesiyle doğrulanır) — yoksa ilk takıma düşer.
-// "Erişebildiği" = normal kullanıcı için ÜYESİ OLDUĞU, platform yöneticisi
-// için TÜM ekipler (bkz. bcc_teams_for_current_user).
 $requestedTeamId = isset($_GET['team_id']) ? (int) $_GET['team_id'] : 0;
 $selectedTeamId = 0;
 $selectedTeamName = '';
@@ -53,21 +37,10 @@ if ($selectedTeamId === 0 && !empty($teams)) {
     $selectedTeamName = $teams[0]['name'];
 }
 
-// Seçili çalışma alanındaki YETENEKLER — tek kaynak src/auth.php. Sol panelden
-// başka bir çalışma alanına geçildiğinde sayfa yeniden yüklendiği için bu
-// bayraklar her zaman GÖRÜNTÜLENEN alana aittir (kullanıcı bir alanda owner,
-// diğerinde viewer olabilir; tek bir "ben owner'ım" bayrağı yanlış olurdu).
 $selectedRole = null;
 $canManageMembers = false;
 $canCreateBase = false;
 
-// Base oluşturma modalının çalışma alanı listesi — dashboard.php'deki AYNI
-// süzgeç (bcc_can_manage_bases). Modal SEÇİLİ alanı ön seçili getirir ama
-// listeyi KİLİTLEMEZ: kullanıcı buradan başka bir alanda da base açabilir.
-//
-// ⚠️ $canCreateBase'ten AYRI bir soru: o "SEÇİLİ alanda base açabilir miyim?",
-// bu "hangi alanlarda açabilirim?". Tetikleyici butonlar yalnızca
-// $canCreateBase ile basılıyor; bu liste modalın İÇERİĞİNİ belirliyor.
 $creatableTeams = array();
 foreach ($teams as $t) {
     if (bcc_can_manage_bases($t['role'])) {
@@ -77,13 +50,8 @@ foreach ($teams as $t) {
 
 $collaborators = array();
 if ($selectedTeamId) {
-    // KVKK: $teams zaten kullanıcının kapsamıyla filtrelenmişti ama savunma
-    // amaçlı ikinci bir doğrulama — projedeki her veri erişiminin ÖNÜNDE olan
-    // aynı fonksiyon (o da admin kapsamını AYNI kaynaktan okur).
     require_team_access($selectedTeamId);
 
-    // $teams zaten rolü içeriyor — ORADAN okunur, current_user_role_in_team()
-    // ile ikinci bir sorgu AÇILMAZ (ikisi de AYNI admin kuralını uygular).
     foreach ($teams as $t) {
         if ((int) $t['id'] === $selectedTeamId) {
             $selectedRole = $t['role'];
@@ -93,13 +61,6 @@ if ($selectedTeamId) {
     $canManageMembers = bcc_can_manage_members($selectedRole);
     $canCreateBase = bcc_can_manage_bases($selectedRole);
 
-    // u.is_active AYRICA çekilir (bulunan gerçek bug: bu sorgu hiç seçmiyordu) —
-    // admin bir kullanıcıyı pasif yaptığında team_members satırı SİLİNMEZ (bkz.
-    // admin/index.php "Pasif yap"), bu yüzden pasif bir kullanıcı burada aktif bir
-    // katılımcıdan (isim/e-posta/rol) AYIRT EDİLEMEZ görünüyordu — oysa
-    // bcc_team_users_by_id() ('user' alan tipi seçenekleri) ve admin/assign_team.php
-    // ('kullanılabilir kullanıcılar' listesi) zaten yalnızca aktif kullanıcıları
-    // gösteriyor, aynı prensip burada da uygulanmalı.
     $collaborators = bcc_fetch_all(
         'SELECT u.id, u.full_name, u.email, u.is_active, tm.role
          FROM team_members tm
@@ -110,10 +71,6 @@ if ($selectedTeamId) {
     );
 }
 
-// ---- Seçili çalışma alanının PANO verileri --------------------------------
-// Sorgular src/schema.php'de (bcc_workspace_*) — bu dosya şablon olarak kalıyor
-// ve sayaçlar ileride başka bir ekrandan da okunabilir. Hepsi $selectedTeamId
-// ile sınırlı; yukarıdaki require_team_access() KVKK kapısının ardında.
 $wsBases = array();
 $wsStarredBases = array();
 $wsUsage = array('base_count' => 0, 'table_count' => 0, 'record_count' => 0, 'storage_bytes' => 0, 'slack_webhook_count' => 0);
@@ -129,24 +86,12 @@ if ($selectedTeamId) {
     $wsUsage = bcc_workspace_usage($selectedTeamId);
     $wsActivity = bcc_workspace_activity($selectedTeamId, 12);
 
-    // "Katılımcıları yönet" ARTIK SAYFA DEĞİŞTİRMİYOR: aynı sayfada "Paylaş"
-    // modalını açıyor. Modal grid.php ve interface.php'nin kullandığı bileşenin
-    // TA KENDİSİ (bcc_share_modal_payload + src/partials/share_modal.php +
-    // assets/share-modal.js) — üçüncü bir katılımcı yönetimi arayüzü
-    // YAZILMADI. Yetki kararları (kim rol değiştirebilir/çıkarabilir) payload
-    // içinde sunucuda hesaplanıyor; asıl kapı yine uçnoktalarda.
-    //
-    // team_members.php SİLİNMEDİ: modalın kapsamadığı işler (arama, rol
-    // filtresi, CSV export, toplu çıkarma) orada duruyor ve modalın içindeki
-    // "Tüm üye ayarları" bağlantısı oraya gidiyor.
     require_once __DIR__ . '/../src/share_modal_payload.php';
 
     $shareModalPayload = bcc_share_modal_payload($selectedTeamId, $selectedRole);
     $shareModalTeamId = $selectedTeamId;
     $shareModalTeamName = $selectedTeamName;
 
-    // Davet kutusunun <datalist> önerileri — interface.php/grid.php'deki AYNI
-    // süzgeç: takımın (bekleyenler dahil) henüz üyesi OLMAYAN aktif kullanıcılar.
     $shareExistingIds = array_map('intval', array_column(
         array_merge($shareModalPayload['collaborators'], $shareModalPayload['pending']),
         'id'
@@ -157,26 +102,11 @@ if ($selectedTeamId) {
             return !in_array((int) $candidate['id'], $shareExistingIds, true);
         }));
     }
-    // NOT: burada bir zamanlar kaldırılan hızlı davet kutusunun rol listesi
-    // bcc_assignable_roles() ile hesaplanıyordu; kutu gidince bu çağrı da ölü
-    // kaldığı için silindi. Fonksiyonun KENDİSİ duruyor — team_members.php,
-    // "Paylaş" modalı (src/share_modal_payload.php) ve
-    // api/team_member_assign.php kullanmaya devam ediyor.
 }
 
-// Sol panelin Starred alt-listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
-// ($teamIds yukarıdaki base sayaçları için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'workspaces';
 $homePageTitle = bcc_tab_title('Çalışma Alanları');
-// Ortak tasarım sistemi + yalnızca bu sayfaya ait iki sütunlu yerleşim.
-// Rol hapı (.sp-role), avatar (.sp-avatar) ve bilgi kutusu (.sp-note) ORTAK
-// dosyada — burada kopyası yok.
-// grid-shell.css: "Paylaş" modalı .gs-* sınıflarını kullanıyor ve o kurallar
-// orada tanımlı (interface.php'nin AYNI gerekçeyle onu yüklemesi gibi) —
-// modalın stilleri ikinci kez YAZILMADI.
 $homeExtraCss = array('settings-page.css', 'workspaces.css', 'grid-shell.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -187,14 +117,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php if (empty($teams)): ?>
-            <?php // ⚠️ ADMİN İÇİN AYRI METİN: bu dal eskiden herkese "yöneticinizle
-                  // iletişime geçin" diyordu — platform yöneticisinin KENDİSİ bu
-                  // ekranda hiçbir şey göremediğinde bu çıkmaz sokaktı (oluşturma
-                  // butonu yalnızca aşağıdaki $teams dolu dalında basılıyor).
-                  // Aynı modal tetikleyicisi buraya da konuyor.
-                  //
-                  // Admin TÜM ekipleri gördüğü için bu dal onun açısından
-                  // "sistemde hiç çalışma alanı yok" demektir — metin buna göre. ?>
+            <?php
+                  ?>
             <?php if ((int) $user['is_admin'] === 1): ?>
                 <p class="settings-empty">
                     <strong>Sistemde henüz hiç çalışma alanı yok.</strong>
@@ -215,12 +139,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php else: ?>
             <div class="wsx-layout">
 
-                <?php // ---- SOL: çalışma alanı seçici --------------------------------
-                      // Tek/iki çalışma alanı olan kullanıcıda sütun "boş" görünüyordu:
-                      // kartlar serbestçe havada duruyordu, panelin bir sınırı yoktu.
-                      // Artık hepsi ÇERÇEVELİ bir panelin içinde (başlık + arama + liste
-                      // + alt bilgi) — panel kendi yüksekliğini taşıdığı için 1 öğeyle
-                      // bile bitmiş bir bileşen gibi duruyor. ?>
+                <?php
+                      ?>
                 <aside class="wsx-side">
                     <div class="wsx-panel">
 
@@ -229,10 +149,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <span class="wsx-panel-count"><?php echo count($teams); ?></span>
                         </div>
 
-                        <?php // Arama: liste uzadıkça asıl işini yapar, kısa listede de
-                              // panelin üst kenarını tanımlar. Katılımcı aramasından
-                              // (.wsx-search, workspaces.js) AYRI bir bileşen: farklı
-                              // liste, farklı DOM, farklı data-* kancası. ?>
+                        <?php
+                              ?>
                         <div class="wsx-panel-search">
                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                             <input
@@ -272,18 +190,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
 
                         <div class="wsx-panel-foot">
-                            <?php // "Yeni çalışma alanı" YALNIZCA platform adminine:
-                                  // çalışma alanı = takım ve takım oluşturmak
-                                  // admin/create_team.php'nin işi (o dosyanın require_admin()'i).
-                                  // Herkese gösterilen bir buton, sıradan kullanıcıyı 403'e
-                                  // götüren ölü bir vaat olurdu — bu yüzden yetkisi olmayana
-                                  // BUTON DEĞİL, nedenini söyleyen tek satır basılıyor
-                                  // (alt bilgi yine de dolu kalır). ?>
+                            <?php
+                                  ?>
                             <?php if ((int) $user['is_admin'] === 1): ?>
-                                <?php // href KORUNDU: create-team-modal.js tıklamayı yakalayıp
-                                      // aynı sayfada modal açıyor. JS yüklenmezse bağlantı yine
-                                      // /admin/create_team.php sayfasına gider — akış JS'siz de
-                                      // tamamlanır (ilerici zenginleştirme). ?>
+                                <?php
+                                      ?>
                                 <a href="/admin/create_team.php" class="wsx-newbtn" data-create-team-btn>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                                     Yeni Çalışma Alanı
@@ -295,14 +206,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <?php endif; ?>
 
                             <?php
-                            // Kullanım rozeti. GERÇEK sayı: kullanıcının üyesi olduğu
-                            // çalışma alanı adedi. Eşik ise BCC_USER_WORKSPACE_SOFT_LIMIT'ten
-                            // gelen GÖRSEL bir referans, zorlanan bir kota DEĞİL (bkz.
-                            // src/schema.php'deki not) — bu yüzden "plan/tier" adı
-                            // UYDURULMADI, yalnızca sayaç gösteriliyor.
-                            //
-                            // Üyelik eşiği aşarsa kesir GÖSTERİLMEZ ("7 / 5" kırık görünür),
-                            // yalnızca sayı yazılır.
                             $wsCount = count($teams);
                             $wsLimit = (int) $GLOBALS['BCC_USER_WORKSPACE_SOFT_LIMIT'];
                             $wsWithinLimit = $wsLimit > 0 && $wsCount <= $wsLimit;
@@ -334,7 +237,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     </div>
                 </aside>
 
-                <?php // ---- SAĞ: seçili çalışma alanı --------------------------------- ?>
                 <div class="wsx-main">
                     <div class="settings-card">
                         <div class="wsx-head">
@@ -352,24 +254,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </div>
                             <div class="wsx-actions">
                                 <?php
-                                // Aksiyonlar SEÇİLİ çalışma alanındaki role göre basılır
-                                // (bkz. $canManageMembers / $canCreateBase yukarıda) —
-                                // CSS ile gizlenmiyor, yetkisi olmayanın kaynağında hiç yok.
-                                //
-                                // "Katılımcıları yönet": ARTIK SAYFA DEĞİŞTİRMİYOR —
-                                //   aynı sayfada "Paylaş" modalını açıyor
-                                //   (data-share-modal-open, share-modal.js). Bu yüzden
-                                //   <a href> DEĞİL <button>: yönlendirme kalkınca href'i
-                                //   olmayan bir bağlantı bırakmak yanlış olurdu
-                                //   (interface.php'deki AYNI karar). Owner olmayana hiç
-                                //   basılmıyor, "yönet" vaadi boşa çıkmasın diye.
-                                // "Base oluştur": Owner eşiği
-                                //   (bcc_can_manage_bases), bases.php'nin formu ve
-                                //   api/base_create.php ile AYNI eşik.
-                                // "Ayarlar": çalışma alanı ayarları diye bir ÖZELLİK YOK
-                                //   (bu dosyanın onaylanmış kararı) — buton hâlâ devre
-                                //   dışı, ama artık yalnızca onu bir gün kullanacak olan
-                                //   role gösteriliyor.
                                 ?>
                                 <?php if ($canManageMembers): ?>
                                 <button type="button" class="wsx-btn wsx-btn--primary" data-share-modal-open>
@@ -378,23 +262,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </button>
                                 <?php endif; ?>
                                 <?php if ($canCreateBase): ?>
-                                <?php // "Base oluştur" ARTIK bases.php'ye GİTMİYOR: aynı
-                                      // sayfada ortak base oluşturma modalını açıyor
-                                      // (dashboard.php ile AYNI partial + AYNI home.js
-                                      // davranışı). Bu yüzden <a href> değil <button>.
-                                      // Modal çalışma alanı seçicisinde BU alanı ön
-                                      // seçili getiriyor (bkz. aşağıdaki require). ?>
+                                <?php
+                                      ?>
                                 <button type="button" class="wsx-btn" data-create-base-open>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                                     Base oluştur
                                 </button>
                                 <?php endif; ?>
-                                <?php // "Ayarlar" butonu KALDIRILDI (denetimde bulundu): kalıcı olarak
-                                      // disabled basılıyordu, arkasında ne bir özellik ne de JS vardı —
-                                      // yani hiçbir koşulda tıklanamayan bir düğmeydi. Çalışma alanı
-                                      // ayarları diye bir kavram bu projede YOK; özellik geldiğinde
-                                      // buton onunla birlikte gelir. (Kart menüsündeki ölü "Çoğalt"
-                                      // öğesiyle AYNI karar.) ?>
+                                <?php
+                                      ?>
                                 <?php if (!$canManageMembers && !$canCreateBase): ?>
                                     <span class="wsx-role-note">
                                         Rolünüz: <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$selectedRole], ENT_QUOTES, 'UTF-8'); ?></strong>
@@ -403,9 +279,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </div>
                         </div>
 
-                        <?php // ---- Kullanım şeridi: başlığın hemen altında dört sayaç ----
-                              // Kartın üstündeki ölü boşluğu dolduran ilk katman. Sayılar
-                              // bcc_workspace_usage()'dan; hiçbiri tahmin değil. ?>
+                        <?php
+                              ?>
                         <div class="wsx-statbar">
                             <div class="wsx-stat">
                                 <span class="wsx-stat-value"><?php echo number_format($wsUsage['base_count'], 0, ',', '.'); ?></span>
@@ -426,31 +301,24 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
                     </div>
 
-                    <?php // Başlık kartının ALTINDA iki sütun: solda içerik (base'ler +
-                          // katılımcılar), sağda dar bilgi rayı (kullanım + hareketler).
-                          // Sayfanın "sağ tarafta ölü alan" sorununun asıl çözümü bu —
-                          // tek geniş sütun yerine içerik kendi içinde ikiye ayrılıyor. ?>
+                    <?php
+                          ?>
                     <div class="wsx-body">
                     <div class="wsx-body-main">
 
-                    <?php // ================= BASE IZGARASI ========================= ?>
                     <div class="settings-card">
                         <div class="wsx-collab-head">
                             <h3 class="wsx-collab-title">Base'ler <span class="sp-count"><?php echo count($wsBases); ?></span></h3>
                             <?php if ($canCreateBase): ?>
-                                <?php // Üstteki "Base oluştur" ile AYNI modalı açar —
-                                      // home.js tetikleyicileri data-* ile buluyor, bu
-                                      // yüzden aynı sayfada ikisi birden çalışıyor. ?>
+                                <?php
+                                      ?>
                                 <button type="button" class="wsx-linkbtn" data-create-base-open>+ Yeni base</button>
                             <?php endif; ?>
                         </div>
 
                         <?php if (!empty($wsStarredBases)): ?>
-                            <?php // ---- Yıldızlılar kısayolu ----
-                                  // user_starred_bases'ten geliyor (sol paneldeki listeyle
-                                  // AYNI kaynak), yalnızca BU çalışma alanına ait olanlar.
-                                  // Hiç yıldızlı yoksa bölüm HİÇ basılmaz — boş bir "Yıldızlılar"
-                                  // başlığı sayfayı zenginleştirmez, seyreltir. ?>
+                            <?php
+                                  ?>
                             <div class="wsx-fav">
                                 <span class="wsx-fav-label">
                                     <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="currentColor"/></svg>
@@ -478,10 +346,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <div class="wsx-base-grid">
                                 <?php foreach ($wsBases as $b):
                                     $bid = (int) $b['id'];
-                                    // "Son değişiklik": cell_values.updated_at'ten TÜRETİLİYOR
-                                    // (bases'te updated_at yok, DDL eklenmedi). Hiç hücre
-                                    // düzenlenmemişse base'in oluşturulma tarihine düşülür —
-                                    // hangisi olduğu etikette AÇIKÇA yazıyor, uydurma yok.
                                     $lastTs = $b['last_edit_at'] !== null ? $b['last_edit_at'] : $b['created_at'];
                                     $lastWord = $b['last_edit_at'] !== null ? 'düzenlendi' : 'oluşturuldu';
                                 ?>
@@ -511,33 +375,19 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <?php endif; ?>
                     </div>
 
-                    <?php // ================= KATILIMCILAR ========================== ?>
                     <div class="settings-card">
                         <div class="wsx-collab-head" id="wsx-collab-head">
                             <h3 class="wsx-collab-title">Katılımcılar <span class="sp-count"><?php echo count($collaborators); ?></span></h3>
                         </div>
 
-                        <?php // ---- "Hızlı davet" kutusu KALDIRILDI ----
-                              // E-posta + rol + "Davet Et" satırı buradaydı. Katılımcı
-                              // EKLEME artık bu sayfada yok; bu kart yalnızca kimin
-                              // hangi rolle bulunduğunu GÖSTERİR. Ekleme/çıkarma ve rol
-                              // değiştirme işinin gerçek yeri team_members.php (üstteki
-                              // "Katılımcıları yönet" butonu oraya gider) — o sayfa arama,
-                              // rol filtresi, CSV export ve toplu çıkarma da sunuyor.
-                              // İki ekranda iki ayrı ekleme yolu tutmak, aynı işin iki
-                              // yerde bakımı demekti.
-                              //
-                              // Uç nokta (api/team_member_assign.php) SİLİNMEDİ: "Paylaş"
-                              // modalı ve team_members.php onu kullanmaya devam ediyor —
-                              // burada yalnızca BU sayfanın tetikleyicisi kalktı. ?>
+                        <?php
+                              ?>
 
                         <?php if (empty($collaborators)): ?>
                             <p class="settings-empty"><strong>Bu çalışma alanında katılımcı yok.</strong></p>
                         <?php else: ?>
-                            <?php // Sonsuz dikey liste yerine çok sütunlu ızgara. Rol hapları
-                                  // .sp-role--<rol> ile renkleniyor (owner/editor/commenter/viewer).
-                                  // .ws-collab-avatar / .ws-collab-role BİLEREK kullanılmadı:
-                                  // ikisi de grid/interface/team_members ile PAYLAŞILIYOR. ?>
+                            <?php
+                                  ?>
                             <div class="wsx-collab-grid" id="wsx-collab-grid">
                                 <?php foreach ($collaborators as $c): ?>
                                     <div class="wsx-member">
@@ -552,12 +402,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                             <?php endif; ?>
                                             <span class="sp-role sp-role--<?php echo htmlspecialchars($c['role'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></span>
                                         </div>
-                                        <?php // Rol değiştirme / çıkarma bu sayfada YOK — team_members.php'nin
-                                              // işi (assign / remove aksiyonları orada). Bu yüzden hover
-                                              // kısayolu sahte bir dropdown değil, GERÇEK sayfaya giden link.
-                                              // Yalnızca Owner'a: "rolü değiştir veya çıkar" diyen bir
-                                              // kısayolu, o sayfada hiçbirini yapamayacak bir role
-                                              // göstermek yanıltıcı olurdu. ?>
+                                        <?php
+                                              ?>
                                         <?php if ($canManageMembers): ?>
                                         <a class="wsx-member-manage" href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" title="Rolü değiştir veya çıkar" aria-label="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?> — rolü değiştir veya çıkar">
                                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>
@@ -569,16 +415,12 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <?php endif; ?>
                     </div>
 
-                    </div><?php // /.wsx-body-main ?>
+                    </div>
 
-                    <?php // ================= SAĞ RAY ================================ ?>
                     <aside class="wsx-body-side">
 
-                        <?php // ---- Kullanım & Limitler ----
-                              // Ölçüler GERÇEK (bcc_workspace_usage). Eşikler ise
-                              // BCC_WORKSPACE_SOFT_LIMITS'ten gelen GÖRSEL referanslardır ve
-                              // hiçbir yerde ZORLANMAZ — kart bunu açıkça yazıyor, aksi hâlde
-                              // kullanıcı var olmayan bir kotaya inanırdı. ?>
+                        <?php
+                              ?>
                         <div class="settings-card wsx-side-card">
                             <h3 class="wsx-side-title">Kullanım &amp; Limitler</h3>
 
@@ -606,7 +448,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             );
                             foreach ($meters as $m):
                                 $pct = $m['max'] > 0 ? min(100, round($m['used'] / $m['max'] * 100)) : 0;
-                                // Renk eşikleri: %75 sarı, %90 kırmızı.
                                 $tone = $pct >= 90 ? ' is-danger' : ($pct >= 75 ? ' is-warn' : '');
                             ?>
                                 <div class="wsx-meter">
@@ -620,8 +461,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </div>
                             <?php endforeach; ?>
 
-                            <?php // Entegrasyon durumu — slack_webhooks'taki GERÇEK aktif satır
-                                  // sayısı (bkz. bcc_workspace_usage notu). ?>
+                            <?php
+                                  ?>
                             <div class="wsx-integration">
                                 <span class="wsx-integration-dot<?php echo $wsUsage['slack_webhook_count'] > 0 ? ' is-on' : ''; ?>"></span>
                                 <span class="wsx-integration-text">
@@ -638,9 +479,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </p>
                         </div>
 
-                        <?php // ---- Son Hareketler ----
-                              // audit_log'dan geliyor (bcc_workspace_activity). Örnek/uydurma
-                              // satır YOK: kayıt yoksa boş durum basılır. ?>
+                        <?php
+                              ?>
                         <div class="settings-card wsx-side-card">
                             <h3 class="wsx-side-title">Son Hareketler</h3>
 
@@ -669,35 +509,21 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
 
                     </aside>
-                    </div><?php // /.wsx-body ?>
+                    </div>
                 </div>
 
             </div>
 
             <?php
-            // "Paylaş" modalı — grid.php ve interface.php ile AYNI partial, AYNI
-            // JS, AYNI uçnoktalar. Yalnızca SEÇİLİ bir çalışma alanı varken
-            // basılır ($shareModalPayload o dalda hesaplanıyor); tetikleyicisi
-            // yukarıdaki "Katılımcıları yönet" butonu.
-            //
-            // Salt-okunur roller için de basılıyor: modal yetkisizde davet
-            // kutusunu göstermez, yerine gerekçeli bir not koyar (bkz. partial)
-            // — buton zaten yalnızca Owner'a basıldığı için pratikte açılmaz,
-            // bu ikinci savunma katmanı.
             require __DIR__ . '/../src/partials/share_modal.php';
             ?>
             <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
-            <?php // share-modal.js dismissable-panel.js'e bağımlı (bcc_bindDismissable)
-                  // — o kabuğun altında (home_shell_bottom.php) yükleniyor ve ikisi de
-                  // defer olduğu için DOM sırası korunuyor: bu etiket kabuktan ÖNCE
-                  // geldiğinden share-modal.js daha erken çalışırdı. Bu yüzden modal
-                  // scripti kabuğun ARDINA, sayfanın en sonuna konuldu (aşağıya bkz.). ?>
+            <?php
+                  ?>
         <?php endif; ?>
 
-        <?php // Modal ve davranışı if/else'in DIŞINDA: tetikleyici HER İKİ dalda
-              // da olabiliyor (boş dalda admin için, dolu dalda sol panel alt
-              // bilgisinde). Yalnızca admine basılıyor — asıl kapı yine
-              // api/team_create.php'nin is_admin kontrolü. ?>
+        <?php
+              ?>
         <?php if ((int) $user['is_admin'] === 1): ?>
             <?php require __DIR__ . '/../src/partials/create_team_modal.php'; ?>
             <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
@@ -705,15 +531,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
         <?php if ($canCreateBase && !empty($creatableTeams)): ?>
             <?php
-            // Base oluşturma modalı — dashboard.php ile AYNI partial, AYNI
-            // davranış (home.js, kabuk her sayfaya yüklüyor: ayrı bir script
-            // etiketi GEREKMEZ). Ayrı bir modal/JS YAZILMADI.
-            //
-            // Sunucuda koşullu basılır: yetkisi olmayanın kaynağında form ve
-            // uçnokta adı hiç görünmez. Asıl kapı yine api/base_create.php.
-            //
-            // Seçili çalışma alanı ön seçili gelir — kullanıcı zaten O alanın
-            // sayfasında, varsayılanın başka bir alan olması şaşırtıcı olurdu.
             $createBaseSelectedTeamId = $selectedTeamId;
             require __DIR__ . '/../src/partials/create_base_modal.php';
             ?>
@@ -722,13 +539,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>
 <?php if ($selectedTeamId): ?>
     <?php
-    // ⚠️ SIRA ÖNEMLİ, kabuktan SONRA: share-modal.js açılışta
-    // window.bcc_bindDismissable'ı çağırıyor ve o fonksiyon
-    // dismissable-panel.js'te tanımlı — o da home_shell_bottom.php içinde
-    // yükleniyor. İkisi de `defer` olduğundan çalışma sırası DOM sırasıdır;
-    // bu etiket kabuktan önce dursaydı share-modal.js tanımsız bir
-    // fonksiyona çarpardı (grid.php/interface.php'de de bağımlılık aynı
-    // yönde yükleniyor).
     ?>
     <script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
 <?php endif; ?>

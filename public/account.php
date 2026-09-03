@@ -1,12 +1,4 @@
 <?php
-// "Hesap Özeti" — OpsFlow'un "Account Overview" ekranının karşılığı (hesap
-// menüsündeki, önceden işlevsiz "Hesap" öğesi artık buraya bağlanıyor, bkz.
-// src/partials/account_menu.php). Ad/e-posta/şifre değişikliği ROLDEN
-// BAĞIMSIZ — require_role() BURADA KULLANILMAZ, yalnızca require_login()
-// (bkz. public/api/account_update_*.php): kullanıcı yalnızca KENDİ hesabını
-// düzenler, takım rolü yalnızca takım VERİSİNE erişimi kısıtlar, kişinin
-// kendi hesap bilgilerine değil. Takım/rol listesi bu sayfada SALT-OKUNUR —
-// değiştirme admin panelinin işi (bkz. admin/assign_team.php), kapsam dışı.
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -14,40 +6,13 @@ require_login();
 
 $user = current_user();
 
-// Salt-okunur ekip/rol listesi. Tek kaynak: src/schema.php.
-//
-// ⚠️ BİLEREK bcc_teams_for_current_user() DEĞİL. O fonksiyon ERİŞİM KAPSAMINI
-// döndürür ve platform admini için TÜM ekipleri kapsar. Burası ise kişinin
-// KENDİ hesabı: "Ekipler" başlığı gerçek ÜYELİKLERİ göstermeli ve aşağıdaki
-// kullanım sayaçları yalnızca o ekipleri saymalı — aksi hâlde admin kendi
-// hesap sayfasında her ekibin üyesiymiş gibi görünür ve depolama/kayıt
-// sayaçları tüm sistemi toplardı.
 $teams = bcc_team_memberships_for_current_user();
 
-// Sol panelin Starred alt-listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor. $teamIds KALIYOR — aşağıdaki sağ sütun sayaçları
-// (KVKK izolasyonu) onu kullanıyor.
 $teamIds = array();
 foreach ($teams as $t) {
     $teamIds[] = (int) $t['id'];
 }
 
-// ---- Sağ sütun widget'ları -------------------------------------------------
-//
-// ⚠️ BURADAKİ HER DEĞER GERÇEK BİR SORGUDAN GELİR. İstenen widget'lardan
-// bazılarının bu uygulamada KARŞILIĞI YOK ve UYDURULMADI:
-//   * İki faktörlü doğrulama — users tablosunda kolon, kodda akış YOK.
-//   * Aktif oturumlar     — oturumlar PHP'nin native $_SESSION'ında, DB'de
-//                           tutulmuyor; sayılamaz.
-//   * API anahtarları     — böyle bir özellik YOK.
-//   * Bildirim ayarları   — ayar sayfası YOK (yalnızca okundu damgası:
-//                           users.last_seen_notifications_at).
-// Bunlar için sahte gösterge/ölü link basmak, kullanıcıya olmayan bir güvenlik
-// durumu veya sayfa vaat etmek olurdu. Var olmayan şey EKRANA DA KONMADI.
-//
-// KVKK izolasyonu: tüm sayaçlar $teamIds ile sınırlı — kullanıcı yalnızca üyesi
-// olduğu ekiplerin verisini sayar.
 
 $accountStats = array(
     'base_count' => 0,
@@ -76,7 +41,6 @@ if (!empty($teamIds)) {
          WHERE b.team_id IN ($ph) AND r.deleted_at IS NULL",
         $teamIds
     );
-    // Depolama: attachments.file_size'ın GERÇEK toplamı (tahmin değil).
     $accountStats['storage_bytes'] = (int) bcc_fetch_column(
         "SELECT COALESCE(SUM(a.file_size), 0) FROM attachments a
          INNER JOIN records r ON r.id = a.record_id AND r.deleted_at IS NULL
@@ -87,9 +51,6 @@ if (!empty($teamIds)) {
     );
 }
 
-// Son giriş: audit_log'daki 'user.login' (login.php:25 gerçekten yazıyor).
-// EN YENİSİ bu oturumun kendi girişidir — "şu anki oturum" olarak gösteriliyor;
-// ondan bir öncekisi "önceki giriş". İkisi de gerçek kayıt, tahmin yok.
 $loginRows = bcc_fetch_all(
     "SELECT created_at FROM audit_log
      WHERE user_id = :uid AND action = 'user.login'
@@ -105,16 +66,6 @@ $loginCount30d = (int) bcc_fetch_column(
     array('uid' => $user['id'])
 );
 
-// current_user() (src/auth.php) YALNIZCA şu kolonları döndürüyor:
-// id, email, full_name, is_admin, is_active, last_seen_notifications_at.
-// created_at ve email_verify_token ORADA YOK — bunlara $user üzerinden erişmek
-// sessizce NULL verir.
-//
-// BULUNAN GERÇEK BUG (ilk sürümde yapıldı, /browse'da yakalandı): doğrulama
-// rozeti `$user['email_verify_token'] === null` ile hesaplanıyordu; tanımsız
-// anahtar NULL sayıldığı için rozet, hesabın gerçek durumundan BAĞIMSIZ olarak
-// HER ZAMAN "doğrulandı" diyordu — yani kullanıcıya yanlış bir güvenlik
-// bilgisi gösteriyordu. Kolonlar artık açıkça sorgulanıyor.
 $accountRow = bcc_fetch_one(
     'SELECT created_at, email_verify_token FROM users WHERE id = :id LIMIT 1',
     array('id' => $user['id'])
@@ -123,7 +74,6 @@ $accountCreatedAt = $accountRow ? $accountRow['created_at'] : null;
 $emailVerified = $accountRow
     && ($accountRow['email_verify_token'] === null || $accountRow['email_verify_token'] === '');
 
-// Rol dağılımı — "en yetkili rol" rozeti için (BCC_ROLE_RANK zaten tanımlı).
 $topRole = null;
 foreach ($teams as $t) {
     if ($topRole === null || $GLOBALS['BCC_ROLE_RANK'][$t['role']] > $GLOBALS['BCC_ROLE_RANK'][$topRole]) {
@@ -131,10 +81,6 @@ foreach ($teams as $t) {
     }
 }
 
-// Buradaki yerel bcc_account_format_bytes() KALDIRILDI: bayt biçimlendirme
-// artık src/schema.php'teki ortak bcc_format_bytes() fonksiyonunda —
-// workspaces.php'nin "Kullanım & Limitler" kartı da AYNI biçimi kullanıyor,
-// ikinci bir kopya YOK.
 
 function bcc_account_format_dt($value)
 {
@@ -148,8 +94,6 @@ function bcc_account_format_dt($value)
 
 $homeActiveNav = 'account';
 $homePageTitle = bcc_tab_title('Hesap Özeti');
-// Ortak tasarım sistemi (table_fields.php / base_tables.php ile PAYLAŞILAN) +
-// yalnızca bu sayfaya ait iki sütunlu yerleşim ve widget'lar.
 $homeExtraCss = array('settings-page.css', 'account.css');
 require __DIR__ . '/../src/partials/home_shell_top.php';
 ?>
@@ -163,11 +107,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <div class="ac-main">
 
         <div class="account-card account-card-profile">
-            <?php // Profil başlığı: büyük avatar + ad/e-posta + durum rozetleri.
-                  // "Fotoğraf değiştir" tetikleyicisi BİLEREK YOK — uygulamada
-                  // avatar yükleme diye bir özellik yok, buton olmayan bir akışa
-                  // işaret ederdi. Avatar her yerde olduğu gibi baş harf diski
-                  // (bcc_user_initial), yalnızca burada daha büyük. ?>
+            <?php
+                  ?>
             <div class="ac-profile-head">
                 <div class="account-avatar-lg"><?php echo htmlspecialchars(bcc_user_initial($user), ENT_QUOTES, 'UTF-8'); ?></div>
                 <div class="ac-profile-id">
@@ -202,16 +143,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             Düzenle
                         </button>
                     </div>
-                    <?php // ⚠️ "account-row-form-inline" SINIFI KALDIRILDI (kullanıcı bildirdi:
-                          // "Düzenle"ye basınca ad kutusu sola dayanmıyor, içerik kayıyor).
-                          // O sınıf home.css'te flex-direction:row + align-items:center
-                          // veriyordu ("input ve butonlar aynı satırda" eski tasarımı), AMA
-                          // account.css'teki `.sp-page .account-row-form` (0,2,0) yönü
-                          // column'a çeviriyor ve o kuralı (0,1,0) yeniyor. Geriye YALNIZCA
-                          // align-items:center kalıyordu — sütun yönlü bir flex kutuda bu
-                          // YATAY ORTALAMA demek: kutu 420px'lik formun ortasına kayıyor,
-                          // üstelik max-width:220px ile de daralıyordu. Sınıf çıkınca form,
-                          // e-posta/şifre formlarıyla BİREBİR aynı kuralları kullanıyor. ?>
+                    <?php
+                          ?>
                     <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
                         <input type="text" name="full_name" class="account-input" data-account-input maxlength="150" required value="<?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="account-row-actions">
@@ -300,10 +233,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             <?php if (empty($teams)): ?>
                 <p class="account-teams-empty">Henüz üyesi olduğunuz bir ekip yok.</p>
             <?php else: ?>
-                <?php // Rol rozeti için .ws-collab-role KULLANILMIYOR: o sınıf
-                      // team_members.php ve workspaces.php ile PAYLAŞILIYOR, buradaki
-                      // yeni görünüm için değiştirmek o iki sayfayı da etkilerdi.
-                      // Role göre renklenen kendi hap sınıfı (.ac-role--<rol>). ?>
+                <?php
+                      ?>
                 <div class="account-team-list">
                     <?php foreach ($teams as $t): ?>
                         <div class="account-team-row">
@@ -323,14 +254,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
                 Tehlikeli Bölge
             </h3>
-            <?php // HESAP SİLME KALDIRILDI (ürün kararı): hiçbir kullanıcı, rolü ne
-                  // olursa olsun, kendi hesabını KALICI OLARAK SİLEMEZ. Yerine
-                  // "pasife alma" sunuluyor — geri alınabilir ve içerik/denetim
-                  // izleri bozulmadan kalır.
-                  //
-                  // ⚠️ Butonu gizlemek YETMEZ: api/account_delete.php uçnoktası
-                  // tamamen KALDIRILDI, yani istek elle gönderilse bile silecek
-                  // bir yol yok (bkz. api/account_deactivate.php baş yorumu). ?>
+            <?php
+                  ?>
             <div class="account-row-display ac-danger-row" data-account-display>
                 <span class="account-row-value">
                     <strong>Hesabı pasife al</strong>
@@ -355,15 +280,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <div class="account-row-error" id="account-deactivate-error" hidden></div>
             </form>
         </div>
-        </div><!-- /.ac-main -->
+        </div>
 
         <aside class="ac-side">
-            <?php // ---- Hesap durumu -------------------------------------------------
-                  // İki faktörlü doğrulama / aktif oturum sayısı BİLEREK YOK:
-                  // uygulamada ne 2FA akışı ne de DB'de oturum kaydı var (oturumlar
-                  // PHP native $_SESSION). Sahte bir "2FA: Kapalı" göstergesi
-                  // olmayan bir ayarı varmış gibi gösterirdi. Buradaki her satır
-                  // gerçek bir sorgudan geliyor. ?>
+            <?php
+                  ?>
             <div class="ac-widget">
                 <h3 class="ac-widget-title">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l6 2.5v5c0 3.6-2.5 6.6-6 7.5-3.5-.9-6-3.9-6-7.5V5l6-2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.5 10l1.8 1.8L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -436,12 +357,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <p class="ac-widget-note">Üyesi olduğunuz ekiplerin toplamı.</p>
             </div>
 
-            <?php // ---- Hızlı erişim --------------------------------------------------
-                  // YALNIZCA GERÇEKTEN VAR OLAN sayfalara link veriliyor. İstenen
-                  // "API anahtarları / Bildirim ayarları / Yardım & Destek"
-                  // kalemleri EKLENMEDİ: bu uygulamada o sayfalar yok, link ölü
-                  // olurdu. Admin kalemi yalnızca is_admin'de görünür (hesap
-                  // menüsündeki AYNI koşul). ?>
+            <?php
+                  ?>
             <div class="ac-widget">
                 <h3 class="ac-widget-title">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M11 2.5L4 11h5l-1 6.5L16 9h-5l1-6.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -473,8 +390,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </div>
             </div>
         </aside>
-        </div><!-- /.ac-grid -->
-</div><!-- /.sp-page -->
+        </div>
+</div>
 <script src="<?php echo bcc_asset_url('account-page.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

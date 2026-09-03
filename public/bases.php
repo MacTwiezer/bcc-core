@@ -16,18 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
     $description = isset($_POST['description']) ? trim($_POST['description']) : '';
 
-    // require_role hem üyeliği (KVKK izolasyonu) hem de rolü doğrular. Eşik
-    // 'editor' DEĞİL 'owner': "Add and delete bases in the shared workspace"
-    // yalnızca Owner'a açık, Editor'a
-    // kapalıdır (bkz. src/auth.php bcc_can_manage_bases()). Aynı eşik Home'daki
-    // "+ Yeni Base Oluştur" kutucuğunu ve api/base_create.php'yi de yönetir —
-    // üç giriş noktası tek kaynaktan beslenir.
     require_role($teamId, 'owner');
 
-    // Doğrulama + INSERT + audit: bcc_create_base() (bkz. src/schema.php) —
-    // api/base_create.php ile ORTAK, ikinci bir kopya yok.
-    // İkon/renk: modalın JS'siz (düz POST) yolu da aynı alanları taşır —
-    // doğrulama tek yerde, bcc_create_base()'in içindeki whitelist'te.
     $result = bcc_create_base(
         $teamId,
         $name,
@@ -44,9 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Tek kaynak: bcc_teams_for_current_user() (src/schema.php). Sorgu BES
-// sayfada birebir kopyalanmisti; admin kapsami gibi bir kural degisince
-// ayrisma riski kalmasin diye tek yere alindi.
 $teams = bcc_teams_for_current_user();
 
 $basesByTeam = array();
@@ -66,10 +53,6 @@ if (!empty($teams)) {
         $basesByTeam[$b['team_id']][] = $b;
     }
 }
-// Sol panel "Yıldızlılar" listesi ARTIK BURADA ÇEKİLMİYOR: kabuk
-// (src/partials/home_shell_top.php) bcc_starred_bases_for_current_user()'ı
-// kendisi çağırıyor — bkz. src/schema.php'deki tek kaynak notu.
-// ($teamIds yukarıdaki base listesi için hâlâ gerekli, o yüzden kalıyor.)
 
 $homeActiveNav = 'bases';
 $homePageTitle = bcc_tab_title("Base'ler");
@@ -88,8 +71,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php endif; ?>
 
         <?php foreach ($teams as $t):
-            // Formun görünürlüğü ile POST'un kabulü AYNI fonksiyondan gelir —
-            // "gizlenen ama hâlâ kabul edilen" bir aksiyon oluşamaz.
             $canEdit = bcc_can_manage_bases($t['role']);
         ?>
             <div class="settings-card">

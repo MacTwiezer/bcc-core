@@ -1,10 +1,4 @@
 <?php
-// register.php'nin e-postayla gönderdiği tek kullanımlık bağlantı buraya çıkar.
-// Kullanıcı burada kendi şifresini oluşturur; başarılı olursa hesap is_active=1
-// olur ve token tekrar kullanılamaz hale gelir (NULL'lanır). Ekip ataması bu
-// sayfanın işi DEĞİL — o admin/assign_team.php veya team_members.php'nin işi;
-// takımsız kalan kullanıcı giriş yaptığında dashboard.php ayrı bir bekleme
-// mesajı gösterir (bkz. dashboard.php).
 
 require __DIR__ . '/../src/bootstrap.php';
 
@@ -60,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// GET (veya doğrulama başarısız POST sonrası) — token hâlâ URL'de/formda taşınır.
 $token = isset($_GET['token']) ? $_GET['token'] : (isset($_POST['token']) ? $_POST['token'] : '');
 $pending = $error === null ? bcc_find_pending_user_by_token($token) : null;
 
@@ -72,8 +65,6 @@ if ($error === null && !$pending) {
 }
 ?>
 <?php
-// Ortak oturumsuz kabuk (src/partials/auth_shell_top.php) — <head>, marka
-// logosu ve kart kutusu BES sayfada birebir aynıydı, tek yere alındı.
 $authPageTitle = 'E-posta doğrulama';
 require __DIR__ . '/../src/partials/auth_shell_top.php';
 ?>
@@ -115,8 +106,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             </p>
         <?php endif; ?>
 <?php
-// $authShowLegal = false: burası bir akışın ORTASI (şifre belirleme adımı),
-// alttaki pazarlama cümlesi oraya ait değil — özgün davranış korunuyor.
 $authShowLegal = false;
 $authScripts = array('password-toggle.js');
 require __DIR__ . '/../src/partials/auth_shell_bottom.php';

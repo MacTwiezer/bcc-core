@@ -9,6 +9,10 @@ api_require_csrf();
 
 const BCC_XLSX_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const BCC_XLSX_IMPORT_MAX_ROWS = 5000;
+// ACILMIS icerik siniri. Yukaridaki 10 MB SIKISTIRILMIS boyuttur; .xlsx bir zip
+// oldugu icin cok yuksek oranlar mumkun (olculdu: 298 KB'lik gecerli bir dosya
+// 300 MB aciliyor ve istegi bellek tukenmesiyle olduruyordu).
+const BCC_XLSX_IMPORT_MAX_UNCOMPRESSED = 60 * 1024 * 1024;
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
 
@@ -33,6 +37,15 @@ if ($upload['size'] <= 0 || $upload['size'] > BCC_XLSX_IMPORT_MAX_BYTES) {
 $ext = strtolower(pathinfo((string) $upload['name'], PATHINFO_EXTENSION));
 if ($ext !== 'xlsx') {
     json_fail(422, 'Yalnızca .xlsx dosyaları desteklenir.');
+}
+
+$acilmis = bcc_xlsx_uncompressed_size($upload['tmp_name']);
+if ($acilmis < 0) {
+    json_fail(422, 'Dosya okunamadı veya geçersiz bir Excel dosyası.');
+}
+if ($acilmis > BCC_XLSX_IMPORT_MAX_UNCOMPRESSED) {
+    json_fail(422, 'Dosyanın içeriği çok büyük (açılmış boyut sınırı: '
+        . (int) (BCC_XLSX_IMPORT_MAX_UNCOMPRESSED / 1048576) . 'MB).');
 }
 
 $sheetRows = bcc_xlsx_read_first_sheet($upload['tmp_name']);

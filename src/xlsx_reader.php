@@ -250,6 +250,37 @@ function bcc_xlsx_parse_sheet_rows($sheetXmlStr, array $sharedStrings, array $da
 }
 
 /**
+ * Arsivin ACILMIS toplam boyutu (bayt). Dosya acilamazsa -1.
+ *
+ * NEDEN GEREKLI (olculdu): yukleme uc noktasi yalnizca SIKISTIRILMIS boyutu
+ * kontrol ediyordu. .xlsx bir zip oldugu icin cok yuksek sikistirma oranlari
+ * mumkun: 298 KB'lik gecerli bir dosya uretildi, icindeki sheet1.xml 300 MB
+ * aciliyordu ve $zip->getFromName() onu tek seferde bellege aldigi icin istek
+ * "Allowed memory size exhausted" ile oluyordu (xlsx_reader.php:269).
+ * 10 MB'lik dosya siniri bunu HIC gormuyordu.
+ *
+ * Boyut zip merkezi dizininden okunur (icerik acilmaz), yani kontrol ucuzdur.
+ */
+function bcc_xlsx_uncompressed_size($filePath)
+{
+    $zip = new ZipArchive();
+    if ($zip->open($filePath) !== true) {
+        return -1;
+    }
+
+    $toplam = 0;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $stat = $zip->statIndex($i);
+        if ($stat !== false && isset($stat['size'])) {
+            $toplam += (int) $stat['size'];
+        }
+    }
+    $zip->close();
+
+    return $toplam;
+}
+
+/**
  * $filePath: yüklenen .xlsx'in geçici yolu (tmp_name). Dönüş: satır dizisi,
  * her satır 0-index'li hücre değerleri (string) dizisi — ilk satır başlık.
  * Dosya açılamazsa/bozuksa boş dizi döner (çağıran taraf bunu "0 satır"

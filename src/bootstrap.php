@@ -99,7 +99,8 @@ function bcc_asset_url($relativePath)
 // yoluydu: bir kullanici kendi adini degistirip onu goren herkesin
 // sayfasini kirabilirdi.
 //
-// JSON_HEX_TAG "<" ve ">" karakterlerini < / > olarak yazar.
+// JSON_HEX_TAG "<" ve ">" karakterlerini alti haneli birim kacisi olarak
+// yazar (u003C / u003E, basinda ters bolu ile).
 // JavaScript bunlari cozdugunde deger AYNIDIR; degisen yalnizca HTML
 // ayristiricisinin gordugu metindir.
 //

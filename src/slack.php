@@ -275,13 +275,22 @@ function bcc_slack_fit_pair($a, $b, $budget)
 }
 
 // Uygulamanın kendi adresini üretir (Slack mesajlarındaki "görüntüle" linki).
-// Üç bildirim fonksiyonu da bunu çağırır — scheme/host hesabı tek yerde.
+// Dört bildirim fonksiyonu da bunu çağırır — adres hesabı tek yerde.
+//
+// ⚠️ ESKİDEN scheme + $_SERVER['HTTP_HOST'] ile KENDİ hesabını yapıyordu ve
+// config/app.php'deki $APP_BASE_URL'i hiç sormuyordu. İki sonucu vardı:
+//   1. Ayar doluyken bile (bu kurulumda dolu) Slack linkleri ondan değil,
+//      isteğin Host başlığından üretiliyordu — e-posta linkleriyle tutarsız.
+//   2. Host başlığını İSTEMCİ gönderir. Bir editör kayıt eklerken
+//      "Host: kotu.example" yollayıp Slack kanalına o adrese giden bir
+//      "Duyuruyu görüntüle" linki bastırabilirdi; kanaldaki herkes (ekip
+//      dışındakiler dahil) o linki uygulamanın kendi linki sanardı. Host'ta
+//      "|" ya da ">" varsa Slack'in <url|metin> sözdizimi de bozulurdu.
+// bcc_app_base_url() zaten parola sıfırlama / e-posta doğrulama linklerinin
+// tabanı; Slack de AYNI kaynağı kullanır.
 function bcc_slack_app_url($path)
 {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-
-    return $scheme . '://' . $host . $path;
+    return bcc_app_base_url() . $path;
 }
 
 // ---------------------------------------------------------------------------

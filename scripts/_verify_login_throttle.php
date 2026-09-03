@@ -75,23 +75,45 @@ check("farkli e-posta hala deneyebiliyor", $out === 'invalid', $out);
 echo "\nD) Zaman sabitligi kilitten ONCE korunuyor mu (yan kanal)\n";
 // ---------------------------------------------------------------------------
 temizle();
-function olc($email, $sifre)
+
+// Iki olcum ARDISIK yapilirsa (once 5 kez A, sonra 5 kez B) makinenin isinmasi
+// / arka plan yuku tamamen ikinci gruba biner: gercek bir sizinti olmadigi
+// halde 50 ms'ye varan fark cikiyordu, hatta bazen "var olan" DAHA HIZLI
+// olculuyordu (sizintinin tersi yon = saf gurultu). Bu yuzden olcumler
+// DONUSUMLU alinir (A,B,A,B...) ve ilk tur isinma olarak atilir.
+function olc_tek($email, $sifre)
 {
-    $t = array();
-    for ($i = 0; $i < 5; $i++) {
-        $b = microtime(true);
-        attempt_login($email, $sifre);
-        $t[] = (microtime(true) - $b) * 1000;
-        // Olcumun kendisi esigi doldurmasin.
-        bcc_execute('DELETE FROM login_attempts WHERE ip = :ip', array('ip' => bcc_client_ip_binary()));
-    }
-    sort($t);
-    return $t[2]; // ortanca
+    $b = microtime(true);
+    attempt_login($email, $sifre);
+    $ms = (microtime(true) - $b) * 1000;
+    // Olcumun kendisi esigi doldurmasin.
+    bcc_execute('DELETE FROM login_attempts WHERE ip = :ip', array('ip' => bcc_client_ip_binary()));
+    return $ms;
 }
-$tVar = olc($VAR, $YANLIS);
-$tYok = olc($YOK, $YANLIS);
-printf("  var olan: %.1f ms   olmayan: %.1f ms   fark: %.1f ms\n", $tVar, $tYok, abs($tVar - $tYok));
-check("fark < 10 ms (kullanici sayimi kapali)", abs($tVar - $tYok) < 10.0, sprintf('%.1f ms', abs($tVar - $tYok)));
+$tur = 13;
+olc_tek($VAR, $YANLIS); // isinma (opcode/onbellek), olcume katilmaz
+olc_tek($YOK, $YANLIS);
+$olcVar = array();
+$olcYok = array();
+for ($i = 0; $i < $tur; $i++) {
+    $olcVar[] = olc_tek($VAR, $YANLIS);
+    $olcYok[] = olc_tek($YOK, $YANLIS);
+}
+// Ortanca bile bir bursta denk gelen CPU frekans dususunden etkileniyordu
+// (turlarin yarisi yavaslayinca ortanca da kayiyor). Gurultu SURENIN
+// USTUNE biner, altina inemez; bu yuzden gercek hesaplama maliyetinin en
+// temiz tahmini EN KUCUK olcumdur. Gercek bir sizinti minimumda da gorunur.
+$tVar = min($olcVar);
+$tYok = min($olcYok);
+$fark = abs($tVar - $tYok);
+// Esik MUTLAK degil ORANLI: bcrypt maliyeti makineye gore 80-400 ms arasi
+// degisir, sabit 10 ms bazi makinelerde imkansiz olur. Yakalanmak istenen
+// sizinti (duzeltme oncesi 206 kat) bu esigin cok otesinde.
+$esik = max(15.0, 0.20 * min($tVar, $tYok));
+printf("  var olan: %.1f ms   olmayan: %.1f ms   fark: %.1f ms   (esik %.1f ms, %d donusumlu turun en kucugu)\n",
+    $tVar, $tYok, $fark, $esik, $tur);
+check('fark esigin altinda (kullanici sayimi kapali)', $fark < $esik,
+    sprintf('%.1f ms >= %.1f ms', $fark, $esik));
 
 // ---------------------------------------------------------------------------
 echo "\nE) Basarili giris hata gecmisini siler\n";

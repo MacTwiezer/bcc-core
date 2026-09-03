@@ -131,6 +131,14 @@ a { text-decoration: none; color: inherit; }
     border-bottom: 1px solid var(--bcc-border);
     flex-shrink: 0;
 }
+/* Arama buyutecleri: renk YANINDAKI ETIKETLE ayni token'dan gelsin.
+   Onceden SVG'lerde stroke="#8a8a8e" SABIT yaziliydi; etiket ise
+   var(--bcc-text-muted) kullaniyor (acik temada #6b6b70, koyu temada #9a9aa0)
+   — yani ikon HICBIR temada yanindaki yaziyla ayni renkte degildi. */
+.home-search-trigger svg,
+.home-search-popover-inputwrap svg,
+.home-notif-search svg,
+.home-members-search svg { color: var(--bcc-text-muted); }
 .home-search-popover-inputwrap svg { flex-shrink: 0; }
 .home-search-popover input {
     border: none;

@@ -259,7 +259,7 @@ if (!isset($starredBases) || !is_array($starredBases)) {
                     ?>
                     <?php if (count($manageableTeams) >= 6): ?>
                         <div class="home-notif-search home-members-search">
-                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8a8a8e" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                             <input type="text" data-members-search placeholder="Çalışma alanı ara" autocomplete="off" aria-label="Çalışma alanı ara">
                         </div>
                     <?php endif; ?>

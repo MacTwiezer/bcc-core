@@ -173,6 +173,18 @@ echo "\n=== F) Son admin kilidi ===\n";
 // alip keeper'i TEK aktif admin birakiyoruz.
 $otherAdmins = bcc_fetch_all('SELECT id FROM users WHERE is_admin = 1 AND is_active = 1 AND id <> :k',
     array('k' => $uid['keeper']));
+
+// Geri acma AYRICA kapanisa baglanir. Asagidaki duz "geri ac" dongusu yalnizca
+// betik sonuna kadar YASARSA calisir; arada bir fatal, Ctrl+C ya da alt surec
+// zaman asimi olursa GERCEK admin hesaplari (kullanicinin kendi hesaplari dahil)
+// pasif kalir ve platformun admin paneline kimse giremez. Kapanis her cikis
+// yolunda calisir; iki kez calismasi zararsiz (ayni degeri yazar).
+register_shutdown_function(function () use ($otherAdmins) {
+    foreach ($otherAdmins as $a) {
+        bcc_execute('UPDATE users SET is_active = 1 WHERE id = :id', array('id' => (int) $a['id']));
+    }
+});
+
 foreach ($otherAdmins as $a) {
     bcc_execute('UPDATE users SET is_active = 0 WHERE id = :id', array('id' => (int) $a['id']));
 }

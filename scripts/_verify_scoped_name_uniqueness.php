@@ -105,15 +105,34 @@ $teamId = (int) bcc_last_insert_id();
 bcc_execute("INSERT INTO teams (name) VALUES ('ZZ Isim Scope Testi 2')");
 $teamId2 = (int) bcc_last_insert_id();
 
-$owner = bcc_fetch_one('SELECT id FROM users WHERE is_active = 1 ORDER BY id LIMIT 1');
-$ownerId = (int) $owner['id'];
+// ONCEDEN: en dusuk id'li AKTIF kullanici seciliyordu, ki bu pratikte projenin
+// sahibinin KENDI gercek hesabi. Testin butun yazmalari o hesap adina
+// yapiliyordu ve audit_log.team_id -> teams FK'si SET NULL oldugu icin uretilen
+// denetim satirlari ekip silindikten SONRA da kaliyordu: her kosu gercek
+// denetim izine o kullaniciya atfedilmis sahte base/tablo olaylari ekliyordu
+// (olculdu: kosu basina 15 satir, 7'si o hesaba ait). Artik ATILIR bir
+// kullanici yaratiliyor.
+$OWNER_EMAIL = 'scopetest.owner@bcc-test.local';
+bcc_execute('DELETE FROM users WHERE email = :e', array('e' => $OWNER_EMAIL));
+bcc_execute(
+    'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 0, 1)',
+    array('e' => $OWNER_EMAIL, 'h' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+          'n' => 'Scope Test Owner')
+);
+$ownerId = (int) bcc_last_insert_id();
 foreach (array($teamId, $teamId2) as $t) {
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t, :u, \'owner\')',
         array('t' => $t, 'u' => $ownerId));
 }
 
-register_shutdown_function(function () use ($teamId, $teamId2) {
+// Bu kosunun urettigi denetim satirlari da temizlenir; aksi halde ekip
+// silinince team_id NULL'lanip satirlar veritabaninda kaliyordu.
+$startAuditId = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
+
+register_shutdown_function(function () use ($teamId, $teamId2, $ownerId, $startAuditId) {
     bcc_execute('DELETE FROM teams WHERE id IN (:a, :b)', array('a' => $teamId, 'b' => $teamId2));
+    bcc_execute('DELETE FROM audit_log WHERE id > :since', array('since' => $startAuditId));
+    bcc_execute('DELETE FROM users WHERE id = :u', array('u' => $ownerId));
 });
 
 $a = bcc_create_base($teamId, 'Base A', '', $ownerId);

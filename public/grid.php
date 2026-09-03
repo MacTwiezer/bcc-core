@@ -1421,16 +1421,16 @@ $gridUser = current_user();
         foreach ($fields as $f) {
             $typesById[(int) $f['id']] = $f['field_type'];
         }
-        echo json_encode($typesById, JSON_UNESCAPED_UNICODE);
+        echo bcc_json_for_script($typesById);
     ?>;
-    var BCC_READONLY_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_READONLY_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_FILTER_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_FILTER_NO_VALUE_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_NO_VALUE_OPS'], JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_READONLY_FIELD_TYPES = <?php echo bcc_json_for_script($GLOBALS['BCC_READONLY_FIELD_TYPES']); ?>;
+    var BCC_FILTER_OPS = <?php echo bcc_json_for_script($GLOBALS['BCC_FILTER_OPERATORS']); ?>;
+    var BCC_FILTER_NO_VALUE_OPS = <?php echo bcc_json_for_script($GLOBALS['BCC_FILTER_NO_VALUE_OPS']); ?>;
     var BCC_FILTER_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>;
     var BCC_SORT_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>;
-    var BCC_DIR_LABELS = <?php echo json_encode($GLOBALS['BCC_GROUP_DIR_LABELS'], JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_TEAM_MEMBERS = <?php echo json_encode(bcc_user_choices_from_map($usersById), JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_USER_VALUE_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_USER_VALUE_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_DIR_LABELS = <?php echo bcc_json_for_script($GLOBALS['BCC_GROUP_DIR_LABELS']); ?>;
+    var BCC_TEAM_MEMBERS = <?php echo bcc_json_for_script(bcc_user_choices_from_map($usersById)); ?>;
+    var BCC_USER_VALUE_FIELD_TYPES = <?php echo bcc_json_for_script($GLOBALS['BCC_USER_VALUE_FIELD_TYPES']); ?>;
     var BCC_SORT_OR_GROUP_ACTIVE = <?php echo (!empty($sortRules) || !empty($groupRules)) ? 'true' : 'false'; ?>;
     var BCC_FILTER_ACTIVE = <?php echo !empty($filterRules) ? 'true' : 'false'; ?>;
     var BCC_FROZEN_COLUMN_COUNT = <?php echo (int) $frozenColumnCount; ?>;
@@ -1441,8 +1441,8 @@ $gridUser = current_user();
     var BCC_VIEW_ID = <?php echo (int) $view['id']; ?>;
     var BCC_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
     var BCC_CAN_COMMENT = <?php echo $canComment ? 'true' : 'false'; ?>;
-    var BCC_CURRENT_USER_NAME = <?php echo json_encode($gridUser['full_name'], JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_TABLE_NAME = <?php echo json_encode($table['name'], JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_CURRENT_USER_NAME = <?php echo bcc_json_for_script($gridUser['full_name']); ?>;
+    var BCC_TABLE_NAME = <?php echo bcc_json_for_script($table['name']); ?>;
 </script>
 <script src="<?php echo bcc_asset_url('grid-toolbar.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-filter.js'); ?>" defer></script>
@@ -1459,7 +1459,7 @@ $gridUser = current_user();
 <?php endif; ?>
 <?php if ($isOwner): ?>
 <script>
-    var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_SELECT_FIELD_TYPES = <?php echo bcc_json_for_script($GLOBALS['BCC_SELECT_FIELD_TYPES']); ?>;
 </script>
 <script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-add-field.js'); ?>" defer></script>

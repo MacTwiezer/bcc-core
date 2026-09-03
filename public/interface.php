@@ -230,8 +230,8 @@ if (!empty($shareExistingIds)) {
         </div>
 
         <script>
-            var BCC_IF_FIELDS = <?php echo json_encode($ifToolFields, JSON_UNESCAPED_UNICODE); ?>;
-            var BCC_IF_OPERATORS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
+            var BCC_IF_FIELDS = <?php echo bcc_json_for_script($ifToolFields); ?>;
+            var BCC_IF_OPERATORS = <?php echo bcc_json_for_script($GLOBALS['BCC_FILTER_OPERATORS']); ?>;
             var BCC_IF_MAX = {
                 filter: <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>,
                 sort: <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>,

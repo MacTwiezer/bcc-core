@@ -102,9 +102,7 @@
     </div>
 </div>
 <script>
-    var BCC_SHARE_MODAL = <?php echo json_encode($shareModalPayload, JSON_UNESCAPED_UNICODE); ?>;
-    var BCC_SHARE_CANDIDATES = <?php echo json_encode(
-        empty($shareModalPayload['can_manage']) ? array() : $shareModalCandidates,
-        JSON_UNESCAPED_UNICODE
-    ); ?>;
+    var BCC_SHARE_MODAL = <?php echo bcc_json_for_script($shareModalPayload); ?>;
+    var BCC_SHARE_CANDIDATES = <?php echo bcc_json_for_script(
+        empty($shareModalPayload['can_manage']) ? array() : $shareModalCandidates); ?>;
 </script>

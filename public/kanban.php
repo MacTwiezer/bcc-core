@@ -247,7 +247,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 <?php endif; ?>
 
 <script>
-    var BCC_KANBAN_CSRF = <?php echo json_encode(csrf_token(), JSON_UNESCAPED_UNICODE); ?>;
+    var BCC_KANBAN_CSRF = <?php echo bcc_json_for_script(csrf_token()); ?>;
     var BCC_KANBAN_CAN_EDIT = <?php echo $canEdit ? 'true' : 'false'; ?>;
 </script>
 <script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>

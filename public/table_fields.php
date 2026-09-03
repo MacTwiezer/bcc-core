@@ -357,7 +357,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </form>
             </div>
             <script>
-                var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
+                var BCC_SELECT_FIELD_TYPES = <?php echo bcc_json_for_script($GLOBALS['BCC_SELECT_FIELD_TYPES']); ?>;
             </script>
             <script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
             <script src="<?php echo bcc_asset_url('table-fields.js'); ?>" defer></script>

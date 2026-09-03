@@ -82,6 +82,33 @@ function bcc_asset_url($relativePath)
     return '/assets/' . $relativePath . ($version !== false ? '?v=' . $version : '');
 }
 
+// Bir PHP degerini <script> BLOGUNUN ICINE gomulecek JSON'a cevirir.
+//
+// NEDEN AYRI BIR YARDIMCI (denetimde tarayiciyla kanitlandi): duz
+// json_encode($v, JSON_UNESCAPED_UNICODE) XSS'e acik DEGIL — "/" varsayilan
+// olarak kacirildigi icin cikti hicbir zaman "</script>" uretemez, yani
+// saldirgan script blogunu kapatip kod calistiramaz. Ama "<" kacirilmadigi
+// icin veri "<!--<script>" gibi bir dizge tasiyorsa tarayicinin HTML
+// ayristiricisi "script data double escaped" durumuna girer ve script
+// etiketinden SONRAKI TUM SAYFAYI yutar.
+//
+// Olculdu: adi "<!--<script>" olan bir kullanicida sayfanin geri kalani
+// tarayicida HIC render edilmedi. Kullanici adlari kayit formundan
+// geliyor ve bircok sayfada JSON olarak gomuluyor (grid'in uye listesi,
+// paylasim modalinin aday listesi...), yani bu KALICI bir sayfa bozma
+// yoluydu: bir kullanici kendi adini degistirip onu goren herkesin
+// sayfasini kirabilirdi.
+//
+// JSON_HEX_TAG "<" ve ">" karakterlerini < / > olarak yazar.
+// JavaScript bunlari cozdugunde deger AYNIDIR; degisen yalnizca HTML
+// ayristiricisinin gordugu metindir.
+//
+// ⚠️ API yanitlarinda KULLANILMAZ: orada cikti HTML degil, application/json.
+function bcc_json_for_script($value)
+{
+    return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+}
+
 header('Content-Type: text/html; charset=utf-8');
 
 bcc_touch_user_activity();

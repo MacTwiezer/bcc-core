@@ -114,8 +114,6 @@ function stray_comment_terminators($css)
     return $hits;
 }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
-
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
         'SELECT b.id FROM bases b INNER JOIN users u ON u.id = b.created_by WHERE u.email = :e',
@@ -124,6 +122,9 @@ $cleanup = function () {
     foreach ($baseIds as $bid) { bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $bid)); }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 $realBefore = array(
     'tablo'   => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => REAL_BASE_ID)),
@@ -257,10 +258,10 @@ try {
     check('D) HICBIR CSS dosyasinda kacak yorum sonlandirici yok',
         count($offenders) === 0, implode(' | ', $offenders));
     // Dusen uc kuralin GERI GELDIGINI dogrula (yorum duzeldi -> kural ayristiriliyor).
-    check('D) interface.css: `* { box-sizing }` yorumdan SONRA ve saglam',
-        preg_match('#\*/\s*\*\s*\{\s*box-sizing: border-box;\s*\}#s', $ifCssRaw) === 1);
-    check('D) home.css: .settings-breadcrumb yorumdan SONRA ve saglam',
-        preg_match('#\*/\s*\.settings-breadcrumb \{#s', file_get_contents($assetsDir . '/home.css')) === 1);
+    check('D) interface.css: `* { box-sizing }` kurali saglam',
+        preg_match('#(^|\})\s*\*\s*\{\s*box-sizing: border-box;\s*\}#s', $ifCssRaw) === 1);
+    check('D) home.css: .settings-breadcrumb kurali saglam',
+        preg_match('#(^|\})\s*\.settings-breadcrumb \{#s', file_get_contents($assetsDir . '/home.css')) === 1);
 
     // =====================================================================
     // E) REGRESYON

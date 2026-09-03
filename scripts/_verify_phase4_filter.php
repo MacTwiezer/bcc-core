@@ -90,7 +90,6 @@ function same_set($a, $b)
     return $a === $b;
 }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => TEST_EMAIL));
 
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
@@ -102,6 +101,9 @@ $cleanup = function () {
     }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => TEST_EMAIL));
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");

@@ -89,7 +89,6 @@ function view_config($viewId)
 }
 
 $emails = array(OWNER_EMAIL, VIEWER_EMAIL);
-foreach ($emails as $e) { bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => $e)); }
 
 $cleanup = function () use ($emails) {
     foreach ($emails as $e) {
@@ -101,6 +100,9 @@ $cleanup = function () use ($emails) {
         bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => $e));
     }
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 $realBefore = array(
     'tablo'   => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => REAL_BASE_ID)),

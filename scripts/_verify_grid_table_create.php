@@ -102,6 +102,7 @@ $cleanup = function () {
     }
 };
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");

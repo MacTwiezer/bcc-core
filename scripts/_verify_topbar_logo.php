@@ -108,8 +108,6 @@ function php_code_only($src)
     return preg_replace('#^\s*//.*$#m', '', $src);
 }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
-
 $cleanup = function () {
     $uid = bcc_fetch_column('SELECT id FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
     if ($uid) {
@@ -119,6 +117,9 @@ $cleanup = function () {
         bcc_execute('DELETE FROM users WHERE id = :i', array(':i' => $uid));
     }
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 $realBefore = array(
     'tablo' => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => REAL_BASE_ID)),

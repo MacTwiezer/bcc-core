@@ -128,6 +128,7 @@ $wipe = function () {
         array(':a' => OWNER_MAIL, ':b' => EDITOR_MAIL));
 };
 $wipe();
+register_shutdown_function($wipe);
 
 try {
     // ---- ORTAM

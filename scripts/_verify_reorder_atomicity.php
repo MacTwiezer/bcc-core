@@ -59,7 +59,6 @@ function req($m, $p, $c = null, $f = null)
 }
 function csrf($h) { return preg_match('/name="csrf_token"\s+value="([a-f0-9]+)"/', $h, $m) ? $m[1] : null; }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER));
 $cleanup = function () {
     foreach (array_column(bcc_fetch_all('SELECT b.id FROM bases b JOIN users u ON u.id = b.created_by WHERE u.email = :e', array(':e' => OWNER)), 'id') as $bid) {
         if ((int) $bid === REAL_BASE_ID) { continue; } // gercek base'e ASLA
@@ -67,6 +66,9 @@ $cleanup = function () {
     }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER));
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 $cleanup();
 
 // GERCEK base referans olcumu

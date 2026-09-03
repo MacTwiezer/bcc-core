@@ -140,6 +140,7 @@ $cleanup = function () {
 };
 
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     // --- Izole fikstur ----------------------------------------------------

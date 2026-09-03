@@ -109,6 +109,7 @@ $wipe = function () {
     }
 };
 $wipe();
+register_shutdown_function($wipe);
 
 try {
     // ORTAM: iki ekip. MULTI ikisinin de uyesi, SOLO yalnizca birinin.

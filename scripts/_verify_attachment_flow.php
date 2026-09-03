@@ -99,6 +99,23 @@ file_put_contents($svgPath, '<svg xmlns="http://www.w3.org/2000/svg"><script>ale
 
 function cf($p, $mime) { return new CURLFile($p, $mime, basename($p)); }
 
+// Betik ortada olurse (fatal / exit) izole ortam DB'de kalirdi; ekip adindaki
+// rastgele ek yuzunden sonraki kosu de onu temizleyemez, artiklar birikirdi.
+$cleanup = function () use ($pngPath, $sahtePath, $svgPath, $COOKIE, $recordId, $fieldId, $tableId, $baseId, $teamId, $editorId, $viewerId, $SON) {
+    @unlink($pngPath); @unlink($sahtePath); @unlink($svgPath); @unlink($COOKIE);
+    bcc_execute('DELETE FROM attachments WHERE record_id = :r', array('r' => $recordId));
+    bcc_execute('DELETE FROM records WHERE id = :i', array('i' => $recordId));
+    bcc_execute('DELETE FROM fields WHERE id = :i', array('i' => $fieldId));
+    bcc_execute('DELETE FROM tables_meta WHERE id = :i', array('i' => $tableId));
+    bcc_execute('DELETE FROM bases WHERE id = :i', array('i' => $baseId));
+    bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
+    bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "att.%.$SON@bcc-test.local"));
+    bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $editorId, 'b' => $viewerId));
+};
+register_shutdown_function($cleanup);
+
 // ---------------------------------------------------------------------------
 echo "A) VIEWER yukleyemez (editor gerekir)\n";
 // ---------------------------------------------------------------------------
@@ -157,17 +174,7 @@ clearstatcache(true, $diskYol);
 check('DISKTEKI dosya da gitti', !is_file($diskYol), $diskYol);
 
 // --- temizlik ---
-@unlink($pngPath); @unlink($sahtePath); @unlink($svgPath); @unlink($COOKIE);
-bcc_execute('DELETE FROM attachments WHERE record_id = :r', array('r' => $recordId));
-bcc_execute('DELETE FROM records WHERE id = :i', array('i' => $recordId));
-bcc_execute('DELETE FROM fields WHERE id = :i', array('i' => $fieldId));
-bcc_execute('DELETE FROM tables_meta WHERE id = :i', array('i' => $tableId));
-bcc_execute('DELETE FROM bases WHERE id = :i', array('i' => $baseId));
-bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-bcc_execute('DELETE FROM login_attempts WHERE email LIKE :e', array('e' => "att.%.$SON@bcc-test.local"));
-bcc_execute('DELETE FROM users WHERE id IN (:a, :b)', array('a' => $editorId, 'b' => $viewerId));
+$cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))
        + (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id IN (:a, :b)', array('a' => $editorId, 'b' => $viewerId));

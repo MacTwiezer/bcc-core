@@ -113,6 +113,7 @@ $wipe = function () {
     }
 };
 $wipe();
+register_shutdown_function($wipe);
 
 try {
     // ORTAM: iki ekip, ikisinde de birer yildizli base + bir yildizSIZ base.

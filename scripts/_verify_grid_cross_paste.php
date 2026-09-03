@@ -127,6 +127,7 @@ $cleanup = function () {
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => TEST_EMAIL));
 };
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");

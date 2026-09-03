@@ -71,7 +71,6 @@ function login($email)
 }
 
 $emails = array(OWNER_EMAIL, VIEWER_EMAIL, COMMENTER_EMAIL);
-foreach ($emails as $e) { bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => $e)); }
 
 $cleanup = function () use ($emails) {
     foreach ($emails as $e) {
@@ -83,6 +82,9 @@ $cleanup = function () use ($emails) {
         bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => $e));
     }
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");

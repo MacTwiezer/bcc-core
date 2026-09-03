@@ -126,6 +126,7 @@ $realBefore = array(
 );
 
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     // ---- Fikstur: KENDI ekibi (gercek 'TY' ekibine DOKUNULMUYOR) ----------

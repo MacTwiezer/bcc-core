@@ -137,6 +137,7 @@ $cleanup = function () use (&$createdFiles) {
     foreach ($createdFiles as $p) { if (is_file($p)) { @unlink($p); } }
 };
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");

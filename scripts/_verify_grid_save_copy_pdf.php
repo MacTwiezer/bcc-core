@@ -271,6 +271,7 @@ $wipe = function () {
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => MAIL));
 };
 $wipe();
+register_shutdown_function($wipe);
 
 try {
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEAM));

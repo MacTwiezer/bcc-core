@@ -112,16 +112,6 @@ $realMembersBefore = bcc_fetch_all(
     array(':t' => $teamId)
 );
 
-foreach (array(OWNER_EMAIL, CAND_EMAIL) as $mail) {
-    $uid = bcc_fetch_column('SELECT id FROM users WHERE email = :e', array(':e' => $mail));
-    if ($uid) {
-        foreach (bcc_fetch_all('SELECT id FROM bases WHERE created_by = :u', array(':u' => $uid)) as $b) {
-            bcc_execute('DELETE FROM bases WHERE id = :i', array(':i' => $b['id']));
-        }
-        bcc_execute('DELETE FROM users WHERE id = :i', array(':i' => $uid));
-    }
-}
-
 $cleanup = function () {
     foreach (array(OWNER_EMAIL, CAND_EMAIL) as $mail) {
         $uid = bcc_fetch_column('SELECT id FROM users WHERE email = :e', array(':e' => $mail));
@@ -133,6 +123,9 @@ $cleanup = function () {
         }
     }
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 try {
     $gridPhp = file_get_contents(__DIR__ . '/../public/grid.php');

@@ -108,6 +108,7 @@ $cleanup = function () {
 
 // Onceki yarim kalmis kosudan artik varsa temizle.
 $cleanup();
+register_shutdown_function($cleanup);
 
 try {
     // --- Izole fixture ----------------------------------------------------

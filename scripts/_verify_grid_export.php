@@ -118,8 +118,6 @@ function fetch_xlsx_rows($queryString, $cookie)
     return $rows;
 }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
-
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
         'SELECT b.id FROM bases b INNER JOIN users u ON u.id = b.created_by WHERE u.email = :e',
@@ -128,6 +126,9 @@ $cleanup = function () {
     foreach ($baseIds as $bid) { bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $bid)); }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 // --- Gercek base (15) ONCE sayaclari ---------------------------------------
 $realBefore = array(

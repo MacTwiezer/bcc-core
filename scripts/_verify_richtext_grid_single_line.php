@@ -107,7 +107,6 @@ function rule_body($css, $selector)
     return null;
 }
 
-bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
 
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
@@ -117,6 +116,9 @@ $cleanup = function () {
     foreach ($baseIds as $bid) { bcc_execute('DELETE FROM bases WHERE id = :id', array(':id' => $bid)); }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER_EMAIL));
 };
+
+$cleanup();
+register_shutdown_function($cleanup);
 
 $realBefore = array(
     'tablo'   => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => REAL_BASE_ID)),

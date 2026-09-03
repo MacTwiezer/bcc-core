@@ -126,6 +126,7 @@ $wipe = function () {
     foreach (glob(bcc_attachment_storage_dir() . '/TPATEST*') as $f) { @unlink($f); }
 };
 $wipe();
+register_shutdown_function($wipe);
 
 try {
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEAM));

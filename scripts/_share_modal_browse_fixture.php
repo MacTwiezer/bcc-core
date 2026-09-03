@@ -13,7 +13,11 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEAM_NAME', 'ShareModal Browse');
-define('TEST_PASS', 'ShareModalBrowse!2026');
+// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
+// (kendi gecici ekibinde) owner yetkili gercek bir hesap aciyor; depo acik
+// oldugu icin sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik
+// bilgisi anlamina gelirdi. Deger zaten asagida ekrana basiliyor.
+define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $emails = array(
     'owner'   => 'sm.browse.owner@bcc-test.local',

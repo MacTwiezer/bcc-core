@@ -14,7 +14,11 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'bulkadd.browse@bcc-test.local');
-define('TEST_PASS', 'BulkAddBrowse!2026');
+// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
+// (kendi gecici ekibinde) owner yetkili gercek bir hesap aciyor; depo acik
+// oldugu icin sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik
+// bilgisi anlamina gelirdi. Deger zaten asagida ekrana basiliyor.
+define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 define('TEST_TEAM', 'ZZ Bulk Add Browse');
 
 $mode = isset($argv[1]) ? $argv[1] : '';

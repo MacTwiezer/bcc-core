@@ -12,7 +12,11 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'export.browse@bcc-test.local');
-define('TEST_PASS', 'ExportBrowse!2026');
+// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
+// gercek "TY" ekibinde owner yetkili bir hesap aciyor; depo acik oldugu icin
+// sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik bilgisi anlamina
+// gelirdi. Deger zaten asagida ekrana basiliyor, saklanmasina gerek yok.
+define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $mode = isset($argv[1]) ? $argv[1] : '';
 

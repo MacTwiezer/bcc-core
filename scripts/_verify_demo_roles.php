@@ -85,7 +85,10 @@ foreach ($accounts as $acc) {
     $userIdByEmail[$acc['email']] = (int) $u['id'];
 
     check($acc['email'] . ' aktif (giris yapabilir)', (int) $u['is_active'] === 1);
-    check($acc['email'] . ' sifresi "' . $acc['password'] . '" ile dogrulaniyor',
+    // Sifre ETIKETE YAZILMAZ. Etiketler her kosuda ekrana basiliyor; deger
+    // terminal gecmisine, ekran goruntusune ve gunluklere dusuyordu. Sifreyi
+    // depodan cikarma gerekcesi (src/demo_accounts.php) burasi icin de gecerli.
+    check($acc['email'] . ' sifresi config/app.local.php degeriyle dogrulaniyor',
         password_verify($acc['password'], $u['password_hash']));
 
     $m = bcc_fetch_one(

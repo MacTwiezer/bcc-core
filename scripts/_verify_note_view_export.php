@@ -19,7 +19,7 @@ require __DIR__ . '/../config/database.php';
 
 define('BASE_URL', 'http://localhost');
 define('TEST_TEAM', 'ZZ Note Export Test');
-define('EMAIL_SUFFIX', '@bcc-noteexport.local');
+define('EMAIL_SUFFIX', '@bcc-test.local');
 define('TEST_PASS', 'NoteExport!2026');
 
 $results = array();

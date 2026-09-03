@@ -19,7 +19,7 @@ require __DIR__ . '/../config/database.php';
 
 define('BASE_URL', 'http://localhost');
 define('TEST_TEAM', 'ZZ Error Page Test');
-define('TEST_EMAIL', 'errpage.owner@bcc-errtest.local');
+define('TEST_EMAIL', 'errpage.owner@bcc-test.local');
 define('TEST_PASS', 'ErrPage!2026');
 
 $results = array();

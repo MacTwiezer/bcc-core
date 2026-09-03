@@ -7,7 +7,10 @@
 // sonuc "Content-Type: application/json" basligi + HTML govde idi.
 //
 // CALISTIRMA: C:/php73/php.exe scripts/_verify_api_error_format.php
-// Apache ayakta olmali. HICBIR VERI YAZMAZ — yalnizca red yollarini olcer.
+// Apache ayakta olmali. Uygulama VERISINE yazmaz — yalnizca red yollarini
+// olcer; yan etkisi viewer@bcc.local ile giris yapmaktir (oturum +
+// login_attempts). Hedef hucrenin degeri once okunur ve kapanista geri yazilir,
+// boylece yetki kapisi gerilese bile gercek veri bozulmaz.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -106,6 +109,35 @@ if (!$row) {
 
 $tok = jetonAl($BASE . '/grid.php?table_id=' . (int) $row['table_id']);
 check('grid sayfasindan CSRF jetonu alindi', strlen($tok) === 64, strlen($tok));
+
+// Hedef hucre GERCEK bir base'e ait (viewer'in uyesi oldugu ilk tablo). Test
+// yazmanin REDDEDILMESINI bekliyor, ama tam da o kapi bir gun gerilerse istek
+// gercek veriyi ezer. Asagidaki kontrol (D bolumu) bunu yalnizca FARK EDER,
+// geri almaz. Bu yuzden mevcut deger simdi okunuyor ve kapanista — testin nasil
+// bittiginden bagimsiz olarak — degismisse geri yaziliyor.
+$hedefCell = bcc_fetch_one(
+    'SELECT id, value_text FROM cell_values WHERE record_id = :r AND field_id = :f LIMIT 1',
+    array('r' => (int) $row['record_id'], 'f' => (int) $row['field_id'])
+);
+register_shutdown_function(function () use ($row, $hedefCell) {
+    $simdi = bcc_fetch_one(
+        'SELECT id, value_text FROM cell_values WHERE record_id = :r AND field_id = :f LIMIT 1',
+        array('r' => (int) $row['record_id'], 'f' => (int) $row['field_id'])
+    );
+    if ($hedefCell === false || $hedefCell === null) {
+        // Test oncesi hic satir yoktu: test bir satir acmissa geri al.
+        if ($simdi) {
+            bcc_execute('DELETE FROM cell_values WHERE id = :i', array('i' => (int) $simdi['id']));
+            fwrite(STDERR, 'UYARI: yazma REDDEDILMEDI, acilan hucre satiri geri alindi.' . PHP_EOL);
+        }
+        return;
+    }
+    if ($simdi && $simdi['value_text'] !== $hedefCell['value_text']) {
+        bcc_execute('UPDATE cell_values SET value_text = :v WHERE id = :i',
+            array('v' => $hedefCell['value_text'], 'i' => (int) $hedefCell['id']));
+        fwrite(STDERR, 'UYARI: yazma REDDEDILMEDI, gercek hucre degeri geri yazildi.' . PHP_EOL);
+    }
+});
 
 $gonderi = 'csrf_token=' . $tok
     . '&field_id=' . (int) $row['field_id']

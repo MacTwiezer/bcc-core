@@ -332,8 +332,7 @@ try {
     check('D) record_id yok -> 404', $resp['status'] === 404, 'status: ' . $resp['status']);
     $resp = http_request('GET', "/api/note_view_export_xlsx.php?record_id={$recordId}", null, null, false);
     $loginaAtti = $resp['status'] === 302
-        && stripos(implode("
-", $resp['headers']), 'Location: /login.php') !== false;
+        && stripos(implode("\n", $resp['headers']), 'Location: /login.php') !== false;
     check('D) oturumsuz -> 302 ile /login.php', $loginaAtti, 'status: ' . $resp['status']);
     // Asil guvence: donen sey bir .xlsx OLMAMALI (ZIP imzasi "PK").
     check('D) oturumsuz -> govde .xlsx DEGIL',

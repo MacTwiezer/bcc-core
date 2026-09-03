@@ -40,8 +40,7 @@ if (!is_file($path)) {
 // (bkz. oradaki base64 notu), ayni koruma buraya da kondu.
 $raw = base64_decode($paramsB64, true);
 if ($raw === false) {
-    fwrite(STDERR, "Parametreler cozulemedi (gecersiz base64).
-");
+    fwrite(STDERR, "Parametreler cozulemedi (gecersiz base64).\n");
     exit(1);
 }
 $decoded = json_decode($raw, true);

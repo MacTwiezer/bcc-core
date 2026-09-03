@@ -153,6 +153,26 @@
             var dupRecordsInput = document.getElementById('gs-table-duplicate-records');
             var dupTargetId = null;
 
+            function existingTableNames() {
+                var names = {};
+                Array.prototype.forEach.call(document.querySelectorAll('[data-table-duplicate]'), function (b) {
+                    var n = b.getAttribute('data-table-name');
+                    if (n) { names[n.toLowerCase()] = true; }
+                });
+                return names;
+            }
+
+            function freeCopyName(baseName) {
+                var names = existingTableNames();
+                var candidate = baseName + ' kopyası';
+                var suffix = 2;
+                while (names[candidate.toLowerCase()] && suffix <= 200) {
+                    candidate = baseName + ' kopyası ' + suffix;
+                    suffix++;
+                }
+                return candidate;
+            }
+
             var closeDup = function () {
                 dupModal.hidden = true;
                 dupError.hidden = true;
@@ -163,7 +183,7 @@
                 btn.addEventListener('click', function () {
                     closeTabMenu(btn);
                     dupTargetId = btn.getAttribute('data-table-duplicate');
-                    dupNameInput.value = (btn.getAttribute('data-table-name') || 'Tablo') + ' kopyası';
+                    dupNameInput.value = freeCopyName(btn.getAttribute('data-table-name') || 'Tablo');
                     dupRecordsInput.checked = true;
                     dupError.hidden = true;
                     dupModal.hidden = false;

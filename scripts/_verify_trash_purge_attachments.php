@@ -105,6 +105,7 @@ echo "\n--- C) Aile regresyonu: TUM silme yollari temizliyor ---\n";
 foreach (array(
     'public/api/record_delete.php' => 'bcc_delete_attachment_files_by_records(',
     'public/api/table_delete.php' => 'bcc_delete_attachment_files_by_table(',
+    'public/base_tables.php' => 'bcc_delete_attachment_files_by_table(',
     'public/api/table_clear_data.php' => 'bcc_delete_attachment_files_by_table(',
     'public/table_fields.php' => 'bcc_delete_attachment_files_by_field(',
     'public/api/trash_records_list.php' => 'bcc_delete_attachment_files_by_records(',

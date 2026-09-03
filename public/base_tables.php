@@ -108,6 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'delete_table') {
             try {
+                bcc_delete_attachment_files_by_table($table['id']);
+
                 bcc_begin_transaction();
 
                 bcc_execute('DELETE FROM tables_meta WHERE id = :id', array('id' => $table['id']));

@@ -133,8 +133,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         ?>
 
         <?php if (!empty($bases) && !$groupByWorkspace): ?>
-        <?php
-              ?>
         <div class="home-section-head">
             <h2 class="home-section-title">Base'leriniz</h2>
             <span class="home-section-meta"><?php echo count($bases); ?> base</span>
@@ -146,10 +144,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         ?>
 
         <?php if ($canCreateBase): ?>
-        <?php
-        ?>
-        <?php
-              ?>
         <?php require __DIR__ . '/../src/partials/create_base_modal.php'; ?>
         <?php endif; ?>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

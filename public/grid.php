@@ -390,22 +390,16 @@ $gridUser = current_user();
 <?php echo bcc_page_identity_meta($table['base_id'], $table['base_name'], $table['name'], isset($table['base_icon']) ? $table['base_icon'] : null, isset($table['base_icon_color']) ? $table['base_icon_color'] : null), "\n"; ?>
 <script src="<?php echo bcc_asset_url('page-identity.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('theme-init.js'); ?>"></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('grid-drawer-resize.js'); ?>"></script>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('theme.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('style.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-shell.css'); ?>">
 <link rel="stylesheet" href="<?php echo bcc_asset_url('home.css'); ?>">
-<?php
-      ?>
 <link rel="stylesheet" href="<?php echo bcc_asset_url('grid-export.css'); ?>" media="print" data-grid-export-css>
 </head>
 <body class="gs-body">
 
 <aside class="gs-rail">
-    <?php
-    ?>
     <a href="/dashboard.php" class="gs-rail-home" title="Ana sayfa" aria-label="Ana sayfa">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
@@ -431,8 +425,6 @@ $gridUser = current_user();
 <div class="gs-main-col">
     <header class="gs-topbar">
         <a href="/dashboard.php" class="gs-topbar-left" title="Ana sayfaya dön">
-            <?php
-                  ?>
             <span class="gs-base-icon" style="background: <?php echo htmlspecialchars(bcc_base_icon_color($table['base_id'], isset($table['base_icon_color']) ? $table['base_icon_color'] : null), ENT_QUOTES, 'UTF-8'); ?>;"><?php echo bcc_base_icon_svg(14, $table['base_name'], isset($table['base_icon']) ? $table['base_icon'] : null); ?></span>
             <span class="gs-base-name"><?php echo htmlspecialchars($table['base_name'], ENT_QUOTES, 'UTF-8'); ?></span>
         </a>
@@ -606,27 +598,19 @@ $gridUser = current_user();
                     </button>
                     <div class="gs-table-tab-menu-divider"></div>
                     <?php endif; ?>
-                    <?php
-                          ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-xlsx-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                         Excel indir
                     </button>
-<?php
-                          ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-print-item">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="5" y="3" width="10" height="5" stroke="#5f6368" stroke-width="1.3"/><rect x="3" y="8" width="14" height="6" rx="1" stroke="#5f6368" stroke-width="1.3"/><rect x="6" y="12" width="8" height="5" stroke="#5f6368" stroke-width="1.3"/></svg>
                         Yazdır
                     </button>
-<?php
-                          ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-png-item"
                             data-html2canvas-src="<?php echo htmlspecialchars(bcc_asset_url('vendor/html2canvas.min.js'), ENT_QUOTES, 'UTF-8'); ?>">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="1.5" stroke="#5f6368" stroke-width="1.3"/><circle cx="7.5" cy="8.5" r="1.3" stroke="#5f6368" stroke-width="1.3"/><path d="M3.5 14l4-4 3.5 3.5L13.5 11l3 3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         PNG olarak indir
                     </button>
-<?php
-                          ?>
                     <button type="button" class="gs-table-tab-menu-item" id="gs-view-download-pdf-item"
                             data-html2canvas-src="<?php echo htmlspecialchars(bcc_asset_url('vendor/html2canvas.min.js'), ENT_QUOTES, 'UTF-8'); ?>">
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M6 2.5h5l3.5 3.5v11a1 1 0 01-1 1h-7.5a1 1 0 01-1-1v-13a1 1 0 011-1z" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M11 2.5V6h3.5" stroke="#5f6368" stroke-width="1.3" stroke-linejoin="round"/><path d="M7.5 11.5h5M7.5 14h3.5" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -656,8 +640,6 @@ $gridUser = current_user();
         <?php endif; ?>
 
         <?php if ($canEdit): ?>
-        <?php
-              ?>
         <div class="gs-view-desc-overlay" id="gs-table-import-overlay" hidden>
             <div class="gs-view-desc-modal gs-import-modal" role="dialog" aria-modal="true" aria-labelledby="gs-import-title">
                 <div class="gs-import-header">
@@ -680,8 +662,6 @@ $gridUser = current_user();
                     </button>
                 </div>
 
-                <?php
-                      ?>
                 <label class="gs-import-dropzone" id="gs-table-import-dropzone" for="gs-table-import-file" tabindex="0">
                     <span class="gs-import-dropzone-icon" aria-hidden="true">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -700,8 +680,6 @@ $gridUser = current_user();
                     <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                 </label>
 
-                <?php
-                      ?>
                 <div class="gs-import-file-card" id="gs-table-import-file-card" hidden>
                     <span class="gs-import-file-check" aria-hidden="true">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -756,8 +734,6 @@ $gridUser = current_user();
                     <input type="hidden" name="visible_fields_submitted" value="1">
                     <?php bcc_render_grid_state_hidden_inputs($sortState + $filterState + $groupState + $rowHeightState + $wrapHeadersState); ?>
 
-                    <?php
-                          ?>
                     <div class="hide-fields-top">
                         <div class="hide-fields-search-wrap">
                             <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -784,8 +760,6 @@ $gridUser = current_user();
                                     <?php echo !in_array((int) $f['id'], $hiddenFieldIds, true) ? 'checked' : ''; ?>
                                 >
                                 <span class="hide-field-toggle" aria-hidden="true"></span>
-                                <?php
-                                      ?>
                                 <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
                                 <span class="hide-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                             </label>
@@ -793,8 +767,6 @@ $gridUser = current_user();
                         <p class="hide-fields-empty" data-hide-fields-empty hidden>Eşleşen alan yok.</p>
                     </div>
 
-                    <?php
-                          ?>
                     <div class="hide-fields-actions">
                         <?php $allHidden = count($hiddenFieldIds) >= count($nonPrimaryFieldIds); ?>
                         <?php if ($allHidden): ?>
@@ -809,8 +781,6 @@ $gridUser = current_user();
                             <a class="hide-fields-btn" href="/grid.php?<?php echo htmlspecialchars($showAllFieldsQueryString, ENT_QUOTES, 'UTF-8'); ?>">Tümünü göster</a>
                         <?php endif; ?>
 
-                        <?php
-                              ?>
                         <button type="submit" class="hide-fields-btn hide-fields-apply" data-hide-fields-apply>Uygula</button>
                     </div>
                 </form>
@@ -857,8 +827,6 @@ $gridUser = current_user();
                             $isUserFilter = bcc_is_user_value_field_type($currentFieldType);
                         ?>
                             <div class="filter-row" data-filter-row data-slot="<?php echo $slot; ?>">
-                                <?php
-                                      ?>
                                 <span class="filter-conj" data-filter-conj>
                                     <?php if ($slot === 1): ?>
                                         <span class="filter-conj-label">Koşul</span>
@@ -872,8 +840,6 @@ $gridUser = current_user();
                                     <?php endif; ?>
                                 </span>
 
-                                <?php
-                                      ?>
                                 <span class="field-badge filter-field-badge <?php echo $currentFieldType ? 'field-badge--' . htmlspecialchars($currentFieldType, ENT_QUOTES, 'UTF-8') : 'is-empty'; ?>" data-filter-field-badge aria-hidden="true"></span>
 
                                 <select name="filter_field_<?php echo $slot; ?>" class="filter-field-select" aria-label="Filtre alanı">
@@ -927,8 +893,6 @@ $gridUser = current_user();
                                     >
                                 <?php endif; ?>
 
-                                <?php
-                                      ?>
                                 <button type="button" class="filter-row-remove" data-filter-remove aria-label="Bu filtre kuralını sil" title="Kuralı sil">
                                     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6M8.5 9v5M11.5 9v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </button>
@@ -962,8 +926,6 @@ $gridUser = current_user();
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="2" stroke="#5f6368" stroke-width="1.3"/><circle cx="14" cy="14" r="2" stroke="#5f6368" stroke-width="1.3"/><path d="M8 6h9M3 14h3" stroke="#5f6368" stroke-width="1.3" stroke-linecap="round"/></svg>
                     Grupla<?php echo !empty($groupRules) ? ' (' . count($groupRules) . ')' : ''; ?>
                 </summary>
-                <?php
-                      ?>
                 <div class="group-form group-panel-box">
 
                     <?php if (empty($groupRules)): ?>
@@ -988,8 +950,6 @@ $gridUser = current_user();
                                         <span class="group-active-name"><?php echo htmlspecialchars($rf['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                                     </span>
 
-                                    <?php
-                                          ?>
                                     <a
                                         class="group-dir-toggle"
                                         href="/grid.php?<?php echo htmlspecialchars($groupDirToggleLinks[$idx], ENT_QUOTES, 'UTF-8'); ?>"
@@ -1006,8 +966,6 @@ $gridUser = current_user();
                                 </div>
                             <?php endforeach; ?>
 
-                            <?php
-                                  ?>
                             <div class="group-collapse-row">
                                 <button type="button" class="group-mini-btn" data-group-collapse-all>Tümünü daralt</button>
                                 <button type="button" class="group-mini-btn" data-group-expand-all>Tümünü genişlet</button>
@@ -1015,8 +973,6 @@ $gridUser = current_user();
                         </div>
                     <?php endif; ?>
 
-                    <?php
-                          ?>
                     <div class="group-pick">
                         <div class="group-search-wrap">
                             <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -1035,8 +991,6 @@ $gridUser = current_user();
                                 $addLink = isset($groupAddLinks[$fid]) ? $groupAddLinks[$fid] : null;
                             ?>
                                 <?php if ($activeSlot !== null): ?>
-                                    <?php
-                                          ?>
                                     <span class="group-field-option is-active" data-group-field-name="<?php echo htmlspecialchars(mb_strtolower($f['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>" title="Bu alan zaten <?php echo (int) $activeSlot; ?>. seviyede gruplu">
                                         <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
                                         <span class="group-field-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
@@ -1062,8 +1016,6 @@ $gridUser = current_user();
                         <?php endif; ?>
                     </div>
 
-                    <?php
-                          ?>
                     <div class="group-actions">
                         <?php if (!empty($groupRules)): ?>
                             <a class="group-clear-btn" href="/grid.php?<?php echo htmlspecialchars($clearGroupQueryString, ENT_QUOTES, 'UTF-8'); ?>">Gruplamayı kaldır</a>
@@ -1094,12 +1046,8 @@ $gridUser = current_user();
                             $dirLabels = bcc_dir_labels($currentType);
                         ?>
                             <div class="sort-row" data-sort-row data-slot="<?php echo $slot; ?>">
-                                <?php
-                                      ?>
                                 <span class="sort-level-badge"><?php echo $slot; ?></span>
 
-                                <?php
-                                      ?>
                                 <span class="field-badge sort-field-badge <?php echo $currentType ? 'field-badge--' . htmlspecialchars($currentType, ENT_QUOTES, 'UTF-8') : 'is-empty'; ?>" data-sort-field-badge aria-hidden="true"></span>
 
                                 <select name="sort_field_<?php echo $slot; ?>" class="sort-field-select" aria-label="Sıralama alanı">
@@ -1115,8 +1063,6 @@ $gridUser = current_user();
                                     <?php endforeach; ?>
                                 </select>
 
-                                <?php
-                                      ?>
                                 <select name="sort_dir_<?php echo $slot; ?>" class="sort-dir-select" data-sort-dir aria-label="Sıralama yönü">
                                     <option value="asc" <?php echo $currentDir === 'asc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($dirLabels['asc'], ENT_QUOTES, 'UTF-8'); ?></option>
                                     <option value="desc" <?php echo $currentDir === 'desc' ? 'selected' : ''; ?>><?php echo htmlspecialchars($dirLabels['desc'], ENT_QUOTES, 'UTF-8'); ?></option>
@@ -1309,8 +1255,6 @@ $gridUser = current_user();
         <?php if (empty($fields)): ?>
             <?php if ($isOwner): ?>
                 <button type="button" class="card gs-empty-fields-card" id="gs-empty-fields-trigger">
-                    <?php
-                          ?>
                     <span class="gs-empty-fields-icon" aria-hidden="true">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                     </span>
@@ -1365,12 +1309,8 @@ $gridUser = current_user();
                                 $thSortable = $f['field_type'] !== 'attachment';
                                 $thCanHide = (int) $f['id'] !== $primaryFieldId;
                             ?>
-<?php
-                                      ?>
                                 <th data-col-key="f<?php echo (int) $f['id']; ?>">
                                     <span class="field-badge field-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($typeLabels[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>"></span>
-<?php
-                                          ?>
                                     <span class="grid-th-label"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php if ((int) $f['is_required'] === 1): ?><span class="req-mark" title="Zorunlu">*</span><?php endif; ?>
                                     <?php if ($thSortable || $thCanHide): ?>
@@ -1469,16 +1409,10 @@ $gridUser = current_user();
     </div>
 </div>
 
-<?php
-      ?>
 <?php require __DIR__ . '/../src/partials/share_modal.php'; ?>
 
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('confirm-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('dismissable-panel.js'); ?>" defer></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('global-search.js'); ?>" defer></script>
 <?php if (!empty($fields)): ?>
 <script>
@@ -1489,16 +1423,10 @@ $gridUser = current_user();
         }
         echo json_encode($typesById, JSON_UNESCAPED_UNICODE);
     ?>;
-    <?php
-          ?>
     var BCC_READONLY_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_READONLY_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_FILTER_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_OPERATORS'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_FILTER_NO_VALUE_OPS = <?php echo json_encode($GLOBALS['BCC_FILTER_NO_VALUE_OPS'], JSON_UNESCAPED_UNICODE); ?>;
-    <?php
-          ?>
     var BCC_FILTER_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_FILTER_MAX_SLOTS']; ?>;
-    <?php
-          ?>
     var BCC_SORT_MAX_SLOTS = <?php echo (int) $GLOBALS['BCC_SORT_MAX_SLOTS']; ?>;
     var BCC_DIR_LABELS = <?php echo json_encode($GLOBALS['BCC_GROUP_DIR_LABELS'], JSON_UNESCAPED_UNICODE); ?>;
     var BCC_TEAM_MEMBERS = <?php echo json_encode(bcc_user_choices_from_map($usersById), JSON_UNESCAPED_UNICODE); ?>;
@@ -1524,8 +1452,6 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-column-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-freeze-columns.js'); ?>" defer></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('grid-column-resize.js'); ?>" defer></script>
 <?php endif; ?>
 <?php if ($canEdit && !empty($fields)): ?>
@@ -1664,10 +1590,6 @@ $gridUser = current_user();
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
-        <?php
-              ?>
-        <?php
-              ?>
         <form class="stacked home-modal-form" data-grid-add-field data-grid-add-field-keep-open>
             <?php echo csrf_field(); ?>
             <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
@@ -1777,8 +1699,6 @@ $gridUser = current_user();
         </div>
 
         <div class="home-modal-form">
-            <?php
-                  ?>
             <p class="home-modal-label" id="gs-paste-summary"></p>
 
             <p class="home-modal-error" id="gs-paste-error" hidden></p>
@@ -1825,25 +1745,15 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-tabs.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-view-manage.js'); ?>" defer></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('grid-cell-select.js'); ?>" defer></script>
-<?php
-      ?>
 <?php if ($canEdit): ?>
 <script src="<?php echo bcc_asset_url('grid-paste.js'); ?>" defer></script>
 <?php endif; ?>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('grid-copy.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('grid-export-pdf.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-data.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('share-popover.js'); ?>" defer></script>
-<?php
-      ?>
 <script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('home.js'); ?>" defer></script>
 <script>

@@ -196,8 +196,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         ?>
                             <tr>
                                 <td class="sp-primary-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <?php
-                                      ?>
                                 <td>
                                     <span class="tf-type-pill">
                                         <span class="field-type-badge field-type-badge--<?php echo htmlspecialchars($f['field_type'], ENT_QUOTES, 'UTF-8'); ?>"></span>
@@ -216,8 +214,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     <?php endif; ?>
                                 </td>
                                 <?php if ($canEdit): ?>
-<?php
-                                      ?>
                                 <td class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/table_fields.php">
@@ -364,8 +360,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 var BCC_SELECT_FIELD_TYPES = <?php echo json_encode($GLOBALS['BCC_SELECT_FIELD_TYPES'], JSON_UNESCAPED_UNICODE); ?>;
             </script>
             <script src="<?php echo bcc_asset_url('field-type-wizard.js'); ?>" defer></script>
-            <?php
-                  ?>
             <script src="<?php echo bcc_asset_url('table-fields.js'); ?>" defer></script>
         <?php else: ?>
             <p class="settings-hint">Bu ekipte alan oluşturmak/düzenlemek için owner rolü gerekir.</p>

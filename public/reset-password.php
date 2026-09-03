@@ -98,8 +98,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
         <?php elseif ($user): ?>
             <p class="login-tagline">Merhaba <?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?>, hesabınız için yeni bir şifre belirleyin. Şifre en az 8 karakter olmalı.</p>
 
-            <?php
-                  ?>
             <form method="post" action="/reset-password.php">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">

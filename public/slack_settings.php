@@ -297,8 +297,6 @@ function bcc_render_slack_team_row($w, $table, $canEdit, $isExtra = false)
         <span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span>
         <?php bcc_slack_status_pill($w['is_active']); ?>
         <?php if ($canEdit): ?>
-            <?php
-                  ?>
             <span class="sl-row-actions">
                 <?php if (!$isExtra): ?>
                 <form method="post" action="/slack_settings.php">
@@ -335,13 +333,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
         <input type="hidden" name="scope" value="<?php echo htmlspecialchars($scope, ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
         <input type="hidden" name="webhook_id" value="<?php echo $webhook ? (int) $webhook['id'] : ''; ?>">
-        <?php
-              ?>
         <label class="settings-field">
-            <?php
-                  ?>
-            <?php
-                  ?>
             <span class="sl-label">Webhook URL
                 <?php if ($webhook): ?>
                     <span class="sl-opt">boş = değişmez</span>
@@ -350,8 +342,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 <?php endif; ?>
             </span>
             <?php if ($webhook): ?>
-                <?php
-                      ?>
                 <span class="sl-hint">Boş bırakırsanız <strong>mevcut adres korunur</strong> — sadece kanal adını ya da Aktif anahtarını değiştirmek için URL'i yeniden yapıştırmanız gerekmez. Yeni bir adres yapıştırırsanız <strong>hedef kanal da değişir</strong>.</span>
             <?php else: ?>
                 <span class="sl-hint">Slack &rarr; <em>Apps</em> &rarr; <em>Incoming Webhooks</em> &rarr; <em>Add New Webhook to Workspace</em> &rarr; kanalı seçin, size verilen adresi buraya yapıştırın. <strong>Hedef kanalı bu adres belirler</strong>; başka bir kanala göndermek için Slack'te yeni bir webhook oluşturmanız gerekir.</span>
@@ -365,8 +355,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
             <input type="text" name="channel_name" value="<?php echo $webhook ? htmlspecialchars((string) $webhook['channel_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="#trendyol-siparis">
         </label>
         <div class="sl-form-footer">
-            <?php
-                  ?>
             <label class="sp-toggle">
                 <input type="checkbox" name="is_active" value="1" <?php echo (!$webhook || (int) $webhook['is_active'] === 1) ? 'checked' : ''; ?>>
                 <span class="sp-toggle-track"></span>
@@ -432,11 +420,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 <td><span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span></td>
                                 <td><?php bcc_slack_status_pill($w['is_active']); ?></td>
                                 <?php if ($canEdit): ?>
-                                <?php
-                                      ?>
                                 <td class="settings-row-actions">
-                                    <?php
-                                          ?>
                                     <form method="post" action="/slack_settings.php">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="test_webhook">
@@ -491,8 +475,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 <span>Yedek kanal: bu takımın <strong>tüm</strong> tablolarında (bu tablo dahil), tablo-özel bir webhook veya kural eşleşmemişse tetiklenir.</span>
             </div>
 
-            <?php
-                  ?>
             <?php if ($teamWebhook): ?>
                 <h3 class="sl-subhead sl-subhead--tight">Bağlı kanal</h3>
                 <?php bcc_render_slack_team_row($teamWebhook, $table, $canEdit); ?>
@@ -503,8 +485,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                 </p>
             <?php endif; ?>
 
-            <?php
-                  ?>
             <?php if ($canEdit && !empty($extraTeamWebhooks)): ?>
                 <div class="sp-note sp-note--warn">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
@@ -527,8 +507,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         Yedek kanal ekle
                     <?php endif; ?>
                 </h3>
-                <?php
-                      ?>
                 <?php bcc_render_slack_webhook_form('team', $teamWebhook, $table, $teamWebhook ? 'Kaydet' : 'Ekle'); ?>
             <?php endif; ?>
         </div>
@@ -635,8 +613,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                         Yeni kural ekle
                     </h3>
-                    <?php
-                          ?>
                     <form class="settings-form sl-rule-form" method="post" action="/slack_settings.php">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="add_routing_rule">
@@ -711,8 +687,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                     </div>
                 <?php endif; ?>
             <?php else: ?>
-                <?php
-                      ?>
                 <form method="post" action="/slack_settings.php">
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="save_watched_fields">
@@ -725,8 +699,6 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
                                 ? $GLOBALS['BCC_FIELD_TYPES'][$wf['field_type']]
                                 : $wf['field_type'];
                             ?>
-                            <?php
-                                  ?>
                             <label class="sl-watch-item sp-toggle">
                                 <input type="checkbox" name="watched_fields[]" value="<?php echo (int) $wf['id']; ?>" <?php echo in_array((int) $wf['id'], $watchedFieldIds, true) ? 'checked' : ''; ?>>
                                 <span class="sp-toggle-track"></span>

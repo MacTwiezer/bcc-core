@@ -117,8 +117,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php if (empty($teams)): ?>
-            <?php
-                  ?>
             <?php if ((int) $user['is_admin'] === 1): ?>
                 <p class="settings-empty">
                     <strong>Sistemde henüz hiç çalışma alanı yok.</strong>
@@ -139,8 +137,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php else: ?>
             <div class="wsx-layout">
 
-                <?php
-                      ?>
                 <aside class="wsx-side">
                     <div class="wsx-panel">
 
@@ -149,8 +145,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <span class="wsx-panel-count"><?php echo count($teams); ?></span>
                         </div>
 
-                        <?php
-                              ?>
                         <div class="wsx-panel-search">
                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M12.7 12.7L17 17" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                             <input
@@ -190,11 +184,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
 
                         <div class="wsx-panel-foot">
-                            <?php
-                                  ?>
                             <?php if ((int) $user['is_admin'] === 1): ?>
-                                <?php
-                                      ?>
                                 <a href="/admin/create_team.php" class="wsx-newbtn" data-create-team-btn>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                                     Yeni Çalışma Alanı
@@ -253,8 +243,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </div>
                             </div>
                             <div class="wsx-actions">
-                                <?php
-                                ?>
                                 <?php if ($canManageMembers): ?>
                                 <button type="button" class="wsx-btn wsx-btn--primary" data-share-modal-open>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8" cy="7" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14.5 7.5h3M16 6v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -262,15 +250,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </button>
                                 <?php endif; ?>
                                 <?php if ($canCreateBase): ?>
-                                <?php
-                                      ?>
                                 <button type="button" class="wsx-btn" data-create-base-open>
                                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                                     Base oluştur
                                 </button>
                                 <?php endif; ?>
-                                <?php
-                                      ?>
                                 <?php if (!$canManageMembers && !$canCreateBase): ?>
                                     <span class="wsx-role-note">
                                         Rolünüz: <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$selectedRole], ENT_QUOTES, 'UTF-8'); ?></strong>
@@ -279,8 +263,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </div>
                         </div>
 
-                        <?php
-                              ?>
                         <div class="wsx-statbar">
                             <div class="wsx-stat">
                                 <span class="wsx-stat-value"><?php echo number_format($wsUsage['base_count'], 0, ',', '.'); ?></span>
@@ -301,8 +283,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         </div>
                     </div>
 
-                    <?php
-                          ?>
                     <div class="wsx-body">
                     <div class="wsx-body-main">
 
@@ -310,15 +290,11 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <div class="wsx-collab-head">
                             <h3 class="wsx-collab-title">Base'ler <span class="sp-count"><?php echo count($wsBases); ?></span></h3>
                             <?php if ($canCreateBase): ?>
-                                <?php
-                                      ?>
                                 <button type="button" class="wsx-linkbtn" data-create-base-open>+ Yeni base</button>
                             <?php endif; ?>
                         </div>
 
                         <?php if (!empty($wsStarredBases)): ?>
-                            <?php
-                                  ?>
                             <div class="wsx-fav">
                                 <span class="wsx-fav-label">
                                     <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l2.3 4.9 5.2.7-3.8 3.8.9 5.4L10 14.7l-4.6 2.6.9-5.4-3.8-3.8 5.2-.7L10 2.5z" fill="currentColor"/></svg>
@@ -380,14 +356,10 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <h3 class="wsx-collab-title">Katılımcılar <span class="sp-count"><?php echo count($collaborators); ?></span></h3>
                         </div>
 
-                        <?php
-                              ?>
 
                         <?php if (empty($collaborators)): ?>
                             <p class="settings-empty"><strong>Bu çalışma alanında katılımcı yok.</strong></p>
                         <?php else: ?>
-                            <?php
-                                  ?>
                             <div class="wsx-collab-grid" id="wsx-collab-grid">
                                 <?php foreach ($collaborators as $c): ?>
                                     <div class="wsx-member">
@@ -402,8 +374,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                             <?php endif; ?>
                                             <span class="sp-role sp-role--<?php echo htmlspecialchars($c['role'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$c['role']], ENT_QUOTES, 'UTF-8'); ?></span>
                                         </div>
-                                        <?php
-                                              ?>
                                         <?php if ($canManageMembers): ?>
                                         <a class="wsx-member-manage" href="/team_members.php?team_id=<?php echo $selectedTeamId; ?>" title="Rolü değiştir veya çıkar" aria-label="<?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?> — rolü değiştir veya çıkar">
                                             <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>
@@ -419,8 +389,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 
                     <aside class="wsx-body-side">
 
-                        <?php
-                              ?>
                         <div class="settings-card wsx-side-card">
                             <h3 class="wsx-side-title">Kullanım &amp; Limitler</h3>
 
@@ -461,8 +429,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </div>
                             <?php endforeach; ?>
 
-                            <?php
-                                  ?>
                             <div class="wsx-integration">
                                 <span class="wsx-integration-dot<?php echo $wsUsage['slack_webhook_count'] > 0 ? ' is-on' : ''; ?>"></span>
                                 <span class="wsx-integration-text">
@@ -479,8 +445,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             </p>
                         </div>
 
-                        <?php
-                              ?>
                         <div class="settings-card wsx-side-card">
                             <h3 class="wsx-side-title">Son Hareketler</h3>
 
@@ -518,12 +482,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             require __DIR__ . '/../src/partials/share_modal.php';
             ?>
             <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
-            <?php
-                  ?>
         <?php endif; ?>
 
-        <?php
-              ?>
         <?php if ((int) $user['is_admin'] === 1): ?>
             <?php require __DIR__ . '/../src/partials/create_team_modal.php'; ?>
             <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
@@ -538,7 +498,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 </div>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>
 <?php if ($selectedTeamId): ?>
-    <?php
-    ?>
     <script src="<?php echo bcc_asset_url('share-modal.js'); ?>" defer></script>
 <?php endif; ?>

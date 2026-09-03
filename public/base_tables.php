@@ -184,8 +184,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                         <tbody>
                         <?php foreach ($tables as $i => $t): ?>
                             <tr>
-                                <?php
-                                      ?>
                                 <td class="sp-primary-name">
                                     <a href="/grid.php?table_id=<?php echo (int) $t['id']; ?>">
                                         <?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>
@@ -194,8 +192,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </td>
                                 <td class="<?php echo ((string) $t['description'] !== '') ? '' : 'sp-muted'; ?>"><?php echo ((string) $t['description'] !== '') ? htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8') : '—'; ?></td>
                                 <?php if ($canEdit): ?>
-                                <?php
-                                      ?>
                                 <td class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/base_tables.php">

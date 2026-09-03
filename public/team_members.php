@@ -113,8 +113,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <button type="submit" class="tm-assign-submit">Ata</button>
                 </form>
             <?php else: ?>
-                <?php
-                ?>
                 <p class="tm-readonly-note">
                     Bu çalışma alanındaki rolünüz
                     <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$myRole], ENT_QUOTES, 'UTF-8'); ?></strong>.
@@ -152,8 +150,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <table class="tm-table">
                     <thead>
                         <tr>
-                            <?php
-                                  ?>
                             <?php if ($canManageMembers): ?>
                             <th class="tm-col-check"><input type="checkbox" data-tm-select-all aria-label="Tümünü seç"></th>
                             <?php endif; ?>

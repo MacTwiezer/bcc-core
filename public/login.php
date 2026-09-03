@@ -82,8 +82,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
         </p>
 
         <?php if (bcc_demo_login_enabled()): ?>
-            <?php
-            ?>
             <div class="login-demo">
                 <div class="login-demo-head">
                     <span class="login-demo-title">Hızlı Demo Girişi</span>

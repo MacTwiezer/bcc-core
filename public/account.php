@@ -107,8 +107,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <div class="ac-main">
 
         <div class="account-card account-card-profile">
-            <?php
-                  ?>
             <div class="ac-profile-head">
                 <div class="account-avatar-lg"><?php echo htmlspecialchars(bcc_user_initial($user), ENT_QUOTES, 'UTF-8'); ?></div>
                 <div class="ac-profile-id">
@@ -143,8 +141,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             Düzenle
                         </button>
                     </div>
-                    <?php
-                          ?>
                     <form class="account-row-form" data-account-edit-form data-account-endpoint="/api/account_update_name.php" hidden>
                         <input type="text" name="full_name" class="account-input" data-account-input maxlength="150" required value="<?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="account-row-actions">
@@ -233,8 +229,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             <?php if (empty($teams)): ?>
                 <p class="account-teams-empty">Henüz üyesi olduğunuz bir ekip yok.</p>
             <?php else: ?>
-                <?php
-                      ?>
                 <div class="account-team-list">
                     <?php foreach ($teams as $t): ?>
                         <div class="account-team-row">
@@ -254,8 +248,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
                 Tehlikeli Bölge
             </h3>
-            <?php
-                  ?>
             <div class="account-row-display ac-danger-row" data-account-display>
                 <span class="account-row-value">
                     <strong>Hesabı pasife al</strong>
@@ -283,8 +275,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <aside class="ac-side">
-            <?php
-                  ?>
             <div class="ac-widget">
                 <h3 class="ac-widget-title">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l6 2.5v5c0 3.6-2.5 6.6-6 7.5-3.5-.9-6-3.9-6-7.5V5l6-2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.5 10l1.8 1.8L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -357,8 +347,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <p class="ac-widget-note">Üyesi olduğunuz ekiplerin toplamı.</p>
             </div>
 
-            <?php
-                  ?>
             <div class="ac-widget">
                 <h3 class="ac-widget-title">
                     <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M11 2.5L4 11h5l-1 6.5L16 9h-5l1-6.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>

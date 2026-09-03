@@ -110,8 +110,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             <p class="login-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
 
-        <?php
-              ?>
         <form method="post" action="/register.php" data-once-submit>
             <?php echo csrf_field(); ?>
             <div class="login-field">
@@ -130,10 +128,6 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
             Zaten hesabın var mı? <a href="/login.php">Giriş yap</a>
         </p>
 
-<?php
-      ?>
-<?php
-      ?>
 <script>
 (function () {
     var form = document.querySelector('form[data-once-submit]');

@@ -114,15 +114,29 @@ function current_user_team_ids()
 // sorgusu hâlâ TEK yerde, iki ayrı kaynak oluşmadı.
 function current_user_team_roles()
 {
-    static $cache = null;
+    // ONBELLEK KULLANICI KIMLIGINE GORE ANAHTARLI.
+    //
+    // Bulunan gercek tuzak (olculdu): onceden tek bir "static $cache" vardi ve
+    // current_user(true) ile oturumdaki kullanici DEGISTIRILDIGINDE bu harita
+    // sifirlanmiyordu. attempt_login() tam da bunu yapiyor (auth.php icinde
+    // $_SESSION['user_id'] yazip current_user(true) cagiriyor). Sonda ile
+    // dogrulandi: A kullanicisinin ekipleri okunduktan sonra B'ye gecilince
+    // fonksiyon HALA A'nin ekiplerini donduruyordu.
+    //
+    // Bu harita current_user_team_ids() -> require_team_access() zincirini ve
+    // bildirim kapsamini besliyor, yani bir YETKI kaynagi. Kimlige gore
+    // anahtarlamak, cagiranlarin bir sifirlama cagrisi yapmasini beklemeden
+    // dogru olmasini saglar.
+    static $cache = array();
 
     $user = current_user();
     if ($user === null) {
         return array();
     }
 
-    if ($cache !== null) {
-        return $cache;
+    $uid = (int) $user['id'];
+    if (isset($cache[$uid])) {
+        return $cache[$uid];
     }
 
     // ⚠️ PLATFORM ADMİNİ TÜM EKİPLERİ GÖRÜR — bilinçli bir ürün kararı.
@@ -158,7 +172,7 @@ function current_user_team_roles()
         $map[(int) $row['team_id']] = $row['role'];
     }
 
-    $cache = $map;
+    $cache[$uid] = $map;
 
     return $map;
 }

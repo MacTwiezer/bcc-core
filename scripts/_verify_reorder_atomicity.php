@@ -72,6 +72,15 @@ register_shutdown_function($cleanup);
 $cleanup();
 
 // GERCEK base referans olcumu
+// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
+// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
+// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
+// kaybeder ama test yesil kalmaya devam eder.
+if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
+    echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
+    exit(1);
+}
+
 $realBefore = array(
     'tablo' => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = ' . REAL_BASE_ID),
     'kayit' => (int) bcc_fetch_column('SELECT COUNT(*) FROM records WHERE table_id IN (SELECT id FROM tables_meta WHERE base_id = ' . REAL_BASE_ID . ')'),

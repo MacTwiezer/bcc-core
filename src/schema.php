@@ -2605,16 +2605,70 @@ function bcc_external_link_icon_svg()
         . '</svg>';
 }
 
+// Girdi UZUNLUK sınırı (KARAKTER) ve çıktı BOYUT sınırı (BAYT).
+//
+// ⚠️ İKİSİ AYNI ŞEY DEĞİL ve eskiden yalnızca birincisi vardı — bulunan gerçek
+// veri kaybı: cell_values.value_text TEXT, yani 65.535 BAYT. 20.000 karakterlik
+// girdi sınırı bunu GARANTİ ETMİYOR, çünkü sanitize çıktısı büyüyebiliyor:
+//   * Türkçe harf   -> 2 bayt  (20.000 karakter =  40.000 bayt, sorun yok)
+//   * emoji         -> 4 bayt  (20.000 karakter =  80.000 bayt)
+//   * ham "&"       -> "&amp;" (20.000 karakter = 100.000 bayt)
+// MariaDB'nin sql_mode'unda STRICT YOK, dolayısıyla fazlalık hata vermeden
+// SESSİZCE KESİLİYORDU. Canlı ölçüldü (16.380 emoji + bir bağlantı):
+//   - 80 bayt sessizce kayboldu,
+//   - kesme noktası bir etiketin ORTASINA düştü ve hücrede kapanmamış bir
+//     <a href="https:  kaldı — tarayıcı sonraki hücreleri o özniteliğin İÇİNE
+//     yutuyor, satırın geri kalanı bozuluyor,
+//   - kesme 4 baytlık emojiyi ortadan bölüp GEÇERSİZ UTF-8 üretti.
+//
+// Çözüm: çıktı sığmıyorsa GİRDİ orantılı olarak kısaltılıp sanitize YENİDEN
+// çalıştırılır. Çıktıyı bayttan kırpmak aynı bozuk-etiket sorununu üretirdi;
+// sanitize edici ise ağacı yeniden inşa ettiği için HER ZAMAN dengeli ve
+// geçerli HTML döndürür. 60.000 bayt tavanı 65.535'in altında kasıtlı bir pay
+// bırakır.
+define('BCC_RICH_TEXT_MAX_CHARS', 20000);
+define('BCC_RICH_TEXT_MAX_BYTES', 60000);
+
 function bcc_sanitize_rich_text($html)
 {
     $html = trim((string) $html);
     if ($html === '') {
         return null;
     }
-    if (mb_strlen($html, 'UTF-8') > 20000) {
-        $html = mb_substr($html, 0, 20000, 'UTF-8');
+    if (mb_strlen($html, 'UTF-8') > BCC_RICH_TEXT_MAX_CHARS) {
+        $html = mb_substr($html, 0, BCC_RICH_TEXT_MAX_CHARS, 'UTF-8');
     }
 
+    $output = bcc_sanitize_rich_text_pass($html);
+
+    // Orantılı küçültme: her tur çıktının ne kadar taştığına bakıp girdiyi o
+    // oranda kısaltır. Genişleme oranı karakterden karaktere değiştiği için tek
+    // tur yetmeyebilir; %90'lık güvenlik payıyla birkaç turda yakınsar.
+    $tur = 0;
+    while ($output !== null && strlen($output) > BCC_RICH_TEXT_MAX_BYTES && $tur < 8) {
+        $karakter = mb_strlen($html, 'UTF-8');
+        if ($karakter <= 1) {
+            break;
+        }
+        $yeni = (int) floor($karakter * (BCC_RICH_TEXT_MAX_BYTES / strlen($output)) * 0.9);
+        if ($yeni >= $karakter) {
+            $yeni = $karakter - 1;
+        }
+        if ($yeni < 1) {
+            $yeni = 1;
+        }
+        $html = mb_substr($html, 0, $yeni, 'UTF-8');
+        $output = bcc_sanitize_rich_text_pass($html);
+        $tur++;
+    }
+
+    return ($output === null || $output === '') ? null : $output;
+}
+
+// Tek bir sanitize turu — bcc_sanitize_rich_text() bunu gerektiğinde daha kısa
+// bir girdiyle TEKRAR çağırır, bu yüzden ayrı bir fonksiyon.
+function bcc_sanitize_rich_text_pass($html)
+{
     // tag => izinli attribute listesi. strong/b/em/i/br: attribute yok.
     $allowedTags = array(
         'strong' => array(), 'b' => array(), 'em' => array(), 'i' => array(),
@@ -2633,9 +2687,7 @@ function bcc_sanitize_rich_text($html)
         return null;
     }
 
-    $output = trim(bcc_sanitize_rich_text_children($body, $allowedTags));
-
-    return $output === '' ? null : $output;
+    return trim(bcc_sanitize_rich_text_children($body, $allowedTags));
 }
 
 function bcc_sanitize_rich_text_children($node, $allowedTags)
@@ -2779,6 +2831,17 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
         case 'url':
         case 'email':
             $text = trim((string) $rawValue);
+
+            // ⚠️ cell_values.value_text TEXT = 65.535 BAYT ve MariaDB'nin
+            // sql_mode'unda STRICT YOK — sınırı aşan değer hata vermeden
+            // SESSİZCE KESİLİYORDU (bu dört tipte hiç uzunluk kontrolü yoktu).
+            // Kesme bayt hizasında yapıldığı için çok baytlı bir karakterin
+            // ortasına düşüp geçersiz UTF-8 de üretebiliyordu.
+            // bcc_create_field()'in fields.name VARCHAR(150) kontrolüyle AYNI
+            // gerekçe ve AYNI çözüm: sessizce bozmak yerine açıkça reddet.
+            if (strlen($text) > 65535) {
+                return array('ok' => false, 'error' => 'Değer çok uzun (bu alan en fazla 65.535 bayt saklayabilir).');
+            }
 
             return array('ok' => true, 'column' => $column, 'value' => $text === '' ? null : $text);
 

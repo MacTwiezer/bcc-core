@@ -1,28 +1,4 @@
 <?php
-// "Gorunumu kaydet" ARTIK TABLOYU PANOYA DA KOPYALIYOR + "PDF olarak indir".
-//
-// ⚠️ PREMIS DUZELTMESI: kullanici "Gorunumu kaydet islevsiz" dedi; olculdu ve
-// CALISIYORDU (ucnokta ok:true, views.config guncelleniyor). "Islevsiz"
-// hissettirmesinin sebebi gorunur bir sonucu olmamasiydi. Bu yuzden kaydetme
-// KALDI, kopyalama onun USTUNE eklendi -- ozellik yok edilmedi.
-//
-// Kapsam:
-//   A) Kaydetme KORUNDU: ucnokta cagrisi duruyor ve CANLI olarak calisiyor
-//   B) Kopyalama eklendi ve pano mantigi TEK kaynaktan (kopya yok)
-//   C) Butun tablo + BASLIK satiri kopyalaniyor (Excel'de kullanilabilir tablo)
-//   D) Sag tik -> Yapistir da calisir: GERCEK sistem panosuna iki format yazilir
-//   E) Kopyalama basarisiz olursa kaydetme yine BASARILI raporlanir
-//   F) copyWholeTable'in dayandigi markup CANLI ciktida GERCEKTEN var
-//   G) "PDF olarak indir" PNG'nin HEMEN ALTINDA ve ayri bir kalem
-//   H) PDF yeni KUTUPHANE eklemedi, PNG'nin canvas'ini paylasiyor
-//   I) Uretilen PDF YAPISAL OLARAK GECERLI (xref ofsetleri bayt bayt dogru)
-//
-// ⚠️ DOGRULANAMAYAN: panoya yazmanin KENDISI ve PDF'in bir okuyucuda acilmasi
-// tarayici gerektirir; bu makinede headless tarayici YOK. Olculen sey
-// sozlesme, markup, canli kayit turu ve PDF'in bayt yapisi.
-//
-// On kosul: Apache + node. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_save_copy_pdf.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -32,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -73,7 +46,6 @@ function http_request($method, $path, $cookie = null, $post = null)
     return array('body' => (string) $b, 'cookie' => $nc, 'status' => $st);
 }
 
-// ⚠️ Yorumlar ayiklanir (bu oturumda dort kez yanlis-pozitif verdi).
 function strip_js_comments($src)
 {
     $src = preg_replace('#/\*.*?\*/#s', '', $src);
@@ -87,7 +59,6 @@ $pdfJs = strip_js_comments(file_get_contents($root . '/public/assets/grid-export
 $pngJs = strip_js_comments(file_get_contents($root . '/public/assets/grid-export-png.js'));
 $gridPhp = file_get_contents($root . '/public/grid.php');
 
-// =====================================================================
 echo "\n--- A) Kaydetme KORUNDU ---\n";
 check('A) ucnokta cagrisi hala yerinde',
     strpos($gridJs, "post('/api/view_save_state.php'") !== false);
@@ -95,17 +66,12 @@ check('A) state_query_string hala gonderiliyor',
     strpos($gridJs, 'state_query_string') !== false);
 check('A) ucnokta dosyasi duruyor', is_file($root . '/public/api/view_save_state.php'));
 
-// =====================================================================
 echo "\n--- B) Kopyalama eklendi, pano mantigi TEK kaynaktan ---\n";
 check('B) kaydetme basarisindan SONRA kopyalama cagriliyor',
     strpos($gridJs, 'BCC_GRID_COPY.copyWholeTable()') !== false);
 check('B) grid-copy.js yuzeyi disa aciyor',
     strpos($copyJs, 'window.BCC_GRID_COPY = { copyWholeTable: copyWholeTable }') !== false);
-// ⚠️ Asil guvence: grid.js KENDI pano mantigini YAZMIYOR.
-// ⚠️ KONTROL DARALTILDI: ilk yazimda ciplak 'execCommand' araniyordu ve
-// KALDI veriyordu -- grid.js'in zengin metin editoru document.execCommand
-// ('bold' vb.) kullaniyor, bu MESRU ve pano ile ilgisiz. Aranan sey PANOYA
-// YAZMA: clipboardData / setData / execCommand('copy').
+
 check('B) grid.js kendi pano yazma mantigini YAZMIYOR (kopya yok)',
     strpos($gridJs, 'clipboardData') === false
     && strpos($gridJs, "setData('text/html'") === false
@@ -118,7 +84,6 @@ check('B) copyWholeTable mevcut yardimcilari kullaniyor (buildTsv/buildHtml/writ
 check('B) ikinci bir writeClipboard tanimi YOK',
     substr_count($copyJs, 'function writeClipboard') === 1);
 
-// =====================================================================
 echo "\n--- C) Butun tablo + BASLIK satiri ---\n";
 check('C) veri sutunlari data-col-key ile secilLiyor (satir no / "+" disarida)',
     strpos($copyJs, "thead th[data-col-key]") !== false);
@@ -129,18 +94,13 @@ check('C) TSV ye baslik satiri EKLENIYOR',
 check('C) HTML e <thead> EKLENIYOR',
     strpos($copyJs, "'<thead><tr") !== false
     && strpos($copyJs, "replace('<tbody>', thead + '<tbody>')") !== false);
-// Ctrl+C (secim) YOLU DEGISMEDI: orada baslik istenmez.
+
 check('C) Ctrl+C secim yolu baslik EKLEMIYOR (degismedi)',
     preg_match('#function copySelection\(\)[\s\S]{0,400}?buildTsv\(matrix\)#', $copyJs) === 1
     && preg_match('#function copySelection\(\)[\s\S]{0,400}?thead#', $copyJs) === 0);
 
-// =====================================================================
 echo "\n--- C2) Bicim bilgisi pano HTML'ine satir ici yaziliyor ---\n";
-// ⚠️ BU BOLUM "Excel'de kenarlik GORUNUYOR" demiyor -- OLCULEN sonuc bunun
-// AKSI: kullanici Excel'e yapistirdi, kenarliklar GELMEDI (Excel buyuk
-// olasilikla text/plain dalini aliyor). Buradaki kontroller yalnizca
-// bicimin panoya YAZILDIGINI dogrular; hedef programin onu uygulayip
-// uygulamadigini bu betik OLCEMEZ (tarayici gerekir).
+
 check('C2) tabloya border ozniteligi + border-collapse',
     strpos($copyJs, 'border="1" style="border-collapse:collapse"') !== false);
 check('C2) her <td> ye INLINE kenarlik stili',
@@ -160,18 +120,15 @@ check('C3) grid-paste.js o satiri ATLIYOR',
 check('C3) atlama YALNIZCA kendi tablomuzda (disaridan gelende davranis degismez)',
     preg_match('#if \(isOurs\)\s*\{[\s\S]{0,200}?data-bcc-head#', $pasteJs) === 1);
 
-// =====================================================================
 echo "\n--- D) Sag tik -> Yapistir: GERCEK sistem panosu, iki format ---\n";
 check('D) text/plain (Excel/LibreOffice/Not Defteri okur)',
     strpos($copyJs, "setData('text/plain', tsv)") !== false);
-// ⚠️ Kontrol eskimisti: HTML artik dogrudan degil, wrapHtmlDocument() ile
-// tam bir belgeye sarilip yaziliyor. Korunan guvence AYNI — text/html kanali var.
+
 check('D) text/html (zengin tablo -- Word/Airtable/LibreOffice)',
     preg_match("/setData\('text\/html',/", $copyJs) === 1);
 check('D) sistem panosuna yaziliyor (uygulama ici tampon DEGIL)',
     strpos($copyJs, "execCommand('copy')") !== false);
 
-// =====================================================================
 echo "\n--- E) Kopyalama basarisiz olursa kaydetme BASARILI raporlanir ---\n";
 check('E) basarili dalda kayit + kopya birlikte bildiriliyor',
     strpos($gridJs, 'Görünüm kaydedildi · tablo panoya kopyalandı') !== false);
@@ -183,7 +140,6 @@ check('E) BCC_GRID_COPY yoksa cokmuyor (guard)',
     strpos($gridJs, 'window.BCC_GRID_COPY' . "\n") !== false
     || strpos($gridJs, 'window.BCC_GRID_COPY') !== false);
 
-// =====================================================================
 echo "\n--- G) 'PDF olarak indir' menu kalemi ---\n";
 $posPng = strpos($gridPhp, 'gs-view-download-png-item');
 $posPdf = strpos($gridPhp, 'gs-view-download-pdf-item');
@@ -191,7 +147,7 @@ check('G) PDF kalemi var', $posPdf !== false);
 check('G) PNG in HEMEN ALTINDA (istenen sira)',
     $posPng !== false && $posPdf !== false && $posPdf > $posPng,
     "png@$posPng pdf@$posPdf");
-// Aradaki mesafe kucuk olmali: baska bir menu kalemi araya girmemis.
+
 $between = ($posPng !== false && $posPdf !== false) ? substr($gridPhp, $posPng, $posPdf - $posPng) : '';
 check('G) araya BASKA bir menu kalemi girmemis',
     substr_count($between, 'class="gs-table-tab-menu-item"') <= 1,
@@ -199,7 +155,6 @@ check('G) araya BASKA bir menu kalemi girmemis',
 check('G) "Yazdir" AYRI bir kalem olarak duruyor (PDF onun yerini almadi)',
     strpos($gridPhp, 'gs-view-print-item') !== false);
 
-// =====================================================================
 echo "\n--- H) PDF yeni kutuphane eklemedi, canvas'i PAYLASIYOR ---\n";
 check('H) grid-export-png.js yakalama yuzeyini disa aciyor',
     strpos($pngJs, 'window.BCC_GRID_EXPORT') !== false
@@ -213,7 +168,7 @@ check('H) PDF KENDI html2canvas sarmalayicisini yazmiyor',
 check('H) vendor klasorune YENI kutuphane eklenmedi (yalnizca html2canvas)',
     count(array_diff(scandir($root . '/public/assets/vendor'), array('.', '..'))) === 1,
     implode(',', array_diff(scandir($root . '/public/assets/vendor'), array('.', '..'))));
-// Yukleme SIRASI: PDF, PNG'den SONRA (yuzey orada kuruluyor; ikisi de defer).
+
 $sPng = strpos($gridPhp, 'grid-export-png.js');
 $sPdf = strpos($gridPhp, 'grid-export-pdf.js');
 check('H) grid-export-pdf.js, grid-export-png.js ten SONRA yukleniyor',
@@ -221,9 +176,8 @@ check('H) grid-export-pdf.js, grid-export-png.js ten SONRA yukleniyor',
 check('H) grid-copy.js grid.js ten SONRA yukleniyor (BCC_GRID_COPY hazir olsun)',
     strpos($gridPhp, 'grid-copy.js') > strpos($gridPhp, "bcc_asset_url('grid.js')"));
 
-// =====================================================================
 echo "\n--- I) Uretilen PDF YAPISAL OLARAK GECERLI ---\n";
-// buildPdf DOSYADAN cikarilip node'da calistirilir (ikinci bir kopya YAZILMAZ).
+
 $nodeScript = <<<'JS'
 const fs=require('fs');
 // argv[0]=node, argv[1]=BU betik, argv[2]=incelenecek dosya. Ilk yazimda
@@ -267,9 +221,6 @@ check('I) TUM xref ofsetleri BAYT BAYT dogru', strpos($nodeOut, 'offsets=OK') !=
 check('I) JPEG /DCTDecode ile gomulu', strpos($nodeOut, 'dct=OK') !== false);
 check('I) sayfa boyutu 96dpi->72pt donusumuyle dogru', strpos($nodeOut, 'mediabox=OK') !== false);
 
-// =====================================================================
-// F) CANLI: markup ve kaydetme
-// =====================================================================
 $wipe = function () {
     foreach (bcc_fetch_all('SELECT id FROM teams WHERE name = :n', array(':n' => TEAM)) as $r) {
         bcc_execute('DELETE FROM teams WHERE id = :id', array(':id' => $r['id']));
@@ -344,7 +295,6 @@ try {
     check('A2) views.config GERCEKTEN degisti (kaydetme yok edilmedi)',
         $before !== $after && strpos((string) $after, 'sort_field_1') !== false,
         'once=' . var_export($before, true) . ' sonra=' . var_export($after, true));
-
 } catch (Throwable $e) {
     echo "\n[HATA] " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . "\n";
     $results[] = false;

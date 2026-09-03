@@ -1,16 +1,4 @@
 <?php
-// bcc_reorder_sibling() + rename/move aksiyonlarinin ATOMIKLIGI.
-//
-// ⚠️ /browse KULLANILMAZ — sunucu-tarafli HTTP (gercek oturum, gercek uc noktalar).
-// ⚠️ IZOLE: kendi test base'ini yaratir; GERCEK uretim base'ine (15) dokunmaz,
-//    once/sonra sayaclariyla kanitlanir.
-//
-// EN KRITIK TEST: "yarim takas" senaryosu. bcc_reorder_sibling() IKI ayri UPDATE
-// yapiyor; ikisinden yalnizca biri kalici olursa IKI SATIR AYNI position'da kalir.
-// Asagida transaction icinde iki UPDATE + kasitli bir hata tetiklenip HER IKI
-// UPDATE'in de geri alindigi gercek InnoDB uzerinde dogrulaniyor.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_reorder_atomicity.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -20,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik denetim satiri uretiyor; test kullanicisi silinince o satirlar
-// audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu kosunun urettigi ve
-// aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -67,21 +52,15 @@ function csrf($h) { return preg_match('/name="csrf_token"\s+value="([a-f0-9]+)"/
 
 $cleanup = function () {
     foreach (array_column(bcc_fetch_all('SELECT b.id FROM bases b JOIN users u ON u.id = b.created_by WHERE u.email = :e', array(':e' => OWNER)), 'id') as $bid) {
-        if ((int) $bid === REAL_BASE_ID) { continue; } // gercek base'e ASLA
+        if ((int) $bid === REAL_BASE_ID) { continue; }
         bcc_execute('DELETE FROM bases WHERE id = :i', array(':i' => $bid));
     }
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => OWNER));
 };
 
-// Onceki yarim kalmis kosudan artik varsa once temizle, sonra kapanisa bagla.
 $cleanup();
 register_shutdown_function($cleanup);
 
-// GERCEK base referans olcumu
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -110,7 +89,6 @@ try {
         $tids[$n] = (int) bcc_last_insert_id();
     }
 
-    // Siralamayi "id:position" olarak dondurur
     $order = function () use ($baseId) {
         $out = array();
         foreach (bcc_fetch_all('SELECT id, name, position FROM tables_meta WHERE base_id = :b ORDER BY position, id', array(':b' => $baseId)) as $r) {
@@ -118,7 +96,7 @@ try {
         }
         return implode(' ', $out);
     };
-    // Ayni position'i paylasan satir var mi
+
     $dupPositions = function () use ($baseId) {
         return (int) bcc_fetch_column(
             'SELECT COUNT(*) FROM (SELECT position FROM tables_meta WHERE base_id = :b GROUP BY position HAVING COUNT(*) > 1) x',
@@ -132,7 +110,6 @@ try {
     if ($r['cookie']) { $cookie = $r['cookie']; }
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // =======================================================================
     echo "\n--- A) rename_table ---\n";
     $page = req('GET', "/base_tables.php?base_id={$baseId}", $cookie);
     $auditBefore = (int) bcc_fetch_column("SELECT COUNT(*) FROM audit_log WHERE action = 'table.update' AND entity_id = :t", array(':t' => $tids['Beta']));
@@ -149,7 +126,6 @@ try {
     check('A) audit satiri yazildi',
         (int) bcc_fetch_column("SELECT COUNT(*) FROM audit_log WHERE action = 'table.update' AND entity_id = :t", array(':t' => $tids['Beta'])) === $auditBefore + 1);
 
-    // =======================================================================
     echo "\n--- B) move_table (normal akis) ---\n";
     check('B) Baslangic sirasi', $order() === 'Alfa:0 Beta Yeni:1 Gama:2', $order());
 
@@ -165,7 +141,6 @@ try {
     check('B) reorder audit satiri yazildi',
         (int) bcc_fetch_column("SELECT COUNT(*) FROM audit_log WHERE action = 'table.reorder' AND entity_id = :t", array(':t' => $tids['Gama'])) === $auditBefore + 1);
 
-    // Geri tasi (down) — ters yon de calisiyor mu
     $page = req('GET', "/base_tables.php?base_id={$baseId}", $cookie);
     req('POST', '/base_tables.php', $cookie, array(
         'csrf_token' => csrf($page['body']), 'action' => 'move_table',
@@ -173,7 +148,6 @@ try {
     ));
     check('B) Asagi tasima da calisiyor (baslangica dondu)', $order() === 'Alfa:0 Beta Yeni:1 Gama:2', $order());
 
-    // Sinir: ilk elemani yukari tasima -> degisiklik YOK, hata YOK
     $page = req('GET', "/base_tables.php?base_id={$baseId}", $cookie);
     $resp = req('POST', '/base_tables.php', $cookie, array(
         'csrf_token' => csrf($page['body']), 'action' => 'move_table',
@@ -182,11 +156,8 @@ try {
     check('B) SINIR: ilk elemani yukari -> sira degismedi', $order() === 'Alfa:0 Beta Yeni:1 Gama:2', $order());
     check('B) SINIR: hata mesaji YOK', strpos($resp['body'], 'taşınamadı') === false);
 
-    // =======================================================================
     echo "\n--- C) ATOMIKLIK: YARIM TAKAS SENARYOSU (en kritik) ---\n";
-    // bcc_reorder_sibling()'in KENDISI cagrilir (base_tables.php'nin kullandigi
-    // AYNI fonksiyon), transaction cagiran tarafta acilir ve iki UPDATE'ten
-    // SONRA kasitli bir hata tetiklenir. Beklenen: IKI UPDATE de geri alinir.
+
     $orderBefore = $order();
     $posBefore = bcc_fetch_all('SELECT id, position FROM tables_meta WHERE base_id = :b ORDER BY id', array(':b' => $baseId));
     $rolledBack = false;
@@ -196,9 +167,8 @@ try {
         bcc_begin_transaction();
 
         $moved = bcc_reorder_sibling('tables_meta', 'base_id', $baseId, $tids['Gama'], 'up');
-        $midOrder = $order(); // transaction ICINDE takas gorunuyor mu
+        $midOrder = $order();
 
-        // log_audit()'in patlamasini taklit et (gecersiz kolon -> mysqli istisnasi)
         bcc_execute('INSERT INTO audit_log (olmayan_kolon) VALUES (1)');
 
         bcc_commit();
@@ -218,7 +188,6 @@ try {
         json_encode($posBefore) . ' -> ' . json_encode($posAfter));
     check('C) ⭐ Hicbir satir ayni position u paylasmiyor (cakisma YOK)', $dupPositions() === 0);
 
-    // =======================================================================
     echo "\n--- D) ATOMIKLIK: rename geri alinabiliyor mu ---\n";
     $nameBefore = bcc_fetch_column('SELECT name FROM tables_meta WHERE id = :t', array(':t' => $tids['Alfa']));
     $rb2 = false;
@@ -237,14 +206,8 @@ try {
     check('D) "ROLLBACK OLMALI" adli tablo DB de YOK',
         bcc_fetch_one('SELECT id FROM tables_meta WHERE name = "ROLLBACK OLMALI"') === false);
 
-    // =======================================================================
-    // bcc_reorder_sibling()'in SOZLESMESI degistigi icin (transaction artik
-    // cagiranin sorumlulugu) DORT cagri yerinin DORDU de canli dogrulanmali —
-    // yalnizca base_tables.php'yi test etmek digerlerinin sessizce bozulmasina
-    // izin verirdi.
     echo "\n--- D2) DIGER UC CAGRI YERI (canli regresyon) ---\n";
 
-    // --- move_field (table_fields.php) ---
     $fids = array();
     foreach (array('A', 'B', 'C') as $i => $n) {
         bcc_execute('INSERT INTO fields (table_id, name, field_type, position) VALUES (:t, :n, "single_line_text", :p)',
@@ -270,8 +233,7 @@ try {
     check('D2) field.reorder audit yazildi',
         (int) bcc_fetch_column("SELECT COUNT(*) FROM audit_log WHERE action = 'field.reorder' AND entity_id = :f", array(':f' => $fids['C'])) === 1);
 
-    // --- view_reorder (api/view_reorder.php) ---
-    req('GET', "/grid.php?table_id={$tids['Alfa']}", $cookie); // varsayilan gorunum olussun
+    req('GET', "/grid.php?table_id={$tids['Alfa']}", $cookie);
     $g = req('GET', "/grid.php?table_id={$tids['Alfa']}", $cookie);
     $gridCsrf = csrf($g['body']);
     req('POST', '/api/view_create.php', $cookie, array('csrf_token' => $gridCsrf, 'table_id' => $tids['Alfa'], 'view_type' => 'grid'));
@@ -295,9 +257,6 @@ try {
     check('D2) view.reorder audit yazildi',
         (int) bcc_fetch_column("SELECT COUNT(*) FROM audit_log WHERE action = 'view.reorder' AND entity_id = :v", array(':v' => $secondView)) === 1);
 
-    // --- slack kural sirasi (slack_settings.php) ---
-    // slack_routing_rules.webhook_id bir FK — once gercek bir webhook satiri
-    // gerekiyor (semadan dogrulandi: value/webhook_id kolonlari, match_value DEGIL).
     bcc_execute('INSERT INTO slack_webhooks (team_id, table_id, webhook_url, channel_name, is_active)
                  VALUES (:tm, :t, "https://hooks.slack.com/services/T/B/x", "#test", 1)',
         array(':tm' => $teamId, ':t' => $tids['Alfa']));
@@ -326,7 +285,6 @@ try {
     check('D2) Kurallarda position cakismasi YOK',
         (int) bcc_fetch_column('SELECT COUNT(*) FROM (SELECT position FROM slack_routing_rules WHERE table_id = :t GROUP BY position HAVING COUNT(*) > 1) x', array(':t' => $tids['Alfa'])) === 0);
 
-    // =======================================================================
     echo "\n--- E) KOD INCELEMESI ---\n";
     $schemaSrc = file_get_contents(__DIR__ . '/../src/schema.php');
     preg_match('/function bcc_reorder_sibling.*?\n}/s', $schemaSrc, $fn);
@@ -338,7 +296,6 @@ try {
     check('E) Sozlesme yorumda yazili (cagiran transaction acmali)',
         strpos($fnBody, 'çağıran taraf') !== false || strpos($schemaSrc, 'ARTIK KENDİ transaction') !== false);
 
-    // DORT cagri yerinin DORDU de transaction aciyor mu
     $callers = array(
         'base_tables.php' => __DIR__ . '/../public/base_tables.php',
         'table_fields.php' => __DIR__ . '/../public/table_fields.php',
@@ -369,7 +326,6 @@ try {
 
 $cleanup();
 
-// =======================================================================
 echo "--- TEMIZLIK + GERCEK VERI KONTROLU ---\n";
 $realAfter = array(
     'tablo' => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = ' . REAL_BASE_ID),

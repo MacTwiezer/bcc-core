@@ -1,11 +1,4 @@
 <?php
-// Ic yardimci — _verify_demo_roles.php tarafindan alt surec olarak calistirilir.
-// Belirtilen kullanicinin oturumuyla GERCEK bir public/*.php sayfasini render
-// eder ve HTML'i stdout'a basar. Sayfalarin kendi yetki kodu calisir.
-//
-// SALT OKUNUR kullanim icindir (GET) — REQUEST_METHOD daima GET, $_POST bos.
-//
-// Kullanim: php _render_as_case.php <user_id> <sayfa.php> [query_string]
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);

@@ -1,16 +1,4 @@
 <?php
-// public/api/* uc noktalari HATA durumunda JSON, sayfalar HTML donuyor mu?
-//
-// src/errors.php'nin kurali: "API'ye HTML, sayfaya JSON donmemeli". Ancak
-// src/auth.php'deki require_team_access()/require_role()/require_admin() HEM
-// sayfalardan HEM API'den cagriliyor ve kosulsuz bcc_error_page()'e dusuyordu;
-// sonuc "Content-Type: application/json" basligi + HTML govde idi.
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_api_error_format.php
-// Apache ayakta olmali. Uygulama VERISINE yazmaz — yalnizca red yollarini
-// olcer; yan etkisi viewer@bcc.local ile giris yapmaktir (oturum +
-// login_attempts). Hedef hucrenin degeri once okunur ve kapanista geri yazilir,
-// boylece yetki kapisi gerilese bile gercek veri bozulmaz.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -19,10 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -39,7 +23,6 @@ function check($ad, $kosul, $ek = '')
     else        { $kaldi++; echo "  [HATA] $ad" . ($ek !== '' ? "  -> $ek" : '') . "\n"; }
 }
 
-// --- basit HTTP istemcisi (cerez destekli) ---
 $COOKIE = tempnam(sys_get_temp_dir(), 'bccjar');
 
 function istek($url, $post = null)
@@ -78,14 +61,12 @@ function jetonAl($url)
     return preg_match('/name="csrf_token" value="([a-f0-9]{64})"/', $r['body'], $m) ? $m[1] : '';
 }
 
-// --- sunucu ayakta mi? ---
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) {
     fwrite(STDERR, "Apache'ye ulasilamadi ($BASE/login.php). XAMPP calisiyor mu?\n");
     exit(2);
 }
 
-// --- viewer olarak giris (yazma yetkisi YOK, bu yuzden test guvenli) ---
 $demoSifre = null;
 foreach (bcc_demo_accounts() as $acc) {
     if ($acc['email'] === 'viewer@bcc.local') { $demoSifre = $acc['password']; }
@@ -98,7 +79,6 @@ if ($demoSifre === null) {
 $tok = jetonAl($BASE . '/login.php');
 istek($BASE . '/login.php', 'csrf_token=' . $tok . '&email=viewer@bcc.local&password=' . rawurlencode($demoSifre));
 
-// viewer'in UYESI oldugu bir tablo + o tablonun bir alani/kaydi
 $row = bcc_fetch_one(
     "SELECT f.id AS field_id, r.id AS record_id, tm.id AS table_id
      FROM users u
@@ -118,11 +98,6 @@ if (!$row) {
 $tok = jetonAl($BASE . '/grid.php?table_id=' . (int) $row['table_id']);
 check('grid sayfasindan CSRF jetonu alindi', strlen($tok) === 64, strlen($tok));
 
-// Hedef hucre GERCEK bir base'e ait (viewer'in uyesi oldugu ilk tablo). Test
-// yazmanin REDDEDILMESINI bekliyor, ama tam da o kapi bir gun gerilerse istek
-// gercek veriyi ezer. Asagidaki kontrol (D bolumu) bunu yalnizca FARK EDER,
-// geri almaz. Bu yuzden mevcut deger simdi okunuyor ve kapanista — testin nasil
-// bittiginden bagimsiz olarak — degismisse geri yaziliyor.
 $hedefCell = bcc_fetch_one(
     'SELECT id, value_text FROM cell_values WHERE record_id = :r AND field_id = :f LIMIT 1',
     array('r' => (int) $row['record_id'], 'f' => (int) $row['field_id'])
@@ -133,7 +108,6 @@ register_shutdown_function(function () use ($row, $hedefCell) {
         array('r' => (int) $row['record_id'], 'f' => (int) $row['field_id'])
     );
     if ($hedefCell === false || $hedefCell === null) {
-        // Test oncesi hic satir yoktu: test bir satir acmissa geri al.
         if ($simdi) {
             bcc_execute('DELETE FROM cell_values WHERE id = :i', array('i' => (int) $simdi['id']));
             fwrite(STDERR, 'UYARI: yazma REDDEDILMEDI, acilan hucre satiri geri alindi.' . PHP_EOL);
@@ -152,9 +126,8 @@ $gonderi = 'csrf_token=' . $tok
     . '&record_id=' . (int) $row['record_id']
     . '&value=' . rawurlencode('__test_asla_yazilmamali__');
 
-// ---------------------------------------------------------------------------
 echo "\nA) API rol reddi -> JSON olmali (duzeltilen bulgu)\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/cell_update.php', $gonderi);
 check('durum 403', $r['code'] === 403, $r['code']);
 check('Content-Type json', strpos($r['ctype'], 'application/json') === 0, $r['ctype']);
@@ -163,16 +136,14 @@ $j = json_decode($r['body'], true);
 check('govde ok=false', is_array($j) && isset($j['ok']) && $j['ok'] === false, $r['body']);
 check('govde HTML DEGIL', strpos($r['body'], '<!doctype') === false && strpos($r['body'], '<html') === false);
 
-// ---------------------------------------------------------------------------
 echo "\nB) API CSRF reddi -> zaten JSON'du, bozulmadi\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/cell_update.php', 'field_id=1&record_id=1&value=x');
 check('durum 403', $r['code'] === 403, $r['code']);
 check('govde JSON', json_decode($r['body'], true) !== null, substr($r['body'], 0, 60));
 
-// ---------------------------------------------------------------------------
 echo "\nC) SAYFA tarafi HALA HTML (regresyon)\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/grid.php?table_id=999999');
 check('bulunamayan tablo 404', $r['code'] === 404, $r['code']);
 check('Content-Type text/html', strpos($r['ctype'], 'text/html') === 0, $r['ctype']);
@@ -182,9 +153,8 @@ $r = istek($BASE . '/admin/index.php');
 check('admin sayfasi viewer icin 403', $r['code'] === 403, $r['code']);
 check('admin reddi HTML', strpos($r['ctype'], 'text/html') === 0, $r['ctype']);
 
-// ---------------------------------------------------------------------------
 echo "\nD) Hicbir sey yazilmadi\n";
-// ---------------------------------------------------------------------------
+
 $kalan = (int) bcc_fetch_column(
     "SELECT COUNT(*) FROM cell_values WHERE value_text = '__test_asla_yazilmamali__'"
 );

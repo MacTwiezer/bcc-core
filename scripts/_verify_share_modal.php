@@ -1,32 +1,17 @@
 <?php
-// "Paylas" modali dogrulamasi (grid.php'de team_members.php yonlendirmesinin
-// yerini alan in-page dialog).
-//
-// Kapsam: (A) paylasilan uye mutasyon yardimcilari, (B) payload sozlesmesi ve
-// rol bayraklari, (C) uc noktalar (yetki matrisi + is kurallari), (D) grid.php
-// render (yonlendirme GITTI, modal GELDI), (E) team_members.php regresyonu
-// (ayni yardimcilara tasindi, davranis degismedi), (F) kod tekrari yok.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_share_modal.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
     die("Bu betik yalnizca komut satirindan calistirilabilir.\n");
 }
 
-// bcc_share_modal_payload() current_user() cagirir, o da $_SESSION okur —
-// oturum CIKTIDAN ONCE baslatilmali (yoksa "headers already sent" uyarisi).
 session_start();
 
 require __DIR__ . '/../config/database.php';
-require __DIR__ . '/../src/schema.php';   // src/auth.php'yi kendisi yukler
-require __DIR__ . '/../src/audit.php';    // log_audit — mutasyon yardimcilari cagiriyor
+require __DIR__ . '/../src/schema.php';
+require __DIR__ . '/../src/audit.php';
 require __DIR__ . '/../src/share_modal_payload.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -101,8 +86,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// bcc_fetch_column() satir yoksa false doner (null DEGIL) — testin "artik uye
-// degil" karsilastirmasi tek bir degere (null) indirgensin.
 function member_role($teamId, $userId)
 {
     $role = bcc_fetch_column(
@@ -126,10 +109,6 @@ $cleanup = function () use ($emails) {
     }
 };
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -144,7 +123,6 @@ $cleanup();
 register_shutdown_function($cleanup);
 
 try {
-    // ---- Fikstur: KENDI ekibi (gercek 'TY' ekibine DOKUNULMUYOR) ----------
     bcc_execute("INSERT INTO teams (name) VALUES ('ShareModal Test')");
     $teamId = (int) bcc_last_insert_id();
 
@@ -165,10 +143,10 @@ try {
     $mkUser('owner2',  $emails['owner2'],  'SM Owner2',  'owner',    1);
     $mkUser('editor',  $emails['editor'],  'SM Editor',  'editor',   1);
     $mkUser('viewer',  $emails['viewer'],  'SM Viewer',  'viewer',   1);
-    // is_active = 0 -> register.php akisi tamamlanmamis hesap = "bekleyen davet"
+
     $mkUser('pending', $emails['pending'], 'SM Pending', 'commenter', 0);
-    $mkUser('outside', $emails['outside'], 'SM Outside', null,       1);   // ekipte DEGIL
-    $mkUser('free',    $emails['free'],    'SM Free',    null,       1);   // eklenecek aday
+    $mkUser('outside', $emails['outside'], 'SM Outside', null,       1);
+    $mkUser('free',    $emails['free'],    'SM Free',    null,       1);
 
     bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',
         array(':t' => $teamId, ':n' => 'ShareModal Base', ':u' => $userIds['owner']));
@@ -184,9 +162,6 @@ try {
     $outsideCookie = login($emails['outside']);
     check('Girisler yapildi', $ownerCookie && $editorCookie && $viewerCookie && $outsideCookie);
 
-    // =====================================================================
-    // A) PAYLASILAN UYE YARDIMCILARI (src/schema.php)
-    // =====================================================================
     echo "\n--- A) Paylasilan yardimcilar ---\n";
 
     $ownerRank = $GLOBALS['BCC_ROLE_RANK']['owner'];
@@ -203,7 +178,6 @@ try {
     $r = bcc_team_member_assign($teamId, $userIds['free'], 'owner', $editorRank, $editorAssignable);
     check('A) atanabilir rol whitelist i: editor OWNER atayamaz', !$r['ok'] && member_role($teamId, $userIds['free']) === 'viewer', json_encode($r));
 
-    // Hiyerarsi: editor rutbesiyle bir OWNER'in rolu degistirilemez
     $r = bcc_team_member_assign($teamId, $userIds['owner2'], 'editor', $editorRank, $editorAssignable);
     check('A) hiyerarsi kapisi: rank(hedef) > rank(ben) reddediliyor',
         !$r['ok'] && $r['error'] === 'Bu kullaniciyi yonetme yetkiniz yok.' || (!$r['ok'] && member_role($teamId, $userIds['owner2']) === 'owner'),
@@ -212,11 +186,9 @@ try {
     $r = bcc_team_member_assign($teamId, 999999, 'viewer', $ownerRank, $ownerAssignable);
     check('A) var olmayan kullanici reddediliyor', !$r['ok'], json_encode($r));
 
-    // is_active = 0 olan hesap ATANAMAZ (team_members.php ile AYNI kural)
     $r = bcc_team_member_assign($teamId, $userIds['pending'], 'viewer', $ownerRank, $ownerAssignable);
     check('A) pasif/dogrulanmamis hesap atanamiyor', !$r['ok'], json_encode($r));
 
-    // Cikarma kurallari
     $rm = bcc_team_member_remove_many($teamId, array($userIds['owner']), $userIds['owner'], $ownerRank);
     check('A) kendini cikaramaz', count($rm['removed']) === 0 && $rm['skipped'] === 1);
 
@@ -226,11 +198,10 @@ try {
     $rm = bcc_team_member_remove_many($teamId, array($userIds['free']), $userIds['owner'], $ownerRank);
     check('A) cikarma calisiyor', $rm['removed'] === array($userIds['free']) && member_role($teamId, $userIds['free']) === null);
 
-    // Son owner korumasi: owner2'yi cikar, sonra tek kalan owner'i cikarmayi dene
     bcc_team_member_remove_many($teamId, array($userIds['owner2']), $userIds['owner'], $ownerRank);
     $rm = bcc_team_member_remove_many($teamId, array($userIds['owner']), $userIds['editor'], $ownerRank);
     check('A) SON owner cikarilamaz', count($rm['removed']) === 0 && member_role($teamId, $userIds['owner']) === 'owner');
-    // owner2'yi geri koy (sonraki testler icin)
+
     bcc_team_member_assign($teamId, $userIds['owner2'], 'owner', $ownerRank, $ownerAssignable);
 
     $msg = bcc_team_member_remove_message(array('removed' => array(1), 'skipped' => 0));
@@ -238,21 +209,15 @@ try {
     $msg = bcc_team_member_remove_message(array('removed' => array(), 'skipped' => 2));
     check('A) hicbiri cikarilamadi -> error', $msg['error'] !== null && $msg['success'] === null);
 
-    // =====================================================================
-    // B) PAYLOAD SOZLESMESI
-    // =====================================================================
     echo "\n--- B) bcc_share_modal_payload ---\n";
 
-    // NOT: payload current_user() cagirir; "ben kimim" bilgisi $_SESSION'dan
-    // gelir (oturum betigin basinda baslatildi). HTTP tarafi bundan bagimsiz,
-    // kendi cerezleriyle calisiyor.
     $_SESSION['user_id'] = $userIds['owner'];
     current_user(true);
     $ownerPayload = bcc_share_modal_payload($teamId, 'owner');
 
     check('B) can_manage owner icin true', $ownerPayload['can_manage'] === true);
     check('B) aktif uyeler collaborators ta',
-        count($ownerPayload['collaborators']) === 4, // owner, owner2, editor, viewer
+        count($ownerPayload['collaborators']) === 4,
         'sayi=' . count($ownerPayload['collaborators']));
     check('B) is_active = 0 olan uye PENDING te',
         count($ownerPayload['pending']) === 1 && $ownerPayload['pending'][0]['email'] === $emails['pending'],
@@ -298,9 +263,6 @@ try {
     unset($_SESSION['user_id']);
     current_user(true);
 
-    // =====================================================================
-    // C) UC NOKTALAR
-    // =====================================================================
     echo "\n--- C) api/team_member_assign.php + team_member_remove.php ---\n";
 
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $ownerCookie);
@@ -312,17 +274,14 @@ try {
     $eg = http_request('GET', '/grid.php?table_id=' . $tableId, $editorCookie);
     $editorCsrf = extract_csrf_meta($eg['body']);
 
-    // GET reddi
     $r = http_request('GET', '/api/team_member_assign.php', $ownerCookie);
     check('C) GET -> 405', $r['status'] === 405, 'HTTP ' . $r['status']);
 
-    // CSRF
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'team_id' => $teamId, 'user_id' => $userIds['free'], 'role' => 'viewer',
     ));
     check('C) CSRF yoksa 403', $r['status'] === 403, 'HTTP ' . $r['status']);
 
-    // Ekip disindaki kullanici (KVKK izolasyonu)
     $og = http_request('GET', '/dashboard.php', $outsideCookie);
     $outsideCsrf = extract_csrf_meta($og['body']);
     if ($outsideCsrf !== null) {
@@ -334,7 +293,6 @@ try {
         check('C) ekip disi kullanici 403 (csrf meta okunamadi, atlandi)', true);
     }
 
-    // Viewer / editor: uye yonetimi yok
     $r = http_request('POST', '/api/team_member_assign.php', $viewerCookie, array(
         'csrf_token' => $viewerCsrf, 'team_id' => $teamId, 'user_id' => $userIds['free'], 'role' => 'viewer',
     ));
@@ -351,7 +309,6 @@ try {
     ));
     check('C) viewer remove -> 403', $r['status'] === 403 && member_role($teamId, $userIds['editor']) === 'editor', 'HTTP ' . $r['status']);
 
-    // Owner: e-posta ile davet
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'email' => $emails['free'], 'role' => 'editor',
     ));
@@ -365,7 +322,6 @@ try {
         isset($data['collaborators']) ? count($data['collaborators']) : 'YOK');
     check('C) yanitta mesaj var', isset($data['message']) && $data['message'] !== '');
 
-    // Bilinmeyen e-posta
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'email' => 'yok@bcc-test.local', 'role' => 'viewer',
     ));
@@ -374,34 +330,29 @@ try {
         $r['status'] === 404 && isset($data['error']) && strpos($data['error'], 'hesap') !== false,
         $r['body']);
 
-    // Dogrulanmamis hesabin e-postasi
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'email' => $emails['pending'], 'role' => 'viewer',
     ));
     check('C) dogrulanmamis hesap -> 422', $r['status'] === 422, 'HTTP ' . $r['status'] . ' ' . $r['body']);
 
-    // Rol degistirme (user_id yolu)
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'user_id' => $userIds['free'], 'role' => 'commenter',
     ));
     check('C) rol degistirme calisiyor',
         $r['status'] === 200 && member_role($teamId, $userIds['free']) === 'commenter', $r['body']);
 
-    // Gecersiz rol
     $r = http_request('POST', '/api/team_member_assign.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'user_id' => $userIds['free'], 'role' => 'superuser',
     ));
     check('C) gecersiz rol -> 422 + DB degismedi',
         $r['status'] === 422 && member_role($teamId, $userIds['free']) === 'commenter', $r['body']);
 
-    // Kendini cikarma
     $r = http_request('POST', '/api/team_member_remove.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'user_id' => $userIds['owner'],
     ));
     check('C) kendini cikarma -> 422 + hala uye',
         $r['status'] === 422 && member_role($teamId, $userIds['owner']) === 'owner', $r['body']);
 
-    // Cikarma
     $r = http_request('POST', '/api/team_member_remove.php', $ownerCookie, array(
         'csrf_token' => $ownerCsrf, 'team_id' => $teamId, 'user_id' => $userIds['free'],
     ));
@@ -417,9 +368,6 @@ try {
     );
     check('C) audit satirlari yazildi', $auditCount >= 3, 'sayi=' . $auditCount);
 
-    // =====================================================================
-    // D) grid.php RENDER — yonlendirme GITTI, modal GELDI
-    // =====================================================================
     echo "\n--- D) grid.php render ---\n";
 
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $ownerCookie);
@@ -454,27 +402,17 @@ try {
         || strpos($html, 'BCC_SHARE_CANDIDATES') !== false,
         'aday listesi');
 
-    // Payload'in HTML icine dogru gomuldugu (owner)
-    //
-    // ⚠️ \r? ZORUNLU — BU DORT KONTROLU DUSUREN HATA BUYDU: dosyalar diskte
-    // CRLF (git autocrlf) ve sunucu ciktisi da CRLF. Desen yalnizca "};\n"
-    // arayinca DOGRU eslesmeyi ATLIYOR (cunku orada "};\r\n" var) ve
-    // ilerideki BASKA bir "};\n" ile eslesip 3400+ karakterlik cop yakaliyordu;
-    // json_decode da haklı olarak basarisiz oluyordu. Yani payload sapasaglamdi,
-    // OLCEN taraf bozuktu. (Ayni CRLF tuzagi _verify_slack_integration.php'de
-    // zaten notlu — orada LF'e normalize ediliyor.)
     preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\r?\n/s', $html, $pm);
     $embedded = isset($pm[1]) ? json_decode($pm[1], true) : null;
     check('D) gomulu payload cozulebiliyor', is_array($embedded), isset($pm[1]) ? substr($pm[1], 0, 120) : 'YOK');
     check('D) gomulu payload owner icin can_manage=true', $embedded && $embedded['can_manage'] === true);
     check('D) gomulu payload pending listesini tasiyor', $embedded && count($embedded['pending']) === 1);
 
-    // Viewer render
     $vg = http_request('GET', '/grid.php?table_id=' . $tableId, $viewerCookie);
     $vhtml = $vg['body'];
     check('D) viewer: modal YINE basiliyor (liste gormek yetki gerektirmez)',
         strpos($vhtml, 'id="gs-share-overlay"') !== false);
-    // \r? — yukaridaki AYNI CRLF gerekcesi (bkz. owner dalindaki not).
+
     preg_match('/var BCC_SHARE_MODAL = (\{.*?\});\r?\n/s', $vhtml, $vpm);
     $vEmbedded = isset($vpm[1]) ? json_decode($vpm[1], true) : null;
     check('D) viewer: gomulu payload can_manage=false + assignable_roles bos',
@@ -483,9 +421,6 @@ try {
     check('D) viewer: "Katilimci ekle" butonu HIC basilmiyor',
         strpos($vhtml, 'collab-popover-add-btn') === false);
 
-    // =====================================================================
-    // E) team_members.php REGRESYONU (ayni yardimcilara tasindi)
-    // =====================================================================
     echo "\n--- E) team_members.php regresyonu ---\n";
 
     $tm = http_request('GET', '/team_members.php?team_id=' . $teamId, $ownerCookie);
@@ -517,29 +452,9 @@ try {
     check('E) toplu cikarma HALA calisiyor (kendisi atlanir, digeri cikar)',
         member_role($teamId, $userIds['owner']) === 'owner' && member_role($teamId, $userIds['editor']) === null,
         'HTTP ' . $r['status']);
-    // editor'u geri koy
+
     bcc_team_member_assign($teamId, $userIds['editor'], 'editor', $ownerRank, $ownerAssignable);
 
-    // =====================================================================
-    // F) KOD TEKRARI YOK
-    // =====================================================================
-    // Bu bolum KAYNAK duzeyinde dogruluyor. Modalin DAVRANISI ayrica tarayicida
-    // dogrulandi (scripts/_share_modal_browse_fixture.php ile kurulan GECICI
-    // ekip/base uzerinde, gercek veriye dokunmadan):
-    //   - "N kisinin erisimi var" tiklamasi SAYFADAN CIKMADAN modali aciyor,
-    //     popover kapaniyor; 3 katilimci + 1 bekleyen, sekme sayaclari 3/1,
-    //   - "Bekleyen davetler" sekmesi is_active=0 hesabi gosteriyor,
-    //   - kapanma: Escape / backdrop / X calisiyor; modalin ICINE tiklamak
-    //     KAPATMIYOR,
-    //   - davet: e-posta + rol -> liste 4'e cikti, durum satiri "Katilimci
-    //     eklendi.", arkadaki popover etiketi de "4 kisinin erisimi var"a
-    //     tazelendi,
-    //   - rol <select> degisimi DB'ye yazildi (editor -> commenter, F5 sonrasi
-    //     da commenter),
-    //   - "Cikar" -> liste 3'e dondu, "Ekipten cikarildi." mesaji,
-    //   - viewer olarak: davet kutusu YOK, rol <select> ve "Cikar" YOK (0/0),
-    //     roller duz metin, gerekce notu gorunuyor, liste yine de goruluyor,
-    //   - konsolda hata yok.
     echo "\n--- F) Tek kaynak ---\n";
     $tmSrc = file_get_contents(__DIR__ . '/../public/team_members.php');
     $assignSrc = file_get_contents(__DIR__ . '/../public/api/team_member_assign.php');
@@ -557,8 +472,7 @@ try {
     check('F) team_members.php de AYNI yardimcilari cagiriyor',
         strpos($tmSrc, 'bcc_team_member_assign(') !== false
         && strpos($tmSrc, 'bcc_team_member_remove_many(') !== false);
-    // Uc noktalar rol esigini KENDI yazmiyor ("=== 'owner'" gibi), yetenek
-    // fonksiyonundan okuyor (src/auth.php yetenek haritasi disiplini).
+
     check('F) uc noktalar owner kapisini bcc_can_manage_members ile aciyor',
         strpos($assignSrc, 'if (!bcc_can_manage_members($myRole))') !== false
         && strpos($removeSrc, 'if (!bcc_can_manage_members($myRole))') !== false
@@ -571,8 +485,6 @@ try {
     check('F) liste sablonu YALNIZCA JS te (partial satir basmiyor)',
         strpos($partial, 'gs-share-row') === false && strpos($modalJs, 'gs-share-row') !== false);
 
-    // Yorumlar haric: istemci rutbe/rol esigi HESAPLAMIYOR, sunucudan gelen
-    // can_change_role / can_remove bayraklarini okuyor.
     $modalJsCode = preg_replace('#(^|\n)\s*//[^\n]*#', '', $modalJs);
     check('F) JS rutbeyi yeniden yorumlamiyor (rank/rol esigi yok)',
         stripos($modalJsCode, 'ROLE_RANK') === false
@@ -580,15 +492,6 @@ try {
         && strpos($modalJsCode, 'can_change_role') !== false
         && strpos($modalJsCode, 'can_remove') !== false);
 
-    // MODALIN kapanmasi (Escape + backdrop) ortak yardimcidan gelir; JS kendi
-    // basina modali KAPATMAZ.
-    //
-    // Not: davet alanindaki oneri kutusu (data-share-suggest) Escape'i KENDISI
-    // dinler ve YALNIZCA kutuyu kapatir — modal acik kalir. Bu yuzden kontrol
-    // "hic Escape yok" degil, "Escape modali kapatmiyor" seklinde: closeModal
-    // cagrisi ile ayni satirda bir Escape karsilastirmasi olmamali.
-    // (Onceki hali "'Escape' hic gecmesin" diyordu; oneri kutusu eklenince
-    // yanlis alarm verdi — kural degil, ifade dardi.)
     $escapeClosesModal = preg_match("/'Escape'[^\\n]*closeModal|closeModal[^\\n]*'Escape'/", $modalJsCode) === 1;
     check('F) kapanma ortak yardimcidan (bcc_bindDismissable)',
         strpos($modalJs, 'window.bcc_bindDismissable') !== false

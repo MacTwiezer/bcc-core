@@ -1,9 +1,4 @@
 <?php
-// "Paylas" modali TARAYICI testi icin GECICI fikstur. "setup" kurar,
-// "teardown" siler. Gercek/canli hicbir hesaba, ekibe veya base'e DOKUNMAZ —
-// KENDI ekibini yaratir (_a_browse_fixture.php ile AYNI desen).
-//
-// Calistirma: C:\php73\php.exe scripts\_share_modal_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -13,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEAM_NAME', 'ShareModal Browse');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// (kendi gecici ekibinde) owner yetkili gercek bir hesap aciyor; depo acik
-// oldugu icin sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik
-// bilgisi anlamina gelirdi. Deger zaten asagida ekrana basiliyor.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $emails = array(
@@ -75,9 +67,9 @@ $mkUser = function ($key, $email, $name, $role, $isActive) use ($teamId, &$ids) 
 $mkUser('owner',   $emails['owner'],   'Browse Owner',   'owner',     1);
 $mkUser('editor',  $emails['editor'],  'Browse Editor',  'editor',    1);
 $mkUser('viewer',  $emails['viewer'],  'Browse Viewer',  'viewer',    1);
-// is_active = 0 -> "Bekleyen davetler" sekmesinde gorunmeli
+
 $mkUser('pending', $emails['pending'], 'Browse Pending', 'commenter', 0);
-// Ekipte DEGIL -> davet kutusunun <datalist> onerilerinde gorunmeli
+
 $mkUser('free',    $emails['free'],    'Browse Free',    null,        1);
 
 bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',

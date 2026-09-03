@@ -1,24 +1,4 @@
 <?php
-// Rol tabanlı yetki testi icin demo hesaplarini ve iceriklerini olusturur.
-//
-// Ne yapar:
-//   1. "Demo Calisma Alani" adli ayri bir EKIP olusturur (yoksa).
-//   2. Ekipte iki base + bir tablo + alanlar + ornek kayitlar olusturur (yoksa)
-//      — dashboard.php'de gorulecek kartlar ve grid.php'de acilacak gercek
-//      veri olsun diye.
-//   3. src/demo_accounts.php'deki 4 hesabi olusturur ve ekibe kendi rolleriyle
-//      ekler; hesap ZATEN VARSA sifresini/adini/aktifligini ve rolunu bilinen
-//      degere geri getirir.
-//
-// TEKRAR CALISTIRILABILIR (idempotent): ikinci calistirma kopya olusturmaz,
-// yalnizca var olani bilinen duruma senkronlar.
-//
-// GERCEK VERIYE DOKUNMAZ: yalnizca asagida adi gecen ekip/base/tablo ve
-// src/demo_accounts.php'deki e-postalar uzerinde islem yapar. Baska hicbir
-// kullanici, ekip veya base okunmaz/degistirilmez.
-//
-// Calistirma:  C:\php73\php.exe scripts\seed_demo_users.php
-// Geri alma:   C:\php73\php.exe scripts\seed_demo_users.php --remove
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -29,29 +9,15 @@ require __DIR__ . '/../src/bootstrap.php';
 
 const DEMO_TEAM = 'Demo Calisma Alani';
 
-// Base adlari bilerek farkli kategorilere dusuyor (bkz. src/schema.php
-// bcc_base_icon_category) — dashboard'da farkli ikon/renk gorunsun diye.
 const DEMO_BASE_MAIN = 'Demo CRM';
 const DEMO_BASE_SECOND = 'Demo Proje Plani';
 const DEMO_TABLE = 'Musteriler';
 
-// LISTEDEN CIKARILMIS eski demo hesaplari. bcc_demo_accounts() artik bunlari
-// dondurmedigi icin --remove onlara HIC dokunmuyordu: creator@bcc.local
-// veritabaninda AKTIF ve demo ekibinde owner rolunde kalmisti, yani betigin
-// "Temizlik tamam" ciktisi yaniltiyordu. Yeni bir hesap listeden cikarilirsa
-// e-postasi buraya eklenmeli. ('creator' diye bir ROL hicbir zaman olmadi —
-// bkz. src/demo_accounts.php'deki not; bu yalnizca artik bir HESAP satiri.)
 $DEMO_LEGACY_EMAILS = array('creator@bcc.local');
 
 $remove = in_array('--remove', $argv, true);
 $accounts = bcc_demo_accounts();
 
-// Sifre depoda LITERAL tutulmuyor (guvenlik denetimi — bkz. config/app.php
-// $BCC_DEMO_PASSWORD notu): yerel yapilandirmada tanimli degilse
-// bcc_demo_accounts() bos liste dondurur. Sessizce "0 hesap islendi" demek
-// yerine ACIKCA reddediyoruz — aksi halde betik basariyla calismis gibi
-// gorunur, ama hicbir demo hesabi olusmazdi.
-// --remove yolu bos listeyle zaten is yapamayacagi icin o da buraya dahil.
 if (empty($accounts)) {
     line('HATA: Demo hesap sifresi tanimli degil.');
     line('');
@@ -65,17 +31,12 @@ function line($msg)
     echo $msg . "\n";
 }
 
-// ---------------------------------------------------------------------------
-// Geri alma
-// ---------------------------------------------------------------------------
 if ($remove) {
     $team = bcc_fetch_one('SELECT id FROM teams WHERE name = :n LIMIT 1', array('n' => DEMO_TEAM));
 
     if ($team) {
         $teamId = (int) $team['id'];
-        // bases -> tables_meta -> fields/records -> cell_values zincirinin
-        // TAMAMI ON DELETE CASCADE (bkz. schema.sql), ekip silinince kendiliginden
-        // temizlenir; audit_log'da ise team_id NULL'lanir, satirlar kalir.
+
         foreach (bcc_fetch_all('SELECT id FROM bases WHERE team_id = :t', array('t' => $teamId)) as $b) {
             bcc_execute('DELETE FROM audit_log WHERE entity_type = :e AND entity_id = :i', array('e' => 'base', 'i' => $b['id']));
         }
@@ -97,9 +58,6 @@ if ($remove) {
     exit(0);
 }
 
-// ---------------------------------------------------------------------------
-// 1) Ekip
-// ---------------------------------------------------------------------------
 $team = bcc_fetch_one('SELECT id FROM teams WHERE name = :n LIMIT 1', array('n' => DEMO_TEAM));
 
 if ($team) {
@@ -111,9 +69,6 @@ if ($team) {
     line('+ ekip olusturuldu: ' . DEMO_TEAM . ' (#' . $teamId . ')');
 }
 
-// ---------------------------------------------------------------------------
-// 2) Kullanicilar + roller
-// ---------------------------------------------------------------------------
 $userIds = array();
 
 foreach ($accounts as $acc) {
@@ -122,10 +77,7 @@ foreach ($accounts as $acc) {
 
     if ($existing) {
         $userId = (int) $existing['id'];
-        // Sifre/ad/aktiflik bilinen degere GERI GETIRILIR — betigin amaci
-        // "her calistirmadan sonra bu kimlik bilgileri kesinlikle calisir"
-        // garantisi vermek. is_active=1 sart: dogrulanmamis hesap giris yapamaz
-        // (bkz. attempt_login() 'inactive' dalı).
+
         bcc_execute(
             'UPDATE users SET password_hash = :p, full_name = :f, is_active = 1, is_admin = 0,
                     email_verify_token = NULL, email_verify_expires_at = NULL
@@ -144,7 +96,6 @@ foreach ($accounts as $acc) {
 
     $userIds[$acc['email']] = $userId;
 
-    // Uyelik: (team_id, user_id) UNIQUE — varsa rolu duzelt, yoksa ekle.
     $member = bcc_fetch_one(
         'SELECT id, role FROM team_members WHERE team_id = :t AND user_id = :u LIMIT 1',
         array('t' => $teamId, 'u' => $userId)
@@ -166,9 +117,6 @@ foreach ($accounts as $acc) {
 
 $ownerId = $userIds['owner@bcc.local'];
 
-// ---------------------------------------------------------------------------
-// 3) Base'ler
-// ---------------------------------------------------------------------------
 function ensure_base($teamId, $name, $description, $ownerId)
 {
     $row = bcc_fetch_one(
@@ -194,9 +142,6 @@ function ensure_base($teamId, $name, $description, $ownerId)
 $baseId = ensure_base($teamId, DEMO_BASE_MAIN, 'Rol testleri icin ornek musteri base\'i.', $ownerId);
 ensure_base($teamId, DEMO_BASE_SECOND, 'Ikinci demo base (ikon/renk cesitliligi icin).', $ownerId);
 
-// ---------------------------------------------------------------------------
-// 4) Tablo + alanlar + kayitlar
-// ---------------------------------------------------------------------------
 $table = bcc_fetch_one(
     'SELECT id FROM tables_meta WHERE base_id = :b AND name = :n LIMIT 1',
     array('b' => $baseId, 'n' => DEMO_TABLE)
@@ -214,20 +159,13 @@ if ($table) {
     line('+ tablo olusturuldu: ' . DEMO_TABLE . ' (#' . $tableId . ')');
 }
 
-// Alanlar. Ilk alan BIRINCIL alandir (grid'in ilk kolonu). single_select'in
-// choices/colors'i fields.options'ta JSON olarak yasar — uygulamanin kendi
-// formati (bkz. src/schema.php).
 $fieldSpecs = array(
     array('name' => 'Musteri', 'type' => 'single_line_text', 'options' => null),
     array('name' => 'Sehir', 'type' => 'single_line_text', 'options' => null),
     array(
         'name' => 'Durum',
         'type' => 'single_select',
-        // 'colors' KONUMSAL LISTE DEGIL, secim metni => renk anahtari HARITASI
-        // olmali: select_choice_colors_from_options() (src/schema.php) degeri
-        // dogrudan $renkler[$secim] diye okur. Liste yazilinca hicbir anahtar
-        // eslesmiyor ve bcc_resolved_choice_color_key() paletten SIRAYLA renk
-        // veriyordu — "Kazanildi" istenen green yerine teal cikiyordu.
+
         'options' => json_encode(array(
             'choices' => array('Yeni', 'Gorusuluyor', 'Kazanildi'),
             'colors' => array('Yeni' => 'blue', 'Gorusuluyor' => 'yellow', 'Kazanildi' => 'green'),
@@ -248,9 +186,7 @@ foreach ($fieldSpecs as $spec) {
 
     if ($existing) {
         $fieldIds[$spec['name']] = (int) $existing['id'];
-        // Kullanicilarda oldugu gibi alan secenekleri de bilinen duruma geri
-        // getirilir: eski kosular 'colors'i yanlis (konumsal) formatta yazmisti,
-        // betigi tekrar calistirmak onu kendiliginden duzeltsin.
+
         if ($spec['options'] !== null && $existing['options'] !== $spec['options']) {
             bcc_execute('UPDATE fields SET options = :o WHERE id = :i',
                 array('o' => $spec['options'], 'i' => $fieldIds[$spec['name']]));
@@ -269,8 +205,6 @@ foreach ($fieldSpecs as $spec) {
     $pos++;
 }
 
-// Ornek kayitlar — yalnizca tablo BOSSA yazilir; boylece betigi tekrar
-// calistirmak, sizin elle duzenlediginiz demo verinin uzerine yazmaz.
 $recordCount = (int) bcc_fetch_column(
     'SELECT COUNT(*) FROM records WHERE table_id = :t AND deleted_at IS NULL',
     array('t' => $tableId)
@@ -295,8 +229,6 @@ if ($recordCount > 0) {
         );
         $recordId = (int) bcc_last_insert_id();
 
-        // Her tip KENDI kolonuna yazilir (bkz. src/schema.php'nin tip -> kolon
-        // haritasi): metin/secim value_text, sayi value_number.
         $cells = array(
             array($fieldIds['Musteri'], 'value_text', $r[0]),
             array($fieldIds['Sehir'], 'value_text', $r[1]),
@@ -320,17 +252,10 @@ if ($recordCount > 0) {
     line('+ ' . count($rows) . ' ornek kayit yazildi');
 }
 
-// ---------------------------------------------------------------------------
-// Ozet
-// ---------------------------------------------------------------------------
 line('');
 line('Demo hesaplari hazir (ekip: ' . DEMO_TEAM . ' #' . $teamId . '):');
 line('');
-// Sifre BILEREK BASILMIYOR. Depodan cikarilmasinin gerekcesi (bkz.
-// src/demo_accounts.php) ekrana basmak icin de gecerli: cikti terminal
-// gecmisine, ekran goruntusune ve gunluklere dusuyor. Betigi calistiran kisi
-// degeri zaten config/app.local.php'ye KENDISI yazdi, tekrar gostermek bilgi
-// katmiyor.
+
 foreach ($accounts as $acc) {
     line(sprintf(
         '  %-9s %-20s %-13s rol=%s',

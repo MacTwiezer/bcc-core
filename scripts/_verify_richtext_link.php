@@ -1,21 +1,4 @@
 <?php
-// Zengin metin (long_text) LINK EKLEME akisi:
-//   window.prompt() -> satir ici URL cubugu + link stilleri.
-//
-// Kapsam:
-//   A) grid.js — prompt/alert kalkti, satir ici cubuk kuruldu
-//   B) grid.js — secim (Range) saklanip geri yukleniyor, odak kaybolmuyor
-//   C) grid.js — grid hucresindeki zengin metin linki YENI SEKMEDE acilir,
-//      tiklamak duzenleyiciyi ACMAZ
-//   D) CSS — link rengi/alti cizili/cursor + cubuk stilleri + [hidden] tuzagi
-//   E) theme.css — --bcc-link token'i UC temada da tanimli (acik/koyu/sistem)
-//   F) UCTAN UCA — sunucuya <a> iceren zengin metin yazilir; DB'ye/yaniti
-//      target="_blank" rel="noopener noreferrer" ile dondugu dogrulanir,
-//      javascript: semasinin hala soyuldugu dogrulanir
-//   G) Gercek base (15) dokunulmamis olmali
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_richtext_link.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -25,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -97,8 +76,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// CSS/JS yorumlarini soyar: bu projede testler UC kez aciklama yorumlarina
-// takilip yanlis "GECTI" verdi — kural/kod metnine bakiyoruz.
 function css_rules($css)
 {
     return preg_replace('#/\*.*?\*/#s', '', $css);
@@ -122,10 +99,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -145,18 +118,11 @@ try {
     $styleCss  = css_rules(file_get_contents($assetsDir . '/style.css'));
     $themeCss  = css_rules(file_get_contents($assetsDir . '/theme.css'));
 
-    // =====================================================================
-    // A) grid.js — NATIVE PROMPT KALKTI, SATIR ICI CUBUK KURULDU
-    // =====================================================================
     echo "--- A) window.prompt yerine satir ici URL cubugu ---\n";
-    // YORUMLARI DA DAHIL ederek bakiyoruz: yorum icinde bile kalmis bir
-    // window.prompt cagrisi olmadigini gormek istiyoruz degil — kodda
-    // olmamali; ama "prompt" kelimesi aciklamada gecebilir, o yuzden
-    // yorumsuz metinde ariyoruz.
+
     check('A) grid.js te window.prompt( CAGRISI KALMADI',
         strpos($gridJs, 'window.prompt(') === false);
-    // window.alert grid.js te BASKA yerlerde (kaydetme hatasi) hala var —
-    // yalnizca LINK yolunun alert kullanmadigini dogruluyoruz.
+
     check('A) link hatasi window.alert ILE DEGIL satir ici gosteriliyor',
         strpos($gridJs, "window.alert('Link") === false
         && strpos($gridJs, 'linkError.textContent =') !== false
@@ -170,8 +136,7 @@ try {
     check('A) "Iptal" carpi butonu var',
         strpos($gridJs, "linkCancelBtn.textContent = '×';") !== false
         && strpos($gridJs, "linkCancelBtn.title = 'İptal';") !== false);
-    // Konum: ARAC CUBUGUNUN HEMEN ALTI, editorun USTU.
-    // DOM sirasi = ekrandaki sira: toolbar -> linkBar -> editable.
+
     $posToolbar  = strpos($gridJs, 'popover.appendChild(toolbar);');
     $posLinkBar  = strpos($gridJs, 'popover.appendChild(linkBar);');
     $posEditable = strpos($gridJs, 'popover.appendChild(editable);');
@@ -185,9 +150,6 @@ try {
         substr_count($gridJs, 'positionPopover();') >= 3,
         'cagri sayisi=' . substr_count($gridJs, 'positionPopover();'));
 
-    // =====================================================================
-    // B) SECIM VE ODAK KORUNMASI
-    // =====================================================================
     echo "\n--- B) Secim (Range) ve odak korunmasi ---\n";
     check('B) cubuk acilirken secim SAKLANIYOR',
         strpos($gridJs, 'savedRange = editableSelectionRange();') !== false);
@@ -206,35 +168,29 @@ try {
         preg_match('/function closeLinkBar\(\) \{[\s\S]{0,400}editable\.focus\(\);/', $gridJs) === 1);
     check('B) butonlar mousedown ta odagi CALMIYOR (preventDefault)',
         preg_match('/\[linkAddBtn, linkCancelBtn\]\.forEach[\s\S]{0,200}e\.preventDefault\(\);/', $gridJs) === 1);
-    // Enter = ekle, Escape = YALNIZCA cubugu kapat (tum duzenlemeyi degil).
+
     check('B) Enter ekler, Escape yalnizca cubugu kapatir',
         preg_match(
             "/linkInput\.addEventListener\('keydown'[\s\S]{0,600}applyLink\(\);[\s\S]{0,300}e\.stopPropagation\(\);\s*cancelLinkBar\(\);/",
             $gridJs
         ) === 1);
-    // Mevcut bir linkin uzerindeyken YENI <a> kurulmaz, href guncellenir.
+
     check('B) mevcut link duzenlenirken href guncelleniyor (ikinci <a> yok)',
         strpos($gridJs, "editingAnchor.setAttribute('href', url);") !== false);
 
-    // =====================================================================
-    // C) GRID HUCRESINDE LINK TIKLAMASI
-    // =====================================================================
     echo "\n--- C) Grid hucresinde link tiklamasi ---\n";
     check('C) .rich-text-view icindeki <a> tiklamasi ozel ele aliniyor',
         strpos($gridJs, "e.target.closest('.rich-text-view a')") !== false);
     check('C) yeni sekmede acilir (target=_blank + rel=noopener)',
         strpos($gridJs, "richLink.target = '_blank';") !== false
         && strpos($gridJs, "richLink.rel = 'noopener noreferrer';") !== false);
-    // Tiklama duzenlemeyi ACMAMALI: td.editable aramasindan ONCE return.
+
     check('C) link tiklamasi duzenleyiciyi ACMIYOR (td.editable ten ONCE return)',
         strpos($gridJs, "e.target.closest('.rich-text-view a')")
         < strpos($gridJs, "var td = e.target.closest('td.editable');"));
     check('C) startRichTextEdit hala baglanmis (diger tiklamalar duzenlemeyi acar)',
         strpos($gridJs, 'startRichTextEdit(td);') !== false);
 
-    // =====================================================================
-    // D) CSS
-    // =====================================================================
     echo "\n--- D) CSS: link gorunumu + cubuk ---\n";
     $linkRule = null;
     if (preg_match('/\.rich-text-view a,[^{]*\{([^}]*)\}/s', $styleCss, $m)) { $linkRule = $m[1]; }
@@ -249,14 +205,10 @@ try {
     check('D) hover da alti cizgi KAYBOLMUYOR, kalinlasiyor',
         preg_match('/\.rich-text-view a:hover,[^{]*\{[^}]*text-decoration-thickness: 2px;/s', $styleCss) === 1
         && preg_match('/\.rich-text-view a:hover,[^{]*\{[^}]*text-decoration: none;/s', $styleCss) === 0);
-    // Dosya eki "chip"leri ve "yeni sekmede ac" ikonu link stilinden ETKILENMEMELI.
+
     check('D) cıplak "td a" secicisi YOK (chip/ikon <a> lari bozulmasin)',
         preg_match('/(^|[\s,])td a\s*[,{]/m', $styleCss) === 0);
-    // TARAYICIDA BULUNAN GERCEK BUG: tek sinifli ".rich-text-view a" (0,0,1,1)
-    // grid-shell.css'in "body.gs-body a { text-decoration:none; color:inherit }"
-    // kuralina (0,0,1,2) YENILIYORDU — link duz siyah + altı cizgisiz kaliyordu
-    // (computed color rgb(29,29,31), deco none). Iki sinif (0,0,2,1) gecer.
-    // AYNI kural .gs-rail .gs-rail-home'da da bu dersi verdirmisti.
+
     check('D) secici ozgullugu body.gs-body a kuralini GECIYOR (iki sinif)',
         strpos($styleCss, '.cell-view.rich-text-view a') !== false
         && strpos($styleCss, '.richtext-popover .richtext-editable a') !== false);
@@ -266,8 +218,7 @@ try {
         strpos($styleCss, '.richtext-link-bar') !== false
         && strpos($styleCss, '.richtext-link-input') !== false
         && strpos($styleCss, '.richtext-link-error') !== false);
-    // [hidden] TUZAGI: kapsayiciya display verilirse UA nin [hidden]{display:none}
-    // kurali ezilir ve cubuk HIC gizlenmezdi.
+
     check('D) .richtext-link-bar[hidden] gercekten gizliyor',
         preg_match('/\.richtext-link-bar \{([^}]*)\}/s', $styleCss, $mb) === 1
         && strpos($mb[1], 'display:') === false
@@ -275,9 +226,6 @@ try {
     check('D) .richtext-link-error[hidden] gercekten gizliyor',
         preg_match('/\.richtext-link-error\[hidden\] \{[^}]*display: none;/s', $styleCss) === 1);
 
-    // =====================================================================
-    // E) TEMA TOKEN'LARI
-    // =====================================================================
     echo "\n--- E) theme.css --bcc-link token'i ---\n";
     check('E) acik temada istenen mavi (#1d4ed8)',
         preg_match('/:root \{[^}]*--bcc-link: #1d4ed8;/s', $themeCss) === 1);
@@ -290,9 +238,6 @@ try {
         substr_count($themeCss, '--bcc-link-hover:') === 3,
         'sayim=' . substr_count($themeCss, '--bcc-link-hover:'));
 
-    // =====================================================================
-    // F) UCTAN UCA — sunucuya <a> yazip geri okuma
-    // =====================================================================
     echo "\n--- F) Uctan uca: link kaydet + geri oku ---\n";
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
     if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
@@ -323,8 +268,6 @@ try {
     check('F) grid.php 200', $g['status'] === 200, 'HTTP ' . $g['status']);
     $csrf = extract_csrf_meta($g['body']);
 
-    // Editorun uretecegi HTML: secili metin <a> ile SARILMIS, target/rel YOK
-    // (onlari sunucu ekler — istemcinin eklemesine guvenilmiyor).
     $editorHtml = 'Detaylar <a href="https://ornek.com/rapor">burada</a> yer aliyor.';
     $r = http_request('POST', '/api/cell_update.php', $cookie, array(
         'csrf_token' => $csrf, 'record_id' => $recordId, 'field_id' => $fieldId, 'value' => $editorHtml,
@@ -351,8 +294,6 @@ try {
         && strpos((string) $stored, 'rel="noopener noreferrer"') !== false,
         (string) $stored);
 
-    // GUVENLIK REGRESYONU: javascript: semasi hala SOYULMALI (link kurma
-    // yolu degisti, whitelist degismedi).
     $r2 = http_request('POST', '/api/cell_update.php', $cookie, array(
         'csrf_token' => $csrf, 'record_id' => $recordId, 'field_id' => $fieldId,
         'value' => 'Tikla <a href="javascript:alert(1)">buraya</a>',
@@ -365,8 +306,6 @@ try {
         && strpos($display2, 'buraya') !== false,
         $display2);
 
-    // Hucre grid te ".rich-text-view" olarak render edilmeli (C'deki JS
-    // secicisinin gercekten eslesecegi sinif).
     $g2 = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
     check('F) hucre .rich-text-view sinifiyla render ediliyor',
         strpos($g2['body'], 'cell-view rich-text-view') !== false);

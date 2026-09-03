@@ -1,20 +1,4 @@
 <?php
-// Temsilci not inceleme takibini (record_view_log) UCTAN UCA dogrular.
-//
-// Kapsam: migrations/018 + schema.sql, src/auth.php'deki iki yetenek
-// fonksiyonu, uc AJAX uc noktasi (api/note_view_start.php, note_view_end.php,
-// note_view_list.php), interface.php'nin rol bayraklari/HTML kapisi ve
-// assets/interface.js + interface.css baglantilari.
-//
-// Yontem: uc noktalar GERCEK oturumla, ayri PHP alt sureclerinde calistirilir
-// (bkz. _post_as_case.php / _render_as_case.php deseni) — yetki mantiginin bir
-// kopyasi test edilmez, uygulamanin kendi dosyalari calisir.
-//
-// KENDI KURBAN VERISINI KURAR VE SILER: gecici bir ekip + base + tablo + kayit
-// olusturur, uzerinde calisir, sonunda hepsini geri alir. Kullanicinin GERCEK
-// verisine (ekip 1 "TY" vb.) HIC dokunmaz.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_note_view_log.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -23,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -41,8 +22,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// Uc noktayi gercek oturumla calistirir. $method/$csrf kontrol edilebilir,
-// cunku "CSRF'siz reddediliyor mu" ve "GET ile reddediliyor mu" da test edilir.
 function call_api($endpoint, $userId, $params, $method = 'POST', $withCsrf = true)
 {
     $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/_note_view_case.php')
@@ -105,7 +84,6 @@ check('idx_rvl_record_opened = (record_id, opened_at) — filesortsuz sorgu',
     isset($idx['idx_rvl_record_opened']) && array_values($idx['idx_rvl_record_opened']) === array('record_id', 'opened_at'));
 check('idx_rvl_opened var (15 gunluk temizlik)', isset($idx['idx_rvl_opened']));
 
-// schema.sql, migration ile AYNI tabloyu tanimlamali (kayma/drift kontrolu).
 $schemaSql = file_get_contents(__DIR__ . '/../schema.sql');
 check('schema.sql record_view_log tanimini iceriyor',
     strpos($schemaSql, 'CREATE TABLE IF NOT EXISTS record_view_log') !== false);
@@ -126,8 +104,6 @@ check('gecmisi YALNIZCA owner gorur',
     && bcc_can_view_record_audits('editor') === false
     && bcc_can_view_record_audits('viewer') === false);
 
-// Asil tuzak: bcc_can_comment() owner/editor icin de true doner. Kimlik
-// tespitinde onunla karistirilirsa her yonetici "temsilci" sayilir.
 $repSet = array_values(array_filter(array('owner', 'editor', 'commenter', 'viewer'), 'bcc_is_representative'));
 $comSet = array_values(array_filter(array('owner', 'editor', 'commenter', 'viewer'), 'bcc_can_comment'));
 check('temsilci kumesi != yorum-yazan kumesi (bcc_can_comment ile karistirilmamis)',
@@ -157,19 +133,6 @@ $recordId = (int) bcc_last_insert_id();
 bcc_execute("INSERT INTO records (table_id, position) VALUES (:t, 1)", array('t' => $tableId));
 $otherRecordId = (int) bcc_last_insert_id();
 
-// Dort rolu de temsil eden KENDI test kullanicilarimiz.
-//
-// ⚠️ ESKIDEN GERCEK HESAPLAR ODUNC ALINIYORDU ve bu testi SESSIZCE BOZUYORDU:
-//   $pool = SELECT id FROM users WHERE is_active = 1 ORDER BY id LIMIT 4
-// "editor" olarak atanan pool[1], veritabanindaki id sirasina gore gelen
-// GERCEK bir hesapti ve o hesap is_admin = 1 idi. Platform admini her ekipte
-// SANAL 'owner' sayildigi icin (current_user_role_in_team, src/auth.php)
-// "editor: gecmisi goremiyor -> 403" kontrolu KALIYORDU -- uc nokta dogru
-// calisirken test yanlis alarm veriyordu (yetki acigi SANILABILIRDI).
-//
-// Ayrica gercek hesaplara gecici team_members satiri yazmak projenin kendi
-// kuralina aykiri. Test artik kendi hesaplarini kurar ve siler; roller
-// GERCEKTEN test edilen roldur, is_admin hepsinde 0.
 $uid = array();
 foreach (array('owner', 'editor', 'commenter', 'viewer') as $role) {
     $mail = 'nvl.' . $role . '@bcc-test.local';
@@ -192,12 +155,9 @@ check('dort test kullanicisi kuruldu (hicbiri is_admin degil)',
     && (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id IN (' . implode(',', $uid) . ') AND is_admin = 1') === 0);
 echo "  ekip=$teamId base=$baseId tablo=$tableId kayit=$recordId\n";
 
-// Betik yarida kalsa bile kurban veri kalmasin.
 register_shutdown_function(function () use ($teamId, $uid) {
-    // records/tables_meta/bases CASCADE ile, record_view_log da oyle gider.
     bcc_execute('DELETE FROM teams WHERE id = :t', array('t' => $teamId));
-    // Test hesaplari da gitmeli: artik GERCEK hesap odunc alinmiyor, bu dort
-    // kullanici bu betige ait (bkz. yukaridaki kurulum notu).
+
     if ($uid) {
         bcc_execute('DELETE FROM users WHERE id IN (' . implode(',', array_map('intval', $uid)) . ')');
     }
@@ -232,7 +192,6 @@ check('CSRF yok -> 403', $r['status'] === 403);
 $r = call_api('note_view_start.php', $uid['commenter'], array('record_id' => $recordId), 'GET');
 check('GET -> 405', $r['status'] === 405);
 
-// Soft-delete edilmis kayit
 bcc_execute('UPDATE records SET deleted_at = NOW() WHERE id = :id', array('id' => $otherRecordId));
 $r = call_api('note_view_start.php', $uid['commenter'], array('record_id' => $otherRecordId));
 check('silinmis kayit -> 404', $r['status'] === 404);
@@ -244,13 +203,9 @@ check('ayni not ikinci kez -> AYRI satir', $secondViewId > 0 && $secondViewId !=
 
 echo "\n=== E) note_view_end.php ===\n";
 
-// Sure olcumu: opened_at'i geriye alip kapatarak deterministik test.
 bcc_execute('UPDATE record_view_log SET opened_at = NOW() - INTERVAL 138 SECOND WHERE id = :id', array('id' => $viewId));
 $r = call_api('note_view_end.php', $uid['commenter'], array('view_id' => $viewId));
-// TOLERANS: opened_at 138 sn geriye alindi ama kapanis AYRI bir alt surecte
-// calisiyor; PHP'nin baslama gecikmesi olcumu 1-3 sn kaydirabilir. Tam esitlik
-// aramak testi FLAKY yapardi (ilk kosularda gercekten oyle oldu). Onemli olan
-// surenin SUNUCUDA ve dogru buyuklukte hesaplanmasi.
+
 $dur = isset($r['json']['duration_seconds']) ? $r['json']['duration_seconds'] : null;
 check('kapanis: sure sunucuda hesaplandi (~138 sn)',
     $r['status'] === 200 && $dur !== null && $dur >= 138 && $dur <= 145, 'olculen=' . var_export($dur, true));
@@ -261,13 +216,11 @@ $after = bcc_fetch_one('SELECT duration_seconds FROM record_view_log WHERE id = 
 check('ayni satir ikinci kez kapatilamaz (sure DONDU)',
     $r['json']['duration_seconds'] === null && (int) $after['duration_seconds'] === $frozenDuration);
 
-// BASKASININ satiri
 $r = call_api('note_view_end.php', $uid['owner'], array('view_id' => $secondViewId));
 $other = bcc_fetch_one('SELECT closed_at FROM record_view_log WHERE id = :id', array('id' => $secondViewId));
 check('baskasinin view_id\'si kapatilamaz (satir DEGISMEDI)',
     $r['json']['duration_seconds'] === null && $other['closed_at'] === null);
 
-// Ust sinir: 5 saat -> 14400; 9000 sn -> 9000 (LEAST tip tuzagi)
 bcc_execute('INSERT INTO record_view_log (record_id,user_id,team_id,role_at_view,opened_at)
              VALUES (:r,:u,:t,\'commenter\', NOW() - INTERVAL 5 HOUR)',
     array('r' => $recordId, 'u' => $uid['commenter'], 't' => $teamId));
@@ -280,10 +233,7 @@ bcc_execute('INSERT INTO record_view_log (record_id,user_id,team_id,role_at_view
     array('r' => $recordId, 'u' => $uid['commenter'], 't' => $teamId));
 $midId = (int) bcc_last_insert_id();
 $r = call_api('note_view_end.php', $uid['commenter'], array('view_id' => $midId));
-// 9000 < 14400: KIRPILMAMALI. Metinsel karsilastirma yapilsaydi ('9000' > '14400')
-// yanlislikla 14400'e cekilirdi — bu kontrol LEAST'in SAYISAL calistigini kanitlar.
-// Yine tolerans (alt surec gecikmesi), ama 14400'e YAKLASMAYAN dar bir aralik:
-// kirpilma olsaydi deger tam 14400 olurdu ve bu aralik onu YAKALAR.
+
 $dur = isset($r['json']['duration_seconds']) ? $r['json']['duration_seconds'] : null;
 check('9000 sn KIRPILMIYOR (LEAST sayisal karsilastiriyor)',
     $dur !== null && $dur >= 9000 && $dur <= 9010, 'olculen=' . var_export($dur, true));
@@ -296,7 +246,6 @@ check('CSRF yok -> 403', $r['status'] === 403);
 
 echo "\n=== F) note_view_list.php ===\n";
 
-// 16 gun once (pencere DISI) ve 14 gun once (pencere ICI) birer satir.
 bcc_execute('INSERT INTO record_view_log (record_id,user_id,team_id,role_at_view,opened_at,closed_at,duration_seconds)
              VALUES (:r,:u,:t,\'commenter\', NOW() - INTERVAL 16 DAY, NOW() - INTERVAL 16 DAY, 45)',
     array('r' => $recordId, 'u' => $uid['commenter'], 't' => $teamId));
@@ -328,7 +277,6 @@ foreach (array('commenter', 'editor', 'viewer') as $role) {
     check($role . ': gecmisi goremiyor -> 403', $r['status'] === 403, $r['body']);
 }
 
-// Sure bicimlendirmesi: uc aralik da dogru mu?
 $durations = array();
 foreach ($views as $v) {
     if ($v['duration_display'] !== null) { $durations[] = $v['duration_display']; }
@@ -366,10 +314,7 @@ check('interface.js selectRow icinde onceki incelemeyi KAPATIYOR',
     preg_match('/function selectRow\(row\) \{\s*(\/\/[^\n]*\n\s*)*endNoteView\(\);/', $ifJs) === 1);
 check('interface.js yeni incelemeyi baslatiyor', strpos($ifJs, 'startNoteView(row);') !== false);
 check('interface.js sendBeacon kullaniyor (kapanis teslimati)', strpos($ifJs, 'navigator.sendBeacon') !== false);
-// DIKKAT (projede UCUNCU kez ayni ders, bkz. docs/PROJE-DURUM.md grid-export.css
-// ve mail_verification vakalari): ham metinde 'beforeunload' aramak, o karari
-// ACIKLAYAN YORUMA takilip yanlis KALDI veriyor. Aranan sey KULLANIM'dir —
-// yani gercek bir olay baglama cagrisi.
+
 check('interface.js beforeunload BAGLAMIYOR (mobilde guvenilmez)',
     preg_match('/addEventListener\(\s*[\'"]beforeunload[\'"]/', $ifJs) === 0
     && preg_match('/\bonbeforeunload\s*=/', $ifJs) === 0);

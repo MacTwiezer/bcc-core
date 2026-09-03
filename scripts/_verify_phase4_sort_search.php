@@ -1,11 +1,4 @@
 <?php
-// Faz 4 (Arama + Sıralama) doğrulaması. curl KULLANILMAZ — PHP'nin kendi
-// http:// stream sarmalayıcısı ile gerçek grid.php uçnoktasına, gerçek bir
-// oturum çerezi ile istek atılır. Kendi test kullanıcısını/verisini kurar,
-// doğrular, sonunda temizler (test_isolation.php ile aynı desen).
-//
-// Ön koşul: Apache ayakta olmalı (DocumentRoot = public, localhost:80).
-// Çalıştırma: C:\php73\php.exe scripts\_verify_phase4_sort_search.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -14,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -81,14 +71,12 @@ function extract_csrf($html)
     return null;
 }
 
-// Bir alan id'sine ait hücrelerin DOM sırasını (data-value) döndürür.
 function extract_field_values_in_order($html, $fieldId)
 {
     $pattern = '/data-field-id="' . preg_quote((string) $fieldId, '/') . '"[^>]*data-value="([^"]*)"/';
     preg_match_all($pattern, $html, $m);
     return isset($m[1]) ? $m[1] : array();
 }
-
 
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
@@ -127,7 +115,6 @@ try {
     bcc_execute('INSERT INTO fields (table_id, name, field_type, position) VALUES (:tid, :name, :type, 0)', array(':tid' => $tableId, ':name' => 'Deger', ':type' => 'number'));
     $fieldId = (int) bcc_last_insert_id();
 
-    // Kasıtlı olarak sırasız (30, 10, 20) — sırala olmadan ekleme sırası, sıralayla sayısal sıra beklenir.
     $values = array(30, 10, 20);
     foreach ($values as $i => $v) {
         bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)', array(':tid' => $tableId, ':pos' => $i, ':uid' => $userId));
@@ -138,7 +125,6 @@ try {
 
     echo "Kurulum tamam: table_id={$tableId}, field_id={$fieldId}\n\n";
 
-    // --- Oturum aç -------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -154,27 +140,22 @@ try {
 
     check('Giris yapildi (login sonrasi oturum cerezi alindi)', $cookie !== null, 'cookie=' . var_export($cookie, true));
 
-    // --- Sıralamasız (varsayılan: ekleme sırası) -------------------------
     $resp = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
     $order = extract_field_values_in_order($resp['body'], $fieldId);
     check('Sirasiz grid ekleme sirasini gosteriyor (30,10,20)', $order === array('30', '10', '20'), 'bulunan: ' . implode(',', $order));
 
-    // --- Artan sıralama ----------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1={$fieldId}&sort_dir_1=asc", $cookie);
     $order = extract_field_values_in_order($resp['body'], $fieldId);
     check('Artan siralama dogru (10,20,30)', $order === array('10', '20', '30'), 'bulunan: ' . implode(',', $order));
     check('Aktif siralama sayaci "Sirala (1)" gosteriyor', strpos($resp['body'], 'Sırala (1)') !== false);
 
-    // --- Azalan sıralama ----------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1={$fieldId}&sort_dir_1=desc", $cookie);
     $order = extract_field_values_in_order($resp['body'], $fieldId);
     check('Azalan siralama dogru (30,20,10)', $order === array('30', '20', '10'), 'bulunan: ' . implode(',', $order));
 
-    // --- Gecersiz/yabanci alan id'si sessizce yok sayilmali (baska tabloya ait olabilir) ---
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1=999999&sort_dir_1=asc", $cookie);
     check('Gecersiz alan id sayfayi kirmiyor (200 dönüyor)', $resp['status'] === 200 && strpos($resp['body'], 'class="grid') !== false);
 
-    // --- Arama kutusu ve sayaç DOM'da mevcut (client-side JS elle test edilir) ---
     check('Arama input alani sayfada mevcut', strpos($resp['body'], 'id="grid-search"') !== false);
     check('grid-toolbar.js dahil edilmis', strpos($resp['body'], '/assets/grid-toolbar.js') !== false);
 } finally {

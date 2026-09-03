@@ -1,23 +1,4 @@
 <?php
-// Home (dashboard.php) base olusturma yetkisi + kart ikonu/rol rozeti testi.
-//
-// Neyi dogruluyor:
-//   A) OpsFlow izin matrisi karsiligi (src/auth.php bcc_can_manage_bases):
-//      base EKLEME/SILME yalnizca 'owner'a acik, editor/commenter/viewer'a kapali.
-//   B) SUNUCU TARAFI RENDER: yetkisi olmayan kullanicinin HTML'inde ne "+ Yeni
-//      Base Olustur" kutucugu ne de "Sil" ogesi bulunur (CSS ile gizleme YOK).
-//   C) UC NOKTA (public/api/base_create.php) — asil kapi. Kutucugu hic gormeyen
-//      bir kullanici elle POST atsa da 403 alir. Bu testler GERCEK uc nokta
-//      dosyasini alt surecte calistirir (bkz. _base_create_case.php), kopyasini
-//      degil; "gizleme != yetkilendirme" boylece kanitlanir.
-//   D) Ikon sistemi: kategori base ADINDAN, renk base ID'sinden deterministik
-//      turer; ayni base her sayfada ayni renk/glifi alir.
-//
-// Betik kendi test takimini/kullanicilarini kurar ve sonunda (basarili ya da
-// basarisiz fark etmeksizin) SADECE kendi olusturdugu id'leri siler;
-// veritabanindaki gercek veriye DOKUNMAZ.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_base_permissions.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -26,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -37,10 +15,6 @@ const FIX_TEAM = 'YETKI_TEST_TAKIM';
 
 $results = array();
 
-// bcc_fetch_one() satir bulamayinca null DEGIL false doner (bkz.
-// config/database.php) — "olusmamis olmali" testleri bu yuzden ikisini de kabul
-// eden bu yardimciyla yazilir; `=== null` yazan bir kontrol satir olusmus olsa
-// bile "gecti" derdi.
 function no_row($row)
 {
     return $row === false || $row === null;
@@ -56,9 +30,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// ---------------------------------------------------------------------------
-// A) Yetki esigi — saf fonksiyon
-// ---------------------------------------------------------------------------
 echo "--- A) Yetki esigi (bcc_can_manage_bases) ---\n";
 
 check('owner base ekleyebilir', bcc_can_manage_bases('owner') === true);
@@ -68,9 +39,6 @@ check('viewer base ekleyemez', bcc_can_manage_bases('viewer') === false);
 check('rolsuz (null) base ekleyemez', bcc_can_manage_bases(null) === false);
 check('bilinmeyen rol base ekleyemez', bcc_can_manage_bases('uydurma_rol') === false);
 
-// ---------------------------------------------------------------------------
-// D) Ikon sistemi — saf fonksiyon
-// ---------------------------------------------------------------------------
 echo "\n--- D) Ikon kategorisi ve rengi ---\n";
 
 check('"Arsiv" -> varsayilan veritabani glifi', bcc_base_icon_category('Arsiv') === 'database', bcc_base_icon_category('Arsiv'));
@@ -97,9 +65,6 @@ check('style attr dort degiskeni de basar (acik+koyu tema)',
     && strpos($styleAttr, '--bi-bg-dark:') !== false && strpos($styleAttr, '--bi-fg-dark:') !== false, $styleAttr);
 check('style attr ham `background:` BASMAZ (koyu tema kuralini yenerdi)', strpos($styleAttr, 'background') === false, $styleAttr);
 
-// ---------------------------------------------------------------------------
-// B) Sunucu tarafi render — rol basina HTML
-// ---------------------------------------------------------------------------
 echo "\n--- B) Sunucu tarafi render (bcc_render_home_base_grid) ---\n";
 
 function render_grid_for($role, $canCreate)
@@ -143,15 +108,11 @@ $emptyCannot = ob_get_clean();
 check('bos durum + yetki: olustur butonu var (cikmaz sokak yok)', strpos($emptyCanCreate, 'home-create-base-btn') !== false);
 check('bos durum + yetki YOK: buton yok', strpos($emptyCannot, 'home-create-base-btn') === false);
 
-// starred.php imzayi degistirmeden cagiriyor — 6. parametre varsayilani false olmali.
 ob_start();
 bcc_render_home_base_grid(array(), array(), array(), 'bos', array());
 $legacy = ob_get_clean();
 check('starred.php\'nin 5 argumanli cagrisi kutucuk BASMAZ (varsayilan false)', strpos($legacy, 'home-create-base-btn') === false);
 
-// ---------------------------------------------------------------------------
-// C) Uc nokta — gercek dosya, alt surecte
-// ---------------------------------------------------------------------------
 echo "\n--- C) public/api/base_create.php (gercek uc nokta) ---\n";
 
 $createdUserIds = array();
@@ -162,14 +123,11 @@ function cleanup()
 {
     global $createdUserIds, $createdTeamIds, $createdBaseIds;
 
-    // SADECE bu betigin olusturdugu id'ler — gercek veriye dokunulmaz.
     foreach ($createdBaseIds as $id) {
         bcc_execute('DELETE FROM audit_log WHERE entity_type = :et AND entity_id = :id', array('et' => 'base', 'id' => $id));
         bcc_execute('DELETE FROM bases WHERE id = :id', array('id' => $id));
     }
     foreach ($createdTeamIds as $id) {
-        // Bu takimda testin ARTIK BILMEDIGI (dogrulama testlerinde olusan) base
-        // kalmis olabilir; takim id'si bu betige ait oldugu icin guvenli.
         bcc_execute('DELETE FROM bases WHERE team_id = :id', array('id' => $id));
         bcc_execute('DELETE FROM team_members WHERE team_id = :id', array('id' => $id));
         bcc_execute('DELETE FROM teams WHERE id = :id', array('id' => $id));
@@ -182,7 +140,6 @@ function cleanup()
 
 register_shutdown_function('cleanup');
 
-// --- fikstur kurulumu ---
 bcc_execute('INSERT INTO teams (name) VALUES (:n)', array('n' => FIX_TEAM));
 $teamId = (int) bcc_last_insert_id();
 $createdTeamIds[] = $teamId;
@@ -244,7 +201,6 @@ check('commenter POST -> 403', $commenterCase['status'] === 403, $commenterCase[
 $viewerCase = run_case($userIdByRole['viewer'], $teamId, 'YETKI_TEST_VIEWER_BASE');
 check('viewer POST -> 403', $viewerCase['status'] === 403, $viewerCase['body']);
 
-// Uye OLMADIGI takim: owner rolu baska bir takimda olmak bu takimda yetki vermez.
 $foreignCase = run_case($userIdByRole['owner'], $otherTeamId, 'YETKI_TEST_YABANCI_BASE');
 check('owner, UYE OLMADIGI takimda -> 403 (KVKK izolasyonu once)', $foreignCase['status'] === 403, $foreignCase['body']);
 check('yabanci takimda base OLUSMADI',
@@ -256,7 +212,6 @@ check('owner + bozuk CSRF -> 403', $csrfCase['status'] === 403, $csrfCase['body'
 $anonCase = run_case(0, $teamId, 'YETKI_TEST_ANON_BASE');
 check('oturumsuz POST -> 401', $anonCase['status'] === 401, $anonCase['body']);
 
-// Dogrulama: bos ad ve 151 karakter -> 422, INSERT YOK.
 $emptyNameCase = run_case($userIdByRole['owner'], $teamId, '   ');
 check('owner + bos ad -> 422 (dogrulama, 500 degil)', $emptyNameCase['status'] === 422, $emptyNameCase['body']);
 
@@ -266,7 +221,6 @@ check('owner + 151 karakter ad -> 422 (sessiz kirpilma yok)', $longCase['status'
 check('151 karakterlik ad DB\'ye kirpilarak yazilmadi',
     no_row(bcc_fetch_one('SELECT id FROM bases WHERE name = :n', array('n' => substr($longName, 0, 150)))));
 
-// Mutlu yol: owner gercekten olusturabiliyor.
 $okCase = run_case($userIdByRole['owner'], $teamId, 'YETKI_TEST_OWNER_BASE');
 check('owner POST -> 200', $okCase['status'] === 200, $okCase['body']);
 
@@ -289,9 +243,6 @@ if (!no_row($newBase)) {
     check('audit kaydi yazildi (base.create)', !no_row($audit));
 }
 
-// ---------------------------------------------------------------------------
-// Kapsam korumasi: uc giris noktasi da AYNI fonksiyondan beslenmeli.
-// ---------------------------------------------------------------------------
 echo "\n--- Kapsam korumasi (tek yetki kaynagi) ---\n";
 
 $root = __DIR__ . '/..';
@@ -305,7 +256,6 @@ check('api/base_create.php esigi bcc_can_manage_bases()\'ten alir', strpos($api,
 check('bases.php artik editor esigini KULLANMIYOR', strpos($basesPage, "require_role(\$teamId, 'editor')") === false);
 check('bases.php INSERT\'i kendi yazmiyor (bcc_create_base ortak)', strpos($basesPage, 'INSERT INTO bases') === false);
 
-// ---------------------------------------------------------------------------
 echo "\n";
 $failed = count(array_filter($results, function ($r) { return !$r; }));
 echo ($failed === 0 ? 'TUM TESTLER GECTI' : $failed . ' TEST KALDI') . ' (' . count($results) . " kontrol)\n";

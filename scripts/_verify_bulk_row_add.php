@@ -1,12 +1,4 @@
 <?php
-// Toplu satir ekleme ("sayi gir, o kadar satir eklensin") dogrulamasi.
-// curl KULLANILMAZ — PHP'nin http:// stream sarmalayicisiyla gercek oturum
-// cerezi alinip gercek uc noktalara istek atilir (scripts/_verify_group_c2.php
-// ile AYNI desen). Kendi izole takimini/base'ini kurar, dogrular, SONUNDA temizler.
-// GERCEK verilere (mevcut takimlar, base'ler) DOKUNMAZ.
-//
-// On kosul: Apache + MySQL ayakta (XAMPP), DocumentRoot = public, localhost:80.
-// Calistirma: C:\php73\php.exe scripts\_verify_bulk_row_add.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -15,10 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -83,7 +71,6 @@ function extract_csrf($html)
     return null;
 }
 
-// Bir tablonun canli kayit id'leri, GORUNEN sirayla.
 function rec_ids($tableId)
 {
     $rows = bcc_fetch_all(
@@ -114,12 +101,10 @@ $cleanup = function () {
     bcc_execute('DELETE FROM teams WHERE name = :n', array(':n' => TEST_TEAM));
 };
 
-// Onceki yarim kalmis kosudan artik varsa temizle.
 $cleanup();
 register_shutdown_function($cleanup);
 
 try {
-    // --- Izole fixture ----------------------------------------------------
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEST_TEAM));
     $teamId = (int) bcc_last_insert_id();
 
@@ -154,7 +139,6 @@ try {
         return (int) bcc_last_insert_id();
     };
 
-    // --- Oturum -----------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -166,9 +150,6 @@ try {
     }
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // =====================================================================
-    // 1) BOS TABLO + count=5
-    // =====================================================================
     $t1 = $mkTable('T1 Toplu');
     $mkField($t1, 'Ad', 'single_line_text', 0);
 
@@ -208,9 +189,6 @@ try {
         'html: ' . implode(',', $htmlIds) . ' / ids: ' . implode(',', $j['record_ids'])
     );
 
-    // =====================================================================
-    // 2) GERIYE DONUK: count HIC gonderilmezse 1 kayit
-    // =====================================================================
     $t2 = $mkTable('T2 Tekil');
     $mkField($t2, 'Ad', 'single_line_text', 0);
     $resp = http_request('POST', '/api/record_add.php', $cookie, array(
@@ -227,9 +205,6 @@ try {
         isset($j['record_id']) && (int) $j['record_id'] === rec_ids($t2)[0]
     );
 
-    // =====================================================================
-    // 3) ARAYA EKLEME: after_record_id + count=3 (pozisyon kaydirmasi)
-    // =====================================================================
     $t3 = $mkTable('T3 Araya');
     $mkField($t3, 'Ad', 'single_line_text', 0);
     http_request('POST', '/api/record_add.php', $cookie, array(
@@ -259,9 +234,6 @@ try {
         'pozisyonlar: ' . implode(',', positions($t3))
     );
 
-    // =====================================================================
-    // 4) SINIRLAR: count=0 -> 1'e kirpilir; count=501 -> 422 ve HIC kayit yok
-    // =====================================================================
     $t4 = $mkTable('T4 Sinir');
     $mkField($t4, 'Ad', 'single_line_text', 0);
     http_request('POST', '/api/record_add.php', $cookie, array(
@@ -279,9 +251,6 @@ try {
     check('4) count=501 -> 422 reddedildi', $resp['status'] === 422, 'status: ' . $resp['status'] . ' body: ' . $resp['body']);
     check('4) count=501 -> HIC kayit eklenmedi (hala 2)', count(rec_ids($t4)) === 2, 'bulunan: ' . count(rec_ids($t4)));
 
-    // =====================================================================
-    // 5) AUDIT: toplu ekleme TEK ozet satiri yazar, 500 satir degil
-    // =====================================================================
     $t5 = $mkTable('T5 Audit');
     $mkField($t5, 'Ad', 'single_line_text', 0);
     $auditBefore = (int) bcc_fetch_column('SELECT COUNT(*) FROM audit_log WHERE team_id = :t', array(':t' => $teamId));
@@ -300,9 +269,6 @@ try {
     );
     check('5) audit action = record.create_bulk', $lastAction === 'record.create_bulk', 'bulunan: ' . $lastAction);
 
-    // =====================================================================
-    // 6) AUTONUMBER: toplu eklemede ardisik numaralar
-    // =====================================================================
     $t6 = $mkTable('T6 Autonumber');
     $mkField($t6, 'Ad', 'single_line_text', 0);
     $resp = http_request('GET', "/table_fields.php?table_id={$t6}", $cookie);
@@ -330,9 +296,6 @@ try {
         check('6) autonumber alani olusturuldu', false, 'alan bulunamadi');
     }
 
-    // =====================================================================
-    // 7) RBAC: viewer toplu ekleme YAPAMAZ
-    // =====================================================================
     bcc_execute(
         'UPDATE team_members SET role = :r WHERE team_id = :t AND user_id = :u',
         array(':r' => 'viewer', ':t' => $teamId, ':u' => $userId)
@@ -352,9 +315,6 @@ try {
         array(':r' => 'owner', ':t' => $teamId, ':u' => $userId)
     );
 
-    // =====================================================================
-    // 8) PERFORMANS: 200 satir tek istekte ne kadar suruyor (sunum kriteri)
-    // =====================================================================
     $t8 = $mkTable('T8 Performans');
     $mkField($t8, 'Ad', 'single_line_text', 0);
     $mkField($t8, 'Not', 'long_text', 1);
@@ -368,13 +328,7 @@ try {
     check('8) 200 satir 5 saniyenin altinda dondu', $elapsed < 5.0, 'sure: ' . round($elapsed, 2) . ' sn');
     echo '         -> 200 satir sunucu suresi: ' . round($elapsed, 2) . ' sn, yanit boyutu: '
         . round(strlen($resp['body']) / 1024, 1) . " KB\n";
-    // =====================================================================
-    // 9) REGRESYON (JS statik): renumberRows() satir no HUCRESININ kendisine
-    //    yazmamali. Yazarsa hucrenin cocuklari (.grid-rownum-inner, secim
-    //    kutusu .grid-row-select, genislet butonu .grid-row-expand) silinir ve
-    //    bir silme/eklemeden SONRA ikinci bir satir secilemez hale gelirdi
-    //    (kullanicinin bildirdigi gercek bug; sayfa yenileyince duzeliyordu).
-    // =====================================================================
+
     $gridJs = file_get_contents(__DIR__ . '/../public/assets/grid.js');
     check(
         '9) renumberRows() numara SPAN\'ine yaziyor (.grid-rownum-number)',

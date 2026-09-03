@@ -1,15 +1,4 @@
 <?php
-// Ic yardimci — _verify_note_view_log.php tarafindan alt surec olarak
-// calistirilir. _post_as_case.php ile AYNI fikir, iki farkla: (1) HTTP metodu
-// secilebilir (GET uc noktalari ve "GET ile POST uc noktasi" testi icin),
-// (2) CSRF token'i BILEREK atlanabilir ("CSRF'siz reddediliyor mu" testi).
-//
-// Kullanim: php _note_view_case.php <endpoint> <user_id> <params_json_b64> <method> <csrf 1|0>
-// Cikti: uc noktanin govdesi + sonda "|HTTP=<kod>".
-//
-// POST/GET govdesi BASE64 ile gecirilir, ham JSON ile DEGIL: Windows'ta
-// escapeshellarg() cift tirnaklari kaldirdigi icin JSON komut satirinda
-// bozuluyor (bkz. _post_as_case.php'deki ayni not).
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -33,11 +22,6 @@ if (!is_file($path)) {
     exit(1);
 }
 
-// base64_decode() gecersiz girdide false doner; (string) false = '' olur ve
-// json_decode('') null verir, yani parametreler SESSIZCE bosalirdi. Uc nokta o
-// zaman "kayit bulunamadi" gibi bir hata doner ve test bunu yanlislikla
-// "yetki reddi" sanabilir — _post_as_case.php'de bu tam olarak yasandi
-// (bkz. oradaki base64 notu), ayni koruma buraya da kondu.
 $raw = base64_decode($paramsB64, true);
 if ($raw === false) {
     fwrite(STDERR, "Parametreler cozulemedi (gecersiz base64).\n");
@@ -48,9 +32,6 @@ $params = is_array($decoded) ? $decoded : array();
 
 session_start();
 
-// CSRF gecerli kurulur (istenmedikce) — amac CSRF'i degil ROL/SAHIPLIK
-// kapisini test etmek; istek "her seyi dogru yapmis ama yetkisi olmayan"
-// kullaniciyi temsil eder. _post_as_case.php ile AYNI gerekce.
 $_SESSION = array('user_id' => $userId, 'csrf_token' => 'NOTE_VIEW_TEST_TOKEN');
 
 $_SERVER['REQUEST_METHOD'] = $method;

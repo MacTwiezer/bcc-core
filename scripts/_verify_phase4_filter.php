@@ -1,10 +1,4 @@
 <?php
-// Faz 4 (Filtreleme) doğrulaması. curl KULLANILMAZ — PHP'nin http:// stream
-// sarmalayıcısıyla gerçek oturum çerezi alınıp gerçek grid.php'ye istek atılır.
-// Kendi test verisini kurar, doğrular, sonunda temizler.
-//
-// Ön koşul: Apache ayakta olmalı (DocumentRoot = public, localhost:80).
-// Çalıştırma: C:\php73\php.exe scripts\_verify_phase4_filter.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -13,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -81,7 +72,6 @@ function row_count($html)
     return substr_count($html, 'data-record-id="');
 }
 
-// Bir alan id'sine ait hücrelerin DOM sırasını (data-value) döndürür.
 function extract_field_values($html, $fieldId)
 {
     $pattern = '/data-field-id="' . preg_quote((string) $fieldId, '/') . '"[^>]*data-value="([^"]*)"/';
@@ -95,7 +85,6 @@ function same_set($a, $b)
     sort($b);
     return $a === $b;
 }
-
 
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
@@ -155,13 +144,12 @@ try {
     $insertDateSql = 'INSERT INTO cell_values (record_id, field_id, value_date) VALUES (:rid, :fid, :val)';
     $insertJsonSql = 'INSERT INTO cell_values (record_id, field_id, value_json) VALUES (:rid, :fid, :val)';
 
-    // rec1=Elma, rec2=Armut, rec3=Kiraz, rec4=Muz, rec5=(bos kayit)
     $rows = array(
         array('name' => 'Elma', 'miktar' => 10, 'aktif' => 1, 'tarih' => '2026-01-10', 'renk' => 'Kirmizi', 'tags' => array('A')),
         array('name' => 'Armut', 'miktar' => 20, 'aktif' => 0, 'tarih' => '2026-02-15', 'renk' => 'Yesil', 'tags' => array('A', 'B')),
         array('name' => 'Kiraz', 'miktar' => 30, 'aktif' => 1, 'tarih' => '2026-03-20', 'renk' => 'Mavi', 'tags' => array('B')),
         array('name' => 'Muz', 'miktar' => 5, 'aktif' => 0, 'tarih' => '2026-01-01', 'renk' => 'Kirmizi', 'tags' => array()),
-        null, // tamamen bos kayit
+        null,
     );
 
     $recordIds = array();
@@ -186,7 +174,6 @@ try {
 
     echo "Kurulum tamam: table_id={$tableId}\n\n";
 
-    // --- Oturum ac ---------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -203,48 +190,38 @@ try {
     $renkId = $fieldIds['Renk'];
     $etiketId = $fieldIds['Etiketler'];
 
-    // --- Filtresiz: 5 kayit ------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}", $cookie);
     check('Filtresiz grid 5 kayit gosteriyor', row_count($resp['body']) === 5, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Metin: contains -----------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$adId}&filter_cond_1=contains&filter_value_1=" . urlencode('rmu'), $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Metin "icerir" -> sadece Armut', $names === array('Armut'), 'bulunan: ' . implode(',', $names));
 
-    // --- Metin: equals -------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$adId}&filter_cond_1=equals&filter_value_1=" . urlencode('Kiraz'), $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Metin "esittir" -> sadece Kiraz', $names === array('Kiraz'), 'bulunan: ' . implode(',', $names));
 
-    // --- Metin: bos ------------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$adId}&filter_cond_1=empty", $cookie);
     check('Metin "bos" -> 1 kayit (Ad hucresi olmayan)', row_count($resp['body']) === 1, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Sayi: > ---------------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$miktarId}&filter_cond_1=gt&filter_value_1=15", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Sayi ">15" -> Armut+Kiraz', same_set($names, array('Armut', 'Kiraz')), 'bulunan: ' . implode(',', $names));
 
-    // --- Sayi: <= ---------------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$miktarId}&filter_cond_1=lte&filter_value_1=10", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Sayi "<=10" -> Elma+Muz', same_set($names, array('Elma', 'Muz')), 'bulunan: ' . implode(',', $names));
 
-    // --- Sayi: gecersiz deger -> kural yok sayilir, filtresiz gibi davranir ---
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$miktarId}&filter_cond_1=gt&filter_value_1=" . urlencode('abc'), $cookie);
     check('Sayida gecersiz deger -> kural yok sayilir (5 kayit)', row_count($resp['body']) === 5, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Checkbox: checked -------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$aktifId}&filter_cond_1=checked", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Checkbox "isaretli" -> Elma+Kiraz', same_set($names, array('Elma', 'Kiraz')), 'bulunan: ' . implode(',', $names));
 
-    // --- Checkbox: unchecked (bos kayit dahil) -----------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$aktifId}&filter_cond_1=unchecked", $cookie);
     check('Checkbox "isaretsiz" -> 3 kayit (Armut, Muz, bos)', row_count($resp['body']) === 3, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Tarih: once/sonra -------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$tarihId}&filter_cond_1=before&filter_value_1=2026-02-01", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Tarih "once 2026-02-01" -> Elma+Muz', same_set($names, array('Elma', 'Muz')), 'bulunan: ' . implode(',', $names));
@@ -253,45 +230,34 @@ try {
     $names = extract_field_values($resp['body'], $adId);
     check('Tarih "sonra 2026-02-01" -> Armut+Kiraz', same_set($names, array('Armut', 'Kiraz')), 'bulunan: ' . implode(',', $names));
 
-    // --- Coklu secim: icerir -------------------------------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$etiketId}&filter_cond_1=contains&filter_value_1=B", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('Coklu secim "B icerir" -> Armut+Kiraz', same_set($names, array('Armut', 'Kiraz')), 'bulunan: ' . implode(',', $names));
 
-    // --- VE (AND): Renk=Kirmizi VE Miktar>=10 -> sadece Elma ---------------
     $q = "filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Kirmizi')
        . "&filter_field_2={$miktarId}&filter_cond_2=gte&filter_value_2=10&filter_logic=and";
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&{$q}", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('VE: Renk=Kirmizi VE Miktar>=10 -> sadece Elma', $names === array('Elma'), 'bulunan: ' . implode(',', $names));
-    // Bagac kontrolu artik radyo dugmesi DEGIL, 2. satirdaki <select>.
-    // Eski kontrol 'value="and" checked' ariyordu (radyonun isareti); panel
-    // OpsFlow davranışına gore yeniden tasarlaninca o markup kalkti. Sunucu
-    // sozlesmesi AYNI: hala tek bir name="filter_logic" gonderiliyor, yalnizca
-    // secili degeri gosteren isaret 'checked' yerine 'selected'.
+
     check('VE modunda bagac select i "VE" secili',
         preg_match('/<select name="filter_logic"[^>]*>.*?<option value="and" selected>/s', $resp['body']) === 1);
     check('Formda filter_logic ADINDA TEK oge (yinelenen gonderim yok)',
         preg_match('#<form[^>]*class="filter-form"[^>]*>(.*?)</form>#s', $resp['body'], $ffm) === 1
         && substr_count($ffm[1], 'name="filter_logic"') === 1);
 
-    // --- VEYA (OR): Renk=Mavi VEYA Miktar<10 -> Kiraz+Muz -------------------
     $q = "filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Mavi')
        . "&filter_field_2={$miktarId}&filter_cond_2=lt&filter_value_2=10&filter_logic=or";
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&{$q}", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('VEYA: Renk=Mavi VEYA Miktar<10 -> Kiraz+Muz', same_set($names, array('Kiraz', 'Muz')), 'bulunan: ' . implode(',', $names));
 
-    // --- Guvenlik: sahte/yabanci alan id'si sessizce yok sayilir ------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1=999999&filter_cond_1=equals&filter_value_1=x", $cookie);
     check('Sahte alan id -> kural yok sayilir, 5 kayit doner', row_count($resp['body']) === 5, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Guvenlik: alan tipine uymayan operator (whitelist disi) yok sayilir ---
-    // Ad (metin) alanina "gt" (sayi operatoru) gonderiliyor -> parse_grid_filter_rules reddetmeli.
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$adId}&filter_cond_1=gt&filter_value_1=x", $cookie);
     check('Alan tipine uymayan operator -> kural yok sayilir, 5 kayit doner', row_count($resp['body']) === 5, 'bulunan: ' . row_count($resp['body']));
 
-    // --- Filtre panel özeti ve sayfa saglamligi -----------------------------
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$renkId}&filter_cond_1=equals&filter_value_1=" . urlencode('Kirmizi'), $cookie);
     check('Filtre paneli ozet sayaci "Filtrele (1)" gosteriyor', strpos($resp['body'], 'Filtrele (1)') !== false);
 } finally {

@@ -1,11 +1,4 @@
 <?php
-// Grup C1 (Currency/Percent/Rating) doğrulaması. curl KULLANILMAZ — PHP'nin
-// http:// stream sarmalayıcısıyla gerçek oturum çerezi alınıp gerçek
-// table_fields.php / grid.php / api'lere istek atılır.
-// Kendi test verisini kurar, doğrular, sonunda temizler.
-//
-// Ön koşul: Apache ayakta olmalı (DocumentRoot = public, localhost:80).
-// Çalıştırma: C:\php73\php.exe scripts\_verify_group_c1.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -15,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -79,7 +68,6 @@ function extract_csrf($html)
     return null;
 }
 
-// Bir alan id'sine ait hücrenin ham data-value'sunu döndürür.
 function extract_field_values($html, $fieldId)
 {
     $pattern = '/data-field-id="' . preg_quote((string) $fieldId, '/') . '"[^>]*data-value="([^"]*)"/';
@@ -87,8 +75,6 @@ function extract_field_values($html, $fieldId)
     return isset($m[1]) ? $m[1] : array();
 }
 
-// Bir alan id'sine ait <td>'nin TAM HTML'ini döndürür (yıldız span'ları,
-// .cell-view metni gibi görüntüleme katmanını doğrulamak için).
 function extract_field_cell_html($html, $fieldId)
 {
     $pattern = '/<td\s[^>]*data-field-id="' . preg_quote((string) $fieldId, '/') . '"[\s\S]*?<\/td>/';
@@ -128,7 +114,6 @@ try {
     bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:email, :hash, :name, 0, 1)', array(':email' => TEST_EMAIL, ':hash' => $hash, ':name' => 'GrupC1 Test Owner'));
     $userId = (int) bcc_last_insert_id();
 
-    // table_fields.php alan olusturma/duzenleme icin 'owner' rolu ister.
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:tid, :uid, :role)', array(':tid' => $teamId, ':uid' => $userId, ':role' => 'owner'));
 
     bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:tid, :name, :uid)', array(':tid' => $teamId, ':name' => 'GrupC1 Test', ':uid' => $userId));
@@ -137,7 +122,6 @@ try {
     bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:bid, :name, 0)', array(':bid' => $baseId, ':name' => 'C1 Test'));
     $tableId = (int) bcc_last_insert_id();
 
-    // Birincil alan (metin) + REGRESYON alanlari: number ve dort otomatik tip.
     $insertFieldSql = 'INSERT INTO fields (table_id, name, field_type, options, position) VALUES (:tid, :name, :type, :options, :pos)';
     $baseDefs = array(
         array('Ad', 'single_line_text', null),
@@ -153,7 +137,6 @@ try {
         $fieldIds[$d[0]] = (int) bcc_last_insert_id();
     }
 
-    // Iki kayit (regresyon + filtre/siralama icin).
     $recordIds = array();
     for ($i = 0; $i < 2; $i++) {
         bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:tid, :pos, :uid)', array(':tid' => $tableId, ':pos' => $i, ':uid' => $userId));
@@ -166,7 +149,6 @@ try {
 
     echo "Kurulum tamam: table_id={$tableId}, kayitlar=" . implode(',', $recordIds) . "\n\n";
 
-    // --- Oturum ac ---------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -176,19 +158,15 @@ try {
     }
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // CSRF token'i alan sayfasindan al.
     $resp = http_request('GET', "/table_fields.php?table_id={$tableId}", $cookie);
     $csrf = extract_csrf($resp['body']);
     check('table_fields.php acildi, csrf alindi', $csrf !== null);
 
-    // =======================================================================
-    // 1) ALAN OLUSTURMA — ozel ayarlarla (A + B: isim eslesmesi burada sinaniyor)
-    // =======================================================================
     $resp = http_request('POST', '/table_fields.php', $cookie, array(
         'csrf_token' => $csrf, 'action' => 'create_field', 'table_id' => $tableId,
         'name' => 'Fiyat', 'field_type' => 'currency',
         'currency_symbol' => '$', 'currency_decimal_places' => '3',
-        // Gizli satirlarin input'lari da forma dahil olur — birbirine karismamali:
+
         'percent_decimal_places' => '4', 'max_rating' => '9',
     ));
     $f = bcc_fetch_one("SELECT id, options FROM fields WHERE table_id = :t AND name = 'Fiyat'", array(':t' => $tableId));
@@ -226,16 +204,12 @@ try {
     $puanId = $fieldIds['Puan'];
     $miktarId = $fieldIds['Miktar'];
 
-    // =======================================================================
-    // 2) HUCRE YAZMA — gercek cell_update.php API'si uzerinden
-    // =======================================================================
     $cellUpdate = function ($recordId, $fieldId, $value) use ($cookie, $csrf) {
         return http_request('POST', '/api/cell_update.php', $cookie, array(
             'csrf_token' => $csrf, 'record_id' => $recordId, 'field_id' => $fieldId, 'value' => $value,
         ));
     };
 
-    // Currency: 1234.5 -> "$1.234,500"
     $resp = $cellUpdate($recordIds[0], $fiyatId, '1234.5');
     $json = json_decode($resp['body'], true);
     check('Currency yazildi, display "$1.234,500"',
@@ -246,7 +220,6 @@ try {
 
     $cellUpdate($recordIds[1], $fiyatId, '20');
 
-    // Percent: "45" -> DB 0.45, ekran "%45,0"
     $resp = $cellUpdate($recordIds[0], $oranId, '45');
     $json = json_decode($resp['body'], true);
     $dbVal = bcc_fetch_one('SELECT value_number FROM cell_values WHERE record_id = :r AND field_id = :f', array(':r' => $recordIds[0], ':f' => $oranId));
@@ -262,30 +235,24 @@ try {
 
     $cellUpdate($recordIds[1], $oranId, '80');
 
-    // Rating: 5 (max 7) kabul
     $resp = $cellUpdate($recordIds[0], $puanId, '5');
     $json = json_decode($resp['body'], true);
     check('Rating 5 kabul edildi (max 7)', is_array($json) && !empty($json['ok']), 'donen: ' . $resp['body']);
     $dbVal = bcc_fetch_one('SELECT value_number FROM cell_values WHERE record_id = :r AND field_id = :f', array(':r' => $recordIds[0], ':f' => $puanId));
     check('Rating DB tam sayi (5)', $dbVal && (int) $dbVal['value_number'] === 5, 'DB: ' . ($dbVal ? $dbVal['value_number'] : 'YOK'));
 
-    // Rating: 9 (max 7) REDDEDILMELI
     $resp = $cellUpdate($recordIds[1], $puanId, '9');
     $json = json_decode($resp['body'], true);
     check('Rating 9 REDDEDILDI (max_rating=7 disi)',
         is_array($json) && empty($json['ok']) && isset($json['error']) && strpos($json['error'], '0 ile 7') !== false,
         'donen: ' . $resp['body']);
 
-    // Rating: negatif REDDEDILMELI
     $resp = $cellUpdate($recordIds[1], $puanId, '-1');
     $json = json_decode($resp['body'], true);
     check('Rating -1 REDDEDILDI', is_array($json) && empty($json['ok']), 'donen: ' . $resp['body']);
 
     $cellUpdate($recordIds[1], $puanId, '3');
 
-    // =======================================================================
-    // 3) GRID RENDER — yildizlar, CSS class'lari, data-options
-    // =======================================================================
     $resp = http_request('GET', "/grid.php?table_id={$tableId}", $cookie);
     $gridHtml = $resp['body'];
     $puanCells = extract_field_cell_html($gridHtml, $puanId);
@@ -313,7 +280,6 @@ try {
         isset($oranCells[0]) && strpos($oranCells[0], '%45,0') !== false,
         isset($oranCells[0]) ? strip_tags($oranCells[0]) : 'YOK');
 
-    // CSS gercekten yuklu mu (style.css'te .rating-star tanimli mi)
     $cssPath = __DIR__ . '/../public/assets/style.css';
     $css = file_get_contents($cssPath);
     check('style.css .rating-star / .rating-star-filled / cursor tanimlari iceriyor',
@@ -321,9 +287,6 @@ try {
         && strpos($css, '.rating-star-filled') !== false
         && strpos($css, '.rating-view-editable .rating-star') !== false);
 
-    // =======================================================================
-    // 4) MADDE D — mevcut alani DUZENLE, ayar DEGISMEDEN korunuyor mu
-    // =======================================================================
     $resp = http_request('GET', "/table_fields.php?table_id={$tableId}&edit={$fiyatId}", $cookie);
     $editHtml = $resp['body'];
     $csrfEdit = extract_csrf($editHtml);
@@ -332,7 +295,6 @@ try {
     check('Duzenleme formu currency_decimal_places\'i KAYITLI degerle (3) on-dolduruyor',
         preg_match('/name="currency_decimal_places"[^>]*value="3"/', $editHtml) === 1);
 
-    // D testi 1: SADECE adi degistir, ayarlara DOKUNMA -> ayarlar korunmali.
     $resp = http_request('POST', '/table_fields.php', $cookie, array(
         'csrf_token' => $csrfEdit, 'action' => 'update_field', 'table_id' => $tableId,
         'field_id' => $fiyatId, 'name' => 'Fiyat TL', 'field_type' => 'currency',
@@ -342,7 +304,6 @@ try {
         field_options_row($fiyatId) === json_encode(array('currency_symbol' => '$', 'decimal_places' => 3), JSON_UNESCAPED_UNICODE),
         'options: ' . field_options_row($fiyatId));
 
-    // D testi 2: ayari GERCEKTEN degistir -> kaydedilmeli.
     $resp = http_request('POST', '/table_fields.php', $cookie, array(
         'csrf_token' => $csrfEdit, 'action' => 'update_field', 'table_id' => $tableId,
         'field_id' => $fiyatId, 'name' => 'Fiyat TL', 'field_type' => 'currency',
@@ -352,7 +313,6 @@ try {
         field_options_row($fiyatId) === json_encode(array('currency_symbol' => '€', 'decimal_places' => 0), JSON_UNESCAPED_UNICODE),
         'options: ' . field_options_row($fiyatId));
 
-    // Rating duzenleme: sadece ad -> max_rating korunmali.
     $resp = http_request('GET', "/table_fields.php?table_id={$tableId}&edit={$puanId}", $cookie);
     $csrfEdit2 = extract_csrf($resp['body']);
     check('Duzenleme formu max_rating\'i KAYITLI degerle (7) on-dolduruyor',
@@ -365,7 +325,6 @@ try {
         field_options_row($puanId) === json_encode(array('max_rating' => 7), JSON_UNESCAPED_UNICODE),
         'options: ' . field_options_row($puanId));
 
-    // Percent duzenleme
     $resp = http_request('GET', "/table_fields.php?table_id={$tableId}&edit={$oranId}", $cookie);
     $csrfEdit3 = extract_csrf($resp['body']);
     check('Duzenleme formu percent_decimal_places\'i KAYITLI degerle (1) on-dolduruyor',
@@ -378,9 +337,6 @@ try {
         field_options_row($oranId) === json_encode(array('decimal_places' => 1), JSON_UNESCAPED_UNICODE),
         'options: ' . field_options_row($oranId));
 
-    // =======================================================================
-    // 5) REGRESYON — number + dort otomatik tip hala dogru mu
-    // =======================================================================
     $resp = http_request('GET', "/grid.php?table_id={$tableId}", $cookie);
     $gridHtml = $resp['body'];
 
@@ -398,10 +354,7 @@ try {
         check("REGRESYON: {$ftype} salt-okunur (editable class YOK)",
             isset($cells[0]) && strpos($cells[0], 'grid-cell editable') === false);
     }
-    // Kullanici hucreleri: ad + SOLUNDA avatar (kullanici istegi, 2026-08-26).
-    // Beklenti "metin tam olarak ad" DEGIL: avatarin bas harfi de metne dahil
-    // oldugu icin (strip_tags "G" + "GrupC1 Test Owner" verir) ad ICERIYOR
-    // seklinde kontrol edilir, avatar da AYRICA aranir.
+
     foreach (array('Olusturan' => 'created_by', 'SonDegistiren' => 'last_modified_by') as $fname => $ftype) {
         $cells = extract_field_cell_html($gridHtml, $fieldIds[$fname]);
         $html = isset($cells[0]) ? $cells[0] : '';
@@ -410,16 +363,12 @@ try {
         check("{$ftype}: adin solunda avatar var", strpos($html, 'cell-user-avatar') !== false, 'bulunan: ' . $html);
     }
 
-    // =======================================================================
-    // 6) FILTRE — yeni tipler
-    // =======================================================================
     $adId = $fieldIds['Ad'];
 
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$fiyatId}&filter_cond_1=gt&filter_value_1=100", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('FILTRE currency ">100" -> sadece Elma (1234.5)', $names === array('Elma'), 'bulunan: ' . implode(',', $names));
 
-    // percent: kullanici "50" yazar, DB'de 0.45/0.80 var -> ">50" sadece Armut (0.80)
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&filter_field_1={$oranId}&filter_cond_1=gt&filter_value_1=50", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('FILTRE percent ">50" (kullanici olcegi) -> sadece Armut (0.80)', $names === array('Armut'), 'bulunan: ' . implode(',', $names));
@@ -432,9 +381,6 @@ try {
     $names = extract_field_values($resp['body'], $adId);
     check('REGRESYON FILTRE: number ">15" -> sadece Armut', $names === array('Armut'), 'bulunan: ' . implode(',', $names));
 
-    // =======================================================================
-    // 7) SIRALAMA — yeni tipler
-    // =======================================================================
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&sort_field_1={$fiyatId}&sort_dir_1=asc", $cookie);
     $names = extract_field_values($resp['body'], $adId);
     check('SIRALAMA currency artan -> Armut(20), Elma(1234.5)', $names === array('Armut', 'Elma'), 'bulunan: ' . implode(',', $names));
@@ -443,9 +389,6 @@ try {
     $names = extract_field_values($resp['body'], $adId);
     check('SIRALAMA rating azalan -> Elma(5), Armut(3)', $names === array('Elma', 'Armut'), 'bulunan: ' . implode(',', $names));
 
-    // =======================================================================
-    // 8) GRUPLAMA — grup basligi cell_display_text($rule['options']) kullaniyor
-    // =======================================================================
     $resp = http_request('GET', "/grid.php?table_id={$tableId}&group_field_1={$puanId}", $cookie);
     check('GRUPLAMA rating: grup basligi yildizla gosteriyor (★ ve ☆)',
         strpos($resp['body'], '★') !== false, 'grup basligi yildiz icermiyor');
@@ -454,16 +397,12 @@ try {
         strpos($resp['body'], '€1.235') !== false || strpos($resp['body'], '€1.234') !== false,
         'grup basligi euro formatli degil');
 
-    // =======================================================================
-    // 9) EXPORT (xlsx) — cell_display_text options ile cagriliyor mu
-    // =======================================================================
     $resp = http_request('GET', "/api/view_export_xlsx.php?table_id={$tableId}", $cookie);
     $xlsxBytes = $resp['body'];
     check('EXPORT: xlsx indirildi (ZIP imzasi PK)', substr($xlsxBytes, 0, 2) === 'PK', 'ilk baytlar: ' . bin2hex(substr($xlsxBytes, 0, 4)));
     $tmpXlsx = sys_get_temp_dir() . '/bcc_c1_export.xlsx';
     file_put_contents($tmpXlsx, $xlsxBytes);
-    // src/xlsx_writer.php TUM hucreleri "inlineStr" olarak yazar — ayri bir
-    // sharedStrings.xml YOK, metin dogrudan sheet1.xml'in icinde.
+
     $zip = new ZipArchive();
     $sheetXml = '';
     if ($zip->open($tmpXlsx) === true) {
@@ -475,19 +414,12 @@ try {
     check('EXPORT: percent formatli (%45,0) xlsx icinde', strpos($sheetXml, '%45,0') !== false);
     check('EXPORT: rating yildizla (★) xlsx icinde', strpos($sheetXml, '★') !== false);
 
-    // =======================================================================
-    // 10) SLACK — bcc_notify_slack_new_record() options'i okuyabiliyor mu
-    //     (webhook YOK; birincil alan sorgusu options seciyor mu diye bakilir)
-    // =======================================================================
     $slackSrc = file_get_contents(__DIR__ . '/../src/slack.php');
     check('SLACK: birincil alan sorgusu options seciyor',
         strpos($slackSrc, 'SELECT id, field_type, options FROM fields') !== false);
     check('SLACK: cell_display_text options ile cagriliyor',
         strpos($slackSrc, "cell_display_text(\$primaryField['field_type'], \$cellRow, \$usersById, \$primaryField['options'])") !== false);
 
-    // =======================================================================
-    // 11) FORM ISIM TUTARLILIGI — A/D kok nedeni bir daha olusmasin
-    // =======================================================================
     $wizardSrc = file_get_contents(__DIR__ . '/../src/partials/field_type_wizard_fields.php');
     $editSrc = file_get_contents(__DIR__ . '/../public/table_fields.php');
     $schemaSrc = file_get_contents(__DIR__ . '/../src/schema.php');
@@ -501,7 +433,6 @@ try {
     check('ISIM TUTARLILIGI: eski/ortak "decimal_places" anahtari artik OKUNMUYOR',
         strpos($schemaSrc, "\$extraPost['decimal_places']") === false);
 
-    // Sihirbaz JS uc satiri da aciyor mu
     $wizJs = file_get_contents(__DIR__ . '/../public/assets/field-type-wizard.js');
     check('SIHIRBAZ JS: currency/percent/rating satirlarini tipe gore aciyor',
         strpos($wizJs, "new-field-currency-row") !== false

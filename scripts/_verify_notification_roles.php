@@ -1,24 +1,4 @@
 <?php
-// Bildirim panelinin ROL SUZGECI — uctan uca dogrulama.
-//
-// Neyi kanitlar:
-//   A) Saf harita: her rol icin bcc_notification_actions_for_role() ne dondurur.
-//   B) GERCEK SAYFA: dashboard.php o rolun oturumuyla render edilir ve panelde
-//      basilan bildirim METINLERI incelenir — viewer/commenter/editor'da
-//      "Slack" ve "ekibe ... uye" cumleleri HIC OLMAMALI (CSS ile gizlemek
-//      sayilmaz, HTML'de bulunmamali), owner'da OLMALI.
-//   C) ROL EKIP BASINA DEGISIR: gecici bir ekipte viewer hesabi 'owner' yapilir;
-//      o ekibin uyelik bildirimini GORMELI, ayni anda Demo ekibinin uyelik
-//      bildirimini GORMEMELI. (Tek "team_id IN (...) AND action IN (...)"
-//      sorgusu bu testte kalirdi.)
-//   D) UC NOKTA: viewer, panelinde HIC gormedigi bir bildirimin id'siyle
-//      api/notification_mark_one_read.php'ye POST atar -> 403 beklenir.
-//
-// Fikstur: seed_demo_users.php'nin hesaplari + bu betigin KENDI olusturdugu
-// gecici ekip ve audit_log satirlari. Hepsi cikista silinir; baska veriye
-// DOKUNULMAZ.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_notification_roles.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -27,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -65,7 +42,6 @@ function post_as($userId, $page, $query, $post)
     return array('status' => $status, 'body' => $out);
 }
 
-// Render edilen sayfadan bildirim satirlarinin METNINI cikarir.
 function notif_messages($html)
 {
     preg_match_all('#<div class="home-notif-message">(.*?)</div>#s', $html, $m);
@@ -84,9 +60,6 @@ function has_any($messages, $needle)
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// Fikstur
-// ---------------------------------------------------------------------------
 $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'Demo Calisma Alani' LIMIT 1");
 if ($team === false || $team === null) {
     die("Demo ekibi yok. Once: C:\\php73\\php.exe scripts\\seed_demo_users.php\n");
@@ -99,9 +72,7 @@ foreach (bcc_demo_accounts() as $acc) {
     if ($u === false || $u === null) {
         die('Demo hesabi eksik: ' . $acc['email'] . " — once seed_demo_users.php calistirin.\n");
     }
-    // is_admin=1 olan bir hesap HER ekipte sanal 'owner' olur ve testin tum
-    // beklentilerini bozar (bkz. current_user_team_roles) — sessizce yanlis
-    // sonuc vermek yerine acikca duruyoruz.
+
     $adm = bcc_fetch_one('SELECT is_admin FROM users WHERE id = :i', array('i' => $u['id']));
     if ((int) $adm['is_admin'] === 1) {
         die('Demo hesabi platform admini: ' . $acc['email'] . " — bu test o hesapla anlamsiz.\n");
@@ -109,9 +80,6 @@ foreach (bcc_demo_accounts() as $acc) {
     $uid[$acc['role']] = (int) $u['id'];
 }
 
-// Panelde MUTLAKA bir uyelik ve bir Slack bildirimi bulunsun diye Demo ekibine
-// iki gecici audit_log satiri yazilir (en yeni 30 icine girsinler diye NOW()).
-// Cikista ikisi de id ile silinir.
 $tempAuditIds = array();
 
 function seed_audit($teamId, $userId, $action)
@@ -133,7 +101,6 @@ $memberAuditId = seed_audit($teamId, $uid['owner'], 'team_member.assign');
 $slackAuditId = seed_audit($teamId, $uid['editor'], 'slack.notify_failed');
 $recordAuditId = seed_audit($teamId, $uid['editor'], 'record.create');
 
-// Gecici ekip: viewer hesabi BURADA owner. Ekip basina rol farkini test eder.
 $tempTeamName = 'ZZ Bildirim Rol Testi';
 bcc_execute('INSERT INTO teams (name) VALUES (:n)', array('n' => $tempTeamName));
 $tempTeamId = (int) bcc_last_insert_id();
@@ -153,9 +120,6 @@ register_shutdown_function(function () use (&$tempAuditIds, $tempTeamId) {
     echo "\n(temizlik: gecici ekip ve audit satirlari silindi)\n";
 });
 
-// ---------------------------------------------------------------------------
-// A) Saf harita
-// ---------------------------------------------------------------------------
 echo "--- A) bcc_notification_actions_for_role() ---\n";
 
 $expected = array(
@@ -172,9 +136,6 @@ foreach ($expected as $role => $want) {
     check($role . ' -> ' . count($got) . ' tur', $want === $got, 'beklenen: ' . implode(',', $want) . ' | gelen: ' . implode(',', $got));
 }
 
-// ---------------------------------------------------------------------------
-// B) Gercek sayfa (dashboard.php) — panelde basilan METINLER
-// ---------------------------------------------------------------------------
 echo "\n--- B) dashboard.php panelinde gorunen bildirimler ---\n";
 
 $seen = array();
@@ -184,10 +145,7 @@ foreach (array('owner', 'editor', 'commenter', 'viewer') as $role) {
 
 foreach (array('editor', 'commenter', 'viewer') as $role) {
     check($role . ': Slack bildirimi GORMUYOR', !has_any($seen[$role], 'Slack'), implode(' | ', $seen[$role]));
-    // Aktore gore aranir: viewer, C bolumundeki gecici ekipte OWNER oldugu
-    // icin ORADAKI uyelik bildirimini ("Demo Viewer ekibe...") gormesi
-    // DOGRUDUR. Burada test edilen, Demo ekibinin ("Demo Owner ekibe...")
-    // bildirimidir.
+
     check($role . ': uyelik bildirimi GORMUYOR', !has_any($seen[$role], 'Demo Owner ekibe yeni bir'), implode(' | ', $seen[$role]));
     check($role . ': kayit bildirimini GORUYOR', has_any($seen[$role], 'yeni bir kayit ekledi') || has_any($seen[$role], 'yeni bir kayıt ekledi'), implode(' | ', $seen[$role]));
 }
@@ -195,9 +153,6 @@ foreach (array('editor', 'commenter', 'viewer') as $role) {
 check('owner: Slack bildirimini GORUYOR', has_any($seen['owner'], 'Slack'), implode(' | ', $seen['owner']));
 check('owner: uyelik bildirimini GORUYOR', has_any($seen['owner'], 'ekibe yeni bir'), implode(' | ', $seen['owner']));
 
-// ---------------------------------------------------------------------------
-// C) Rol EKIP BASINA — viewer, gecici ekipte owner
-// ---------------------------------------------------------------------------
 echo "\n--- C) Ekip basina rol (viewer burada owner) ---\n";
 
 $viewerHtml = render_as($uid['viewer'], 'dashboard.php');
@@ -209,9 +164,6 @@ foreach ($viewerMsgs as $msg) {
     }
 }
 
-// Gecici ekipteki uyelik bildiriminin aktoru viewer'in KENDISI ("Demo Viewer"),
-// Demo ekibindeki ise owner ("Demo Owner") — metinden hangisinin geldigi ayirt
-// edilebiliyor.
 check(
     'viewer: owner OLDUGU ekibin uyelik bildirimini GORUYOR',
     has_any($viewerMsgs, 'Demo Viewer ekibe yeni bir'),
@@ -224,9 +176,6 @@ check(
 );
 check('viewer: toplam 1 uyelik bildirimi', $membershipCount === 1, 'sayi: ' . $membershipCount);
 
-// ---------------------------------------------------------------------------
-// D) Uc nokta zorlamasi
-// ---------------------------------------------------------------------------
 echo "\n--- D) api/notification_mark_one_read.php ---\n";
 
 $res = post_as($uid['viewer'], 'api/notification_mark_one_read.php', '', array('notification_id' => $memberAuditId));
@@ -241,7 +190,6 @@ check('viewer: GORDUGU kayit bildirimini okundu YAPABILIYOR (200)', $res['status
 $res = post_as($uid['owner'], 'api/notification_mark_one_read.php', '', array('notification_id' => $memberAuditId));
 check('owner: uyelik bildirimini okundu YAPABILIYOR (200)', $res['status'] === 200, 'HTTP ' . $res['status'] . ' | ' . trim($res['body']));
 
-// ---------------------------------------------------------------------------
 echo "\n";
 $pass = count(array_filter($results));
 $total = count($results);

@@ -1,10 +1,4 @@
 <?php
-// api/account_update_password.php: sifre degisince bekleyen sifirlama token'i
-// temizleniyor mu ve oturum kimligi yenileniyor mu?
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_account_password_update.php
-// Apache ayakta olmali. KENDI test kullanicisini kurar ve siler; gercek
-// hesaplara DOKUNMAZ.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -13,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -69,7 +60,6 @@ function jeton($url)
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) { fwrite(STDERR, "Apache'ye ulasilamadi.\n"); exit(2); }
 
-// --- kendi test kullanicimiz ---
 $SON   = bin2hex(random_bytes(4));
 $EMAIL = "pwtest.$SON@bcc-test.local";
 $ESKI  = 'EskiSifre!' . $SON;
@@ -81,9 +71,6 @@ bcc_execute(
 );
 $UID = (int) bcc_last_insert_id();
 
-// Temizlik BURADA baglanir, sonda degil: e-posta rastgele ek tasiyor
-// (pwtest.<hex>@bcc-test.local), yani betik ortada olurse (Apache dusmesi,
-// fatal, Ctrl+C) kalan satiri SONRAKI kosu de bulamaz — artiklar birikir.
 $cleanup = function () use ($UID, $EMAIL, $COOKIE) {
     bcc_execute('DELETE FROM audit_log WHERE user_id = :id', array('id' => $UID));
     bcc_execute('DELETE FROM login_attempts WHERE email = :e', array('e' => $EMAIL));
@@ -94,7 +81,6 @@ register_shutdown_function($cleanup);
 
 echo "Test kullanicisi: $EMAIL (id=$UID)\n\n";
 
-// --- bekleyen bir sifirlama token'i yerlestir ---
 $TOKEN = bin2hex(random_bytes(32));
 bcc_execute(
     'UPDATE users SET password_reset_token = :t, password_reset_expires_at = :e WHERE id = :id',
@@ -103,15 +89,13 @@ bcc_execute(
 $var = bcc_fetch_column('SELECT password_reset_token IS NOT NULL FROM users WHERE id = :id', array('id' => $UID));
 check('bekleyen sifirlama token\'i kuruldu', (int) $var === 1, $var);
 
-// --- giris ---
 $tok = jeton($BASE . '/login.php');
 $r = istek($BASE . '/login.php', 'csrf_token=' . $tok . '&email=' . rawurlencode($EMAIL) . '&password=' . rawurlencode($ESKI));
 check('giris yapildi (302)', $r['code'] === 302, $r['code']);
 $sidOnce = $r['sid'];
 
-// ---------------------------------------------------------------------------
 echo "\nA) Red yollari\n";
-// ---------------------------------------------------------------------------
+
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/account_update_password.php', 'new_password=' . rawurlencode($YENI));
 check('CSRF\'siz -> 403', $r['code'] === 403, $r['code']);
@@ -128,9 +112,8 @@ $r = istek($BASE . '/api/account_update_password.php',
     'csrf_token=' . $tok . '&current_password=' . rawurlencode($ESKI) . '&new_password=' . rawurlencode($YENI) . '&confirm_password=baska');
 check('tekrar eslesmiyor -> 422', $r['code'] === 422, $r['code']);
 
-// ---------------------------------------------------------------------------
 echo "\nB) Basarili degisiklik\n";
-// ---------------------------------------------------------------------------
+
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/account_update_password.php',
     'csrf_token=' . $tok . '&current_password=' . rawurlencode($ESKI) . '&new_password=' . rawurlencode($YENI) . '&confirm_password=' . rawurlencode($YENI));
@@ -140,20 +123,17 @@ $hash = bcc_fetch_column('SELECT password_hash FROM users WHERE id = :id', array
 check('yeni sifre gecerli', password_verify($YENI, $hash));
 check('eski sifre ARTIK gecersiz', !password_verify($ESKI, $hash));
 
-// ---------------------------------------------------------------------------
 echo "\nC) DUZELTME 1 — bekleyen sifirlama token'i temizlendi mi?\n";
-// ---------------------------------------------------------------------------
+
 $row = bcc_fetch_one('SELECT password_reset_token, password_reset_expires_at FROM users WHERE id = :id', array('id' => $UID));
 check('password_reset_token NULL', $row['password_reset_token'] === null, var_export($row['password_reset_token'], true));
 check('password_reset_expires_at NULL', $row['password_reset_expires_at'] === null, var_export($row['password_reset_expires_at'], true));
 
-// ---------------------------------------------------------------------------
 echo "\nD) DUZELTME 2 — oturum kimligi yenilendi mi?\n";
-// ---------------------------------------------------------------------------
+
 check('yanit yeni PHPSESSID gonderdi', $r['sid'] !== null && $r['sid'] !== $sidOnce,
     'once=' . substr((string) $sidOnce, 0, 10) . ' sonra=' . substr((string) $r['sid'], 0, 10));
 
-// --- temizlik ---
 $cleanup();
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE id = :id', array('id' => $UID));
 check('test kullanicisi silindi', $kalan === 0, $kalan);

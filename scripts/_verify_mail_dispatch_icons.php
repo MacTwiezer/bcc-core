@@ -1,14 +1,4 @@
 <?php
-// Etkinlestirme e-postasi: (A) MUKERRER GONDERIM kapisi, (B) footer IKONLARI.
-//
-// _verify_mail_verification.php gonderen kimligi/sablon icerigini dogruluyordu;
-// bu iki konuyu KAPSAMIYORDU. Bu betik yalnizca o iki isi kontrol eder.
-//
-// GERCEK MAIL GONDERMEZ: $MAIL_MODE 'smtp' olsa bile PHPMailer'in preSend()'i
-// cagriliyor (MIME'i kurar, POSTA GONDERMEZ) — ikonlarin govdeye gercekten
-// gomulup gomulmedigi ancak kurulmus MIME'e bakarak dogrulanabilir.
-//
-// Calistirma:  C:\php73\php.exe scripts\_verify_mail_dispatch_icons.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -31,7 +21,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-/** Yorumlari soyulmus PHP kaynagi — aciklama metni "kullanim" sanilmasin. */
 function code_without_comments($path)
 {
     $code = '';
@@ -51,22 +40,17 @@ function code_without_comments($path)
 
 $registerCode = code_without_comments(__DIR__ . '/../public/register.php');
 
-// =====================================================================
-// A) MUKERRER GONDERIM KAPISI
-// =====================================================================
 echo "--- A) Mukerrer gonderim kapisi ---\n";
 
-// A1) Saf fonksiyonun karar tablosu. $now sabit veriliyor -> zaman bagimsiz.
 $now = 1700000000;
 $ttl = 86400;
 $cooldown = 120;
 $at = function ($secondsAgo) use ($now, $ttl) {
-    // "$secondsAgo saniye once verilmis" bir token'in son kullanma damgasi.
     return date('Y-m-d H:i:s', $now - $secondsAgo + $ttl);
 };
 
 $cases = array(
-    // etiket => array(expires_at, beklenen)
+
     'hic token yok (NULL) -> GONDER'            => array(null, true),
     'bos damga -> GONDER'                       => array('', true),
     'okunamayan damga -> GONDER (kilitlenme)'   => array('bozuk-tarih', true),
@@ -82,8 +66,6 @@ foreach ($cases as $label => $case) {
     check('A) ' . $label, $actual === $expected, 'donen: ' . var_export($actual, true));
 }
 
-// A2) Kapinin GERCEKTEN gonderimi sardigini goster: register.php'de
-// bcc_send_mail TEK KEZ gecmeli ve $skipVerificationMail ile korunmali.
 $sendCalls = preg_match_all('/bcc_send_mail\s*\(/', $registerCode);
 check('A) register.php TEK bcc_send_mail cagrisi iceriyor', $sendCalls === 1, $sendCalls . ' cagri');
 check('A) gonderim $skipVerificationMail kapisiyla sarili',
@@ -100,16 +82,11 @@ check('A) POST sonrasi yonlendirme var (yenilemede form tekrar POST edilmez)',
 check('A) istemci tarafi cift-submit kilidi duruyor (UX katmani)',
     strpos(file_get_contents(__DIR__ . '/../public/register.php'), 'data-once-submit') !== false);
 
-// A3) Kapinin varsayilan TTL'i register.php'nin token omruyle AYNI olmali;
-// yoksa "veriliş = son kullanma - ttl" cikarimi kayar ve kapi yanlis karar verir.
 check('A) kapinin TTL varsayilani register.php token omruyle ayni (86400)',
     strpos($registerCode, "time() + 86400") !== false
     && bcc_should_send_verification_mail(date('Y-m-d H:i:s', $now + 86400), 120, $now) === false,
     'TTL uyusmuyor');
 
-// =====================================================================
-// B) FOOTER IKONLARI (cid: gomulu, emoji YOK)
-// =====================================================================
 echo "\n--- B) Footer ikonlari ---\n";
 
 $fallbackUrl = 'https://ornek.test/verify_email.php?token=abc';
@@ -124,7 +101,6 @@ $html = bcc_mail_html_shell(
 );
 $text = "Merhaba,\n" . bcc_mail_text_footer();
 
-// B1) Dosyalar: gercek PNG, 36x36 (18x18 gosterim -> retina'da net).
 foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
     $path = bcc_mail_icons_dir() . '/' . $icon['file'];
     $size = is_file($path) ? getimagesize($path) : false;
@@ -133,16 +109,9 @@ foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
         is_file($path) ? var_export($size, true) : 'dosya yok: ' . $path);
 }
 
-// B2) Sablon: her ikon icin cid + SABIT olcu + hizalama.
 foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
     $tag = bcc_mail_icon_img($key);
-    // ⚠️ OLCU 16 -> 14 VE HIZALAMA DEGISTI, TEST GERI KALMISTI. Sablon
-    // (src/mail_template.php) uzun suredir 14x14 + display:block uretiyor:
-    // 16px'lik ikon, satir yuksekligi 14px olan etiketten 2-3px asagi tasip
-    // dort kanalda da basligin altina kayik duruyordu. margin-right kaldirildi,
-    // aradaki bosluk ikon hucresinin sabit 22px genisliginden geliyor.
-    // Korunan guvence AYNI: cid ile gomulu + olcu HEM oznitelik HEM inline
-    // (Outlook inline CSS'i kirpar, ozniteliklere uyar).
+
     check('B) ' . $key . ' <img> cid + 14x14 OZNITELIK + inline olcu',
         strpos($tag, 'src="cid:' . $icon['cid'] . '"') !== false
         && strpos($tag, 'width="14" height="14"') !== false
@@ -158,10 +127,6 @@ foreach ($GLOBALS['BCC_MAIL_ICONS'] as $key => $icon) {
         substr_count($html, 'cid:' . $icon['cid']) . ' kez');
 }
 
-// B3) Her ikon KENDI kanalinin hucresinde: web -> site linki, phone ->
-// telefon, mail -> mailto, map -> harita. Ikon ile deger arasinda artik
-// etiket satiri ([^<]*<div>...) var; arada BASKA bir ikon gecmemeli —
-// [^\x{FFFF}]*? yerine "cid: gecmeyen her sey" ile siniri koruyoruz.
 $rows = array(
     'web'   => '/cid:bcc-icon-web(?:(?!cid:).)*?<a href="https:\/\/bcciletisim\.com\.tr"/s',
     'phone' => '/cid:bcc-icon-phone(?:(?!cid:).)*?<a href="https:\/\/wa\.me\/902162100707"/s',
@@ -172,29 +137,19 @@ foreach ($rows as $key => $pattern) {
     check('B) ' . $key . ' ikonu KENDI kanal hucresinde', preg_match($pattern, $html) === 1);
 }
 
-// B3b) Kanal etiketleri (gruplama) — 2 sutunlu izgaranin okunur basliklari.
 foreach (array('Web Sitesi', 'Telefon / WhatsApp', 'Destek', 'Adres') as $label) {
     check('B) kanal etiketi: ' . $label, strpos($html, '>' . $label . '</div>') !== false);
 }
 
-// B4) EMOJI YOK: ne HTML ne duz metin parcasinda.
 $emoji = '/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}\x{2190}-\x{21FF}\x{2700}-\x{27BF}]/u';
 check('B) HTML gövdede emoji YOK', preg_match($emoji, $html) === 0, 'emoji bulundu');
 check('B) duz metin gövdede emoji YOK', preg_match($emoji, $text) === 0, 'emoji bulundu');
-// ⚠️ YORUMLAR AYIKLANIYOR — YANLIS POZITIF DUZELTMESI: kontrol "kod+yorum"
-// diyerek TUM dosyayi tariyordu ve bu depoda yorumlarda kullanilan ⚠️
-// isareti (U+26A0, regex araligi \x{2600}-\x{27BF} icinde) yuzunden HER ZAMAN
-// KALIYORDU. Bir PHP yorumundaki isaret e-postaya ASLA gitmez; korunmak
-// istenen sey GONDERILEN govdedeki emoji (istemciler tutarsiz render eder) ve
-// onu yukaridaki iki kontrol zaten olcuyor. Burada kalan guvence: sablonun
-// URETTIGI dizgelerde emoji olmamasi.
+
 $tplLive = preg_replace('#/\*.*?\*/#s', '', file_get_contents(__DIR__ . '/../src/mail_template.php'));
 $tplLive = preg_replace('#^\s*//.*$#m', '', $tplLive);
 check('B) sablonun CALISAN kodunda emoji YOK (yorumlar haric)',
     preg_match($emoji, $tplLive) === 0, 'emoji bulundu');
 
-// B5) Uc uca: PHPMailer MIME'i KURULUYOR ve 4 ikon cid ile gomulu geliyor.
-// preSend() MIME'i olusturur, SMTP'ye BAGLANMAZ -> gercek mail gitmez.
 $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 $mail->CharSet = 'UTF-8';
 $mail->setFrom('no-reply@ornek.test', 'BCC İletişim');
@@ -228,12 +183,10 @@ if ($built) {
         substr_count($mime, 'image/png') === 4,
         substr_count($mime, 'image/png') . ' adet');
     check('B) ikonlar disari HTTP istegi ACMIYOR (footer tarafinda http src yok)',
-        preg_match('/<img[^>]+src="https?:/i', $html) === 1, // yalnizca logo uzaktan
+        preg_match('/<img[^>]+src="https?:/i', $html) === 1,
         'beklenen: sadece logo');
 }
 
-// B6) Ikonu OLMAYAN bir gövdeye ek EKLENMEZ (record_send gibi baska sablonlar
-// gereksiz 4 ataşman tasimasin).
 $plainMail = new PHPMailer\PHPMailer\PHPMailer(true);
 $plainMail->setFrom('no-reply@ornek.test', 'BCC');
 $plainMail->addAddress('alici@ornek.test');
@@ -244,12 +197,6 @@ bcc_mail_attach_footer_icons($plainMail, '<p>Ikon yok</p>');
 check('B) ikonsuz gövdeye ek EKLENMIYOR', count($plainMail->getAttachments()) === 0,
     count($plainMail->getAttachments()) . ' ek');
 
-// =====================================================================
-// D) TASARIM BELIRTECI (kart, ust serit, rozet, CTA, kutu, izgara)
-// =====================================================================
-// Her kontrol istenen CSS'i ARAR; Outlook'ta dusen kurallarin (radius,
-// gradient, shadow) YEDEGI de ayrica araniyor — yedegi olmayan bir kural
-// "tasarim var" sayilmaz.
 echo "\n--- D) Tasarim belirteci ---\n";
 
 $design = array(
@@ -286,7 +233,6 @@ foreach ($design as $label => $needle) {
     check('D) ' . $label, strpos($html, $needle) !== false, $needle);
 }
 
-// Rozet: hem metni hem pill zemini olmali.
 check('D) rozet/pill basildi',
     strpos($html, 'Hesap Doğrulama') !== false && strpos($html, 'border-radius: 999px') !== false);
 check('D) rozet zemini bgcolor OZNITELIGIYLE de veriliyor (Outlook)',
@@ -294,19 +240,13 @@ check('D) rozet zemini bgcolor OZNITELIGIYLE de veriliyor (Outlook)',
 check('D) rozet YOKSA basilmiyor (opsiyonel parametre)',
     strpos(bcc_mail_html_shell('B', '<p>x</p>'), 'border-radius: 999px') === false);
 
-// Izgara: 2 sutun x 2 satir = 4 adet width="50%" hucre.
 check('D) iletisim izgarasi 2 sutun (4 hucre)',
     substr_count($html, 'width="50%"') === 4,
     substr_count($html, 'width="50%"') . ' hucre');
 
-// CTA zemini UC katmanli: <td bgcolor> + background-color + gradient.
 check('D) CTA zemini <td bgcolor> ile de garantilenmis',
     preg_match('/<td bgcolor="#2563eb"[^>]*linear-gradient/', $html) === 1);
 
-// Kopyalama kutusu ham baglantiyi TASIYOR (buton calismayan istemciler).
-// Adres 3 kez gecer: CTA href + kutu href + kutunun GORUNEN metni.
-// Gorunen metin sart: buton <a>'sini duz metne ceviren istemcide adresin
-// kendisi okunabilir kalmali.
 check('D) ham baglanti kopyalama kutusunda (gorunur metin olarak da)',
     strpos($html, 'Buton çalışmazsa bu adresi kopyalayın') !== false
     && substr_count($html, htmlspecialchars($fallbackUrl, ENT_QUOTES, 'UTF-8')) === 3
@@ -315,37 +255,21 @@ check('D) ham baglanti kopyalama kutusunda (gorunur metin olarak da)',
 check('D) $fallbackUrl YOKSA kutu basilmiyor',
     strpos(bcc_mail_html_shell('B', '<p>x</p>'), 'Buton çalışmazsa') === false);
 
-// Sablon hâlâ mail-uyumlu: harici <style>/<link> yok, her kural inline.
 check('D) harici <style> / <link> YOK (her kural inline)',
     stripos($html, '<style') === false && stripos($html, '<link') === false);
 check('D) tablo tabanli iskelet korundu',
     substr_count($html, '<table role="presentation"') >= 6,
     substr_count($html, '<table role="presentation"') . ' tablo');
 
-// Kacirma (XSS) regresyonu: yeni parametreler de kaciriliyor mu?
 $evil = bcc_mail_html_shell('<script>x</script>', '<p>ok</p>', null, null, null, '<b>rozet</b>', 'https://x.test/?a=1&b=2');
 check('D) $heading kaciriliyor', strpos($evil, '&lt;script&gt;') !== false && strpos($evil, '<script>x') === false);
 check('D) $badgeText kaciriliyor', strpos($evil, '&lt;b&gt;rozet&lt;/b&gt;') !== false);
 check('D) $fallbackUrl kaciriliyor', strpos($evil, 'a=1&amp;b=2') !== false);
 
-// =====================================================================
-// C) KAPININ DB TURU (yalnizca --db ile)
-// =====================================================================
-// A) bolumu kapiyi ELDE uretilen damgalarla siniyor. Gercekte damga MySQL'den
-// DATETIME olarak geri okunuyor — bu bolum o TURU dogruluyor: register.php'nin
-// SELECT'i ile ayni sorgu, ayni kolon, ayni kapi.
-//
-// MAIL GONDERMEZ (bcc_send_mail hic cagrilmaz). Tek yazma islemi, kendi actigi
-// ATILABILIR test satiridir ve sonunda SILINIR. Var olan bir hesaba DOKUNMAZ:
-// adres zaten kayitliysa betik o satiri kullanmaz, testi atlar.
 if (in_array('--db', $argv, true)) {
     echo "\n--- C) Kapinin DB turu ---\n";
     require_once __DIR__ . '/../config/database.php';
 
-    // Bekleme suresi register.php'den OKUNUYOR (elle kopyalanmiyor): orada
-    // degistirilirse bu test de otomatik ayni degeri kullanir, sessizce
-    // eskimis bir sabitle "gecti" demez. (register.php require EDILEMEZ —
-    // sayfayi calistirir.)
     preg_match("/define\('BCC_REGISTER_RESEND_COOLDOWN',\s*(\d+)\)/", $registerCode, $cm);
     check('C) bekleme suresi register.php den okundu', !empty($cm), 'sabit bulunamadi');
     $cooldownProd = !empty($cm) ? (int) $cm[1] : 120;
@@ -358,7 +282,7 @@ if (in_array('--db', $argv, true)) {
         check('C) atilabilir test satiri acilabildi', false,
             $testEmail . ' ZATEN VAR (id=' . $pre['id'] . ') — DOKUNULMADI, test atlandi');
     } else {
-        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // register.php ile ayni
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400);
         bcc_execute(
             'INSERT INTO users (email, password_hash, full_name, is_admin, is_active, email_verify_token, email_verify_expires_at)
              VALUES (:email, :hash, :full_name, 0, 0, :token, :expires)',
@@ -373,7 +297,6 @@ if (in_array('--db', $argv, true)) {
         $testId = bcc_last_insert_id();
 
         try {
-            // C1) "Az once kaydolundu" -> ikinci POST mail ATLAMALI.
             $row = bcc_fetch_one(
                 'SELECT id, is_active, email_verify_expires_at FROM users WHERE email = :email LIMIT 1',
                 array('email' => $testEmail)
@@ -384,7 +307,6 @@ if (in_array('--db', $argv, true)) {
             check('C) az once kaydolan adrese IKINCI mail ATLANIYOR',
                 bcc_should_send_verification_mail($row['email_verify_expires_at'], $cooldownProd) === false);
 
-            // C2) Bekleme suresi dolmus token -> yeniden gonderime IZIN.
             bcc_execute(
                 'UPDATE users SET email_verify_expires_at = :expires WHERE id = :id',
                 array('expires' => date('Y-m-d H:i:s', time() - 3600 + 86400), 'id' => $testId)
@@ -399,8 +321,6 @@ if (in_array('--db', $argv, true)) {
             check('C) DB turu hatasiz calisti', false, $e->getMessage());
         }
 
-        // Temizlik: acilan satir HER durumda silinir (id ile — adres esleşmesiyle
-        // degil, yanlislikla baska bir satiri silmemek icin).
         bcc_execute('DELETE FROM users WHERE id = :id', array('id' => $testId));
         $left = bcc_fetch_one('SELECT id FROM users WHERE id = :id LIMIT 1', array('id' => $testId));
         check('C) test satiri temizlendi (DB de iz birakilmadi)', $left === false || $left === null,
@@ -408,13 +328,11 @@ if (in_array('--db', $argv, true)) {
     }
 }
 
-// --- HTML onizleme (cid: tarayicida gorunmez; yapiyi gozle kontrol icin) -----
 $previewPath = __DIR__ . '/../storage/mail/_onizleme_ikonlar.html';
 if (!is_dir(dirname($previewPath))) {
     mkdir(dirname($previewPath), 0775, true);
 }
-// Onizlemede cid: yerine yerel dosya yolu — yalnizca BU dosyada, gonderilen
-// mailde DEGIL (gonderimde cid: kaliyor).
+
 $preview = $html;
 foreach ($GLOBALS['BCC_MAIL_ICONS'] as $icon) {
     $preview = str_replace('cid:' . $icon['cid'], '../../public/assets/mail/' . $icon['file'], $preview);

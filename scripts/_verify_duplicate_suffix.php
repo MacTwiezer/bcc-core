@@ -1,18 +1,4 @@
 <?php
-// Kayit cogaltmada " copy" ekinin TIP WHITELIST'ine
-// ($GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES']) gore uygulandigini dogrular.
-//
-// Eskiden karar KOLON bazliydi ($primaryColumn === 'value_text') ve value_text'i
-// YEDI tip paylastigi icin bicim sozlesmesi OLAN tiplerin degerini bozuyordu:
-//   url -> link uretiliyor ama bosluk HOST'a karisiyordu (var olmayan alan adi)
-//   email -> mailto: linki tamamen kayboluyordu
-//   single_select -> choices listesinde OLMAYAN bir deger yaziliyordu
-//   time -> gecerli olmayan bir saat olusuyordu
-// Bu betik hem o dort bug'in kapandigini hem de serbest metin tiplerinin
-// (single_line_text/long_text) " copy" ekini HALA aldigini dogrular.
-//
-// On kosul: Apache ayakta olmali (DocumentRoot = public, localhost:80).
-// Calistirma: C:\php73\php.exe scripts\_verify_duplicate_suffix.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -22,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -111,7 +93,6 @@ try {
     bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)', array(':t' => $teamId, ':n' => 'DupSuffix Test', ':u' => $userId));
     $baseId = (int) bcc_last_insert_id();
 
-    // --- Oturum -----------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -119,15 +100,6 @@ try {
     if ($resp['cookie']) { $cookie = $resp['cookie']; }
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // Bir tip icin: BIRINCIL alani o tip olan bir tablo kurar, tek kayit yazar,
-    // gercek /api/record_duplicate.php ucnoktasindan cogaltir ve kopyanin
-    // birincil degerini dondurur.
-    // Tablo adina SIRA NUMARASI eklenir: ayni tip birden fazla kez test
-    // ediliyor (ornegin single_line_text hem dolu hem BOS birincil degerle) ve
-    // tablo adlari artik AYNI BASE ICINDE benzersiz olmak zorunda
-    // (migrations/019, uq_tables_meta_base_name). Numara olmadan ikinci cagri
-    // "Duplicate entry" ile patliyordu — bu bir FIKSTUR sorunuydu, urun
-    // davranisi dogru: ayni base'de iki ayni adli tablo OLMAMALI.
     $tableSeq = 0;
     $duplicateWithPrimary = function ($fieldType, $storedValue, $options = null) use ($baseId, $userId, $cookie, &$tableSeq) {
         $tableSeq++;
@@ -135,7 +107,6 @@ try {
             array(':b' => $baseId, ':n' => 'T_' . $fieldType . '_' . $tableSeq));
         $tableId = (int) bcc_last_insert_id();
 
-        // position 0 = BIRINCIL alan.
         bcc_execute('INSERT INTO fields (table_id, name, field_type, options, position) VALUES (:t, :n, :ft, :o, 0)',
             array(':t' => $tableId, ':n' => 'Birincil', ':ft' => $fieldType, ':o' => $options));
         $fieldId = (int) bcc_last_insert_id();
@@ -178,12 +149,8 @@ try {
         );
     };
 
-    // =======================================================================
-    // A) BICIM SOZLESMESI OLAN TIPLER — " copy" eki ALMAMALI
-    // =======================================================================
     echo "\n--- A) Ek ALMAMASI gereken tipler ---\n";
 
-    // url
     $r = $duplicateWithPrimary('url', 'https://example.com');
     check('A) url: cogaltma basarili', $r['ok'], $r['body']);
     check('A) url: kopya DEGISMEDI (ek yok)', $r['kopya'] === 'https://example.com', 'kopya: ' . var_export($r['kopya'], true));
@@ -194,7 +161,6 @@ try {
     check('A) url: href\'te BOSLUK YOK (host bozulmasi kapandi)',
         strpos($r['rowHtml'], 'href="https://example.com copy"') === false);
 
-    // email
     $r = $duplicateWithPrimary('email', 'user@example.com');
     check('A) email: kopya DEGISMEDI', $r['kopya'] === 'user@example.com', 'kopya: ' . var_export($r['kopya'], true));
     check('A) email: mailto linki HALA calisiyor',
@@ -203,18 +169,15 @@ try {
     check('A) email: kopya satirinda mailto href var',
         strpos($r['rowHtml'], 'href="mailto:user@example.com"') !== false);
 
-    // phone
     $r = $duplicateWithPrimary('phone', '0212 555 00 00');
     check('A) phone: kopya DEGISMEDI', $r['kopya'] === '0212 555 00 00', 'kopya: ' . var_export($r['kopya'], true));
     check('A) phone: tel linki dogru', bcc_cell_link_href('phone', $r['kopya']) === 'tel:02125550000');
 
-    // time
     $r = $duplicateWithPrimary('time', '14:30');
     check('A) time: kopya DEGISMEDI', $r['kopya'] === '14:30', 'kopya: ' . var_export($r['kopya'], true));
     $t = DateTime::createFromFormat('H:i', (string) $r['kopya']);
     check('A) time: kopya GECERLI bir saat', $t !== false && $t->format('H:i') === '14:30', 'kopya: ' . var_export($r['kopya'], true));
 
-    // single_select
     $selOptions = json_encode(array('choices' => array('Acik', 'Kapali')), JSON_UNESCAPED_UNICODE);
     $r = $duplicateWithPrimary('single_select', 'Acik', $selOptions);
     check('A) single_select: kopya DEGISMEDI', $r['kopya'] === 'Acik', 'kopya: ' . var_export($r['kopya'], true));
@@ -222,9 +185,6 @@ try {
     check('A) single_select: kopya GECERLI bir choices degeri',
         in_array((string) $r['kopya'], $choices, true), 'kopya: ' . var_export($r['kopya'], true) . ' / choices: ' . implode(',', $choices));
 
-    // =======================================================================
-    // B) SERBEST METIN TIPLERI — " copy" ekini HALA ALMALI (REGRESYON)
-    // =======================================================================
     echo "\n--- B) Ek ALMASI gereken tipler (regresyon) ---\n";
 
     $r = $duplicateWithPrimary('single_line_text', 'Musteri A');
@@ -233,7 +193,6 @@ try {
     $r = $duplicateWithPrimary('long_text', 'Uzun bir not');
     check('B) long_text: HALA " copy" eki aliyor', $r['kopya'] === 'Uzun bir not copy', 'kopya: ' . var_export($r['kopya'], true));
 
-    // Bos birincil deger: whitelist'teki tip 'copy' alir, digerleri bos kalir.
     $r = $duplicateWithPrimary('single_line_text', '');
     check('B) single_line_text bos deger -> "copy"', $r['kopya'] === 'copy', 'kopya: ' . var_export($r['kopya'], true));
 
@@ -241,9 +200,6 @@ try {
     check('B) url bos deger -> BOS kalir ("copy" YAZILMAZ)',
         $r['kopya'] === '' || $r['kopya'] === null, 'kopya: ' . var_export($r['kopya'], true));
 
-    // =======================================================================
-    // C) REGRESYON — autonumber birincil alan HALA taze numara aliyor (Grup C2)
-    // =======================================================================
     echo "\n--- C) Regresyon: autonumber birincil alan ---\n";
     bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b, :n, 0)', array(':b' => $baseId, ':n' => 'T_autonumber'));
     $tC = (int) bcc_last_insert_id();
@@ -273,9 +229,6 @@ try {
     check('C) autonumber birincil: value_text\'e "copy" SIZMADI',
         $copyText === null || $copyText === false || $copyText === '', 'value_text: ' . var_export($copyText, true));
 
-    // =======================================================================
-    // D) STATIK KONTROLLER
-    // =======================================================================
     echo "\n--- D) Statik kontroller ---\n";
     check('D) BCC_DUPLICATE_SUFFIX_FIELD_TYPES tanimli',
         isset($GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES']) && is_array($GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES']));
@@ -288,7 +241,7 @@ try {
         || strpos($dupPhp, "// Bulunan gerçek buglar") !== false);
     check('D) record_duplicate.php whitelist\'i kullaniyor',
         strpos($dupPhp, "in_array(\$primaryFieldType, \$GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES'], true)") !== false);
-    // value_text'i paylasan AMA whitelist'te OLMAYAN tipler gercekten ek almamali.
+
     $textTypes = array();
     foreach ($GLOBALS['BCC_FIELD_VALUE_COLUMN'] as $t => $c) {
         if ($c === 'value_text' && !in_array($t, $GLOBALS['BCC_DUPLICATE_SUFFIX_FIELD_TYPES'], true)) {

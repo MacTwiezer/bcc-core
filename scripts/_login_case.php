@@ -1,10 +1,4 @@
 <?php
-// Ic yardimci — _verify_demo_roles.php tarafindan alt surec olarak calistirilir.
-// login.php'nin cagirdigi GERCEK attempt_login() fonksiyonunu izole bir surecte
-// dener (oturum yan etkisi cagiran betige sizmasin diye ayri surec).
-//
-// Kullanim: php _login_case.php <email> <sifre>
-// Cikti: 'ok' | 'inactive' | 'invalid'
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);

@@ -1,24 +1,4 @@
 <?php
-// Zengin metin (long_text) hucresinin KAPALI grid gorunumu: OpsFlow davranışı
-// TEK SATIR + yatay akis.
-//
-// Kapsam:
-//   A) bcc_rich_text_grid_html() birim davranisi (<br> -> bosluk, gerisi durur)
-//   B) grid.php render: .cell-view'da <br> YOK, data-value'da VAR
-//   C) cell_update.php: 'display' donusmus, 'raw' ham kalmis
-//   D) CSS: tek satir kurallari + satir ici blok elemanlar + 320px tavani
-//   E) DEGISMEMESI gerekenler: duzenleyici, detay paneli, orta/uzun satir
-//      yukseklikleri (Duyuru ekrani zaten sunucuda strip_tags ediyor)
-//   F) Gercek base (15) dokunulmamis olmali
-//
-// GEOMETRI NOTU: "<br> tek satirda durmuyor" davranisi TARAYICIDA olculdu
-// (/browse): white-space:nowrap ile kutu 3 satira (h=50px) cikiyordu;
-// display:inline / inline-block+width / content:"" da ayni sonucu verdi.
-// display:none tek satira (h=18px) dusurdu. Burasi o kararin KODDA durdugunu
-// ve regresyona ugramadigini bekler.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_richtext_grid_single_line.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -28,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -100,21 +76,17 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// CSS/JS yorumlarini soyar: bu projede testler aciklama YORUMLARINA takilip
-// birden fazla kez yanlis "GECTI" verdi — kural metnine bakiyoruz.
 function css_rules($css)
 {
     return preg_replace('#/\*.*?\*/#s', '', $css);
 }
 
-// Bir seciciye ait kural govdesini dondurur (yorumlar zaten soyulmus olmali).
 function rule_body($css, $selector)
 {
     $q = preg_quote($selector, '#');
     if (preg_match('#(?:^|[};])\s*' . $q . '\s*\{([^}]*)\}#s', $css, $m)) { return $m[1]; }
     return null;
 }
-
 
 $cleanup = function () {
     $baseIds = array_column(bcc_fetch_all(
@@ -128,10 +100,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -149,9 +117,6 @@ try {
     $styleCss = css_rules(file_get_contents($assetsDir . '/style.css'));
     $interfaceCss = css_rules(file_get_contents($assetsDir . '/interface.css'));
 
-    // =====================================================================
-    // A) bcc_rich_text_grid_html() BIRIM DAVRANISI
-    // =====================================================================
     echo "--- A) bcc_rich_text_grid_html() ---\n";
     check('A) <br> bosluga donuyor',
         bcc_rich_text_grid_html('Bir<br>Iki') === 'Bir Iki',
@@ -159,7 +124,7 @@ try {
     check('A) <br/> ve <br /> ve <BR> varyantlari da',
         bcc_rich_text_grid_html('a<br/>b<br />c<BR>d') === 'a b c d',
         bcc_rich_text_grid_html('a<br/>b<br />c<BR>d'));
-    // Bicimlendirme ve linkler KAYBOLMAMALI — yalnizca satir sonu duzlesiyor.
+
     check('A) <strong>/<em>/<a> DOKUNULMADAN duruyor',
         bcc_rich_text_grid_html('<strong>K</strong><br><a href="https://x.example">L</a>')
         === '<strong>K</strong> <a href="https://x.example">L</a>');
@@ -167,17 +132,13 @@ try {
         bcc_rich_text_grid_html('duz metin') === 'duz metin');
     check('A) bos/null girdi patlamiyor',
         bcc_rich_text_grid_html('') === '' && bcc_rich_text_grid_html(null) === '');
-    // Gecersiz UTF-8: /u modifikatoru olsaydi preg_replace null doner, icerik
-    // SESSIZCE SILINIRDI (normalize_cell_value phone dalindaki AYNI tuzak).
+
     $badUtf8 = "Bir<br>\xC3\x28Iki";
     check('A) gecersiz UTF-8 girdide icerik KAYBOLMUYOR',
         strpos(bcc_rich_text_grid_html($badUtf8), 'Iki') !== false
         && strpos(bcc_rich_text_grid_html($badUtf8), '<br>') === false,
         bin2hex(bcc_rich_text_grid_html($badUtf8)));
 
-    // =====================================================================
-    // B) + C) RENDER VE API
-    // =====================================================================
     echo "\n--- B/C) grid.php render + cell_update.php ---\n";
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
     if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
@@ -221,7 +182,7 @@ try {
         $cellView !== null && strpos($cellView, 'Birinci satir Ikinci satir') !== false, (string) $cellView);
     check('B) bicimlendirme korundu (<strong> duruyor)',
         $cellView !== null && strpos($cellView, '<strong>Ucuncu</strong>') !== false, (string) $cellView);
-    // data-value duzenleyicinin kaynagi: <br>'ler AYNEN durmali.
+
     check('B) data-value HAM HTML olarak <br> leri KORUYOR (duzenleyici bozulmaz)',
         strpos($html, 'data-value="Birinci satir&lt;br&gt;Ikinci satir') !== false);
 
@@ -239,9 +200,6 @@ try {
     check('C) yanit raw HAM <br> leri koruyor (duzenleyici/data-value)',
         is_array($json) && stripos($json['raw'], '<br') !== false, $r['body']);
 
-    // =====================================================================
-    // D) CSS
-    // =====================================================================
     echo "\n--- D) CSS: tek satir + yatay akis ---\n";
     $shortRule = rule_body($styleCss, 'table.grid.row-h-short .cell-view.rich-text-view');
     check('D) row-h-short zengin metin kurali var', $shortRule !== null);
@@ -251,9 +209,7 @@ try {
         $shortRule !== null && strpos($shortRule, 'overflow: hidden;') !== false, (string) $shortRule);
     check('D) text-overflow: ellipsis',
         $shortRule !== null && strpos($shortRule, 'text-overflow: ellipsis;') !== false, (string) $shortRule);
-    // Bulunan gercek bug: eski hali -webkit-box + white-space:normal + clamp:1 idi;
-    // <br> sonrasi metin IKINCI satirda kaliyor, sutun genisletilse bile
-    // ilk satira HIC katilmadigi icin geri gelmiyordu.
+
     check('D) eski -webkit-line-clamp:1 / white-space:normal KALKTI',
         $shortRule !== null && strpos($shortRule, 'line-clamp') === false
         && strpos($shortRule, 'white-space: normal;') === false, (string) $shortRule);
@@ -265,30 +221,25 @@ try {
         && preg_match('#\.rich-text-view li \{[^}]*display: inline;#s', $styleCss) === 1);
     check('D) ardisik maddeler arasina gorunur ayirici konuyor',
         preg_match('#\.rich-text-view li \+ li::before \{[^}]*content:#s', $styleCss) === 1);
-    // Bulunan gercek tuzak: taban .cell-view'in max-width:320px tavani, sutun
-    // 320px'in otesine cekildiginde metnin genislemeyi izlemesini ENGELLERDI.
+
     $wideRule = rule_body($styleCss, 'table.grid.grid-has-col-widths .cell-view.rich-text-view');
     check('D) sutun genisletilince 320px tavani kalkiyor (max-width: none)',
         $wideRule !== null && strpos($wideRule, 'max-width: none;') !== false, (string) $wideRule);
 
-    // =====================================================================
-    // E) DEGISMEMESI GEREKENLER
-    // =====================================================================
     echo "\n--- E) Kapsam disi kalanlar (regresyon) ---\n";
-    // 3. sart: duzenleyici ve detay gorunumu TAM cok satirli zengin metin.
+
     $editableRule = rule_body($styleCss, '.richtext-editable');
     check('E) duzenleyici (.richtext-editable) nowrap ALMADI',
         $editableRule !== null && strpos($editableRule, 'nowrap') === false, (string) $editableRule);
     $readonlyRule = rule_body($styleCss, '.grid-detail-field-value-readonly .cell-view');
     check('E) detay panelinin salt-okunur hucresi hala white-space: normal',
         $readonlyRule !== null && strpos($readonlyRule, 'white-space: normal;') !== false, (string) $readonlyRule);
-    // Satir yuksekligi ozelligi (Kisa disindakiler) BILEREK korundu.
+
     check('E) orta/uzun/ekstra satir yukseklikleri hala cok satirli (line-clamp)',
         strpos($styleCss, '-webkit-line-clamp: 2;') !== false
         && strpos($styleCss, '-webkit-line-clamp: 4;') !== false
         && strpos($styleCss, '-webkit-line-clamp: 6;') !== false);
-    // Duyuru ekrani: tablo grid'i YOK, ozet zaten sunucuda strip_tags ediliyor
-    // ve satir zaten nowrap+ellipsis — degisiklik GEREKMEDI, dogrulaniyor.
+
     $summaryRule = rule_body($interfaceCss, '.if-record-summary');
     check('E) interface.php ozeti zaten tek satir (nowrap+hidden+ellipsis)',
         $summaryRule !== null && strpos($summaryRule, 'white-space: nowrap;') !== false
@@ -296,7 +247,7 @@ try {
         && strpos($summaryRule, 'text-overflow: ellipsis;') !== false, (string) $summaryRule);
     check('E) interface.php ozeti sunucuda strip_tags ile duz metne indiriliyor',
         strpos(file_get_contents(__DIR__ . '/../public/interface.php'), 'strip_tags(cell_display_text(') !== false);
-    // Detay paneli zengin metni (is_rich) HALA HTML olarak basiliyor.
+
     check('E) Duyuru detay paneli zengin metni HTML olarak gosteriyor',
         strpos(file_get_contents($assetsDir . '/interface.js'), 'value.innerHTML = f.value;') !== false);
 

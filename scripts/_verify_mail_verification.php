@@ -1,10 +1,4 @@
 <?php
-// Kayit/dogrulama e-postasi dogrulamasi: sablon iceriği, baglantilar, gonderen
-// kimligi ve (istege bagli) GERCEK gonderim.
-//
-// Calistirma:
-//   C:\php73\php.exe scripts\_verify_mail_verification.php            -> yalnizca kontroller + HTML onizleme dosyasi
-//   C:\php73\php.exe scripts\_verify_mail_verification.php <e-posta>  -> ayrica GERCEK test maili gonderir
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -27,8 +21,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// --- register.php'nin urettigi gövdenin AYNISI ------------------------------
-// (register.php POST akisinda; burada ayni cagrilar tekrarlaniyor)
 $fullName = 'Test Kullanıcı';
 $token = str_repeat('a1b2', 8);
 $verifyLink = bcc_app_base_url() . '/verify_email.php?token=' . $token;
@@ -48,9 +40,6 @@ $text = "Merhaba {$fullName},\n\nopsflow.bcccrm.com hesabınızı etkinleştirme
     . $verifyLink . "\n\nBu bağlantı 24 saat geçerlidir.\n\nBu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
     . bcc_mail_text_footer();
 
-// =====================================================================
-// A) GONDEREN KIMLIGI (spam acisindan en kritik kisim)
-// =====================================================================
 echo "--- A) Gonderen kimligi ---\n";
 $smtp = bcc_smtp_config();
 check('A) SMTP yapilandirmasi bulundu', is_array($smtp));
@@ -63,10 +52,7 @@ check('A) record_send ile AYNI config dosyasi okunuyor (hesap birligi)',
     && strpos(file_get_contents(__DIR__ . '/../src/mailer.php'), 'mail_record_send.local.php') !== false);
 check('A) gorunen ad kurumsal', $GLOBALS['MAIL_FROM_NAME'] === 'BCC İletişim', (string) $GLOBALS['MAIL_FROM_NAME']);
 check('A) Reply-To tanimli', $GLOBALS['MAIL_REPLY_TO'] === 'info@bcciletisim.com.tr', (string) $GLOBALS['MAIL_REPLY_TO']);
-// YORUMLAR SOYULARAK bakiliyor: her iki dosya da degisikligin GEREKCESINI
-// anlatirken "smtp.gmail.com" / "HTTP_HOST" gibi ifadeleri ANIYOR. Ham metinde
-// aramak, aciklayici yorumu gercek bir kullanim sanip yanlis KALDI veriyordu
-// (grid-export.css'teki @media vakasinin aynisi).
+
 function php_code_without_comments($path)
 {
     $code = '';
@@ -90,9 +76,6 @@ check('A) mail.local.php artik Gmail kimlik bilgisi ICERMIYOR',
     && strpos($mailLocalCode, 'MAIL_FROM_EMAIL') === false,
     trim(preg_replace('/\s+/', ' ', $mailLocalCode)));
 
-// =====================================================================
-// B) MULTIPART + KONU
-// =====================================================================
 echo "\n--- B) Bicim ---\n";
 check('B) duz metin parcasi HTML den turetilmemis (elle yazilmis)',
     strpos($text, 'Merhaba Test Kullanıcı') !== false && strpos($text, '<') === false);
@@ -101,9 +84,6 @@ check('B) mailer multipart destekliyor (AltBody)',
 check('B) konu sade (uzun tire / gereksiz onek yok)',
     strpos('opsflow.bcccrm.com hesabınızı etkinleştirin', '—') === false);
 
-// =====================================================================
-// C) SABLON ICERIGI: logo + iletisim linkleri
-// =====================================================================
 echo "\n--- C) Sablon icerigi ---\n";
 $mustContain = array(
     'logo (kurumsal alan adindan)' => 'https://bcciletisim.com.tr/assets/images/logo.png',
@@ -127,15 +107,8 @@ check('C) MAILDE localhost adresi YOK (footer/logo tarafinda)',
     strpos($GLOBALS['BCC_MAIL_LOGO_URL'], 'localhost') === false
     && strpos($GLOBALS['BCC_MAIL_SITE_URL'], 'localhost') === false);
 
-// =====================================================================
-// D) UZAKTAN KAYNAKLAR GERCEKTEN ERISILEBILIR MI
-// =====================================================================
 echo "\n--- D) Uzak kaynaklar ---\n";
-// Tek denemede BIR KEZ yeniden dener. Gerekce: bu iki kontrol gercek aga
-// cikiyor ve gecici bir DNS/baglanti kesintisi testi HATALI yere dusuruyordu
-// (bir taramada 24/25, hemen ardindan 25/25 — ayni gun `git push` de ayni
-// kesintiyi yasadi). Kontrol ZAYIFLATILMADI: hala gercek 200 bekliyor,
-// yalnizca tek seferlik ag gurultusu elenir.
+
 function head_status($url, $attempt = 1)
 {
     $ctx = stream_context_create(array('http' => array('method' => 'GET', 'timeout' => 20, 'ignore_errors' => true)));
@@ -160,17 +133,12 @@ check('D) logo URL 200 ve bos degil', $st === 200 && $len > 1000, "HTTP {$st}, {
 list($st2) = head_status($GLOBALS['BCC_MAIL_SITE_URL']);
 check('D) web sitesi 200', $st2 === 200, 'HTTP ' . $st2);
 
-// =====================================================================
-// E) DOGRULAMA BAGLANTISI
-// =====================================================================
 echo "\n--- E) Dogrulama baglantisi ---\n";
 check('E) baglanti bcc_app_base_url() uzerinden kuruluyor',
     strpos(file_get_contents(__DIR__ . '/../public/register.php'), 'bcc_app_base_url()') !== false);
 check('E) register.php artik HTTP_HOST kullanmiyor',
     strpos(php_code_without_comments(__DIR__ . '/../public/register.php'), 'HTTP_HOST') === false);
-// Baglantinin KAYNAGINI da soyle: "localhost" iki farkli sebepten cikabilir ve
-// ikisi ayni sey DEGIL. Ilk surum her iki durumda da "$APP_BASE_URL bos" diyordu;
-// deger doldurulduktan sonra bu mesaj YANLIS oldu.
+
 global $APP_BASE_URL;
 $configured = (is_string($APP_BASE_URL) && $APP_BASE_URL !== '');
 $isLocal = strpos($verifyLink, 'localhost') !== false;
@@ -189,13 +157,11 @@ if ($isLocal) {
     echo "          Canliya cikarken config/app.local.php'ye gercek adresi yazin.\n";
 }
 
-// --- HTML onizleme dosyasi --------------------------------------------------
 $previewPath = __DIR__ . '/../storage/mail/_onizleme_dogrulama.html';
 if (!is_dir(dirname($previewPath))) { mkdir(dirname($previewPath), 0775, true); }
 file_put_contents($previewPath, $html);
 echo "\nHTML onizleme: " . realpath($previewPath) . "\n";
 
-// --- Istege bagli GERCEK gonderim ------------------------------------------
 if (isset($argv[1]) && $argv[1] !== '') {
     $to = $argv[1];
     echo "\n--- F) GERCEK gonderim: {$to} ---\n";

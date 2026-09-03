@@ -1,24 +1,4 @@
 <?php
-// workspaces.php: "Base olustur" ve "+ Yeni base" ARTIK bases.php'ye
-// YONLENDIRMIYOR -- ayni sayfada base olusturma modalini aciyorlar.
-//
-// ⚠️ ANA ILKE: yeni bir modal/JS YAZILMADI. dashboard.php'nin modali ortak
-// partial'a (src/partials/create_base_modal.php) cikarildi ve iki sayfa da
-// onu kullaniyor; davranis home.js'te TEK yerde.
-//
-// Kapsam:
-//   A) Modal markup'i ortak partial'da, dashboard.php kopya tutmuyor
-//   B) workspaces.php: iki tetikleyici de <button data-create-base-open>
-//   C) home.js tetikleyicileri data-* ile buluyor (id ile TEK oge baglaniyordu)
-//   D) Geriye donuk uyum: dashboard tetikleyicileri id'lerini KORUDU
-//   E) CANLI: workspaces.php modali basiyor, secili alan ON SECILI geliyor
-//   F) CANLI ucdan uca: modalin gonderdigi gibi POST -> base GERCEKTEN olustu
-//   G) Yetki: base acamayan rol ne tetikleyiciyi ne modali goruyor; ucnokta da
-//      reddediyor
-//   H) dashboard.php bozulmadi (ayni modal orada da basiliyor)
-//
-// On kosul: Apache ayakta. Calistirma:
-//   C:\php73\php.exe scripts\_verify_workspaces_create_base.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -28,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -82,9 +59,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// ⚠️ Yorumlar ayiklanir: "burada su yok" diyen kontroller, kaldirilan seyin
-// adini ACIKLAMA YORUMUNDA gecen bir satir yuzunden duser (bu oturumda dort
-// kez yasandi). Kontroller CALISAN koda bakmali.
 function strip_comments($src)
 {
     $src = preg_replace('#/\*.*?\*/#s', '', $src);
@@ -98,7 +72,6 @@ $wsLive = strip_comments(file_get_contents($root . '/public/workspaces.php'));
 $dashLive = strip_comments(file_get_contents($root . '/public/dashboard.php'));
 $homeJsLive = strip_comments(file_get_contents($root . '/public/assets/home.js'));
 
-// =====================================================================
 echo "\n--- A) Modal markup'i ORTAK partial'da ---\n";
 check('A) partial dosyasi var', is_file($partial));
 check('A) modal iskeleti partial da', is_file($partial)
@@ -112,7 +85,6 @@ check('A) workspaces.php ayni partial i require ediyor',
 check('A) workspaces.php de kendi kopyasini yazmiyor',
     strpos($wsLive, 'id="home-create-base-form"') === false);
 
-// =====================================================================
 echo "\n--- B) workspaces.php tetikleyicileri ---\n";
 check('B) "Base olustur" artik <button data-create-base-open>',
     preg_match('#<button[^>]*data-create-base-open[^>]*>.*?Base oluştur#s', $wsLive) === 1);
@@ -124,7 +96,6 @@ check('B) iki tetikleyici de var (sayim)',
     substr_count($wsLive, 'data-create-base-open') === 2,
     'adet: ' . substr_count($wsLive, 'data-create-base-open'));
 
-// =====================================================================
 echo "\n--- C) home.js coklu tetikleyici destekliyor ---\n";
 check('C) tetikleyiciler data-* ile bulunuyor',
     strpos($homeJsLive, "querySelectorAll('[data-create-base-open]')") !== false);
@@ -135,7 +106,6 @@ check('C) her tetikleyiciye dinleyici baglaniyor',
 check('C) odak ACAN tetikleyiciye donuyor (sabit butona degil)',
     strpos($homeJsLive, 'lastCreateTrigger') !== false);
 
-// =====================================================================
 echo "\n--- D) Geriye donuk uyum: dashboard id'leri KORUNDU ---\n";
 $schemaLive = strip_comments(file_get_contents($root . '/src/schema.php'));
 check('D) izgara kutucugu id sini koruyor',
@@ -143,9 +113,6 @@ check('D) izgara kutucugu id sini koruyor',
 check('D) bos durum butonu da id + data tasiyor',
     preg_match('#home-empty-create-btn" id="home-create-base-btn" data-create-base-open#', $schemaLive) === 1);
 
-// =====================================================================
-// E-H) CANLI
-// =====================================================================
 $wipe = function () {
     foreach (bcc_fetch_all('SELECT id FROM teams WHERE name IN (:a, :b)',
         array(':a' => TEAM_A, ':b' => TEAM_B)) as $r) {
@@ -156,9 +123,6 @@ $wipe = function () {
 };
 $wipe();
 
-// Temizlik kapanisa da baglanir: asagidaki try/catch yalnizca ISTISNALARI
-// yakaliyor, exit() ya da olumcul hatada calismazdi. Adlar sabit oldugu icin
-// sonraki kosu de temizlerdi, ama artik ilk kosunun sonunda temiz kaliyor.
 register_shutdown_function($wipe);
 
 try {
@@ -174,7 +138,6 @@ try {
         array(':e' => VIEWER_MAIL, ':h' => password_hash(PASS, PASSWORD_DEFAULT), ':n' => 'WSCB Viewer'));
     $viewerId = (int) bcc_last_insert_id();
 
-    // Owner IKI alanda da owner -> modalde <select> cikar, on secim olculebilir.
     bcc_execute('INSERT INTO team_members (team_id,user_id,role) VALUES (:t,:u,:r)', array(':t'=>$tidA,':u'=>$ownerId,':r'=>'owner'));
     bcc_execute('INSERT INTO team_members (team_id,user_id,role) VALUES (:t,:u,:r)', array(':t'=>$tidB,':u'=>$ownerId,':r'=>'owner'));
     bcc_execute('INSERT INTO team_members (team_id,user_id,role) VALUES (:t,:u,:r)', array(':t'=>$tidA,':u'=>$viewerId,':r'=>'viewer'));
@@ -183,8 +146,7 @@ try {
     $viewerCookie = login(VIEWER_MAIL);
 
     echo "\n--- E) CANLI: modal sayfada + ON SECIM ---\n";
-    // ⚠️ B alani BILEREK seciliyor: A ilk sirada oldugu icin "on secim
-    // calisiyor" yanilsamasi vermesin.
+
     $page = http_request('GET', '/workspaces.php?team_id=' . $tidB, $ownerCookie);
     check('E) sayfa 200', $page['status'] === 200, 'HTTP ' . $page['status']);
     check('E) modal sayfada basiliyor', strpos($page['body'], 'id="home-create-base-modal"') !== false);
@@ -244,7 +206,6 @@ try {
         strpos($dash['body'], 'id="home-create-base-btn"') !== false);
     check('H) o tetikleyici data-* de tasiyor (home.js onu buluyor)',
         strpos($dash['body'], 'data-create-base-open') !== false);
-
 } catch (Throwable $e) {
     echo "\n[HATA] " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . "\n";
     $results[] = false;

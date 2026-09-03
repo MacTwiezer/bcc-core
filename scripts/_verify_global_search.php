@@ -1,14 +1,4 @@
 <?php
-// Genel arama ("Ara..." / Ctrl K) — birlestirilmis davranisin dogrulanmasi.
-//
-// Neden bu betik var: arama sonuclari sayfanin DOM'undan TOPLANIYOR
-// (assets/global-search.js icindeki collector'lar). Bu, sunucu tarafinda
-// ikinci bir sorgu gerektirmedigi icin ucuz ama KIRILGAN: bir sayfanin
-// markup'i degisip bir sinif adi kaybolursa arama SESSIZCE bos doner.
-// Asagidaki C bolumu tam olarak bunu yakalar — her collector'in aradigi
-// secici, o sayfanin GERCEK ciktisinda var mi?
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_global_search.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -17,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -47,21 +34,11 @@ $root = __DIR__ . '/..';
 $js = file_get_contents($root . '/public/assets/global-search.js');
 $homeJs = file_get_contents($root . '/public/assets/home.js');
 
-// ---------------------------------------------------------------------------
-// A) Kisayol ve kapanma mantigi — kaynak seviyesinde
-// ---------------------------------------------------------------------------
 echo "--- A) Kisayol / kapanma mantigi ---\n";
 
 check('Ctrl+K ve Cmd+K birlikte destekleniyor',
     strpos($js, 'e.ctrlKey || e.metaKey') !== false && strpos($js, "e.key === 'k'") !== false);
 
-// ASIL REGRESYON KORUMASI: eski kusur, kisayolun bir icerik kosulunun
-// (#home-base-grid var mi) ICINDE kayitli olmasiydi. Kayit noktasinin
-// kosulsuz oldugunu dogrula: keydown dinleyicisinden ONCE gelen metinde
-// bir "if (... grid ...)" bloguna girilmemis olmali.
-// Suslu parantez derinligi: bir ifadenin kac blok icinde oldugunu verir.
-// (Kendi yazdigimiz dosya oldugu icin string/yorum icindeki suslu parantez
-// riski yok — asagidaki iki isaret de sade kod satirlari.)
 function brace_depth($src, $pos)
 {
     $depth = 0;
@@ -79,13 +56,6 @@ function brace_depth($src, $pos)
 $shortcutPos = strpos($js, "if ((e.ctrlKey || e.metaKey)");
 check('Ctrl+K dinleyicisi kaynakta bulunuyor', $shortcutPos !== false);
 
-// ASIL REGRESYON KORUMASI. Eski kusur "kisayol bir ICERIK kosulunun
-// (#home-base-grid var mi) icinde kayitliydi" seklindeydi. Bunu metin arayarak
-// yakalamak yaniltici: collector fonksiyonlarinin ICINDE de `if (!grid)` var ve
-// bu tamamen dogru. Dogru olcut YAPISAL: kisayolun kayit noktasi, kosulsuz
-// kurulum kodunun (`var lastFocused = null;`) TAM OLARAK AYNI blok
-// derinliginde olmali. Bir gun biri kaydi bir `if` icine alirsa derinlik artar
-// ve bu test duser.
 $registrationPos = strpos($js, "document.addEventListener('keydown', function (e) {");
 $baselinePos = strpos($js, 'var lastFocused = null;');
 
@@ -100,8 +70,6 @@ check('kisayol kaydi ve kosulsuz kurulum kodu AYNI blok derinliginde '
 check('Escape + disari tiklama ortak yardimciyla (bcc_bindDismissable)',
     strpos($js, 'bcc_bindDismissable(details') !== false);
 
-// Backdrop hatasi: .home-search-overlay <details>'in ICINDE oldugu icin
-// varsayilan !el.contains(target) olcutu asla saglanmiyordu.
 check('isClickOutside override edilmis (backdrop <details> icinde)',
     strpos($js, 'isClickOutside: function') !== false);
 check('panel ici tiklama kapatmiyor', strpos($js, 'popover.contains(target)') !== false);
@@ -119,9 +87,6 @@ check('home.js silme islemi arama listesini ortak kancadan temizliyor',
 check('global-search.js o kancayi disariya aciyor',
     strpos($js, 'window.bcc_searchRemoveItem') !== false);
 
-// ---------------------------------------------------------------------------
-// B) Markup ve script HER sayfada var mi
-// ---------------------------------------------------------------------------
 echo "\n--- B) Bilesenin sayfalara dagilimi ---\n";
 
 $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'Demo Calisma Alani' LIMIT 1");
@@ -130,9 +95,6 @@ if ($team === false || $team === null) {
 }
 $teamId = (int) $team['id'];
 
-// Demo verisi ON KOSUL: kontrolsuz indeksleme $ownerId'yi 0 yapar ve testler
-// "oturumsuz kullanici" olarak calisip anlamsiz bir hata yigini uretir. Tek ve
-// acik bir mesaj daha iyi (yukaridaki ekip kontrolu ile AYNI kalip).
 $owner = bcc_fetch_one("SELECT id FROM users WHERE email = 'owner@bcc.local' LIMIT 1");
 if ($owner === false || $owner === null) {
     die("owner@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
@@ -171,7 +133,6 @@ foreach ($pages as $page => $query) {
         strpos($html[$page], 'dismissable-panel.js') < strpos($html[$page], 'global-search.js'));
 }
 
-// Markup TEK dosyadan gelmeli (kopya yok).
 $shellTop = file_get_contents($root . '/src/partials/home_shell_top.php');
 $gridSrc = file_get_contents($root . '/public/grid.php');
 check('home_shell_top.php arama markup\'ini ORTAK partial\'dan aliyor',
@@ -181,19 +142,10 @@ check('grid.php AYNI partial\'i kullaniyor (ikinci kopya yok)',
     strpos($gridSrc, "partials/global_search.php") !== false
     && strpos($gridSrc, 'home-search-popover') === false);
 
-// ---------------------------------------------------------------------------
-// C) Collector secicileri gercek ciktiyla ESLESIYOR MU (asil kirilganlik)
-// ---------------------------------------------------------------------------
 echo "\n--- C) Collector secicileri gercek DOM ile eslesiyor mu ---\n";
 
-// Her satir: [sayfa, aciklama, global-search.js'in aradigi secici parcasi,
-//             o sayfanin ciktisinda bulunmasi gereken metin]
 $selectorChecks = array(
-    // ⚠️ TEK-ID DAN COKLU IZGARAYA: base'ler CALISMA ALANINA gore gruplanınca
-    // sayfada BIRDEN COK .home-base-grid olustu ve id="home-base-grid" hic
-    // basilmaz oldu. global-search.js hala getElementById kullaniyordu, yani
-    // collectBases() HER ZAMAN null donuyor ve dashboard'daki base'ler genel
-    // aramaya HIC girmiyordu (sessiz bug -- bu kontrol onu yakaladi).
+
     array('dashboard.php', 'base kart kabi', "querySelectorAll('.home-base-grid')", 'class="home-base-grid'),
     array('dashboard.php', 'base kart sinifi', ".home-base-card", 'home-base-card'),
     array('dashboard.php', 'base adi', ".home-base-name", 'home-base-name'),
@@ -227,7 +179,6 @@ foreach ($selectorChecks as $sc) {
         strpos($html[$page], $needle) !== false);
 }
 
-// Salt-okunur rol metni (owner olmayan gorunum) de aranabilir olmali.
 $viewer = bcc_fetch_one("SELECT id FROM users WHERE email = 'viewer@bcc.local' LIMIT 1");
 if ($viewer === false || $viewer === null) {
     die("viewer@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
@@ -241,9 +192,6 @@ check('viewer gorunumunde .tm-role-readonly gercekten basiliyor',
 check('viewer gorunumunde .tm-role-select YOK (RBAC) — collector duz metne dusmeli',
     strpos($viewerHtml, 'tm-role-select') === false);
 
-// ---------------------------------------------------------------------------
-// D) Baglam etiketi ve stiller
-// ---------------------------------------------------------------------------
 echo "\n--- D) Baglam etiketi / stiller ---\n";
 
 $css = file_get_contents($root . '/public/assets/home.css');
@@ -256,7 +204,6 @@ check('sayfa ici atlama vurgusu stilli', strpos($css, '.bcc-search-flash') !== f
 check('grid ust bari tetikleyicisi stilli', strpos($css, '.gs-topbar-search') !== false);
 check('sayfa ici atlama JS tarafinda uygulanmis', strpos($js, "classList.add('bcc-search-flash')") !== false);
 
-// ---------------------------------------------------------------------------
 echo "\n";
 $failed = count(array_filter($results, function ($r) { return !$r; }));
 echo ($failed === 0 ? 'TUM TESTLER GECTI' : $failed . ' TEST KALDI') . ' (' . count($results) . " kontrol)\n";

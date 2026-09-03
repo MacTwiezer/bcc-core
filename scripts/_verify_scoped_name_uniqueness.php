@@ -1,18 +1,4 @@
 <?php
-// Isim benzersizliginin SCOPE'LU oldugunu UCTAN UCA dogrular.
-//
-// Kural: bir isim yalnizca AIT OLDUGU UST YAPI icinde benzersizdir.
-//   Base A -> "Musteriler"  +  Base B -> "Musteriler"   = GECERLI
-//   Base A -> "Musteriler"  +  Base A -> "Musteriler"   = GECERSIZ
-//
-// Yontem: sayfa/uc nokta akislari GERCEK oturumla, ayri PHP alt sureclerinde
-// calistirilir (_post_as_case.php); paylasilan fonksiyonlar (bcc_create_base,
-// bcc_create_field) dogrudan cagrilir. Yetki/validation mantiginin kopyasi
-// test edilmez.
-//
-// KENDI KURBAN VERISINI KURAR VE SILER. Gercek verilere dokunmaz.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_scoped_name_uniqueness.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -33,7 +19,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// base_tables.php gibi TAM SAYFA POST akislari icin.
 function post_page($userId, $page, $query, $post)
 {
     $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/_post_as_case.php')
@@ -63,7 +48,6 @@ check('fields: UNIQUE(table_id, name)',
 check('views: UNIQUE(table_id, name)',
     isset($uq['views.uq_views_table_name']) && $uq['views.uq_views_table_name'] === 'table_id,name');
 
-// Asil regresyon: hicbiri YALNIZCA name uzerinde olmamali (= global benzersizlik).
 $globalNameIdx = array();
 foreach ($uq as $key => $cols) {
     if ($cols === 'name' && strpos($key, 'teams.') !== 0) {
@@ -73,11 +57,9 @@ foreach ($uq as $key => $cols) {
 check('HICBIR tabloda GLOBAL UNIQUE(name) yok (teams haric)',
     empty($globalNameIdx), implode(', ', $globalNameIdx));
 
-// teams BILEREK global: veri modelinin en ust yapisi, ustunde scope yok.
 check('teams.name GLOBAL kaliyor (en ust yapi, dogru davranis)',
     isset($uq['teams.uq_teams_name']) && $uq['teams.uq_teams_name'] === 'name');
 
-// bases'te DB kisiti OLMAMALI (soft-delete: cop kutusundaki ad blokelemesin).
 $basesNameIdx = false;
 foreach ($uq as $key => $cols) {
     if (strpos($key, 'bases.') === 0 && strpos($cols, 'name') !== false) { $basesNameIdx = $key . ' => ' . $cols; }
@@ -105,13 +87,6 @@ $teamId = (int) bcc_last_insert_id();
 bcc_execute("INSERT INTO teams (name) VALUES ('ZZ Isim Scope Testi 2')");
 $teamId2 = (int) bcc_last_insert_id();
 
-// ONCEDEN: en dusuk id'li AKTIF kullanici seciliyordu, ki bu pratikte projenin
-// sahibinin KENDI gercek hesabi. Testin butun yazmalari o hesap adina
-// yapiliyordu ve audit_log.team_id -> teams FK'si SET NULL oldugu icin uretilen
-// denetim satirlari ekip silindikten SONRA da kaliyordu: her kosu gercek
-// denetim izine o kullaniciya atfedilmis sahte base/tablo olaylari ekliyordu
-// (olculdu: kosu basina 15 satir, 7'si o hesaba ait). Artik ATILIR bir
-// kullanici yaratiliyor.
 $OWNER_EMAIL = 'scopetest.owner@bcc-test.local';
 bcc_execute('DELETE FROM users WHERE email = :e', array('e' => $OWNER_EMAIL));
 bcc_execute(
@@ -125,8 +100,6 @@ foreach (array($teamId, $teamId2) as $t) {
         array('t' => $t, 'u' => $ownerId));
 }
 
-// Bu kosunun urettigi denetim satirlari da temizlenir; aksi halde ekip
-// silinince team_id NULL'lanip satirlar veritabaninda kaliyordu.
 $startAuditId = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 
 register_shutdown_function(function () use ($teamId, $teamId2, $ownerId, $startAuditId) {
@@ -144,7 +117,6 @@ echo "  ekip=$teamId baseA=$baseA baseB=$baseB\n";
 
 echo "\n=== D) Kullanicinin 6 test senaryosu (TABLO) ===\n";
 
-// Test 1: Base A -> Table A  +  Base A -> Table A  => ENGELLENMELI
 post_page($ownerId, 'base_tables.php', 'base_id=' . $baseA, array('action' => 'create_table', 'name' => 'Table A'));
 $n = (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
     array('b' => $baseA, 'n' => 'Table A'));
@@ -157,13 +129,11 @@ check('TEST 1: Base A -> "Table A" IKINCI kez => ENGELLENDI', $n === 1, 'adet=' 
 check('TEST 1: kullaniciya scope\'u anlatan hata gosteriliyor',
     strpos($html, 'zaten kullanılıyor') !== false && strpos($html, "base") !== false);
 
-// Test 2 / 6: Base B -> Table A => IZIN VERILMELI
 post_page($ownerId, 'base_tables.php', 'base_id=' . $baseB, array('action' => 'create_table', 'name' => 'Table A'));
 $n = (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
     array('b' => $baseB, 'n' => 'Table A'));
 check('TEST 2+6: Base B -> "Table A" => IZIN VERILDI (farkli scope)', $n === 1, 'adet=' . $n);
 
-// Test 3: Base A -> Table B => IZIN VERILMELI
 post_page($ownerId, 'base_tables.php', 'base_id=' . $baseA, array('action' => 'create_table', 'name' => 'Table B'));
 $n = (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
     array('b' => $baseA, 'n' => 'Table B'));
@@ -174,7 +144,6 @@ $tblA = (int) bcc_fetch_column('SELECT id FROM tables_meta WHERE base_id = :b AN
 $tblB = (int) bcc_fetch_column('SELECT id FROM tables_meta WHERE base_id = :b AND name = :n',
     array('b' => $baseA, 'n' => 'Table B'));
 
-// Test 4: mevcut tabloyu AYNI isimle guncelle => KENDI KAYDI, ENGELLENMEMELI
 post_page($ownerId, 'base_tables.php', 'base_id=' . $baseA, array(
     'action' => 'rename_table', 'table_id' => $tblA, 'name' => 'Table A', 'description' => 'aciklama degisti',
 ));
@@ -183,7 +152,6 @@ check('TEST 4: ayni isimle guncelleme ENGELLENMEDI (kendi kaydi haric tutuldu)',
     $row['name'] === 'Table A' && $row['description'] === 'aciklama degisti',
     json_encode($row, JSON_UNESCAPED_UNICODE));
 
-// Test 5: Table B -> "Table A" rename => ENGELLENMELI
 $html = post_page($ownerId, 'base_tables.php', 'base_id=' . $baseA, array(
     'action' => 'rename_table', 'table_id' => $tblB, 'name' => 'Table A', 'description' => '',
 ));
@@ -191,7 +159,6 @@ $stillB = bcc_fetch_column('SELECT name FROM tables_meta WHERE id = :id', array(
 check('TEST 5: ayni base\'de baskasinin adiyla rename => ENGELLENDI', $stillB === 'Table B', 'ad=' . $stillB);
 check('TEST 5: hata mesaji gosterildi', strpos($html, 'zaten kullanılıyor') !== false);
 
-// Farkli base'deki bir adla rename SERBEST olmali.
 post_page($ownerId, 'base_tables.php', 'base_id=' . $baseB, array('action' => 'create_table', 'name' => 'Sadece B'));
 $html = post_page($ownerId, 'base_tables.php', 'base_id=' . $baseA, array(
     'action' => 'rename_table', 'table_id' => $tblB, 'name' => 'Sadece B', 'description' => '',
@@ -215,7 +182,6 @@ check('base hata mesaji scope\'u soyluyor',
 $other = bcc_create_base($teamId2, 'Base A', '', $ownerId);
 check('BASKA ekipte ayni base adi => IZIN VERILDI', $other['ok'] === true, json_encode($other, JSON_UNESCAPED_UNICODE));
 
-// Cop kutusundaki base adi BLOKE ETMEMELI.
 bcc_execute('UPDATE bases SET deleted_at = NOW() WHERE id = :id', array('id' => $baseB));
 $reuse = bcc_create_base($teamId, 'Base B', '', $ownerId);
 check('SILINMIS base\'in adi yeniden kullanilabiliyor', $reuse['ok'] === true, json_encode($reuse, JSON_UNESCAPED_UNICODE));
@@ -235,7 +201,6 @@ check('alan hata mesaji scope\'u soyluyor',
 $f3 = bcc_create_field($tblB, $teamId, array('name' => 'Telefon', 'field_type' => 'single_line_text'));
 check('BASKA tabloda ayni alan adi => IZIN VERILDI', $f3['ok'] === true, json_encode($f3, JSON_UNESCAPED_UNICODE));
 
-// Alan guncelleme: kendi kaydi haric tutuluyor mu?
 $fieldId = (int) bcc_fetch_column('SELECT id FROM fields WHERE table_id = :t AND name = :n',
     array('t' => $tblA, 'n' => 'Telefon'));
 post_page($ownerId, 'table_fields.php', 'table_id=' . $tblA, array(
@@ -276,7 +241,6 @@ check('BASKA tabloda ayni gorunum adi serbest',
 
 echo "\n=== I) Veritabani son savunma hatti ===\n";
 
-// Uygulama kontrolu atlansa bile DB reddetmeli.
 $dbBlocked = false;
 try {
     bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b, :n, 99)',
@@ -286,8 +250,6 @@ try {
 }
 check('uygulama atlansa bile DB duplicate tabloyu REDDEDIYOR', $dbBlocked);
 
-// Ayni adi HENUZ ICERMEYEN ucuncu bir base: DB kisiti global olsaydi burasi da
-// reddedilirdi. ($baseB zaten "Table A" iceriyor, onu kullanmak yaniltirdi.)
 $c = bcc_create_base($teamId, 'Base C', '', $ownerId);
 $dbAllowed = true;
 $dbErr = '';
@@ -302,7 +264,6 @@ check('DB kisiti FARKLI base\'de ayni adi ENGELLEMIYOR (scope\'lu, global degil)
 
 echo "\n=== J) Kaynak taramasi ===\n";
 
-// Global duplicate kontrolu geri sizmasin.
 $srcFiles = array_merge(
     glob(__DIR__ . '/../public/*.php'),
     glob(__DIR__ . '/../public/api/*.php'),
@@ -311,14 +272,13 @@ $srcFiles = array_merge(
 $globalChecks = array();
 foreach ($srcFiles as $file) {
     $src = file_get_contents($file);
-    // Yorumlari soy: karari ACIKLAYAN yorumlara takilmasin (projede ucuncu kez
-    // ayni ders, bkz. docs/PROJE-DURUM.md grid-export.css vakasi).
+
     $code = '';
     foreach (token_get_all($src) as $tok) {
         if (is_array($tok) && in_array($tok[0], array(T_COMMENT, T_DOC_COMMENT), true)) { continue; }
         $code .= is_array($tok) ? $tok[1] : $tok;
     }
-    // "FROM <tablo> WHERE name = ..." — arada scope kolonu YOKSA global demektir.
+
     if (preg_match('/FROM\s+(tables_meta|fields|views|bases)\s+WHERE\s+name\s*=/i', $code, $m)) {
         $globalChecks[] = basename($file) . ' (' . $m[1] . ')';
     }

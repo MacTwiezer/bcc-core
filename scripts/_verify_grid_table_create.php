@@ -1,26 +1,4 @@
 <?php
-// Grid'den TABLO OLUSTURMA — aynı sayfada modal, ayrı sayfaya yönlendirme YOK.
-//
-// Modali IKI tetikleyici acar:
-//   1. Tablo sekmeleri cubugundaki "+"  (.gs-table-tab-add)
-//   2. "+ Yeni olustur" menusundeki "Bos tablo olustur"
-// Ikisi de [data-create-table-btn] tasir ve AYNI modali, AYNI ucnoktayi
-// (api/table_create.php) kullanir — ikinci bir akis YOK.
-//
-// Kapsam:
-//   A) Owner: modal + IKI tetikleyici basiliyor, "+" href yedegini koruyor
-//   B) Editor: NE tetikleyici NE modal (tablo olusturmak owner isi)
-//   C) Ucnokta kapilari: GET/CSRF/yetki
-//   D) Dogrulama: bos ad, 150 karakter, AYNI base'te ayni ad
-//   E) Kapsamli benzersizlik: BASKA base'te ayni ad SERBEST
-//   F) Basari: tablo olusuyor, redirect_url SUNUCUDAN, mevcut tablodan
-//      HICBIR SEY kopyalanmiyor (klonlama degil)
-//   G) JS tum tetikleyicileri bagliyor ve gezinmeyi durduruyor
-//
-// ⚠️ GERCEK VERIYE DOKUNMAZ: kendi kullanicilarini/base'ini yaratir, siler.
-//
-// On kosul: Apache ayakta. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_table_create.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -30,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -129,7 +103,6 @@ try {
     $ownerId = $mkUser(OWNER_EMAIL, 'owner');
     $editorId = $mkUser(EDITOR_EMAIL, 'editor');
 
-    // Iki base: kapsamli benzersizlik (E) icin gerekli.
     $mkBase = function ($name) use ($teamId, $ownerId) {
         bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',
             array(':t' => $teamId, ':n' => $name, ':u' => $ownerId));
@@ -138,7 +111,6 @@ try {
     $baseA = $mkBase('TblCreate Base A');
     $baseB = $mkBase('TblCreate Base B');
 
-    // Grid acilabilmesi icin baslangic tablosu (bir alanla).
     bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b, :n, 0)',
         array(':b' => $baseA, ':n' => 'Musteriler'));
     $tableId = (int) bcc_last_insert_id();
@@ -148,9 +120,8 @@ try {
     $ownerCookie = login(OWNER_EMAIL);
     $editorCookie = login(EDITOR_EMAIL);
 
-    // =====================================================================
     echo "\n--- A) Owner: modal + iki tetikleyici ---\n";
-    // =====================================================================
+
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $ownerCookie);
     check('A) grid acildi', $g['status'] === 200, 'HTTP ' . $g['status']);
     $html = $g['body'];
@@ -163,14 +134,12 @@ try {
         || preg_match('#data-create-table-btn[^>]*class="gs-table-tab-add"#', $html) === 1);
     check('A) menudeki "Bos tablo olustur" tetikleyicisi bagli',
         strpos($html, 'id="gs-create-table-btn"') !== false);
-    // ⚠️ JS'siz yedek: "+" gercek bir href tasimali, yoksa JS yuklenmediginde
-    // tiklama HICBIR SEY yapmazdi.
+
     check('A) "+" href yedegini KORUYOR (JS yoksa eski sayfaya gider)',
         preg_match('#<a href="/base_tables\.php\?base_id=\d+"[^>]*data-create-table-btn#', $html) === 1);
 
-    // =====================================================================
     echo "\n--- B) Editor: tetikleyici de modal da YOK ---\n";
-    // =====================================================================
+
     $ge = http_request('GET', '/grid.php?table_id=' . $tableId, $editorCookie);
     check('B) editor grid acabiliyor', $ge['status'] === 200, 'HTTP ' . $ge['status']);
     check('B) editor tetikleyiciyi GORMUYOR',
@@ -178,9 +147,8 @@ try {
     check('B) editor modali GORMUYOR',
         strpos($ge['body'], 'id="gs-create-table-modal"') === false);
 
-    // =====================================================================
     echo "\n--- C) Ucnokta kapilari ---\n";
-    // =====================================================================
+
     $csrf = extract_csrf($html);
     check('C) CSRF token bulundu', $csrf !== null);
 
@@ -199,9 +167,8 @@ try {
         (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
             array(':b' => $baseA, ':n' => 'EditorTablo')), 0);
 
-    // =====================================================================
     echo "\n--- D) Dogrulama ---\n";
-    // =====================================================================
+
     $r = http_request('POST', '/api/table_create.php', $ownerCookie,
         array('base_id' => $baseA, 'name' => '   ', 'csrf_token' => $csrf));
     eq('D) bos ad 422', $r['status'], 422);
@@ -217,9 +184,8 @@ try {
         (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
             array(':b' => $baseA, ':n' => 'Musteriler')), 1);
 
-    // =====================================================================
     echo "\n--- E) Kapsamli benzersizlik: BASKA base te ayni ad serbest ---\n";
-    // =====================================================================
+
     $r = http_request('POST', '/api/table_create.php', $ownerCookie,
         array('base_id' => $baseB, 'name' => 'Musteriler', 'csrf_token' => $csrf));
     $d = json_decode($r['body'], true);
@@ -228,9 +194,8 @@ try {
         (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b AND name = :n',
             array(':b' => $baseB, ':n' => 'Musteriler')), 1);
 
-    // =====================================================================
     echo "\n--- F) Basari + KLONLAMA YOK ---\n";
-    // =====================================================================
+
     $r = http_request('POST', '/api/table_create.php', $ownerCookie,
         array('base_id' => $baseA, 'name' => 'Siparisler', 'description' => 'Deneme', 'csrf_token' => $csrf));
     $d = json_decode($r['body'], true);
@@ -242,9 +207,7 @@ try {
 
     eq('F) tablo gercekten olustu',
         bcc_fetch_column('SELECT name FROM tables_meta WHERE id = :i', array(':i' => $newId)), 'Siparisler');
-    // ⚠️ "Yeni olustur" MEVCUT TABLOYU KLONLAMAMALI — bu, kullanicinin daha
-    // once bildirdigi karisikligin ta kendisiydi. Yeni tabloda kaynak
-    // tablonun alanlari/kayitlari OLMAMALI.
+
     eq('F) yeni tabloda KAYIT yok (klonlanmadi)',
         (int) bcc_fetch_column('SELECT COUNT(*) FROM records WHERE table_id = :i', array(':i' => $newId)), 0);
     $srcFields = (int) bcc_fetch_column('SELECT COUNT(*) FROM fields WHERE table_id = :i', array(':i' => $tableId));
@@ -253,23 +216,17 @@ try {
         $newFields === 0 || $newFields !== $srcFields,
         'kaynak=' . $srcFields . ' yeni=' . $newFields);
 
-    // Yeni tablonun grid'i acilabilmeli (varsayilan gorunum tembel olusur).
     $ng = http_request('GET', '/grid.php?table_id=' . $newId, $ownerCookie);
     eq('F) yeni tablonun gridi acilabiliyor', $ng['status'], 200);
 
-    // =====================================================================
     echo "\n--- G) JS tum tetikleyicileri bagliyor ---\n";
-    // =====================================================================
+
     $js = file_get_contents(__DIR__ . '/../public/assets/grid-view-manage.js');
     check('G) TEK id yerine tum [data-create-table-btn] seciliyor',
         preg_match('#querySelectorAll\(\s*[\'"]\[data-create-table-btn\][\'"]\s*\)#', $js) === 1);
     check('G) eski tek-id secimi KALMADI',
         strpos($js, "getElementById('gs-create-table-btn')") === false);
-    // ⚠️ "+" gercek bir <a href> — preventDefault olmazsa modal acilir acilmaz
-    // sayfa base_tables.php'ye giderdi.
-    // ⚠️ Pencere BAYT cinsinden: aradaki aciklama yorumu UTF-8 Turkce ve cok
-    // baytli karakterler tasiyor, dar bir pencere kodu DOGRU olsa bile
-    // eslesmezdi (ilk denemede oyle oldu).
+
     check('G) varsayilan gezinme durduruluyor (preventDefault)',
         preg_match('#createTableTriggers\.forEach[\s\S]{0,900}e\.preventDefault\(\)#', $js) === 1);
 

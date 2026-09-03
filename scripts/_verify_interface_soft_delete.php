@@ -1,14 +1,4 @@
 <?php
-// Duyuru arayuzu (interface.php / interface_search.php / interface_records.php)
-// COP KUTUSUNDAKI kayitlari gostermemeli.
-//
-// BULUNAN GERCEK BUG: bcc_interface_fetch_records() "WHERE r.table_id = ?"
-// diyordu, "AND r.deleted_at IS NULL" YOKTU. grid.php'nin sorgusu
-// (bcc_build_grid_records_query) o filtreyi tasidigi icin kayit tabloda
-// kayboluyor ama Duyuru ekraninda durmaya devam ediyordu.
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_interface_soft_delete.php
-// Apache ayakta olmali. Kendi verisini kurar ve siler.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -17,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -69,7 +56,6 @@ function idler($body)
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) { fwrite(STDERR, "Apache'ye ulasilamadi.\n"); exit(2); }
 
-// --- izole ortam ---
 $SON = bin2hex(random_bytes(4));
 $SIFRE = 'IfTest!' . $SON;
 
@@ -80,11 +66,6 @@ bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_ac
 $ownerId = (int) bcc_last_insert_id();
 bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t,:u,:r)', array('t' => $teamId, 'u' => $ownerId, 'r' => 'owner'));
 
-// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-posta rastgele ek
-// tasiyor (IfTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
-// Ctrl+C) kalan ekip/kullaniciyi SONRAKI kosu de bulamaz.
-// base/tablo/alan/kayit ayrica silinmiyor: FK zinciri CASCADE, ekip silinince
-// hepsi kendiliginden gider.
 $cleanup = function () use ($teamId, $ownerId, $SON, $COOKIE) {
     bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
     bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
@@ -119,9 +100,8 @@ echo "Ortam: tablo=$tableId, kayitlar=$kalan (kalacak) / $silinecek (silinecek)\
 $tok = jeton($BASE . '/login.php');
 istek($BASE . '/login.php', 'csrf_token=' . $tok . '&email=' . rawurlencode("if.owner.$SON@bcc-test.local") . '&password=' . rawurlencode($SIFRE));
 
-// ---------------------------------------------------------------------------
 echo "A) SILMEDEN ONCE — iki kayit da gorunuyor\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/interface_records.php?table_id=' . $tableId);
 $ids = idler($r['body']);
 check('interface_records 2 kayit', is_array($ids) && count($ids) === 2, is_array($ids) ? count($ids) : $r['body']);
@@ -130,9 +110,8 @@ $r = istek($BASE . '/api/interface_search.php?table_id=' . $tableId . '&q=' . ra
 $ids = idler($r['body']);
 check('interface_search 2 kayit', is_array($ids) && count($ids) === 2, is_array($ids) ? count($ids) : $r['body']);
 
-// ---------------------------------------------------------------------------
 echo "\nB) COP KUTUSUNA ATILDIKTAN SONRA — silinmis kayit GORUNMEMELI\n";
-// ---------------------------------------------------------------------------
+
 bcc_execute('UPDATE records SET deleted_at = NOW() WHERE id = :i', array('i' => $silinecek));
 
 $r = istek($BASE . '/api/interface_records.php?table_id=' . $tableId);
@@ -150,21 +129,18 @@ $r = istek($BASE . '/api/interface_search.php?table_id=' . $tableId . '&q=' . ra
 $ids = idler($r['body']);
 check('silinmis kaydi ADIYLA aramak da bos donuyor', is_array($ids) && count($ids) === 0, is_array($ids) ? count($ids) : $r['body']);
 
-// ---------------------------------------------------------------------------
 echo "\nC) grid.php'nin sorgusuyla AYNI sonuc\n";
-// ---------------------------------------------------------------------------
+
 list($sql, $p) = bcc_build_grid_records_query($tableId, array(), array(), array(), 'AND');
 $gridIds = array_map('intval', array_column(bcc_fetch_all($sql, $p), 'id'));
 check('grid ve interface ayni kayit kumesi', $gridIds === array($kalan), implode(',', $gridIds));
 
-// ---------------------------------------------------------------------------
 echo "\nD) LIKE joker karakterleri kacisiliyor\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/interface_search.php?table_id=' . $tableId . '&q=' . rawurlencode('%'));
 $ids = idler($r['body']);
 check('"%" aramasi HER SEYI getirmiyor', is_array($ids) && count($ids) === 0, is_array($ids) ? count($ids) : $r['body']);
 
-// --- temizlik ---
 $cleanup();
 
 $k = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))

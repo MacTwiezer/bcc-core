@@ -1,24 +1,4 @@
 <?php
-// "Paylas" (katilimci paylasimi) akisinin TUM sayfalarda AYNI satir ici
-// bilesende birlesmesi.
-//
-// Kapsam:
-//   A) HICBIR paylas tetikleyicisi sayfadan CIKMIYOR (team_members.php'ye
-//      yonlendiren <a>/<form> yok)
-//   B) interface.php artik ORTAK bilesende (kendi sorgulari silindi)
-//   C) grid.php ile interface.php AYNI modal sozlesmesini basiyor
-//   D) CANLI: davet + rol degistirme + cikarma, sayfadan cikmadan calisiyor
-//   E) team_members.php KORUNDU (silinmedi) ve hala erisilebilir
-//   F) Gercek takim verisi bozulmadi
-//
-// TARAYICI NOTU: davranis /browse ile de doğrulandı — grid.php ve
-// interface.php'de "Paylas" -> modal acilirken URL DEGISMIYOR
-// (/grid.php?table_id=... ve /interface.php?base_id=...&table_id=... aynen
-// kaliyor); davet/rol/cikarma sonrasi liste ve "N kisinin erisimi var" ozeti
-// ANINDA tazeleniyor (14 -> 13 olcuildu).
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_share_unified.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -28,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -98,8 +75,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// PHP/HTML yorumlarini soyar — testler aciklama yorumlarina takilip yanlis
-// "GECTI"/"KALDI" vermesin (bu projede birden fazla kez yasandi).
 function php_code_only($src)
 {
     $src = preg_replace('#<!--.*?-->#s', '', $src);
@@ -111,7 +86,6 @@ function php_code_only($src)
 $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
 if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
 
-// GERCEK uyeler: testin sonunda birebir ayni kalmali (fixture kullanicilari haric).
 $realMembersBefore = bcc_fetch_all(
     "SELECT u.email, tm.role FROM team_members tm INNER JOIN users u ON u.id = tm.user_id
      WHERE tm.team_id = :t AND u.email NOT LIKE '%@bcc-test.local' ORDER BY u.email",
@@ -139,15 +113,8 @@ try {
     $ifCode = php_code_only($ifPhp);
     $gridCode = php_code_only($gridPhp);
 
-    // =====================================================================
-    // A) YONLENDIRME YOK
-    // =====================================================================
     echo "--- A) Paylas tetikleyicileri sayfadan CIKMIYOR ---\n";
-    // Bulunan gercek durum: grid.php ZATEN satir iciydi; interface.php ise
-    // hem <form action="/team_members.php"> (tam sayfa POST) hem de
-    // <a href="/team_members.php"> tasiyordu — /browse ile dogrulandi:
-    // "Paylas > N kisinin erisimi var" tiklandiginda adres
-    // /team_members.php?team_id=1 oluyordu.
+
     check('A) interface.php te team_members.php ye giden <a> KALMADI',
         preg_match('#<a[^>]*href="/team_members\.php#', $ifCode) === 0);
     check('A) interface.php te team_members.php ye POST eden <form> KALMADI',
@@ -156,12 +123,7 @@ try {
         strpos($ifCode, 'collab-popover-assign') === false);
     check('A) grid.php te de yonlendiren paylas baglantisi yok',
         preg_match('#<a[^>]*href="/team_members\.php#', $gridCode) === 0);
-    // Katilimci satiri <button> (yonlendiren <a> DEGIL).
-    // ⚠️ ARTIK ORTAK PARTIAL'DA: popover govdesi grid.php ile interface.php'de
-    // 20 satir birebir ayniydi, src/partials/collab_popover_form.php'a alindi
-    // (denetim). Kontrol de oraya tasindi — kural degismedi, YERI degisti.
-    // Iki sayfanin partial'i GERCEKTEN require ettigi ayrica dogrulaniyor,
-    // yoksa "markup var ama sayfa basmiyor" durumu gozden kacardi.
+
     $popoverPartial = file_get_contents(__DIR__ . '/../src/partials/collab_popover_form.php');
     check('A) ortak popover: katilimci ozeti <button data-share-modal-open>',
         preg_match('#<button[^>]*class="collab-popover-people"[^>]*data-share-modal-open#', $popoverPartial) === 1);
@@ -170,9 +132,6 @@ try {
             strpos($code, 'partials/collab_popover_form.php') !== false);
     }
 
-    // =====================================================================
-    // B) INTERFACE.PHP ORTAK BILESENDE
-    // =====================================================================
     echo "\n--- B) interface.php ortak bilesene gecti ---\n";
     check('B) ortak payload yardimcisi require ediliyor',
         strpos($ifCode, "require_once __DIR__ . '/../src/share_modal_payload.php'") !== false);
@@ -182,7 +141,7 @@ try {
         strpos($ifCode, "require __DIR__ . '/../src/partials/share_modal.php'") !== false);
     check('B) ortak share-modal.js yukleniyor',
         strpos($ifCode, "bcc_asset_url('share-modal.js')") !== false);
-    // Kendi katilimci/aday SORGULARI silinmis olmali (ikinci bir hesap yok).
+
     check('B) kendi katilimci sorgusu SILINDI (ikinci kaynak yok)',
         strpos($ifCode, 'FROM team_members tm') === false, 'interface.php hala kendi sorgusunu yaziyor');
     check('B) eski $shareCandidateUsers/$shareAssignableRoles degiskenleri kalmadi',
@@ -191,9 +150,6 @@ try {
     check('B) yetki kapisi sunucu tarafinda (bcc_can_manage_members)',
         strpos($ifCode, 'bcc_can_manage_members(') !== false);
 
-    // =====================================================================
-    // C) IKI SAYFA AYNI SOZLESME
-    // =====================================================================
     echo "\n--- C) grid.php ve interface.php AYNI modal sozlesmesi ---\n";
     $ownerId = null;
     bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 0, 1)',
@@ -222,16 +178,12 @@ try {
     check('C) grid.php 200', $gridHtml['status'] === 200, 'HTTP ' . $gridHtml['status']);
     check('C) interface.php 200', $ifHtml['status'] === 200, 'HTTP ' . $ifHtml['status']);
 
-    // Modalin islemesi icin GEREKEN her parca IKI sayfada da olmali.
     $contract = array(
         'id="gs-share-overlay"'          => 'overlay',
         'data-share-invite'              => 'davet kutusu',
         'data-share-invite-role'         => 'rol secici',
         'data-share-invite-btn'          => 'Davet Et',
-        // Native <datalist> yerine kendi oneri kutusu (data-share-suggest):
-        // datalist'in gorunumu tarayiciya aitti ve 35 hesapla sayfa boyunda
-        // bir seride donusuyordu. Sozlesme AYNI: iki sayfada da oneri kutusu
-        // BULUNMALI, yalnizca ozniteligin adi degisti.
+
         'data-share-suggest'            => 'kullanici onerileri (arama)',
         'data-share-tab="collaborators"' => 'Katilimcilar sekmesi',
         'data-share-tab="pending"'       => 'Bekleyen davetler sekmesi',
@@ -248,17 +200,12 @@ try {
     }
     check('C) interface.php te modalin CSS i zaten yuklu (grid-shell.css)',
         strpos($ifHtml['body'], 'grid-shell.css') !== false);
-    // "Baglanti" (URL kopyalama) kutusu interface.php'den KALDIRILDI (ise
-    // yaramayan link kutusuydu). grid.php'de "Paylas ve Senkronize Et" altinda
-    // duruyor ve hala ORTAK partial'dan geliyor.
+
     check('C) URL kopyalama kutusu grid.php te ORTAK partial dan',
         substr_count($gridHtml['body'], 'data-share-url-input') >= 1);
     check('C) interface.php te URL kopyalama kutusu artik YOK',
         substr_count($ifHtml['body'], 'data-share-url-input') === 0);
 
-    // =====================================================================
-    // D) CANLI: davet -> rol -> cikarma (hepsi AJAX, yonlendirme yok)
-    // =====================================================================
     echo "\n--- D) Canli akis: davet / rol / cikarma ---\n";
     $csrf = extract_csrf_meta($ifHtml['body']);
     check('D) interface.php csrf meta etiketi basiyor', $csrf !== null);
@@ -276,7 +223,7 @@ try {
         $inv['status'] === 200 && strpos($inv['body'], '"ok"') !== false, 'HTTP ' . $inv['status'] . ' ' . substr($inv['body'], 0, 120));
     $row = $isMember($candId);
     check('D) davet sonrasi uye ve rolu viewer', $row && $row['role'] === 'viewer', json_encode($row));
-    // Yanit modalin TEKRAR cizmek icin ihtiyac duydugu payload'i dondurmeli.
+
     $invJson = json_decode($inv['body'], true);
     check('D) yanit modalin listesini tazeleyecek payload iceriyor',
         is_array($invJson) && isset($invJson['collaborators']) && isset($invJson['pending']),
@@ -295,23 +242,13 @@ try {
     check('D) cikarma 200', $rem['status'] === 200, 'HTTP ' . $rem['status']);
     check('D) aday takimdan cikarildi', !$isMember($candId));
 
-    // =====================================================================
-    // E) team_members.php KORUNDU
-    // =====================================================================
     echo "\n--- E) team_members.php silinmedi / hala gerekli ---\n";
-    // ⚠️ 2. gereksinim "yalnizca bu paylas akisinda mi kullaniliyor" diye
-    // soruyordu. HAYIR: workspaces.php iki yerden, modalin alt bilgisi bir
-    // yerden bagliyor; ustelik modalda OLMAYAN yetenekleri var.
+
     check('E) dosya duruyor', is_file(__DIR__ . '/../public/team_members.php'));
     $tmPage = http_request('GET', '/team_members.php?team_id=' . $teamId, $cookie);
     check('E) sayfa hala 200 doner', $tmPage['status'] === 200, 'HTTP ' . $tmPage['status']);
     $wsCode = php_code_only(file_get_contents(__DIR__ . '/../public/workspaces.php'));
-    // ⚠️ SAYIM 2 -> 1 OLDU, KASITLI: "Katilimcilari yonet" butonu artik
-    // team_members.php'ye YONLENDIRMIYOR, ayni sayfada "Paylas" modalini
-    // aciyor (<button data-share-modal-open>). Kalan tek bag katilimci
-    // satirlarinin uzerinde beliren kisayol. Bu kontrolun ASIL guvencesi
-    // "team_members.php hala ERISILEBILIR" -- o korunuyor: bu bag + modalin
-    // alt bilgisindeki "Tum uye ayarlari" (asagidaki kontrol).
+
     check('E) workspaces.php hala oraya bagliyor (satir kisayolu)',
         substr_count($wsCode, 'href="/team_members.php') === 1,
         'sayim=' . substr_count($wsCode, 'href="/team_members.php'));
@@ -322,7 +259,7 @@ try {
     check('E) iki sayfada da alt bilgi bagi render ediliyor',
         strpos($gridHtml['body'], 'gs-share-foot-link') !== false
         && strpos($ifHtml['body'], 'gs-share-foot-link') !== false);
-    // Modalda OLMAYAN yetenekler: silinseydi kaybolurdu.
+
     foreach (array('data-tm-search' => 'uye arama', 'team_members_export_xlsx' => 'Excel indir',
                    'data-tm-sort-created' => '"Eklenme tarihi" siralamasi') as $needle => $label) {
         check("E) modalda OLMAYAN yetenek korundu: {$label}",

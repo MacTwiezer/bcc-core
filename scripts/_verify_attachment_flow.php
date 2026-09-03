@@ -1,9 +1,4 @@
 <?php
-// attachment_upload / _download / _delete ucusu uctan uca.
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_attachment_flow.php
-// Apache ayakta olmali. KENDI base/tablo/alan/kayit/kullanicisini kurar ve
-// sonunda TAMAMEN siler; gercek veriye DOKUNMAZ.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -12,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -64,9 +56,6 @@ function jeton($url)
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) { fwrite(STDERR, "Apache'ye ulasilamadi.\n"); exit(2); }
 
-// ---------------------------------------------------------------------------
-// Izole ortam
-// ---------------------------------------------------------------------------
 $SON = bin2hex(random_bytes(4));
 $SIFRE = 'AttTest!' . $SON;
 
@@ -95,7 +84,6 @@ $recordId = (int) bcc_last_insert_id();
 
 echo "Ortam: team=$teamId base=$baseId alan=$fieldId kayit=$recordId\n\n";
 
-// gecerli bir PNG (1x1) ve sahte bir dosya
 $pngPath = sys_get_temp_dir() . '/bcc_test_' . $SON . '.png';
 file_put_contents($pngPath, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
 $sahtePath = sys_get_temp_dir() . '/bcc_test_' . $SON . '_sahte.png';
@@ -105,8 +93,6 @@ file_put_contents($svgPath, '<svg xmlns="http://www.w3.org/2000/svg"><script>ale
 
 function cf($p, $mime) { return new CURLFile($p, $mime, basename($p)); }
 
-// Betik ortada olurse (fatal / exit) izole ortam DB'de kalirdi; ekip adindaki
-// rastgele ek yuzunden sonraki kosu de onu temizleyemez, artiklar birikirdi.
 $cleanup = function () use ($pngPath, $sahtePath, $svgPath, $COOKIE, $recordId, $fieldId, $tableId, $baseId, $teamId, $editorId, $viewerId, $SON) {
     @unlink($pngPath); @unlink($sahtePath); @unlink($svgPath); @unlink($COOKIE);
     bcc_execute('DELETE FROM attachments WHERE record_id = :r', array('r' => $recordId));
@@ -122,18 +108,16 @@ $cleanup = function () use ($pngPath, $sahtePath, $svgPath, $COOKIE, $recordId, 
 };
 register_shutdown_function($cleanup);
 
-// ---------------------------------------------------------------------------
 echo "A) VIEWER yukleyemez (editor gerekir)\n";
-// ---------------------------------------------------------------------------
+
 $tok = jeton($BASE . '/login.php');
 istek($BASE . '/login.php', 'csrf_token=' . $tok . '&email=' . rawurlencode("att.viewer.$SON@bcc-test.local") . '&password=' . rawurlencode($SIFRE));
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/attachment_upload.php', array('csrf_token' => $tok, 'field_id' => $fieldId, 'record_id' => $recordId), cf($pngPath, 'image/png'));
 check('viewer yukleme -> 403', $r['code'] === 403, $r['code'] . ' ' . substr($r['body'], 0, 60));
 
-// ---------------------------------------------------------------------------
 echo "\nB) EDITOR yukler\n";
-// ---------------------------------------------------------------------------
+
 @unlink($COOKIE);
 $tok = jeton($BASE . '/login.php');
 istek($BASE . '/login.php', 'csrf_token=' . $tok . '&email=' . rawurlencode("att.editor.$SON@bcc-test.local") . '&password=' . rawurlencode($SIFRE));
@@ -156,30 +140,25 @@ check('DB mime kanonik (image/png)', $row && $row['mime_type'] === 'image/png', 
 check('stored_name rastgele (32 hex + .png)', $row && preg_match('/^[0-9a-f]{32}\.png$/', $row['stored_name']) === 1, $row ? $row['stored_name'] : 'yok');
 check('dosya diskte', $row && is_file(bcc_attachment_storage_path($row['stored_name'])));
 
-// ---------------------------------------------------------------------------
 echo "\nC) Indirme\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/attachment_download.php?id=' . $attId);
 check('editor indirebiliyor -> 200', $r['code'] === 200, $r['code']);
 check('Content-Type image/png', stripos($r['head'], 'Content-Type: image/png') !== false);
 check('nosniff basligi var', stripos($r['head'], 'X-Content-Type-Options: nosniff') !== false);
 check('govde gercek PNG', strpos($r['body'], "\x89PNG") === 0);
 
-// ---------------------------------------------------------------------------
 echo "\nD) Silme\n";
-// ---------------------------------------------------------------------------
+
 $diskYol = bcc_attachment_storage_path($row['stored_name']);
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/attachment_delete.php', array('csrf_token' => $tok, 'attachment_id' => $attId));
 check('editor silebiliyor -> 200', $r['code'] === 200, $r['code'] . ' ' . substr($r['body'], 0, 60));
 check('DB satiri gitti', (int) bcc_fetch_column('SELECT COUNT(*) FROM attachments WHERE id = :i', array('i' => $attId)) === 0);
-// PHP is_file() sonucunu istek basina onbellege alir; yukaridaki "dosya diskte"
-// kontrolu pozitif sonucu onbellege attigi icin temizlenmeden bakilirsa
-// silinmis dosya hala VAR gorunur.
+
 clearstatcache(true, $diskYol);
 check('DISKTEKI dosya da gitti', !is_file($diskYol), $diskYol);
 
-// --- temizlik ---
 $cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))

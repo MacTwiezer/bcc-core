@@ -1,29 +1,4 @@
 <?php
-// "OpsFlow hucreleri secilip Excel'e VEYA kendi icinde BASKA BIR GRIDE
-// yapistirilabilsin" — bu iddianin UCTAN UCA kaniti.
-//
-// Tarayici olmadan nasil olculuyor:
-//   grid-copy.js panoya iki format yazar. Yuksek-sadakat kanalinda her hucre
-//   data-bcc-raw="<td'nin data-value'su>" tasir. Yani panoya giden ham deger,
-//   grid.php'nin HTML'ine bastigi data-value'nun TA KENDISIDIR. Bu test o
-//   degeri sunucudan gelen GERCEK HTML'den okur, BASKA bir tabloya
-//   api/cells_bulk_update.php ile yazar (yapistirmanin yaptigi istegin
-//   aynisi) ve ikinci tablonun HTML'ini okuyup KARSILASTIRIR.
-//   Boylece "kopyala -> baska gride yapistir" zinciri gercek uctan uca olcumus
-//   olur; tek varsayim, grid-copy.js'in data-value'yu dogru okudugudur ve o da
-//   node scripts/_verify_grid_clipboard.js ile ayrica test ediliyor.
-//
-// Kapsam:
-//   A) Ham deger KANONIK mi (duzenleyicinin/sunucunun bekledigi bicim)
-//   B) Gorunen metin ham degerden FARKLI mi (Excel kanalinin var olma sebebi)
-//   C) Tablo A -> Tablo B ham yapistirma: her tipte deger BOZULMADAN gidiyor mu
-//   D) Yabanci (Excel) bicimleri: gg.aa.yyyy / 1.234,56 / %45 / Evet kabul mu
-//   E) Tip UYUSMAZLIGI guvenli mi (yanlis tip sessizce YAZILMAMALI)
-//
-// ⚠️ GERCEK VERIYE DOKUNMAZ: kendi kullanicisini/base'ini yaratir, siler.
-//
-// On kosul: Apache ayakta. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_cross_paste.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -33,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -101,8 +72,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// grid.php HTML'inden bir hucrenin data-value'sunu (grid-copy.js'in
-// data-bcc-raw olarak panoya yazacagi deger) okur.
 function raw_of($html, $fieldId)
 {
     if (preg_match('#<td\b[^>]*data-field-id="' . (int) $fieldId . '"[^>]*data-value="([^"]*)"#', $html, $m)) {
@@ -111,7 +80,6 @@ function raw_of($html, $fieldId)
     return null;
 }
 
-// Ayni hucrenin GORUNEN metni (.cell-view) — text/plain kanalina giden.
 function display_of($html, $fieldId)
 {
     if (preg_match('#<td\b[^>]*data-field-id="' . (int) $fieldId . '"[^>]*>(.*?)</td>#s', $html, $m)) {
@@ -152,8 +120,6 @@ try {
         array(':t' => $teamId, ':n' => 'XPaste Test', ':u' => $userId));
     $baseId = (int) bcc_last_insert_id();
 
-    // ---- IKI TABLO, AYNI SEMA ------------------------------------------
-    // "Farkli bir gride yapistirma" senaryosunun ta kendisi.
     $selOpts = json_encode(array('choices' => array('Acik', 'Kapali', 'Beklemede')), JSON_UNESCAPED_UNICODE);
     $fieldDefs = array(
         array('Ad',      'single_line_text', null),
@@ -190,7 +156,6 @@ try {
     $csrf = extract_csrf($gridSrc['body']);
     check('0) CSRF token bulundu', $csrf !== null);
 
-    // Kullanicinin ELLE gireceginin AYNISI (kanonik giris bicimi).
     $seed = array(
         'Ad'     => 'Acme A.S.',
         'Adet'   => '42',
@@ -222,26 +187,20 @@ try {
     $gridSrc = http_request('GET', '/grid.php?table_id=' . $src['id'], $cookie);
     $srcHtml = $gridSrc['body'];
 
-    // =====================================================================
     echo "\n--- A) Ham deger KANONIK mi (data-bcc-raw kanali) ---\n";
-    // =====================================================================
+
     eq('A) metin', raw_of($srcHtml, $src['fields']['Ad']), 'Acme A.S.');
     eq('A) sayi', raw_of($srcHtml, $src['fields']['Adet']), '42');
-    // ⚠️ Y-m-d olmali: sunucu DateTime::createFromFormat('Y-m-d') ile KATI
-    // dogruluyor, "2000-03-12 00:00:00" gelseydi gidis-donus KIRILIRDI.
+
     eq('A) tarih Y-m-d (saat kismi YOK)', raw_of($srcHtml, $src['fields']['Tarih']), '2000-03-12');
     eq('A) checkbox', raw_of($srcHtml, $src['fields']['Onay']), '1');
-    // ⚠️ DB'de 0.45 duruyor ama ham deger 45 olmali (cell_raw_value x100) —
-    // sunucu 45 bekliyor, 0.45 yapistirilsa deger 100 kat kucululurdu.
+
     eq('A) yuzde kullanici bicimi (0.45 DEGIL 45)', raw_of($srcHtml, $src['fields']['Oran']), '45');
     eq('A) tek secim', raw_of($srcHtml, $src['fields']['Durum']), 'Beklemede');
     eq('A) cok secim JSON', raw_of($srcHtml, $src['fields']['Etiket']), '["Acik","Kapali"]');
 
-    // =====================================================================
     echo "\n--- B) Gorunen metin ham degerden FARKLI (Excel kanali) ---\n";
-    // =====================================================================
-    // Bu farklar, panoya IKI format birden yazmanin gerekcesi. Bir gun
-    // esitlenirlerse cift kanal gereksizlesir; burasi o gun haber verir.
+
     $dTarih = display_of($srcHtml, $src['fields']['Tarih']);
     check('B) tarih GORUNENI hamdan farkli (gg.aa.yyyy)',
         $dTarih !== null && $dTarih !== '2000-03-12', 'gorunen: ' . var_export($dTarih, true));
@@ -249,11 +208,8 @@ try {
     check('B) yuzde GORUNENI hamdan farkli (% isaretli)',
         $dOran !== null && $dOran !== '45', 'gorunen: ' . var_export($dOran, true));
 
-    // =====================================================================
     echo "\n--- C) Tablo A -> Tablo B: HAM yapistirma ---\n";
-    // =====================================================================
-    // grid-paste.js kendi isaretimizi gorunce TAM OLARAK bunu yapar: kaynak
-    // hucrelerin data-value'larini hedef tablonun ayni sirali sutunlarina yazar.
+
     $copied = array();
     foreach ($fieldDefs as $def) {
         $copied[$def[0]] = raw_of($srcHtml, $src['fields'][$def[0]]);
@@ -271,18 +227,14 @@ try {
             raw_of($dstHtml, $dst['fields'][$def[0]]), $copied[$def[0]]);
     }
 
-    // =====================================================================
     echo "\n--- D) Yabanci (Excel) bicimleri kabul ediliyor mu ---\n";
-    // =====================================================================
-    // grid-paste.js coerceForField() bunlari kanonige cevirir (node testinde
-    // birim olarak dogrulandi); burada cevrilmis halin SUNUCUCA kabul
-    // edildigi ve DOGRU degeri urettigi olculuyor.
+
     $foreign = array(
         'Ad'    => 'Excel A.S.',
-        'Adet'  => '1234.56',   // "1.234,56" -> coerce
-        'Tarih' => '2000-03-12', // "12.03.2000" -> coerce
-        'Onay'  => '1',          // "Evet" -> coerce
-        'Oran'  => '45',         // "%45" -> coerce
+        'Adet'  => '1234.56',
+        'Tarih' => '2000-03-12',
+        'Onay'  => '1',
+        'Oran'  => '45',
     );
     $w3 = bulk_write($dst['id'], $dst['record'], $dst['fields'], $foreign, $csrf, $cookie);
     $w3d = json_decode($w3['body'], true);
@@ -294,13 +246,8 @@ try {
     eq('D) "Evet" checkbox dogru saklandi', raw_of($dstHtml2, $dst['fields']['Onay']), '1');
     eq('D) "%45" yuzde dogru saklandi', raw_of($dstHtml2, $dst['fields']['Oran']), '45');
 
-    // =====================================================================
     echo "\n--- E) Tip uyusmazligi GUVENLI mi ---\n";
-    // =====================================================================
-    // Kullanici yanlis sutuna yapistirabilir. Sunucu yanlis tipli degeri
-    // SESSIZCE YAZMAMALI; atlamali ve sayisini bildirmeli.
-    // E1) HEPSI gecersiz: sunucu 422 + net mesaj doner. ⚠️ Sessizce "ok"
-    // DEMEZ — kullanici hicbir sey yazilmadigini ogrenmeli.
+
     $bad = bulk_write($dst['id'], $dst['record'], $dst['fields'],
         array('Adet' => 'bu bir metin', 'Tarih' => '32.13.2000'), $csrf, $cookie);
     $badD = json_decode($bad['body'], true);
@@ -316,8 +263,6 @@ try {
         raw_of($dstHtml3, $dst['fields']['Adet']), '1234.56');
     eq('E1) onceki tarih degeri KORUNDU', raw_of($dstHtml3, $dst['fields']['Tarih']), '2000-03-12');
 
-    // E2) KISMEN gecersiz — gercek hayatta en sik hal: blok yapistirilir,
-    // bir sutun tip tutmaz. Gecerliler YAZILMALI, gecersizler SAYILMALI.
     $mixed = bulk_write($dst['id'], $dst['record'], $dst['fields'],
         array('Ad' => 'Kismi Test', 'Adet' => 'sayi degil'), $csrf, $cookie);
     $mixedD = json_decode($mixed['body'], true);

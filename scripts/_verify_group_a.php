@@ -1,14 +1,4 @@
 <?php
-// Grup A (URL / E-posta / Telefon) dogrulamasi. curl KULLANILMAZ — PHP'nin
-// http:// stream sarmalayicisiyla gercek oturum cerezi alinip gercek uc
-// noktalara istek atilir. Kendi test verisini kurar, dogrular, sonunda temizler.
-//
-// Ayrica bu turda duzeltilen MEVCUT BUG'i da dogrular:
-// BCC_GROUP_DIR_LABELS'in Grup B1/B2/C1/C2 tiplerini icermemesi
-// (public/grid.php'nin korumasiz okumasi -> "Undefined index" + bos etiket).
-//
-// On kosul: Apache ayakta olmali (DocumentRoot = public, localhost:80).
-// Calistirma: C:\php73\php.exe scripts\_verify_group_a.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -18,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -81,7 +67,6 @@ function extract_csrf($html)
     return null;
 }
 
-// Bir alanin <td>'sinin TAM HTML'ini dondurur (ic icerik dahil).
 function cell_html($html, $fieldId)
 {
     $pattern = '/<td\b[^>]*data-field-id="' . preg_quote((string) $fieldId, '/') . '"[^>]*>(.*?)<\/td>/s';
@@ -131,7 +116,6 @@ try {
         return (int) bcc_last_insert_id();
     };
 
-    // --- Oturum -----------------------------------------------------------
     $resp = http_request('GET', '/login.php');
     $csrf = extract_csrf($resp['body']);
     $cookie = $resp['cookie'];
@@ -139,16 +123,12 @@ try {
     if ($resp['cookie']) { $cookie = $resp['cookie']; }
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // Hucreye deger yazan yardimci — gercek cell_update.php ucnoktasi.
     $setCell = function ($recordId, $fieldId, $value) use ($cookie, &$csrfMain) {
         return http_request('POST', '/api/cell_update.php', $cookie, array(
             'csrf_token' => $csrfMain, 'record_id' => $recordId, 'field_id' => $fieldId, 'value' => $value,
         ));
     };
 
-    // =======================================================================
-    // A) ALAN OLUSTURMA — sihirbazdan gercekten olusturulabiliyor mu
-    // =======================================================================
     $tA = $mkTable('A Linkler');
     $adA = $mkField($tA, 'Ad', 'single_line_text', 0);
     $resp = http_request('GET', "/table_fields.php?table_id={$tA}", $cookie);
@@ -172,9 +152,6 @@ try {
 
     $r1 = $mkRecord($tA, 0);
 
-    // =======================================================================
-    // B) GECERLI DEGERLER -> LINK IKONU
-    // =======================================================================
     $setCell($r1, $fUrl, 'https://example.com');
     $setCell($r1, $fMail, 'ali@ornek.com');
     $setCell($r1, $fTel, '0212 555 00 00');
@@ -196,22 +173,16 @@ try {
         bcc_fetch_column('SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f',
             array(':r' => $r1, ':f' => $fTel)) === '0212 555 00 00');
 
-    // =======================================================================
-    // C) DUZENLENEBILIRLIK — Grup B/C'nin salt-okunur zorlamasi burada YOK
-    // =======================================================================
     check('C) URL hucresi editable (tiklayinca duzenleme acilir)',
         strpos($cUrl, 'grid-cell editable') !== false, $cUrl);
     check('C) Email hucresi editable', strpos($cMail, 'grid-cell editable') !== false);
     check('C) Telefon hucresi editable', strpos($cTel, 'grid-cell editable') !== false);
     check('C) Metnin KENDISI link DEGIL (tiklama duzenlemeyi acsin diye)',
         strpos($cUrl, '<span class="cell-link-text">https://example.com</span>') !== false, $cUrl);
-    // Hucrede TEK bir <a> olmali (ikon) — metin sarmalayan ikinci bir <a> YOK.
+
     check('C) Hucrede yalnizca IKON linki var (metin sarmalayan <a> yok)',
         substr_count($cUrl, '<a ') === 1, 'a sayisi: ' . substr_count($cUrl, '<a '));
 
-    // =======================================================================
-    // D) YUMUSAK DOGRULAMA — gecersiz degerler REDDEDILMEZ, sadece linklesmez
-    // =======================================================================
     $r2 = $mkRecord($tA, 1);
     $resp = $setCell($r2, $fUrl, 'abc');
     $j = json_decode($resp['body'], true);
@@ -237,9 +208,6 @@ try {
     check('D) "555" icin tel IKONU YOK (7 rakam esigi)',
         strpos(cell_html($row2, $fTel), 'cell-link-icon') === false);
 
-    // =======================================================================
-    // E) XSS — kotu niyetli deger linklesmemeli, kacirilmali
-    // =======================================================================
     $r3 = $mkRecord($tA, 2);
     $xss = 'javascript:alert(1)';
     $resp = $setCell($r3, $fUrl, $xss);
@@ -255,22 +223,15 @@ try {
     check('E) javascript: metin olarak duz duruyor', strpos($cX, 'javascript:alert(1)') !== false, $cX);
     check('E) Sayfada hicbir yerde href="javascript: YOK', strpos($g, 'href="javascript:') === false);
 
-    // Attribute kacisi denemesi
     $setCell($r3, $fMail, 'a@b.com" onmouseover="alert(1)');
     $g = http_request('GET', "/grid.php?table_id={$tA}", $cookie)['body'];
     check('E) Attribute kacisi ENGELLENDI (onmouseover enjekte olmadi)',
         strpos($g, 'onmouseover="alert(1)"') === false);
-    // Etiket enjeksiyonu denemesi
+
     $setCell($r3, $fUrl, '<script>alert(1)</script>');
     $g = http_request('GET', "/grid.php?table_id={$tA}", $cookie)['body'];
     check('E) <script> etiketi kacirildi (ham script yok)', strpos($g, '<script>alert(1)</script>') === false);
 
-    // =======================================================================
-    // F) DETAY MODALI — salt-okunur yol canli <td>'yi kopyaladigi icin bedava
-    // =======================================================================
-    // Panel, gizli alanlar icin data-fields JSON'unu kullanir; gorunur alanlarda
-    // canli <td>'nin innerHTML'ini AYNEN kopyalar (grid-row-detail.js:186).
-    // Sunucu tarafinda dogrulanabilen kisim: <td> icerigi ikonu tasiyor mu.
     $g = http_request('GET', "/grid.php?table_id={$tA}", $cookie)['body'];
     $rows = explode('data-record-id="' . $r1 . '"', $g);
     $row1 = isset($rows[1]) ? $rows[1] : '';
@@ -280,9 +241,6 @@ try {
         strpos(file_get_contents(__DIR__ . '/../public/assets/style.css'),
             '.grid-detail-field-value-readonly .cell-link-icon') !== false);
 
-    // =======================================================================
-    // G) REGRESYON — Excel ve Slack DUZ METIN almali (HTML SIZMAMALI)
-    // =======================================================================
     foreach (array('url', 'email', 'phone') as $ft) {
         $row = array('value_text' => 'https://example.com', 'value_number' => null, 'value_date' => null, 'value_json' => null);
         check("G) cell_display_text('{$ft}') DUZ METIN dondurdu (HTML yok)",
@@ -295,22 +253,17 @@ try {
     check('G) XLSX icinde <a href / cell-link-icon YOK (HTML sizmadi)',
         strpos($xlsx, 'cell-link-icon') === false && strpos($xlsx, '<a href') === false);
 
-    // Slack: bcc_notify_slack_new_record() gercek webhook ister; bunun yerine
-    // Slack'in KULLANDIGI fonksiyonun ciktisi dogrudan dogrulaniyor (ayni yol).
     $slackRow = array('value_text' => 'https://example.com', 'value_number' => null, 'value_date' => null, 'value_json' => null);
     $slackText = cell_display_text('url', $slackRow, array(), null);
     check('G) Slack birincil-alan metni HTML icermiyor',
         strpos($slackText, '<') === false && $slackText === 'https://example.com', $slackText);
 
-    // =======================================================================
-    // H) FILTRE — empty / not_empty bos hucreleri dogru buluyor mu
-    // =======================================================================
     $tH = $mkTable('H Filtre');
     $adH = $mkField($tH, 'Ad', 'single_line_text', 0);
     $uH = $mkField($tH, 'Site', 'url', 1);
-    $h1 = $mkRecord($tH, 0);   // dolu
-    $h2 = $mkRecord($tH, 1);   // hic hucresi yok (NULL)
-    $h3 = $mkRecord($tH, 2);   // bos string ('') hucresi VAR
+    $h1 = $mkRecord($tH, 0);
+    $h2 = $mkRecord($tH, 1);
+    $h3 = $mkRecord($tH, 2);
     bcc_execute('INSERT INTO cell_values (record_id, field_id, value_text) VALUES (:r, :f, :v)',
         array(':r' => $h1, ':f' => $uH, ':v' => 'https://a.com'));
     bcc_execute('INSERT INTO cell_values (record_id, field_id, value_text) VALUES (:r, :f, :v)',
@@ -332,11 +285,6 @@ try {
     check('H) not_empty filtresi yalnizca gercekten dolu kaydi buldu',
         array_values($notEmptyIds) === array((string) $h1), 'bulunan: ' . implode(',', $notEmptyIds));
 
-    // =======================================================================
-    // I) MEVCUT BUG FIX — BCC_GROUP_DIR_LABELS eksik girisleri
-    //    Gruplama panelinde bu tiplere gore gruplamak "Undefined index"
-    //    notice'i ve BOS yon etiketleri uretiyordu.
-    // =======================================================================
     $tI = $mkTable('I Gruplama');
     $adI = $mkField($tI, 'Ad', 'single_line_text', 0);
     $groupTypes = array(
@@ -358,17 +306,11 @@ try {
             stripos($g, 'Undefined index') === false && stripos($g, 'Undefined variable') === false,
             'notice bulundu');
         check("I) '{$ft}' yon etiketi dogru ('{$expectedLabel}')",
-            // Panel yeniden tasarlandi: yon etiketi <select><option> icinde DEGIL,
-            // tek tiklik .group-dir-toggle baglantisindaki .group-dir-text
-            // <span>'inde. Kontrol edilen sey AYNI: alan TIPINE gore dogru etiket.
+
             strpos($g, '<span class="group-dir-text">' . $expectedLabel . '</span>') !== false,
             'etiket bulunamadi');
     }
 
-    // Koruma katmani: dizide OLMAYAN bir tip artik notice uretmemeli.
-    // Koruma grid.php'den src/schema.php'ye TASINDI: bcc_dir_labels()
-    // artik hem gruplama hem siralama panelinin tek giris noktasi ve
-    // isset() kontrolu ORADA. grid.php'de satir ici bir kopya KALMAMALI.
     check('I) yon etiketi okumasi ortak bcc_dir_labels() ile korunuyor',
         function_exists('bcc_dir_labels')
         && bcc_dir_labels('boyle_bir_tip_yok') === array('asc' => 'artan', 'desc' => 'azalan'));
@@ -379,9 +321,6 @@ try {
         count(array_diff(array_keys($GLOBALS['BCC_FIELD_TYPES']), array_keys($GLOBALS['BCC_GROUP_DIR_LABELS']))) === 1,
         'eksik: ' . implode(',', array_diff(array_keys($GLOBALS['BCC_FIELD_TYPES']), array_keys($GLOBALS['BCC_GROUP_DIR_LABELS']))));
 
-    // =======================================================================
-    // J) REGRESYON — mevcut tipler bozulmadi mi
-    // =======================================================================
     $tJ = $mkTable('J Regresyon');
     $adJ = $mkField($tJ, 'Ad', 'single_line_text', 0);
     $nJ = $mkField($tJ, 'Sayi', 'number', 1);
@@ -395,10 +334,7 @@ try {
 
     $resp = http_request('GET', "/table_fields.php?table_id={$tJ}", $cookie);
     $csrfJ = extract_csrf($resp['body']);
-    // autonumber alani GERCEK ucnoktadan olusturulur — $mkField dogrudan INSERT
-    // yaptigi icin bcc_create_field()'in backfill'ini atlar ve hucre BOS kalirdi
-    // (urun hatasi degil, fikstur hatasi). Kayit ZATEN var, yani bu ayni zamanda
-    // Grup C2'nin backfill yolunu da tekrar dogrular.
+
     http_request('POST', '/table_fields.php', $cookie, array(
         'csrf_token' => $csrfJ, 'action' => 'create_field', 'table_id' => $tJ,
         'name' => 'No', 'field_type' => 'autonumber',
@@ -428,11 +364,7 @@ try {
     check('J) REGRESYON percent "%45"', $txt($pJ) === '%45', $txt($pJ));
     check('J) REGRESYON rating 5 yildiz', substr_count(cell_html($g, $rJ), 'data-rating-star=') === 5);
     check('J) REGRESYON created_time tarih', preg_match('/\d{2}\.\d{2}\.\d{4}/', $txt($ctJ)) === 1, $txt($ctJ));
-    // ⚠️ Kontrol kodun GERISINDE kalmisti: kullanici hucrelerine AVATAR eklendi
-    // (commit bc849a7) ve avatarin bas harfi de bir <span> icinde basiliyor —
-    // strip_tags() onu da metne katinca beklenen "GrupA Test Owner" yerine
-    // "GGrupA Test Owner" cikiyordu. Kod DOGRU; test avatari hesaba katmiyordu.
-    // Artik avatarin varligi AYRICA dogrulaniyor, ad ise avatar disindan okunuyor.
+
     check('J) REGRESYON created_by hucresinde avatar var',
         strpos(cell_html($g, $cbJ), 'cell-user-avatar') !== false, cell_html($g, $cbJ));
     check('J) REGRESYON created_by kullanici adi',
@@ -445,16 +377,12 @@ try {
     check('J) REGRESYON long_text linki HALA <a> (whitelist genislemedi)',
         strpos(cell_html($g, $ltJ), 'href="https://x.com"') !== false);
 
-    // Zengin metin whitelist'i GENISLEMEDI — mailto hala soyulmali.
     check('J) REGRESYON zengin metinde mailto HALA soyuluyor',
         bcc_sanitize_rich_text('<a href="mailto:a@b.com">x</a>') === 'x',
         bcc_sanitize_rich_text('<a href="mailto:a@b.com">x</a>'));
     check('J) REGRESYON zengin metinde javascript: HALA soyuluyor',
         bcc_sanitize_rich_text('<a href="javascript:alert(1)">x</a>') === 'x');
 
-    // =======================================================================
-    // K) STATIK KONTROLLER
-    // =======================================================================
     $themeCss = file_get_contents(__DIR__ . '/../public/assets/theme.css');
     foreach (array('url', 'email', 'phone') as $ft) {
         check("K) theme.css: .field-type-badge--{$ft} ikonu tanimli",

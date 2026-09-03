@@ -1,10 +1,4 @@
 <?php
-// Sutun genisligi surukle-boyutlandirma TARAYICI testi icin GECICI fikstur.
-// "setup" kurar, "teardown" siler. Gercek/canli hicbir hesaba veya base'e
-// DOKUNMAZ — kendi test kullanicisini ve kendi base'ini yaratir
-// (_a_browse_fixture.php ile AYNI desen, ikinci bir mekanizma yok).
-//
-// Calistirma: C:\php73\php.exe scripts\_colresize_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -14,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'colresize.browse@bcc-test.local');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// gercek "TY" ekibinde owner yetkili bir hesap aciyor; depo acik oldugu icin
-// sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik bilgisi anlamina
-// gelirdi. Deger zaten asagida ekrana basiliyor, saklanmasina gerek yok.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $mode = isset($argv[1]) ? $argv[1] : '';
@@ -75,7 +66,6 @@ foreach ($names as $pos => $name) {
     $fieldIds[$name] = (int) bcc_last_insert_id();
 }
 
-// 12 satir: govde yeterince uzun olsun (tam boy tutamac govdede de test edilecek).
 for ($i = 0; $i < 12; $i++) {
     bcc_execute('INSERT INTO records (table_id, position, created_by) VALUES (:t, :p, :u)',
         array(':t' => $tableId, ':p' => $i, ':u' => $userId));

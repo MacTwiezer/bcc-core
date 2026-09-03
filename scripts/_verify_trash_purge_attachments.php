@@ -1,28 +1,4 @@
 <?php
-// COP KUTUSU 7 GUNLUK OTOMATIK KALICI SILME — dosya ekleri de DISKTEN gidiyor mu?
-//
-// ⚠️ BULUNAN GERCEK SIZINTI (QA turunda olculdu, bu betik onun regresyonu):
-// api/trash_records_list.php `DELETE FROM records WHERE id IN (...)` yapiyor
-// ama hicbir dosya temizligi CAGIRMIYORDU. attachments satirlari ON DELETE
-// CASCADE ile gidiyor, FIZIKSEL DOSYALAR diskte kaliyordu -- ve projede oksuz
-// dosyalari supuren baska hicbir mekanizma YOK. Yani kullaniciya "kalici
-// silindi" denen kaydin eki sunucuda sonsuza dek duruyordu (depolama sinirsiz
-// buyur + "silindi" sozu tam tutulmaz). Diger silme yollari (record_delete,
-// table_delete, table_clear_data, alan silme) bu temizligi ZATEN yapiyordu;
-// yalnizca bu yol atlanmisti.
-//
-// Kapsam:
-//   A) Toplu yardimci var ve DB satirini SILMIYOR (cascade'in isi)
-//   B) Purge, dosya temizligini SILME SORGUSUNDAN ONCE cagiriyor (sira kritik)
-//   C) Butun silme yollari dosya temizligi yapiyor (aile regresyonu)
-//   D) CANLI: 7 gunu DOLDURMUS kayit -> DB satiri VE dosya gidiyor
-//   E) CANLI: 7 gunu DOLDURMAMIS kayit -> ne kayit ne dosya siliniyor
-//   F) CANLI: BASKA kaydin dosyasina DOKUNULMUYOR
-//
-// ⚠️ GERCEK HESAPLARA/VERIYE DOKUNMAZ: kendi ekibini kurar, sonunda siler.
-//
-// On kosul: Apache ayakta. Calistirma:
-//   C:\php73\php.exe scripts\_verify_trash_purge_attachments.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -32,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -73,8 +46,6 @@ function http_request($method, $path, $cookie = null, $post = null)
     return array('body' => (string) $b, 'cookie' => $nc, 'status' => $st);
 }
 
-// ⚠️ Yorumlar ayiklanir: "su cagri var mi" kontrolleri, cagrinin adini
-// ACIKLAMA YORUMUNDA gecen bir satir yuzunden yanlis GECTI verebilir.
 function strip_php_comments($s)
 {
     $s = preg_replace('#/\*.*?\*/#s', '', $s);
@@ -86,7 +57,6 @@ $purgeSrc = file_get_contents($root . '/public/api/trash_records_list.php');
 $purgeLive = strip_php_comments($purgeSrc);
 $schemaLive = strip_php_comments(file_get_contents($root . '/src/schema.php'));
 
-// =====================================================================
 echo "\n--- A) Toplu yardimci ---\n";
 check('A) bcc_delete_attachment_files_by_records tanimli',
     strpos($schemaLive, 'function bcc_delete_attachment_files_by_records') !== false);
@@ -97,7 +67,6 @@ check('A) DB satirini SILMIYOR (cascade in isi)',
 check('A) bos dizide sorgu ACMIYOR',
     preg_match('#function bcc_delete_attachment_files_by_records[\s\S]{0,300}?if \(!\$ids\)#', $schemaLive) === 1);
 
-// =====================================================================
 echo "\n--- B) SIRA: temizlik silme sorgusundan ONCE ---\n";
 $posClean = strpos($purgeLive, 'bcc_delete_attachment_files_by_records(');
 $posDelete = strpos($purgeLive, 'DELETE FROM records WHERE id IN');
@@ -106,7 +75,6 @@ check('B) cagri DELETE ten ONCE geliyor (sonra olsaydi okuyacak satir kalmazdi)'
     $posClean !== false && $posDelete !== false && $posClean < $posDelete,
     'temizlik@' . var_export($posClean, true) . ' delete@' . var_export($posDelete, true));
 
-// =====================================================================
 echo "\n--- C) Aile regresyonu: TUM silme yollari temizliyor ---\n";
 foreach (array(
     'public/api/record_delete.php' => 'bcc_delete_attachment_files_by_records(',
@@ -120,9 +88,6 @@ foreach (array(
         strpos(strip_php_comments(file_get_contents($root . '/' . $file)), $needle) !== false, $file);
 }
 
-// =====================================================================
-// D-F) CANLI
-// =====================================================================
 $dir = bcc_attachment_storage_dir();
 $wipe = function () {
     foreach (bcc_fetch_all('SELECT id FROM teams WHERE name = :n', array(':n' => TEAM)) as $r) {
@@ -152,7 +117,6 @@ try {
         array(':t' => $table, ':n' => 'Dosya', ':ft' => 'attachment'));
     $field = (int) bcc_last_insert_id();
 
-    // Uc kayit: (1) 8 gunluk silinmis, (2) 2 gunluk silinmis, (3) hic silinmemis
     $mk = function ($label, $deletedSql) use ($table, $uid, $field, $dir) {
         bcc_execute('INSERT INTO records (table_id,position,created_by) VALUES (:t,0,:u)',
             array(':t' => $table, ':u' => $uid));
@@ -172,7 +136,6 @@ try {
     $fresh   = $mk('YENI', 'DATE_SUB(NOW(), INTERVAL 2 DAY)');
     $alive   = $mk('CANLI', null);
 
-    // Giris + cop kutusunu ac (otomatik purge tetiklenir)
     $r = http_request('GET', '/login.php');
     $c = $r['cookie'];
     preg_match('/name="csrf_token"\s+value="([a-f0-9]+)"/', $r['body'], $m);
@@ -195,7 +158,6 @@ try {
     echo "\n--- F) Silinmemis kaydin dosyasina DOKUNULMADI ---\n";
     check('F) kayit duruyor', $exists($alive['id']));
     check('F) dosyasi duruyor', is_file($dir . '/' . $alive['file']));
-
 } catch (Throwable $e) {
     echo "\n[HATA] " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . "\n";
     $results[] = false;

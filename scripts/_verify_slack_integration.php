@@ -1,18 +1,4 @@
 <?php
-// Slack entegrasyonu — olay tetikleyicilerinin UCTAN UCA dogrulanmasi.
-//
-// GERCEK SLACK'E MESAJ GITMEZ. Test, DEMO ekibine gecici bir webhook satiri
-// yazar ve URL'i ERISILEMEZ bir yerel adrese (127.0.0.1:9, "discard" portu)
-// isaret ettirir. Boylece:
-//   - gonderim DENENIR  -> hook'un gercekten calistigi kanitlanir
-//   - baglanti REDDEDILIR -> audit_log'a 'slack.notify_failed' yazilir
-//   - hicbir dis trafik olusmaz, kullanicinin GERCEK kanallarina (team 1'deki
-//     #trendyol-siparis / #yves-rocher-siparis / #genel) DOKUNULMAZ
-//
-// "Hook bagli mi" sorusunun dogru olcutu tam olarak budur: webhook YOKKEN
-// hicbir audit satiri olusmamali, webhook VARKEN olusmali.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_slack_integration.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -21,8 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Erisilemez adres: RFC 863 "discard" portu, baglanti aninda reddedilir.
-// Slack'e ait GERCEK bir host DEGIL — kasitli.
 const UNREACHABLE = 'http://127.0.0.1:9/bcc-slack-test';
 
 $results = array();
@@ -50,7 +34,6 @@ function post_as($userId, $page, $query, $post)
     return array('status' => $status, 'body' => $out);
 }
 
-// Bu betigin baslangicindan SONRA yazilan slack audit satirlarini sayar.
 function slack_audit_since($sinceId, $action, $entityType = null, $entityId = null)
 {
     $sql = 'SELECT COUNT(*) FROM audit_log WHERE id > :since AND action = :action';
@@ -68,15 +51,12 @@ function slack_audit_since($sinceId, $action, $entityType = null, $entityId = nu
     return (int) bcc_fetch_column($sql, $params);
 }
 
-// ---------------------------------------------------------------------------
-// A) Kapsam matrisi — hangi mutasyon hangi bildirimi cagiriyor
-// ---------------------------------------------------------------------------
 echo "--- A) Olay kapsami (kaynak seviyesinde) ---\n";
 
 $root = __DIR__ . '/..';
 
 $coverage = array(
-    // [dosya, beklenen cagri, aciklama]
+
     array('public/api/record_add.php', 'bcc_notify_slack_new_record(', 'satir ekleme (AJAX)'),
     array('public/grid.php', 'bcc_notify_slack_new_record(', 'satir ekleme (JS-siz form)'),
     array('public/api/record_duplicate.php', 'bcc_notify_slack_new_record(', 'satir cogaltma'),
@@ -89,23 +69,11 @@ foreach ($coverage as $c) {
         strpos(file_get_contents($root . '/' . $c[0]), $c[1]) !== false, $c[0]);
 }
 
-// Alan olusturmanin IKI giris noktasi da ortak fonksiyondan gecmeli — hook'un
-// tek yerde olmasinin gecerli olmasi buna bagli.
 check('table_fields.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/table_fields.php'), 'bcc_create_field(') !== false);
 check('api/field_create.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/api/field_create.php'), 'bcc_create_field(') !== false);
-// ⚠️ BU KONTROL DEGISTI — ESKI HALI YANLIS SEYI OLCUYORDU. "tables_meta INSERT
-// yalnizca base_tables.php'de olsun" diyordu; oysa zamanla IKI mesru yol daha
-// eklendi (api/table_create.php -> tablo sekmelerindeki "+", ve
-// bcc_duplicate_table() -> "Bagimsiz kopya olustur"). Kontrol bu yuzden HER
-// ZAMAN kaliyordu ve asil onemli soruyu SORMUYORDU.
-//
-// ASIL GUVENCE: tablo olusturan HER yol Slack bildirimini gondermeli --
-// "yeni tablo" ayni olaydir, hangi yoldan geldigi kullaniciyi ilgilendirmez.
-// Bu kontrol yazilinca GERCEK BIR EKSIK bulundu: bcc_duplicate_table()
-// bildirimi GONDERMIYORDU, cogaltmayla acilan tablo ekipte sessizce
-// beliriyordu. Duzeltildi.
+
 $tableInsertFiles = array();
 foreach (array_merge(glob($root . '/public/*.php'), glob($root . '/public/api/*.php'), glob($root . '/src/*.php')) as $f) {
     if (strpos(file_get_contents($f), 'INSERT INTO tables_meta') !== false) {
@@ -117,30 +85,18 @@ check('tablo olusturan yollar BILINEN kumeye esit (yenisi eklenirse bu test uyar
     $tableInsertFiles === array('base_tables.php', 'schema.php', 'table_create.php'),
     implode(', ', $tableInsertFiles));
 
-// Ve UCU DE bildirimi gondermeli.
 foreach (array(
     'public/base_tables.php' => 'form ile tablo olusturma',
     'public/api/table_create.php' => 'tablo sekmelerindeki "+"',
-    // ⚠️ src/schema.php DEGIL: bildirim, tablo olusturan diger iki yolda oldugu
-    // gibi GIRIS NOKTASINDA duruyor. bcc_duplicate_table()'in icine konmasi
-    // denendi ve schema.php'yi slack.php'ye BAGIMLI hale getirdigi icin
-    // testleri kirdi (CLI betikleri slack.php yuklemiyor).
+
     'public/api/table_duplicate.php' => 'bagimsiz kopya olustur',
 ) as $file => $desc) {
     check('tablo olusturan yol bildirim gonderiyor -> ' . $desc,
         strpos(file_get_contents($root . '/' . $file), 'bcc_notify_slack_new_table(') !== false, $file);
 }
 
-// Bildirim COMMIT'ten SONRA olmali (geri alinmis bir islem icin mesaj gitmesin,
-// Slack yavassa transaction acik kalmasin).
-//
-// Dosyalar diskte CRLF — arama yapmadan once LF'e normalize edilir, yoksa
-// cok satirli desenler HIC eslesmez (bu betikte bir kez yasandi).
 function lf($s) { return str_replace("\r\n", "\n", $s); }
 
-// bcc_create_field()'in govdesi icinde: notify cagrisi, o fonksiyonun
-// bcc_commit()'inden SONRA gelmeli. Fonksiyonun basindan itibaren bakilir ki
-// dosyadaki BASKA bir bcc_commit() ile karistirilmasin.
 $schemaSrc = lf(file_get_contents($root . '/src/schema.php'));
 $fnStart = strpos($schemaSrc, 'function bcc_create_field(');
 $fieldNotifyPos = strpos($schemaSrc, 'bcc_notify_slack_new_field(', $fnStart);
@@ -153,9 +109,6 @@ $btSrc = lf(file_get_contents($root . '/public/base_tables.php'));
 check('tablo bildirimi COMMIT sonrasinda',
     strpos($btSrc, 'bcc_commit();') < strpos($btSrc, 'bcc_notify_slack_new_table('));
 
-// ---------------------------------------------------------------------------
-// B) Guvenlik — webhook_url hicbir yere sizmamali
-// ---------------------------------------------------------------------------
 echo "\n--- B) Guvenlik ---\n";
 
 $slackSrc = file_get_contents($root . '/src/slack.php');
@@ -168,9 +121,6 @@ check('kaydetme yalnizca https://hooks.slack.com/ kabul ediyor',
 check('test gonderimi webhook satirini team_id ile suzuyor (baska ekibin webhook\'u test edilemez)',
     strpos($slackSrc, 'WHERE id = :id AND team_id = :team_id') !== false);
 
-// ---------------------------------------------------------------------------
-// C) CANLI TETIKLEME TESTI (demo ekibi, erisilemez URL)
-// ---------------------------------------------------------------------------
 echo "\n--- C) Canli tetikleme (gercek uc noktalar) ---\n";
 
 $team = bcc_fetch_one("SELECT id FROM teams WHERE name = 'Demo Calisma Alani' LIMIT 1");
@@ -179,8 +129,6 @@ if (no_row($team)) {
 }
 $teamId = (int) $team['id'];
 
-// Demo verisi ON KOSUL: kontrolsuz indeksleme id'leri 0 yapar ve testler
-// anlamsiz bir hata yigini uretir. Tek ve acik bir mesaj daha iyi.
 $owner = bcc_fetch_one("SELECT id, full_name FROM users WHERE email = 'owner@bcc.local' LIMIT 1");
 if ($owner === false || $owner === null) {
     die("owner@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
@@ -205,25 +153,11 @@ if ($existingTable === false || $existingTable === null) {
 }
 $tableId = (int) $existingTable['id'];
 
-// ---------------------------------------------------------------------------
-// IZOLASYON: demo ekibinde ONCEDEN yapilandirilmis (GERCEK) webhook varsa,
-// test suresince GECICI OLARAK pasife alinir ve sonunda AYNEN geri acilir.
-//
-// Bulunan gercek test kusuru: onceden bu betik "demo ekibinde webhook yok"
-// varsayiyordu. Demo calisma alanina gercek bir webhook eklendiginde
-// bcc_find_slack_webhook()'un siralamasi (ORDER BY (table_id IS NULL) ASC,
-// id ASC) DAHA DUSUK id'li GERCEK satiri seciyor ve betigin kendi erisilemez
-// test URL'i hic kullanilmiyordu -> regresyon kosusu CANLI Slack kanalina
-// mesaj gonderiyordu. Artik mumkun degil: gercek satirlar test boyunca pasif.
 $preExistingHooks = bcc_fetch_all(
     'SELECT id, is_active FROM slack_webhooks WHERE team_id = :t AND is_active = 1',
     array('t' => $teamId)
 );
 
-// SIRA ONEMLI: geri acma, pasife almadan ONCE baglanir. Ters sirada olsaydi
-// (once UPDATE, sonra register) aradaki her hata gercek webhooklari PASIF
-// birakirdi — asagidaki "HER DURUMDA geri ac" vaadi de o pencerede gecersiz
-// olurdu. Kapanis kancasi bos $preExistingHooks ile calissa bile zararsiz.
 $startAuditId = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 
 $createdTableIds = array();
@@ -232,7 +166,6 @@ $createdRecordIds = array();
 $tempWebhookId = 0;
 
 register_shutdown_function(function () use (&$createdTableIds, &$createdFieldIds, &$createdRecordIds, &$tempWebhookId, $startAuditId, $preExistingHooks) {
-    // Gercek webhooklari HER DURUMDA (hata/istisna dahil) geri ac.
     foreach ($preExistingHooks as $h) {
         bcc_execute('UPDATE slack_webhooks SET is_active = 1 WHERE id = :i', array('i' => $h['id']));
     }
@@ -251,7 +184,7 @@ register_shutdown_function(function () use (&$createdTableIds, &$createdFieldIds
     if ($tempWebhookId > 0) {
         bcc_execute('DELETE FROM slack_webhooks WHERE id = :i', array('i' => $tempWebhookId));
     }
-    // Bu kosunun urettigi TUM audit satirlari (slack + entity) temizlenir.
+
     bcc_execute('DELETE FROM audit_log WHERE id > :since', array('since' => $startAuditId));
 });
 
@@ -263,7 +196,6 @@ check('demo ekibindeki mevcut webhooklar test suresince pasife alindi (canli kan
     (int) bcc_fetch_column('SELECT COUNT(*) FROM slack_webhooks WHERE team_id = :t AND is_active = 1', array('t' => $teamId)) === 0,
     'pasife alinan: ' . count($preExistingHooks));
 
-// --- C1: webhook YOKKEN hicbir slack audit satiri olusmamali ---
 $r = post_as($ownerId, 'api/field_create.php', '', array(
     'table_id' => $tableId, 'name' => 'SLACK_TEST_ALAN_1', 'field_type' => 'single_line_text',
 ));
@@ -277,7 +209,6 @@ check('webhook YOKKEN slack audit satiri OLUSMADI',
     slack_audit_since($startAuditId, 'slack.notify_failed') === 0
     && slack_audit_since($startAuditId, 'slack.notify_sent') === 0);
 
-// --- Gecici webhook: ERISILEMEZ adres ---
 bcc_execute(
     'INSERT INTO slack_webhooks (team_id, table_id, webhook_url, channel_name, is_active)
      VALUES (:t, NULL, :u, :c, 1)',
@@ -288,7 +219,6 @@ check('gecici (ekip-geneli) webhook olusturuldu', $tempWebhookId > 0);
 
 $auditBeforeEvents = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 
-// --- C2: ALAN olusturma -> bildirim denendi mi? ---
 $r = post_as($ownerId, 'api/field_create.php', '', array(
     'table_id' => $tableId, 'name' => 'SLACK_TEST_ALAN_2', 'field_type' => 'number',
 ));
@@ -301,7 +231,6 @@ if (!no_row($f2)) {
 check('ALAN olusturma Slack bildirimini TETIKLEDI (entity_type=field)',
     !no_row($f2) && slack_audit_since($auditBeforeEvents, 'slack.notify_failed', 'field', (int) $f2['id']) === 1);
 
-// --- C3: TABLO olusturma ---
 $auditBeforeTable = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 $r = post_as($ownerId, 'base_tables.php', 'base_id=' . $baseId, array(
     'action' => 'create_table', 'base_id' => $baseId, 'name' => 'SLACK_TEST_TABLO', 'description' => '',
@@ -315,7 +244,6 @@ if (!no_row($newTable)) {
 check('TABLO olusturma Slack bildirimini TETIKLEDI (entity_type=table)',
     !no_row($newTable) && slack_audit_since($auditBeforeTable, 'slack.notify_failed', 'table', (int) $newTable['id']) === 1);
 
-// --- C4: SATIR ekleme (zaten calisiyordu — regresyon korumasi) ---
 $auditBeforeRecord = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 $r = post_as($ownerId, 'api/record_add.php', '', array('table_id' => $tableId));
 check('satir eklendi (api/record_add.php)', $r['status'] === 200, 'HTTP ' . $r['status']);
@@ -327,11 +255,9 @@ if (!no_row($newRec)) {
 check('SATIR ekleme Slack bildirimini TETIKLEDI (entity_type=record)',
     !no_row($newRec) && slack_audit_since($auditBeforeRecord, 'slack.notify_failed', 'record', (int) $newRec['id']) === 1);
 
-// --- C5: Slack erisilemezken asil islem BASARILI kalmali ---
 check('Slack erisilemezken bile alan/tablo/satir GERCEKTEN olustu (bildirim islemi bloklamiyor)',
     !no_row($f2) && !no_row($newTable) && !no_row($newRec));
 
-// --- C6: "Baglantiyi test et" ---
 $auditBeforeTest = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 $r = post_as($ownerId, 'slack_settings.php', 'table_id=' . $tableId, array(
     'action' => 'test_webhook', 'table_id' => $tableId, 'webhook_id' => $tempWebhookId,
@@ -342,11 +268,9 @@ check('test gonderimi denendi ve sonuc loglandi (slack.test_failed)',
 check('erisilemez URL\'de kullaniciya HATA gosteriliyor (sessiz basari yok)',
     strpos($r['body'], 'gönderilemedi') !== false, substr($r['body'], 0, 200));
 
-// Test mesaji metni dogru mu?
 check('test mesaji "Slack Integration Connected Successfully" iceriyor',
     strpos($slackSrc, 'Slack Integration Connected Successfully') !== false);
 
-// Baska ekibin webhook'u test EDILEMEZ.
 $foreign = bcc_fetch_one('SELECT id FROM slack_webhooks WHERE team_id <> :t LIMIT 1', array('t' => $teamId));
 if (!no_row($foreign)) {
     $auditBeforeForeign = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
@@ -360,7 +284,6 @@ if (!no_row($foreign)) {
         && slack_audit_since($auditBeforeForeign, 'slack.test_failed') === 0);
 }
 
-// --- C7: Yetki — owner olmayan test/kaydetme yapamaz ---
 $editor = bcc_fetch_one("SELECT id FROM users WHERE email = 'editor@bcc.local' LIMIT 1");
 if ($editor === false || $editor === null) {
     die("editor@bcc.local yok. Once: C:\php73\php.exe scripts\seed_demo_users.php
@@ -371,7 +294,6 @@ $r = post_as((int) $editor['id'], 'slack_settings.php', 'table_id=' . $tableId, 
 ));
 check('editor test gonderemez (403)', $r['status'] === 403, 'HTTP ' . $r['status']);
 
-// ---------------------------------------------------------------------------
 echo "\n";
 $failed = count(array_filter($results, function ($r) { return !$r; }));
 echo ($failed === 0 ? 'TUM TESTLER GECTI' : $failed . ' TEST KALDI') . ' (' . count($results) . " kontrol)\n";

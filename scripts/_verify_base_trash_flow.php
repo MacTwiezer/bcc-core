@@ -1,8 +1,4 @@
 <?php
-// base_delete / base_restore ucusu + geri yuklemede isim cakismasi korumasi.
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_base_trash_flow.php
-// Apache ayakta olmali. KENDI ekip/kullanici/base'ini kurar ve siler.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -11,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -57,7 +50,6 @@ function jeton($url)
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) { fwrite(STDERR, "Apache'ye ulasilamadi.\n"); exit(2); }
 
-// --- izole ortam ---
 $SON = bin2hex(random_bytes(4));
 $SIFRE = 'BtTest!' . $SON;
 $AD = 'BtBase ' . $SON;
@@ -75,12 +67,6 @@ foreach (array('owner', 'editor') as $rol) {
 
 $baseId = bcc_create_base($teamId, $AD, '', $ownerId)['id'];
 
-// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-postalar rastgele ek
-// tasiyor (BtTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
-// Ctrl+C) kalan ekip/kullanicilari SONRAKI kosu de bulamaz.
-// Base'ler ayrica silinmiyor: bases.team_id -> teams FK'si CASCADE, ekip
-// silinince test sirasinda olusturulan TUM base'ler (sonradan eklenen ikinci
-// base dahil) kendiliginden gider.
 $cleanup = function () use ($teamId, $ownerId, $editorId, $SON, $COOKIE) {
     bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
     bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
@@ -98,17 +84,15 @@ function girisYap($BASE, $email, $sifre) {
     istek($BASE . '/login.php', 'csrf_token=' . $t . '&email=' . rawurlencode($email) . '&password=' . rawurlencode($sifre));
 }
 
-// ---------------------------------------------------------------------------
 echo "A) EDITOR silemez (owner gerekir)\n";
-// ---------------------------------------------------------------------------
+
 girisYap($BASE, "bt.editor.$SON@bcc-test.local", $SIFRE);
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/base_delete.php', 'csrf_token=' . $tok . '&base_id=' . $baseId);
 check('editor silme -> 403', $r['code'] === 403, $r['code'] . ' ' . substr($r['body'], 0, 60));
 
-// ---------------------------------------------------------------------------
 echo "\nB) OWNER siler (soft-delete)\n";
-// ---------------------------------------------------------------------------
+
 girisYap($BASE, "bt.owner.$SON@bcc-test.local", $SIFRE);
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/base_delete.php', 'csrf_token=' . $tok . '&base_id=' . $baseId);
@@ -120,9 +104,8 @@ check('deleted_by = silen kullanici', $row && (int) $row['deleted_by'] === $owne
 $r = istek($BASE . '/api/base_delete.php', 'csrf_token=' . $tok . '&base_id=' . $baseId);
 check('ikinci silme -> 404 (zaten silinmis)', $r['code'] === 404, $r['code']);
 
-// ---------------------------------------------------------------------------
 echo "\nC) DUZELTME — cakisan isimle geri yukleme REDDEDILIR\n";
-// ---------------------------------------------------------------------------
+
 $ikinciId = bcc_create_base($teamId, $AD, '', $ownerId)['id'];
 check('cop kutusundakiyle AYNI adla yeni base acilabildi', $ikinciId > 0, $ikinciId);
 
@@ -131,16 +114,14 @@ check('geri yukleme -> 422 (isim cakismasi)', $r['code'] === 422, $r['code'] . '
 $aktif = bcc_fetch_all('SELECT id FROM bases WHERE team_id = :t AND name = :n AND deleted_at IS NULL', array('t' => $teamId, 'n' => $AD));
 check('ayni isimli AKTIF base sayisi 1', count($aktif) === 1, count($aktif));
 
-// ---------------------------------------------------------------------------
 echo "\nD) Cakisma giderilince geri yukleme CALISIR\n";
-// ---------------------------------------------------------------------------
+
 bcc_execute('UPDATE bases SET name = :n WHERE id = :i', array('n' => $AD . ' (2)', 'i' => $ikinciId));
 $r = istek($BASE . '/api/base_restore.php', 'csrf_token=' . $tok . '&base_id=' . $baseId);
 check('geri yukleme -> 200', $r['code'] === 200, $r['code'] . ' ' . substr($r['body'], 0, 60));
 $row = bcc_fetch_one('SELECT deleted_at FROM bases WHERE id = :i', array('i' => $baseId));
 check('deleted_at NULL oldu', $row && $row['deleted_at'] === null);
 
-// --- temizlik ---
 $cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))

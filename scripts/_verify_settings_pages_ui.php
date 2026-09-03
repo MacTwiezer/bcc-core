@@ -1,17 +1,4 @@
 <?php
-// Ayar sayfalari (table_fields.php + base_tables.php) UI yenilemesi —
-// KAPSAM KORUMASI testi.
-//
-// Bu isin asil riski gorsel degil YAYILMA riskiydi: bu sayfalar
-// .settings-card / .settings-table / .settings-btn / .settings-breadcrumb
-// sinifllarini SEKIZ baska sayfayla paylasiyor (admin/index, admin/create_user,
-// admin/create_team, admin/assign_team, bases, kanban,
-// slack_settings); alan tipi grid'i ise src/partials/field_type_wizard_fields.php'den
-// gelip grid.php'nin "+" POPUP'IYLA paylasiliyor. Yeni kurallarin bir gun
-// home.css'e/theme.css'e tasinmasi o sayfalari sessizce yeniden tasarlardi.
-// Bu betik tam olarak bunu engelliyor.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_settings_pages_ui.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -46,30 +33,18 @@ $acJs = file_get_contents($root . '/public/assets/account-page.js');
 $tfJs = file_get_contents($root . '/public/assets/table-fields.js');
 $fieldsPage = file_get_contents($root . '/public/table_fields.php');
 $basePage = file_get_contents($root . '/public/base_tables.php');
-// ⚠️ css_rules() ile YORUMLAR SOYULUR. Ham metinde arayinca home.css'in
-// "...hesap sayfasi .sp-page duzenine gecirilirken..." diye ANLATAN yorumu
-// gercek bir sizma sanilip yanlis KALDI veriyordu (dosyanin basindaki
-// php_code_only notunda anlatilan AYNI tuzak, dorduncu kez).
+
 $homeCss = css_rules(file_get_contents($root . '/public/assets/home.css'));
 $themeCss = file_get_contents($root . '/public/assets/theme.css');
 $partial = file_get_contents($root . '/src/partials/field_type_wizard_fields.php');
 $wizardJs = file_get_contents($root . '/public/assets/field-type-wizard.js');
 $shellTop = file_get_contents($root . '/src/partials/home_shell_top.php');
 
-// CSS yorumlarini soy: dosya basliklari acikca ".settings-card" gibi sinif
-// adlarini ANIYOR; ham metinde aramak yanlis sonuc verirdi (bu projede iki kez
-// yasanan ders).
 function css_rules($css)
 {
     return preg_replace('#/\*.*?\*/#s', '', $css);
 }
 
-// PHP yorumlarini soyar. GEREKLI: account.php'nin yorumlari, hangi widget'larin
-// BILEREK YAPILMADIGINI ("iki faktorlu dogrulama ... YOK", "API anahtarlari ...
-// YOK") ve hangi bug'in duzeltildigini ($user['email_verify_token']) ACIKCA
-// ANLATIYOR. Ham metinde aramak, aciklayici yorumu gercek bir kullanim sanip
-// yanlis KALDI verir — bu projede UCUNCU kez ayni tuzak (grid-export.css @media
-// ve mail.local.php gmail.com vakalari).
 function php_code_only($path)
 {
     $code = '';
@@ -83,7 +58,7 @@ function php_code_only($path)
         }
         $code .= $token;
     }
-    // HTML yorumlari (<!-- ... -->) T_INLINE_HTML icinde kalir, onlar da cikar.
+
     return preg_replace('/<!--.*?-->/s', '', $code);
 }
 
@@ -93,11 +68,8 @@ $acRules = css_rules($acCss);
 $slRules = css_rules($slCss);
 $wsRules = css_rules($wsCss);
 
-// =====================================================================
 echo "--- A) Kapsam: her kural .sp-page altinda mi ---\n";
-// $allowed: .sp-page ile BASLAMASI mumkun OLMAYAN, gerekcesi dosyada yazili
-// selector'lar. Liste BILEREK dar tutuluyor — kural "sayfaya ozel CSS global
-// sizmasin"i korumaya devam etsin diye her istisna tek tek yazilir.
+
 function unscoped_selectors($rules, $allowed = array())
 {
     preg_match_all('/(^|\})\s*([^{}@]+)\{/m', $rules, $m);
@@ -114,11 +86,6 @@ function unscoped_selectors($rules, $allowed = array())
     return $bad;
 }
 
-// table-fields.css'in IKI mesru istisnasi (bkz. o dosyadaki yorumlar):
-//   .tf-modal-backdrop  — perde <body>'ye ekleniyor (table-fields.js), yani
-//                         .sp-page'in ALTINDA degil; kapsanirsa hic eslesmez.
-//   body.tf-modal-open  — <body> zaten .sp-page'in (bir <div>) ustunde.
-// Ikisi de yalnizca bu sayfanin JS'i tarafindan uretilen sinif adlari, cakisma yok.
 $tfAllowedUnscoped = array('.tf-modal-backdrop', 'body.tf-modal-open');
 
 foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
@@ -137,10 +104,8 @@ check('A) base_tables.php YALNIZCA ortak CSS bagliyor',
     strpos($basePage, "array('settings-page.css')") !== false
     && strpos($basePage, 'table-fields.css') === false);
 
-// =====================================================================
 echo "\n--- B) ORTAK iskelet KOPYALANMAMIS ---\n";
-// base_tables.php'nin ihtiyac duydugu her sey settings-page.css'te olmali;
-// table-fields.css yalnizca ALAN TIPI kavramina ait olanlari tutmali.
+
 foreach (array('.sp-icon-btn', '.sp-count', '.sp-primary-name', '.sp-move-group', '.settings-card', '.settings-table') as $shared) {
     check("B) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
     check("B) '{$shared}' table-fields.css'te TEKRARLANMIYOR", strpos($tfRules, $shared) === false);
@@ -150,7 +115,6 @@ foreach (array('.tf-type-pill', '.tf-required-yes', '.tf-type-search') as $speci
         strpos($tfRules, $specific) !== false && strpos($spRules, $specific) === false);
 }
 
-// =====================================================================
 echo "\n--- C) Paylasilan dosyalara SIZMA olmamis ---\n";
 foreach (array('sp-page', 'sp-icon-btn', 'sp-count', 'tf-type-pill') as $needle) {
     check("C) home.css '{$needle}' ICERMIYOR", strpos($homeCss, $needle) === false);
@@ -161,46 +125,33 @@ check('C) paylasilan partial DEGISMEDI (arama kutusu oraya girmemis)',
     strpos($partial, 'tf-type-search') === false && strpos($partial, 'type="search"') === false);
 check('C) paylasilan field-type-wizard.js DEGISMEDI',
     strpos($wizardJs, 'tf-') === false && strpos($wizardJs, 'sp-') === false);
-// theme.css'teki taban tip-karti olculeri KORUNMALI (grid.php popup'i bunlari
-// kullaniyor); /browse ile popup uzerinde de olculdu.
+
 check('C) theme.css .field-type-option taban stili korunuyor (grid popup)',
     preg_match('/\.field-type-option \{[^}]*border-radius: 6px;[^}]*padding: 0\.5rem 0\.7rem;/s', $themeCss) === 1);
 check('C) theme.css .field-type-grid taban minmax(150px) korunuyor (grid popup)',
     strpos($themeCss, 'minmax(150px, 1fr)') !== false);
 
-// =====================================================================
 echo "\n--- D) Kabuk degisikligi EKLEMELI ---\n";
 check('D) $homeExtraCss tanimsizsa bos diziye dusuyor',
     strpos($shellTop, 'if (!isset($homeExtraCss) || !is_array($homeExtraCss)) {') !== false);
 check('D) kabuk yalnizca dizideki dosyalari basiyor',
     preg_match('/foreach \(\$homeExtraCss as \$bccExtraCssFile\)/', $shellTop) === 1);
-// NOT: slack_settings.php bu listeden CIKARILDI — artik kendisi de ortak
-// tasarim sistemini kullaniyor ($homeExtraCss atiyor). Liste, kabugu paylasan
-// ama YENIDEN TASARLANMAMIS sayfalari korumaya devam ediyor.
-//
-// ⚠️ dashboard.php ve starred.php DE AYNI GEREKCEYLE CIKARILDI (bu iki kontrol
-// uzun suredir KALIYORDU): ikisi de artik MESRU sekilde $homeExtraCss atiyor
-// ($homeExtraCss = array('home-bento.css')) -- yani kontrol, tam da tesvik
-// edilen deseni "hata" diye raporluyordu. Listede yalnizca gercekten kendi
-// ek CSS'ini ALMAYAN sayfalar kaldi.
+
 foreach (array('team_members.php', 'bases.php') as $other) {
     $src = @file_get_contents($root . '/public/' . $other);
     check("D) {$other} \$homeExtraCss ATAMIYOR", $src !== false && strpos($src, 'homeExtraCss') === false);
 }
 
-// =====================================================================
 echo "\n--- E) Bulunan iki yerlesim kok nedeni duzeltilmis mi ---\n";
-// 1) tip grid'i formun max-width:420px'ine sikisiyordu (table_fields'a ozgu)
+
 check('E) #new-field-form max-width kaldirilmis (tip grid\'i tam genislik)',
     preg_match('/\.sp-page #new-field-form \{ max-width: none; \}/', $tfRules) === 1);
-// 2) column flex + flex-wrap:wrap -> kap icerikten ~800px uzun oluyordu.
-//    ORTAK dosyaya tasindi: iki sayfa da ayni stacked form'u kullaniyor.
+
 check('E) settings-form-stacked flex-wrap:nowrap ORTAK dosyada (iki sayfa da yararlaniyor)',
     preg_match('/\.sp-page \.settings-form-stacked \{[^}]*flex-wrap: nowrap;/s', $spRules) === 1);
 check('E) paylasilan .settings-form kurali DEGISMEDI (yatay formlar bozulmasin)',
     preg_match('/\.settings-form \{[^}]*flex-wrap: wrap;/s', $homeCss) === 1);
 
-// =====================================================================
 echo "\n--- F) Arama kutusu (yalnizca table_fields) ---\n";
 check('F) arama kutusu SAYFAYA OZEL js ile ekleniyor',
     strpos($tfJs, 'tf-type-search') !== false && strpos($tfJs, 'new-field-type-step') !== false);
@@ -212,7 +163,6 @@ check('F) filtre [hidden] DEGIL ayri sinif kullaniyor (grid display tuzagi)',
     strpos($tfJs, "classList.toggle('tf-hidden'") !== false && strpos($tfJs, '.hidden = !match') === false);
 check('F) base_tables.php bu js\'i YUKLEMIYOR', strpos($basePage, 'table-fields.js') === false);
 
-// =====================================================================
 echo "\n--- G) Yeni sabit renk eklenmemis (koyu tema) ---\n";
 foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 'account.css' => $acRules, 'slack-settings.css' => $slRules, 'workspaces.css' => $wsRules) as $name => $rules) {
     preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $rules, $hex);
@@ -221,22 +171,18 @@ foreach (array('settings-page.css' => $spRules, 'table-fields.css' => $tfRules, 
 check('G) renkler --bcc-* token\'larindan geliyor',
     substr_count($spRules, 'var(--bcc-') >= 20, substr_count($spRules, 'var(--bcc-') . ' kullanim');
 
-// =====================================================================
 echo "\n--- H) account.php: uydurma widget YOK, JS sozlesmesi korunuyor ---\n";
-// Asagidaki "olmamali" kontrolleri YORUMSUZ kod uzerinden yapilir — bkz.
-// php_code_only() basligi.
+
 $acCode = php_code_only($root . '/public/account.php');
 check('H) account.php ortak + sayfaya ozel CSS bagliyor',
     strpos($acPage, "array('settings-page.css', 'account.css')") !== false);
 check('H) account.php .sp-page sarmalayicisi aciyor',
     substr_count($acPage, '<div class="sp-page ac-page">') === 1);
 
-// UYDURMA WIDGET KORUMASI: bu uygulamada 2FA / oturum kaydi / API anahtari /
-// bildirim ayari YOK. Sahte gosterge ya da olu link basilmadigini dogrula.
 foreach (array('İki faktör', 'iki faktör', '2FA', 'Aktif oturum', 'API anahtar', 'Bildirim ayar') as $fake) {
     check("H) uydurma widget YOK: '{$fake}'", stripos($acCode, $fake) === false);
 }
-// Hizli erisim linkleri GERCEKTEN VAR OLAN sayfalara gitmeli.
+
 preg_match_all('/class="ac-link"\s+href="([^"]+)"|href="([^"]+)"\s+class="ac-link"/', $acPage, $lm);
 $links = array_values(array_filter(array_merge($lm[1], $lm[2])));
 foreach ($links as $href) {
@@ -245,33 +191,26 @@ foreach ($links as $href) {
 }
 check('H) en az uc hizli erisim linki var', count($links) >= 3, count($links) . ' link');
 
-// [hidden] KORUMASI: account-page.js satir ici duzenlemeyi TAMAMEN hidden ile
-// yonetiyor; CSS'te display verilen her eleman onu ezebilir. Ilk surumde tum
-// formlar acik geliyordu (bu tuzak projede daha once de yasandi).
 check('H) [hidden] korumasi var (display kurallari hidden\'i ezmesin)',
     preg_match('/\.sp-page \[hidden\] \{ display: none !important; \}/', $acRules) === 1);
 check('H) account-page.js DEGISMEDI (sp-*/ac-* bilmiyor)',
     strpos($acJs, 'ac-') === false && strpos($acJs, 'sp-') === false);
-// JS'in bagli oldugu kancalarin hepsi markup'ta durmali.
+
 foreach (array('data-account-field', 'data-account-display', 'data-account-edit-trigger',
                'data-account-edit-form', 'data-account-edit-cancel', 'data-account-value',
                'data-account-input', 'data-account-error', 'account-password-trigger',
-               // account-delete-* -> account-deactivate-*: hesap SILME kaldirildi,
-               // yerine kendi hesabini PASIFE ALMA geldi (bkz.
-               // public/api/account_deactivate.php bas yorumu).
+
                'account-password-form', 'account-deactivate-trigger', 'account-deactivate-form') as $hook) {
     check("H) JS kancasi korundu: {$hook}", strpos($acPage, $hook) !== false);
 }
-// current_user() created_at/email_verify_token DONDURMUYOR -> $user uzerinden
-// okumak rozeti HER ZAMAN "dogrulandi" yapardi (bulunan gercek bug).
+
 check('H) dogrulama rozeti $user yerine ACIK sorgudan okunuyor',
     strpos($acCode, "\$user['email_verify_token']") === false
     && strpos($acPage, "SELECT created_at, email_verify_token FROM users") !== false);
-// Paylasilan rol hapina dokunulmadi.
+
 check('H) .ws-collab-role (team_members/workspaces ile paylasilan) DEGISTIRILMEDI',
     strpos($acRules, 'ws-collab-role') === false && strpos($acCode, 'ws-collab-role') === false);
 
-// =====================================================================
 echo "\n--- I) slack_settings.php ---\n";
 $slCode = php_code_only($root . '/public/slack_settings.php');
 
@@ -280,40 +219,30 @@ check('I) ortak + sayfaya ozel CSS bagliyor',
 check('I) .sp-page sarmalayicisi aciyor',
     substr_count($slPage, '<div class="sp-page">') === 1);
 
-// Tasarim sistemine EKLENEN bilesenler ORTAK dosyada olmali, sayfaya ozel
-// dosyada TEKRARLANMAMALI.
 foreach (array('.sp-status', '.sp-toggle', '.sp-note', '.sp-code') as $shared) {
     check("I) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
-    // "TEKRARLANMIYOR" = bilesenin KENDI tanimi ikinci kez yazilmamis demek.
-    // Sayfaya ozel bir BAGLAMDA kullanmak (ör. slack-settings.css teki
-    // ".sp-page .sl-watch-item input:focus-visible ~ .sp-toggle-track") tekrar
-    // DEGILDIR — ortak gorseli aynen kullanip o listeye ozel bir durum ekler.
+
     check("I) {$shared} slack-settings.css te KENDI tanimi TEKRARLANMIYOR",
         preg_match('/^\s*' . preg_quote($shared, '/') . '[\s,{]/m', $slRules) === 0);
 }
 
-// Eski "chunky" butonlar tamamen gitmis olmali.
 check('I) eski .settings-btn-sm butonlari KALMADI',
     strpos($slCode, 'settings-btn-sm') === false);
-// Kural formu artik ALT ALTA degil.
+
 check('I) kural formu settings-form-stacked KULLANMIYOR (satir ici)',
     strpos($slCode, 'sl-rule-form') !== false
     && preg_match('/class="settings-form settings-form-stacked"[^>]*>\s*<\?php echo csrf_field\(\); \?>\s*<input type="hidden" name="action" value="add_routing_rule"/s', $slPage) === 0);
 check('I) kural formu 4 alan + buton olacak sekilde yatay grid',
     preg_match('/\.sp-page \.sl-rule-form \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) auto;/s', $slRules) === 1);
 
-// slack-routing.js'in bagli oldugu id'ler korunmali.
 check('I) slack-routing.js kancalari korundu (#routing-rule-field / -value)',
     strpos($slPage, 'id="routing-rule-field"') !== false && strpos($slPage, 'id="routing-rule-value"') !== false);
 check('I) slack-routing.js DEGISMEDI (sp-*/sl-* bilmiyor)',
     strpos($routingJs, 'sp-') === false && strpos($routingJs, 'sl-') === false);
 
-// Toggle ham checkbox'in yerini aldi ama name/value AYNEN korundu.
 check('I) toggle name="is_active" value="1" sozlesmesini koruyor',
     preg_match('/class="sp-toggle">\s*<input type="checkbox" name="is_active" value="1"/s', $slPage) === 1);
 
-// theme.css'e EKLENEN durum yesili: uc blokta da tanimli olmali (acik, koyu,
-// prefers-color-scheme) ve MEVCUT hicbir token degistirilmemis olmali.
 check('I) --bcc-success uc tema blogunda da tanimli',
     substr_count($themeCss, '--bcc-success:') === 3 && substr_count($themeCss, '--bcc-success-soft:') === 3,
     substr_count($themeCss, '--bcc-success:') . ' / ' . substr_count($themeCss, '--bcc-success-soft:'));
@@ -321,14 +250,9 @@ foreach (array('--bcc-accent: #2d7ff9', '--bcc-danger: #c62828', '--bcc-danger-s
     check("I) mevcut token DEGISMEDI: {$untouched}", strpos($themeCss, $untouched) !== false);
 }
 
-// =====================================================================
 echo "\n--- J) workspaces.php ---\n";
 $wsCode = php_code_only($root . '/public/workspaces.php');
 
-// ⚠️ UCUNCU DOSYA EKLENDI: grid-shell.css. "Katilimcilari yonet" artik sayfa
-// degistirmiyor, ayni sayfada "Paylas" modalini aciyor ve o modal .gs-*
-// siniflarini kullaniyor (kurallar grid-shell.css'te). interface.php de AYNI
-// gerekcheyle yukluyor -- modalin stilleri ikinci kez YAZILMADI.
 check('J) ortak + sayfaya ozel CSS bagliyor',
     strpos($wsPage, "array('settings-page.css', 'workspaces.css', 'grid-shell.css')") !== false);
 check('J) grid-shell.css modal ICIN yukleniyor (paylasilan bilesen, kopya CSS yok)',
@@ -337,16 +261,13 @@ check('J) grid-shell.css modal ICIN yukleniyor (paylasilan bilesen, kopya CSS yo
 check('J) .sp-page sarmalayicisi aciyor',
     substr_count($wsPage, '<div class="sp-page wsx-page">') === 1);
 
-// PAYLASILAN .ws-* siniflarina DOKUNULMADI: .ws-collab-avatar grid.php /
-// interface.php / team_members.php / grid-row-detail.js tarafindan,
-// .ws-collab-role ve .ws-detail team_members.php tarafindan kullaniliyor.
 foreach (array('ws-collab-avatar', 'ws-collab-role', 'ws-detail', 'ws-card', 'ws-grid') as $sharedWs) {
     check("J) paylasilan '{$sharedWs}' workspaces.css'te YENIDEN TANIMLANMAMIS",
         strpos($wsRules, '.' . $sharedWs) === false);
     check("J) paylasilan '{$sharedWs}' markup'ta ARTIK KULLANILMIYOR",
         preg_match('/class="[^"]*\b' . preg_quote($sharedWs, '/') . '\b/', $wsCode) === 0);
 }
-// Bu sayfa artik ortak bilesenleri kullaniyor.
+
 check('J) rol hapi ortak .sp-role kullaniyor', strpos($wsCode, 'sp-role sp-role--') !== false);
 check('J) avatar ortak .sp-avatar kullaniyor', strpos($wsCode, 'sp-avatar') !== false);
 foreach (array('.sp-role', '.sp-avatar') as $shared) {
@@ -354,17 +275,9 @@ foreach (array('.sp-role', '.sp-avatar') as $shared) {
     check("J) '{$shared}' workspaces.css'te TEKRARLANMIYOR", strpos($wsRules, $shared) === false);
 }
 
-// UYDURMA OZELLIK KORUMASI. Katilimci SATIRLARINDA rol degistirme/cikarma
-// hala YOK (team_members.php'nin isi) ve calisma alani olusturma admin'e ait.
 check('J) hover kisayolu SAHTE dropdown degil, GERCEK sayfaya link',
     preg_match('/class="wsx-member-manage" href="\/team_members\.php\?team_id=/', $wsPage) === 1);
 
-// ⚠️ BU KONTROLLER TERSINE CEVRILDI: "hizli davet" kutusu (e-posta + rol +
-// "Davet Et") workspaces.php'den KALDIRILDI. Bu kart artik yalnizca kimin
-// hangi rolle bulundugunu GOSTERIR; ekleme/cikarma ve rol degistirmenin
-// gercek yeri team_members.php ("Katilimcilari yonet" butonu oraya gider).
-// Eskiden bu bolum kutunun VARLIGINI ve dogru bagli oldugunu dogruluyordu;
-// simdi geri gelmedigini (olu markup/JS/CSS kalmadigini) dogruluyor.
 check('J) sayfada HIC <select> yok (davet kutusu kalkti, satir ici dropdown da yok)',
     substr_count($wsCode, '<select') === 0,
     'adet: ' . substr_count($wsCode, '<select'));
@@ -380,29 +293,15 @@ check('J) workspaces.css te olu .wsx-invite* kurallari KALMADI',
     strpos(file_get_contents($root . '/public/assets/workspaces.css'), '.wsx-invite') === false);
 check('J) katilimci SATIRLARINDA satir ici rol dropdown\'u YOK',
     preg_match('/wsx-member-badges.*?<select/s', $wsCode) === 0);
-// ⚠️ UC NOKTA SILINMEDI: "Paylas" modali ve team_members.php onu kullanmaya
-// devam ediyor. Yalnizca BU sayfanin tetikleyicisi kalkti.
+
 check('J) api/team_member_assign.php DURUYOR (Paylas modali + team_members kullaniyor)',
     is_file($root . '/public/api/team_member_assign.php')
     && strpos(file_get_contents($root . '/src/share_modal_payload.php'), 'bcc_assignable_roles') !== false);
-// Katilimci ekleme icin GERCEK bir cikis yolu hala var (cikmaz sokak birakilmadi).
+
 check('J) "Katilimcilari yonet" baglantisi duruyor (ekleme icin gercek yol)',
     strpos($wsCode, 'team_members.php') !== false
     && strpos($wsCode, 'Katılımcıları yönet') !== false);
-// Iki ayri kontrol: tek bir regex'te birlestirmek kirilgandi ([^)]* acgozlu
-// davranip "=== 1"i yutuyordu, dogru markup'ta bile KALDI veriyordu).
-// ⚠️ BU IKI KONTROL DEGISTI. Eskiden (a) is_admin kapisi ile <a> arasinda
-// HICBIR SEY olmamasini ve (b) baglantinin dosyada TEK KEZ gecmesini sart
-// kosuyorlardi. Ikisi de artik yanlis: "Yeni Calisma Alani" tetikleyicisi
-// simdi IKI dalda birden var (hic calisma alani olmayan admin icin bos dalda
-// da, dolu dalda sol panel alt bilgisinde de) ve aralarinda aciklama yorumu
-// bulunuyor. Konum/adet sayan metin kontrolu yerine ASIL guvence olculuyor:
-// her baglanti bir modal tetikleyicisi olmali ve JS'siz yedegini korumali.
-//
-// "Admin olmayan bunu GORMEMELI" guvencesi burada DEGIL, CANLI olarak
-// scripts/_verify_team_create.php (D bolumu) icinde dogrulaniyor — gercek
-// oturumla render edilen sayfaya bakmak, kaynak metninde kapi aramaktan
-// daha guclu bir kanit.
+
 $wsTriggerCount = substr_count($wsPage, 'href="/admin/create_team.php"');
 check('J) "Yeni calisma alani" tetikleyicisi var',
     $wsTriggerCount > 0, 'adet: ' . $wsTriggerCount);
@@ -410,32 +309,22 @@ check('J) her tetikleyici modal tetikleyicisi (data-create-team-btn) ve href yed
     substr_count($wsPage, 'data-create-team-btn') === $wsTriggerCount,
     'href=' . $wsTriggerCount . ' data-attr=' . substr_count($wsPage, 'data-create-team-btn'));
 check('J) admin/create_team.php GERCEKTEN var', is_file($root . '/public/admin/create_team.php'));
-// ⚠️ BU KONTROL DEGISTI. Eskiden "Base olustur" bases.php'ye giden bir <a> idi
-// ve kontrol o href'i ariyordu. Artik sayfa DEGISTIRMIYOR: ayni sayfada ortak
-// base olusturma modalini aciyor (dashboard.php ile AYNI partial + AYNI
-// home.js davranisi). Kontrolun ASIL guvencesi degismedi -- "bu buton OLU
-// DEGIL, gercekten bir sey yapiyor": simdi bunu modalin sayfada basildigini ve
-// tetikleyicinin ona bagli oldugunu olcerek dogruluyor.
+
 check('J) "Base olustur" OLU DEGIL: modal tetikleyicisi',
     preg_match('#<button[^>]*data-create-base-open[^>]*>.*?Base oluştur#s', $wsPage) === 1);
-// ⚠️ $wsPage RENDER EDILMIS HTML DEGIL, workspaces.php'nin PHP KAYNAGI --
-// modal markup'i ortak partial'da oldugu icin burada aranmaz. Olculen sey
-// zincirin kendisi: sayfa partial'i require ediyor VE partial modali tasiyor.
+
 check('J) tetikleyicinin actigi modal GERCEKTEN var (ortak partial uzerinden)',
     strpos($wsPage, "partials/create_base_modal.php") !== false
     && is_file($root . '/src/partials/create_base_modal.php')
     && strpos(file_get_contents($root . '/src/partials/create_base_modal.php'), 'id="home-create-base-modal"') !== false);
-// bases.php SILINMEDI: modal formunun JS'siz yedegi hala oraya POST ediyor.
+
 check('J) bases.php duruyor (modalin JS siz yedegi oraya POST ediyor)',
     is_file($root . '/public/bases.php')
     && strpos(file_get_contents($root . '/src/partials/create_base_modal.php'), 'action="/bases.php"') !== false);
-// ⚠️ TERSINE CEVRILDI: "Ayarlar" dugmesi devre disi birakilmakla kalmayip
-// TAMAMEN KALDIRILDI (workspaces.php icindeki nota bakiniz) — olmayan bir
-// ozelligi gri bir dugmeyle ima etmek de gereksizdi.
+
 check('J) "Ayarlar" dugmesi tamamen KALDIRILDI (olmayan ozellik ima edilmiyor)',
     strpos($wsPage, 'wsx-btn\" disabled') === false);
 
-// Uye listesi artik cok sutunlu izgara (sonsuz dikey liste degil).
 check('J) katilimci listesi cok sutunlu izgara',
     preg_match('/\.sp-page \.wsx-collab-grid \{[^}]*grid-template-columns: repeat\(auto-fill, minmax\(280px, 1fr\)\);/s', $wsRules) === 1);
 check('J) arama kutusu sayfaya ozel js ile, kisa listede eklenmiyor',
@@ -443,16 +332,9 @@ check('J) arama kutusu sayfaya ozel js ile, kisa listede eklenmiyor',
 check('J) filtre [hidden] DEGIL ayri sinif kullaniyor (grid display tuzagi)',
     strpos($wsJs, "classList.toggle('wsx-hidden'") !== false);
 
-// theme.css'e EKLENEN owner rengi: uc blokta da tanimli, mevcutlar degismemis.
 check('J) --bcc-role-owner uc tema blogunda da tanimli',
     substr_count($themeCss, '--bcc-role-owner:') === 3 && substr_count($themeCss, '--bcc-role-owner-soft:') === 3,
     substr_count($themeCss, '--bcc-role-owner:') . ' / ' . substr_count($themeCss, '--bcc-role-owner-soft:'));
-
-// =====================================================================
-// K bolumu (form_edit.php arayuz denetimi) KALDIRILDI: herkese acik form
-// ozelligi ve public/form_edit.php migrations/023 ile tamamen silindi.
-// Paylasilan bilesenlerin (sp-*/field-type-badge/--bcc-warning) kendi
-// kontrolleri B, C ve I bolumlerinde duruyor.
 
 $passed = count(array_filter($results));
 $total = count($results);

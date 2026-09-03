@@ -1,28 +1,4 @@
 <?php
-// Sol paneldeki "Yildizlilar" listesinin CALISMA ALANINA gore gruplanmasi
-// + ust bardaki cevrimici rozetinin cercevesiz olmasi.
-//
-// Neden: birden cok ekipte uye olan (ve TUM ekipleri goren platform yoneticisi)
-// icin sol paneldeki yildizlar duz bir listeydi — hangi base'in hangi calisma
-// alanina ait oldugu hicbir yerden okunamiyordu. Kart izgarasi bunu zaten grup
-// baslikalariyla yapiyordu (bkz. _verify_home_workspace_groups.php), sol panel
-// geride kalmisti.
-//
-// Kapsam:
-//   A) Coklu ekip: sol panel gruplu, her grubun basliginda EKIP ADI
-//   B) Her base YALNIZCA kendi ekibinin grubunda (KVKK/kapsam sizintisi yok)
-//   C) starred.php de AYNI gruplu paneli basiyor (kendi sorgusuyla besliyor)
-//   D) Yildizsiz kullanici: hic grup basilmiyor (bos baslik yok)
-//   E) bcc_group_starred_bases_by_team() birim davranisi
-//   F) home.js dogru gruba ekliyor + son yildiz silinince baslik da gidiyor
-//   G) Cevrimici rozeti CERCEVESIZ (border/hap zemini kalkti)
-//   H) Kart data-team-id tasiyor (JS'in grubu bulmasi buna bagli)
-//
-// ⚠️ GERCEK HESAPLARA DOKUNULMAZ: kendi kullanicilarini/ekiplerini yaratir,
-// sonunda siler (yildizlar bases CASCADE ile gider).
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_starred_team_groups.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -32,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -93,7 +66,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// Sol panelin #home-starred-list govdesini dondurur (yoksa null).
 function starred_panel($html)
 {
     if (preg_match('#<div class="home-starred-list" id="home-starred-list">(.*?)\n\s*</div>\s*<a href="/workspaces\.php"#s', $html, $m)) {
@@ -102,7 +74,6 @@ function starred_panel($html)
     return null;
 }
 
-// Panelde bir ekip grubunun govdesini dondurur (yoksa null).
 function group_body($panel, $teamId)
 {
     $re = '#<div class="home-starred-group" data-starred-team-id="' . (int) $teamId . '">(.*?)</div>\s*(?=<div class="home-starred-group"|$)#s';
@@ -122,8 +93,6 @@ $wipe();
 register_shutdown_function($wipe);
 
 try {
-    // ORTAM: iki ekip, ikisinde de birer yildizli base + bir yildizSIZ base.
-    // ⚠️ is_admin=0: bu test GRUPLAMAYI olcuyor, admin kapsamini degil.
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEAM_PREFIX . 'Alfa'));
     $teamAlfa = (int) bcc_last_insert_id();
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEAM_PREFIX . 'Beta'));
@@ -156,7 +125,6 @@ try {
         array(':t' => $teamAlfa, ':n' => $nameNoStar, ':u' => $multiId));
     $baseNoStar = (int) bcc_last_insert_id();
 
-    // MULTI iki base'i yildizliyor (yildizsiz olan BILEREK disarida).
     foreach (array($baseAlfa, $baseBeta) as $bid) {
         bcc_execute('INSERT INTO user_starred_bases (user_id, base_id) VALUES (:u, :b)',
             array(':u' => $multiId, ':b' => $bid));
@@ -165,9 +133,6 @@ try {
     $multiCookie = login(MULTI_EMAIL);
     $emptyCookie = login(EMPTY_EMAIL);
 
-    // =====================================================================
-    // A) Coklu ekip -> sol panel gruplu, basliklarda EKIP ADI
-    // =====================================================================
     echo "\n--- A) Sol panel gruplama ---\n";
     $page = http_request('GET', '/dashboard.php', $multiCookie);
     check('A) dashboard.php 200', $page['status'] === 200, 'HTTP ' . $page['status']);
@@ -192,15 +157,11 @@ try {
     check('A) adsiz "Calisma alani #N" geri dusumu TETIKLENMEDI',
         $panel !== null && strpos($panel, 'Calisma alani #') === false && strpos($panel, 'Çalışma alanı #') === false);
 
-    // Ekip adi base adinin USTUNDE (istenen sira: baslik once, base'ler altinda).
     $posTeam = $panel === null ? false : strpos($panel, TEAM_PREFIX . 'Alfa');
     $posBase = $panel === null ? false : strpos($panel, $nameAlfa);
     check('A) ekip adi base adindan ONCE geliyor (baslik ustte)',
         $posTeam !== false && $posBase !== false && $posTeam < $posBase);
 
-    // =====================================================================
-    // B) Her base YALNIZCA kendi ekibinin grubunda
-    // =====================================================================
     echo "\n--- B) Base dogru grupta (sizinti yok) ---\n";
     check('B) Alfa base i Alfa grubunda', $gAlfa !== null && strpos($gAlfa, $nameAlfa) !== false);
     check('B) Alfa base i Beta grubunda DEGIL', $gBeta !== null && strpos($gBeta, $nameAlfa) === false);
@@ -212,9 +173,6 @@ try {
         $panel !== null && substr_count($panel, 'home-starred-item"') === 2,
         'adet: ' . ($panel === null ? 'panel yok' : substr_count($panel, 'home-starred-item"')));
 
-    // =====================================================================
-    // C) starred.php AYNI gruplu paneli basiyor (kendi sorgusuyla)
-    // =====================================================================
     echo "\n--- C) starred.php kendi sorgusuyla ayni paneli besliyor ---\n";
     $sp = http_request('GET', '/starred.php', $multiCookie);
     check('C) starred.php 200', $sp['status'] === 200, 'HTTP ' . $sp['status']);
@@ -229,9 +187,6 @@ try {
     check('C) starred.php de adsiz geri dusum YOK',
         $spPanel !== null && strpos($spPanel, 'alani #') === false && strpos($spPanel, 'alanı #') === false);
 
-    // =====================================================================
-    // D) Yildizi olmayan kullanici -> hic grup basilmiyor
-    // =====================================================================
     echo "\n--- D) Yildizsiz kullanici: bos baslik yok ---\n";
     $ep = http_request('GET', '/dashboard.php', $emptyCookie);
     check('D) dashboard.php 200', $ep['status'] === 200, 'HTTP ' . $ep['status']);
@@ -241,9 +196,6 @@ try {
     check('D) hic yildiz ogesi yok',
         $epPanel !== null && strpos($epPanel, 'home-starred-item') === false);
 
-    // =====================================================================
-    // E) bcc_group_starred_bases_by_team() birim davranisi
-    // =====================================================================
     echo "\n--- E) Gruplama fonksiyonu (birim) ---\n";
     $g = bcc_group_starred_bases_by_team(array());
     check('E) bos girdi -> bos cikti', $g === array());
@@ -261,16 +213,12 @@ try {
     check('E) grup icinde base sirasi KORUNDU (sorgunun ORDER BY i)',
         $g[1]['bases'][0]['name'] === 'B1' && $g[1]['bases'][1]['name'] === 'B3');
 
-    // team_name'i olmayan satir DUSURULMEZ, etiketlenir.
     $g = bcc_group_starred_bases_by_team(array(array('id' => 7, 'name' => 'Bx', 'team_id' => 42)));
     check('E) team_name yoksa satir DUSURULMUYOR', count($g) === 1 && count($g[0]['bases']) === 1);
     check('E) team_name yoksa team_id ile etiketleniyor',
         isset($g[0]['team_name']) && strpos($g[0]['team_name'], '42') !== false,
         isset($g[0]['team_name']) ? $g[0]['team_name'] : 'yok');
 
-    // =====================================================================
-    // F) home.js: dogru gruba ekleme + bosalan basligi kaldirma
-    // =====================================================================
     echo "\n--- F) home.js grup mantigi ---\n";
     $js = file_get_contents(__DIR__ . '/../public/assets/home.js');
     check('F) grubu data-team-id ile ariyor',
@@ -288,9 +236,6 @@ try {
     check('F) eski kosulsuz "starredList.appendChild(item)" satiri KALMADI',
         !preg_match('#\n\s*starredList\.appendChild\(item\);#', $js));
 
-    // =====================================================================
-    // G) Cevrimici rozeti CERCEVESIZ
-    // =====================================================================
     echo "\n--- G) Cevrimici rozeti cercevesiz ---\n";
     $css = file_get_contents(__DIR__ . '/../public/assets/home.css');
     $badge = null;
@@ -305,9 +250,6 @@ try {
         strpos($page['body'], 'home-online-dot') !== false
         && strpos($page['body'], 'home-online-count') !== false);
 
-    // =====================================================================
-    // H) Kart data-team-id tasiyor (JS in grubu bulmasi buna bagli)
-    // =====================================================================
     echo "\n--- H) Kart data-team-id ---\n";
     check('H) dashboard kartinda data-team-id var',
         preg_match('#data-base-id="' . $baseAlfa . '" data-team-id="' . $teamAlfa . '"#', $page['body']) === 1);
@@ -315,7 +257,6 @@ try {
         preg_match('#data-base-id="' . $baseBeta . '" data-team-id="' . $teamBeta . '"#', $page['body']) === 1);
     check('H) .home-base-workspace hucresi dolu (JS grup adini buradan okuyor)',
         strpos($page['body'], '<div class="home-base-workspace">' . TEAM_PREFIX . 'Alfa</div>') !== false);
-
 } catch (Throwable $e) {
     echo "\n[HATA] " . $e->getMessage() . "\n";
     $results[] = false;
@@ -323,7 +264,6 @@ try {
 
 $wipe();
 
-// Temizlik dogrulamasi: test verisinden hicbir iz kalmadi mi?
 $leftTeams = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE name LIKE :p', array(':p' => TEAM_PREFIX . '%'));
 $leftUsers = (int) bcc_fetch_column('SELECT COUNT(*) FROM users WHERE email IN (:a, :b)',
     array(':a' => MULTI_EMAIL, ':b' => EMPTY_EMAIL));

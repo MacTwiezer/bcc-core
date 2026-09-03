@@ -1,13 +1,4 @@
 <?php
-// Sutun genisligi surukle-boyutlandirma dogrulamasi.
-//
-// Kapsam: (A) savunmaci okuyucu/kirpici yardimcilar, (B) view_config_update.php
-// ucnoktasi (iki ozelligin birbirini EZMEDIGI dahil), (C) grid.php render'i
-// (opt-in davranisi: kayitli genislik YOKSA hicbir sey degismemeli),
-// (D) dondurma tutamaciyla cakismama, (E) export/print regresyonu.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_column_resize.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -18,9 +9,6 @@ require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 require __DIR__ . '/../src/xlsx_reader.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -110,10 +98,6 @@ $cleanup = function () use ($emails) {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -168,8 +152,6 @@ try {
             array(':r' => $rid, ':f' => $fKod, ':v' => 'K-' . ($i + 1)));
     }
 
-    // BASKA bir tablonun alani — sunucu whitelist'inin gercekten calistigini
-    // gostermek icin (istemci uydurma bir field_id gonderirse dusmeli).
     bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b, :n, 1)', array(':b' => $baseId, ':n' => 'Yabanci'));
     $otherTableId = (int) bcc_last_insert_id();
     bcc_execute('INSERT INTO fields (table_id, name, field_type, position) VALUES (:t, :n, :ft, 0)',
@@ -179,7 +161,6 @@ try {
     $cookie = login(OWNER_EMAIL);
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // grid.php ilk acilis: view lazy olusuyor
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
     check('grid.php 200', $g['status'] === 200, 'HTTP ' . $g['status']);
     $viewId = (int) bcc_fetch_column('SELECT id FROM views WHERE table_id = :t ORDER BY id LIMIT 1', array(':t' => $tableId));
@@ -189,9 +170,6 @@ try {
 
     $assetsDir = __DIR__ . '/../public/assets';
 
-    // =====================================================================
-    // A) SAVUNMACI YARDIMCILAR (bcc_get_column_widths / sanitize / clamp)
-    // =====================================================================
     echo "\n--- A) Savunmaci yardimcilar ---\n";
     $vf = array(array('id' => $fAd), array('id' => $fKod), array('id' => $fNot));
 
@@ -216,7 +194,6 @@ try {
     $read = bcc_get_column_widths($json, $vf);
     check('A) sayisal olmayan deger atlaniyor', $read === array('f' . $fKod => 200), json_encode($read));
 
-    // Gizli/silinmis alanin eski genisligi colgroup'u kaydirmasin
     $json = json_encode(array('column_widths' => array('f' . $fAd => 300, 'f' . $fNot => 250)));
     $read = bcc_get_column_widths($json, array(array('id' => $fAd)));
     check('A) gorunur olmayan alan filtreleniyor', $read === array('f' . $fAd => 300), json_encode($read));
@@ -228,12 +205,8 @@ try {
     check('A) sanitize: dizi olmayan girdi -> bos', bcc_sanitize_column_widths('abc', $fieldsById) === array());
     check('A) clamp sinirlari', bcc_clamp_column_width(1) === 80 && bcc_clamp_column_width(9999) === 800 && bcc_clamp_column_width(250) === 250);
 
-    // =====================================================================
-    // B) UCNOKTA
-    // =====================================================================
     echo "\n--- B) view_config_update.php ---\n";
 
-    // Once dondurma sayisini 2 yap (asagidaki "ezilmiyor mu" testinin zemini)
     $r = http_request('POST', '/api/view_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $viewId, 'frozen_column_count' => 2, 'state_query_string' => '',
     ));
@@ -248,9 +221,6 @@ try {
     check('B) column_widths yazildi', $r['status'] === 200 && $cfg['column_widths'] == $widths,
         json_encode(isset($cfg['column_widths']) ? $cfg['column_widths'] : null));
 
-    // REGRESYON — bulunan gercek bug: ucnokta frozen_column_count'u isset
-    // kontrolu olmadan `: 1` varsayilaniyla HER ISTEKTE yaziyordu; yalnizca
-    // genislik gonderen bu istek dondurma ayarini sessizce 1'e dusururdu.
     check('B) YALNIZCA genislik gonderince frozen_column_count EZILMIYOR (bug regresyonu)',
         isset($cfg['frozen_column_count']) && $cfg['frozen_column_count'] === 2,
         'frozen=' . (isset($cfg['frozen_column_count']) ? $cfg['frozen_column_count'] : 'YOK'));
@@ -262,7 +232,6 @@ try {
     check('B) tersi de dogru: yalnizca dondurma gonderince genislikler EZILMIYOR',
         $cfg['frozen_column_count'] === 1 && $cfg['column_widths'] == $widths);
 
-    // Istemciye guvenilmiyor: sunucu yeniden kirpiyor
     $r = http_request('POST', '/api/view_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $viewId,
         'column_widths' => json_encode(array('f' . $fAd => 5, 'f' . $fKod => 4000, 'f' . $foreignFieldId => 200)),
@@ -275,7 +244,6 @@ try {
     check('B) baska tablonun field_id si sunucuda dusuruldu',
         !isset($cfg['column_widths']['f' . $foreignFieldId]));
 
-    // Bos harita = otomatik yerlesime don (anahtar SILINIR)
     $r = http_request('POST', '/api/view_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $viewId, 'column_widths' => '{}', 'state_query_string' => '',
     ));
@@ -309,9 +277,6 @@ try {
     );
     check('B) audit satirlari yazildi', $auditCount >= 4, 'sayi=' . $auditCount);
 
-    // =====================================================================
-    // C) RENDER — OPT-IN davranisi
-    // =====================================================================
     echo "\n--- C) grid.php render (opt-in) ---\n";
 
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
@@ -331,7 +296,6 @@ try {
         strpos($html, 'var BCC_MIN_COLUMN_WIDTH = 80;') !== false
         && strpos($html, 'var BCC_MAX_COLUMN_WIDTH = 800;') !== false);
 
-    // Simdi genislik kaydet ve yeniden render et
     $widths = array('row' => 120, 'f' . $fAd => 300, 'f' . $fKod => 150);
     http_request('POST', '/api/view_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $viewId, 'column_widths' => json_encode($widths), 'state_query_string' => '',
@@ -344,16 +308,9 @@ try {
 
     preg_match('#<colgroup>(.*?)</colgroup>#s', $html, $cg);
     $colCount = isset($cg[1]) ? substr_count($cg[1], '<col ') : 0;
-    // rownum + 3 gorunur alan + "+" sutunu (owner) = 5
+
     check('C) col sayisi = rownum + gorunur alanlar + "+" sutunu', $colCount === 5, 'col=' . $colCount);
-    // ⚠️ BEKLENTI GUNCELLENDI — 'row' ARTIK HARITADAN OKUNMUYOR. Test hala
-    // kaydedilen row=120'nin colgroup'a yansimasini ve toplamin 790 olmasini
-    // bekliyordu; oysa satir no sutunu BILEREK sabit BCC_ROW_COLUMN_WIDTH (44)
-    // kullaniyor: o sutun surukleneMEZ, dolayisiyla haritadaki 'row' degeri bir
-    // kullanici tercihi degil eski yogunlugun olculmus kalintisidir ve satir ici
-    // <col style> olarak basilinca CSS'i yenip sutunu 80px'te kilitliyordu
-    // (gerekce grid.php'de yazili).
-    // Yeni toplam = 44 (row, SABIT) + 300 + 150 + 180 (Not, varsayilan) + 40 ("+") = 714.
+
     check('C) kaydedilen ALAN genislikleri colgroup a yansiyor',
         strpos($cg[1], 'width: 300px') !== false
         && strpos($cg[1], 'width: 150px') !== false);
@@ -366,16 +323,12 @@ try {
         strpos($html, 'style="width: 714px;"') !== false,
         preg_match('/<table class="grid[^"]*"\s+style="([^"]*)"/', $html, $tm) ? $tm[1] : 'YOK');
 
-    // Gizli sutun colgroup a girmemeli
     $gh = http_request('GET', '/grid.php?table_id=' . $tableId . '&hidden_fields=' . $fKod, $cookie);
     preg_match('#<colgroup>(.*?)</colgroup>#s', $gh['body'], $cg2);
     check('C) gizli alan colgroup a GIRMIYOR',
         isset($cg2[1]) && substr_count($cg2[1], '<col ') === 4 && strpos($cg2[1], 'width: 150px') === false,
         isset($cg2[1]) ? trim(preg_replace('/\s+/', ' ', $cg2[1])) : 'YOK');
 
-    // =====================================================================
-    // D) DONDURMA TUTAMACIYLA CAKISMAMA
-    // =====================================================================
     echo "\n--- D) Iki tutamac ayrisiyor mu ---\n";
     $styleCss = file_get_contents($assetsDir . '/style.css');
     $exportCss = file_get_contents($assetsDir . '/grid-export.css');
@@ -390,10 +343,7 @@ try {
     check('D) iki tutamac farkli renkte cizgi kullaniyor',
         preg_match('/\.grid-freeze-handle::after \{[^}]*background: var\(--bcc-accent\);/s', $styleCss) === 1
         && preg_match('/\.grid-col-resize-handle::after \{[^}]*background: var\(--bcc-border-strong\);/s', $styleCss) === 1);
-    // Serit artik <th>'nin cocugu DEGIL, .grid-wrap'teki katmanda ve katman
-    // (z-index 4) dondurma tutamacinin (th'nin z-index:2 yigin baglaminda
-    // hapsolmus z-index:10) USTUNDE kaliyor — bu yuzden 12px kaydirma ARTIK
-    // ZORUNLU ve CSS'te degil, JS'te (FREEZE_CLEARANCE) yapiliyor.
+
     check('D) donmus kenarda genislik seridi 12px kaydiriliyor (ust uste binmiyor)',
         preg_match('/var FREEZE_CLEARANCE = 12;/', $resizeJs) === 1
         && strpos($resizeJs, "th.classList.contains('grid-frozen-edge')") !== false
@@ -414,9 +364,6 @@ try {
     check('D) resize, frozen_column_count GONDERMIYOR',
         strpos($resizeJs, 'frozen_column_count:') === false);
 
-    // =====================================================================
-    // E) EXPORT / PRINT REGRESYONU
-    // =====================================================================
     echo "\n--- E) Export / print ---\n";
     check('E) export CSS her IKI tutamaci da (ve serit KATMANINI) gizliyor',
         strpos($exportCss, '.grid-col-resize-layer,') !== false
@@ -427,7 +374,6 @@ try {
     check('E) print te col genislikleri sifirlaniyor',
         preg_match('/table\.grid col \{\s*width: auto !important;/', $shellCss) === 1);
 
-    // Veri kapsami: genislik ayarliyken Excel ile grid ayni kalmali
     $r = http_request('GET', '/api/view_export_xlsx.php?table_id=' . $tableId, $cookie);
     $tmp = sys_get_temp_dir() . '/bcc_colresize_' . getmypid() . '.xlsx';
     file_put_contents($tmp, $r['body']);
@@ -442,8 +388,6 @@ try {
     preg_match_all('/<tr\s[^>]*data-record-id="(\d+)"/', $html, $rm);
     check('E) genislik ayarliyken grid satir sayisi degismedi', count($rm[1]) === 4, 'satir=' . count($rm[1]));
 
-    // Kapsam siniri
-    // form.php SILINDI (form ozelligi kaldirildi, migrations/023) — listeden cikti.
     foreach (array('kanban.php') as $other) {
         $src = file_get_contents(__DIR__ . '/../public/' . $other);
         check("E) {$other} sutun genisligi kodu ICERMIYOR",
@@ -453,12 +397,8 @@ try {
     check('E) kanban.js dokunulmadi',
         stripos(file_get_contents($assetsDir . '/kanban.js'), 'column_widths') === false);
 
-    // =====================================================================
-    // F) YAPISKAN ILK VERI SUTUNU (indekse dayali, alan adindan BAGIMSIZ)
-    // =====================================================================
     echo "\n--- F) Yapiskan ilk veri sutunu ---\n";
 
-    // F1) Sunucu tarafi: varsayilan 2, ACIK secim korunuyor, bozuk girdi guvenli
     check('F) varsayilan dondurma sayisi 2 (satir no + ilk VERI sutunu)',
         bcc_get_frozen_column_count(null) === 2, bcc_get_frozen_column_count(null));
     check('F) bos config de varsayilani veriyor',
@@ -477,10 +417,6 @@ try {
     check('F) tek alanli tabloda maxAllowed a sikistiriliyor',
         bcc_get_frozen_column_count(null, 1) === 1);
 
-    // F2) grid.php istemciye SAYIYI geciriyor; alan ADI hicbir yerde gecmiyor.
-    //     DIKKAT: B bolumu bu gorunume ACIKCA 1 yazdi. Once o ACIK secimin hala
-    //     saygi gordugunu, sonra config sifirlaninca varsayilanin 2 oldugunu
-    //     dogruluyoruz - ikisi ayni kodun iki ayri dali.
     $g = http_request('GET', '/grid.php?table_id=' . $tableId, $cookie);
     check('F) ACIK secim 1 render a da yansiyor',
         strpos($g['body'], 'var BCC_FROZEN_COLUMN_COUNT = 1;') !== false,
@@ -492,13 +428,12 @@ try {
     check('F) kaydedilmis secim YOKKEN varsayilan 2 istemciye geciyor',
         strpos($html, 'var BCC_FROZEN_COLUMN_COUNT = 2;') !== false,
         preg_match('/var BCC_FROZEN_COLUMN_COUNT = \d+;/', $html, $fm) ? $fm[0] : 'YOK');
-    // Sunucu HICBIR hucreye sabit sticky/left yazmamali - tumu JS te, indekse gore
+
     check('F) sunucu hucrelere inline position:sticky YAZMIYOR',
         stripos($html, 'position:sticky') === false && stripos($html, 'position: sticky') === false);
     check('F) sunucu ILK ALAN ADINI dondurma icin OZEL-DURUM yapmiyor',
         strpos(file_get_contents(__DIR__ . '/../public/grid.php'), 'grid-frozen-cell') === false);
 
-    // F3) Istemci: indekse dayali dondurma + ACIK cozme
     check('F) JS dondurmayi INDEKSE gore uyguluyor (idx < frozenCount)',
         strpos($freezeJs, 'if (idx < frozenCount)') !== false);
     check('F) index 1 ve sonrasi ACIKCA cozuluyor (left temizlenip siniflar siliniyor)',
@@ -508,9 +443,6 @@ try {
     check('F) yeni satirlar da ayni fonksiyondan geciyor (ikinci mekanizma yok)',
         strpos($freezeJs, 'window.BCC_reapplyFreeze = applyFreeze;') !== false);
 
-    // F4) Varsayilan 2 nin ortaya cikardigi IKI GORSEL KUSURUN duzeltmesi
-    //     (1) grup kenar cizgisi govde satirlarinda goze gorunur mu,
-    //     (2) satir no golgesi grubun ORTASINDA kalmiyor mu.
     $styleNoComments = preg_replace('#/\*.*?\*/#s', '', $styleCss);
     check('F) kenar cizgisi table.grid ile nitelendi (table.grid td yi YENIYOR)',
         strpos($styleNoComments, 'table.grid .grid-frozen-edge { border-right: 2px solid var(--bcc-border-strong); }') !== false);
@@ -520,32 +452,10 @@ try {
         strpos($styleNoComments, 'table.grid.grid-has-frozen-data .grid-rownum { box-shadow: none; }') !== false);
     check('F) golge kuralini tetikleyen sinifi JS koyuyor',
         strpos($freezeJs, "table.classList.toggle('grid-has-frozen-data', frozenCount > 1 && heads.length > 1);") !== false);
-    // Golge SADECE o sinifla kapanmali - kosulsuz silinmis olmamali
+
     check('F) satir no golgesi KOSULSUZ silinmedi (frozen=1 de geri geliyor)',
         preg_match('/table\.grid \.grid-rownum \{[^}]*box-shadow: 2px 0 4px -2px/s', $styleNoComments) === 1);
 
-    // =====================================================================
-    // G) TAM BOY AYIRAC + LOCALSTORAGE KALICILIGI
-    // =====================================================================
-    // Bu bolum KAYNAK duzeyinde dogruluyor; davranisin kendisi tarayicida
-    // dogrulandi (scripts/_colresize_browse_fixture.php ile kurulan GECICI
-    // fikstur uzerinde, gercek base'e dokunmadan):
-    //   - 4 veri sutununun 4 seridi de tablo yuksekliginin TAMAMI kadar
-    //     (480px = table.offsetHeight) ve hepsinde cursor:col-resize,
-    //   - elementFromPoint hem BASLIK hem 6. GOVDE satiri hizasinda seridi
-    //     donuyor; ayiracin 40px uzagi hala hucre (.cell-view),
-    //   - surukleme: 457px -> 257px (dikey +250px hicbir seyi degistirmedi,
-    //     tablo yuksekligi 480px sabit), sola 900px -> 80px'te durdu, saga
-    //     2000px -> 800px'te durdu, birakinca 260px kaydedildi,
-    //   - F5 sonrasi sunucudan 260px geldi; views.config'te
-    //     {"column_widths":{"row":120,"f3539":260,...}},
-    //   - config NULL'landiktan sonra F5: sunucu <colgroup> BASMADI, genislikler
-    //     localStorage'dan geri yuklendi (ayni degerler),
-    //   - donmus kenarda serit sinirdan tam 12px solda ve .grid-freeze-handle
-    //     hala kendi noktasindan yakalanabiliyor (cursor:grab),
-    //   - yatay kaydirmada (scrollLeft=380, donmus grup=380) donmus grubun
-    //     ALTINA giren 2 serit display:none oldu, donmus kenarinki pinli kaldi,
-    //   - konsolda hata yok.
     echo "\n--- G) Tam boy ayirac + localStorage ---\n";
 
     check('G) serit artik <th> icine EKLENMIYOR (th.appendChild yok)',
@@ -582,9 +492,7 @@ try {
         preg_match("/if \(table\.classList\.contains\('grid-has-col-widths'\)\) \{\s*writeStored\(currentWidthMap\(\)\);\s*\} else \{/s", $resizeJs) === 1);
     check('G) localStorage anahtari GORUNUM basina',
         strpos($resizeJs, "'bcc.grid.column_widths.v' + viewId") !== false);
-    // Her iki localStorage cagrisi (getItem/setItem) da try/catch icinde:
-    // gizli sekme kotasi ya da "site verilerini engelle" ayari ozelligi
-    // patlatmamali, yalnizca sunucu kaydina dusmeli.
+
     check('G) bozuk/kapali depolama sessizce yutuluyor (try/catch)',
         substr_count($resizeJs, 'window.localStorage') === 2
         && substr_count(substr($resizeJs, strpos($resizeJs, 'function readStored')), 'catch (e)') >= 2);

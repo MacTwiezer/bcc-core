@@ -1,14 +1,4 @@
 <?php
-// Grid disa aktarma dogrulamasi: "PDF olarak indir" (window.print() + print CSS)
-// ve "PNG olarak indir" (istemci tarafi html2canvas, YEREL dosya).
-//
-// Odak: (1) menu/varlik, (2) html2canvas'in CDN'siz oldugu, (3) PDF/PNG/Excel
-// VERI KAPSAMININ birebir ayni oldugu -- PDF ve PNG DOM'u bastigi icin
-// karsilastirma "grid.php'nin HTML'i" ile "view_export_xlsx.php'nin .xlsx'i"
-// arasinda yapiliyor: ayni URL state'i, ayni kayitlar, ayni sutunlar.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_export.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -19,9 +9,6 @@ require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 require __DIR__ . '/../src/xlsx_reader.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -29,7 +16,6 @@ define('BASE_URL', 'http://localhost');
 define('OWNER_EMAIL', 'export.owner@bcc-test.local');
 define('TEST_PASS', 'ExportTest!2026');
 
-// Gercek base (id 15) SAYAC KORUMASI -- bu betigin ona dokunmadiginin kaniti.
 define('REAL_BASE_ID', 15);
 
 $results = array();
@@ -83,28 +69,18 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// grid.php HTML'inden tbody kayit id'lerini SIRASIYLA cikarir -- PDF/PNG'nin
-// bastigi kayit kumesi tam olarak budur.
 function grid_record_ids($html)
 {
     preg_match_all('/<tr\s[^>]*data-record-id="(\d+)"/', $html, $m);
     return $m[1];
 }
 
-// grid.php HTML'inden GORUNUR sutun basliklarini SIRASIYLA cikarir.
-// Hedef ALAN sutunlari: data-col-key="f<id>" (sutun genisligi turunda eklendi,
-// grid-column-resize.js de ayni kancayi kullaniyor). Onceki surum duz "<th>"
-// ariyordu; o oznitelik gelince eslesme sifira dustu ve bu YARDIMCI kirildi --
-// urun tarafi degil (ayni turdeki .xlsx ve kayit karsilastirmalari gecmisti).
-// Satir no ve "+" sutunlari zaten alan degil, artik acikca disarida kaliyor.
 function grid_header_names($html)
 {
     if (!preg_match('#<thead>(.*?)</thead>#s', $html, $th)) { return array(); }
     preg_match_all('#<th data-col-key="f\d+">(.*?)</th>#s', $th[1], $m);
     $names = array();
     foreach ($m[1] as $cell) {
-        // <span class="field-badge...">, <span class="req-mark">*</span> ve
-        // <details> menusu ayiklanir, geriye alan adi kalir.
         $cell = preg_replace('#<details.*?</details>#s', '', $cell);
         $cell = strip_tags($cell);
         $cell = trim(html_entity_decode(str_replace('*', '', $cell), ENT_QUOTES, 'UTF-8'));
@@ -136,11 +112,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// --- Gercek base (15) ONCE sayaclari ---------------------------------------
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -186,7 +157,6 @@ try {
             array(':r' => $rid, ':f' => $fid, ':v' => $val));
     };
 
-    // --- GENIS tablo: 8 alan (landscape esigi >= 6 tetiklenir), 12 kayit -----
     $tWide = $mkTable('Genis Tablo', 0);
     $wideFieldIds = array();
     $wideFieldNames = array('Ad', 'Sehir', 'Departman', 'Unvan', 'Telefon', 'Adres', 'Notlar', 'Durum');
@@ -209,14 +179,12 @@ try {
         $setCell($rid, $wideFieldIds['Durum'], ($i % 2 === 0) ? 'Aktif' : 'Pasif');
     }
 
-    // --- DAR tablo: 3 alan (landscape tetiklenmez) ---------------------------
     $tNarrow = $mkTable('Dar Tablo', 1);
     $nAd = $mkField($tNarrow, 'Ad', 'single_line_text', 0);
     $mkField($tNarrow, 'Kod', 'single_line_text', 1);
     $mkField($tNarrow, 'Aciklama', 'single_line_text', 2);
     for ($i = 0; $i < 3; $i++) { $setCell($mkRecord($tNarrow, $i), $nAd, 'Dar ' . $i); }
 
-    // --- BUYUK tablo: 520 kayit (PNG uyari esigi 500'un ustu) ---------------
     $tBig = $mkTable('Buyuk Tablo', 2);
     $bAd = $mkField($tBig, 'Ad', 'single_line_text', 0);
     bcc_begin_transaction();
@@ -228,9 +196,6 @@ try {
 
     $assetsDir = __DIR__ . '/../public/assets';
 
-    // =====================================================================
-    // A) html2canvas: YEREL, CDN'SIZ
-    // =====================================================================
     echo "\n--- A) html2canvas yerel/CDN'siz ---\n";
     $vendorPath = $assetsDir . '/vendor/html2canvas.min.js';
     check('A) vendor/html2canvas.min.js diskte var', is_file($vendorPath));
@@ -241,7 +206,6 @@ try {
         hash('sha256', $vendorSrc) === 'e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb',
         hash('sha256', $vendorSrc));
 
-    // Dosyadaki TUM mutlak URL'ler beyaz listede mi? (SVG namespace + banner)
     preg_match_all('#https?://[a-zA-Z0-9./_-]+#', $vendorSrc, $urlM);
     $allowedUrls = array('http://www.w3.org/2000/svg', 'https://hertzen.com', 'https://html2canvas.hertzen.com');
     $unexpected = array_values(array_diff(array_unique($urlM[0]), $allowedUrls));
@@ -253,19 +217,12 @@ try {
             && strpos(file_get_contents(__DIR__ . '/../public/grid.php'), $cdn) === false);
     }
 
-    // =====================================================================
-    // B) CSS/JS kaynak yapisi
-    // =====================================================================
     echo "\n--- B) CSS/JS kaynak yapisi ---\n";
     $exportCss = file_get_contents($assetsDir . '/grid-export.css');
     $shellCss = file_get_contents($assetsDir . '/grid-shell.css');
     $pngJs = file_get_contents($assetsDir . '/grid-export-png.js');
     $manageJs = file_get_contents($assetsDir . '/grid-view-manage.js');
 
-    // ORTAK dosya @media'ya HAPSEDILMEMELI -- yoksa html2canvas klonu (screen)
-    // kurallari hic gormez ve liste ikinci kez yazilmak zorunda kalir.
-    // (Yorumlar soyuluyor: dosya basligi @media print'ten SOZ EDIYOR ama kural
-    // olarak kullanmiyor -- ilk surumde bu testi yanlis dusuren seydi.)
     $exportCssRules = preg_replace('#/\*.*?\*/#s', '', $exportCss);
     check('B) grid-export.css @media ile sinirlandirilmamis (PNG de kullanabiliyor)',
         strpos($exportCssRules, '@media') === false);
@@ -285,7 +242,7 @@ try {
         strpos($shellCss, 'page-break-inside: avoid') !== false && strpos($shellCss, 'break-inside: avoid') !== false);
     check('B) grid-shell.css yataya sigdirma (width 100% + metin sarma)',
         strpos($shellCss, 'overflow-wrap: anywhere') !== false);
-    // Eski dar print listesi grid-export.css'e TASINDI, geride kopyasi kalmadi.
+
     check('B) grid-shell.css içinde ESKI .grid-add-row-plus print kurali kalmadi',
         strpos($shellCss, '.grid-add-row-plus,') === false);
 
@@ -293,17 +250,10 @@ try {
         preg_match('/ROW_WARN_THRESHOLD = 500\b/', $pngJs) === 1);
     check('B) grid-export-png.js yukseklik esigi de var (scrollHeight)',
         strpos($pngJs, 'HEIGHT_WARN_THRESHOLD') !== false && strpos($pngJs, 'table.scrollHeight') !== false);
-    // ⚠️ METIN ARTIK BIREBIR DEGIL, BICIM ADI DEGISKEN: yakalama mantigi
-    // "PDF olarak indir" ile PAYLASILDIGI icin (captureCanvas(label),
-    // window.BCC_GRID_EXPORT) uyari hem "PNG" hem "PDF" diyebilmeli. Ikinci bir
-    // sabit metin yazmak, birini degistirip digerini unutmaya acik kapi olurdu.
-    // KORUNAN GUVENCE AYNI: uyari TURKCE, Excel'i oneriyor ve SERT ENGEL DEGIL
-    // (soru soruyor) -- parcalar tek tek dogrulaniyor.
+
     check('B) grid-export-png.js onay metni Turkce ve bicim adini DEGISKEN aliyor',
         strpos($pngJs, "'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?'") !== false);
-    // ⚠️ Kontrol eskimisti: onay artik native window.confirm DEGIL, sayfa ici
-    // modal (assets/confirm-modal.js -> window.bcc_confirm). Korunan guvence
-    // AYNI: soru soruluyor ve reddedilince islem iptal ediliyor.
+
     check('B) uyari SERT ENGEL degil (sayfa ici onay, reddedilince cikiliyor)',
         strpos($pngJs, 'window.bcc_confirm(') !== false
         && strpos($pngJs, 'return Promise.resolve(null);') !== false);
@@ -315,11 +265,6 @@ try {
     check('B) grid-export-png.js onclone ile ORTAK CSS medyasini ceviriyor',
         strpos($pngJs, 'data-grid-export-css') !== false && strpos($pngJs, "link.media = 'all'") !== false);
 
-    // /browse ile bulunan GERCEK BUG'in regresyonu: klonda sol serit/gorunum
-    // paneli gizlenince .gs-main genisliyor ve table.grid'in min-width:100%'i
-    // tabloyu ekrandakinden genis yayiyordu (olculdu: canli 926px -> klon
-    // 1240px). Canvas canli olcuyle acildigi icin sagdaki 314px KIRPILIYOR,
-    // altta da gizlenen "+" satiri kadar bos serit kaliyordu.
     check('B) PNG: sutun genisligi ekrandan olculup klona sabitleniyor (kirpma bug regresyonu)',
         strpos($pngJs, 'colWidths') !== false
         && strpos($pngJs, "clonedTable.style.tableLayout = 'fixed'") !== false
@@ -332,11 +277,8 @@ try {
     check('B) landscape esigi 6 veri sutunu',
         preg_match('/PRINT_LANDSCAPE_MIN_COLUMNS = 6\b/', $manageJs) === 1);
 
-    // =====================================================================
-    // C) KAPSAM SINIRI: Kanban/Form'a dokunulmadi
-    // =====================================================================
     echo "\n--- C) Kapsam siniri (yalnizca Grid) ---\n";
-    // form.php SILINDI (form ozelligi kaldirildi, migrations/023) — listeden cikti.
+
     foreach (array('kanban.php') as $other) {
         $src = file_get_contents(__DIR__ . '/../public/' . $other);
         check("C) {$other} PNG/html2canvas iceRMIYOR",
@@ -345,9 +287,6 @@ try {
     check('C) kanban.js PNG disa aktarma icermiyor',
         stripos(file_get_contents($assetsDir . '/kanban.js'), 'html2canvas') === false);
 
-    // =====================================================================
-    // D) Menu + sayfa ciktisi (canli HTTP)
-    // =====================================================================
     echo "\n--- D) Menu ve sayfa ciktisi ---\n";
     $gridUrl = '/grid.php?table_id=' . $tWide;
     $g = http_request('GET', $gridUrl, $cookie);
@@ -384,12 +323,8 @@ try {
     $j = http_request('GET', '/assets/grid-export-png.js', $cookie);
     check('D-S) /assets/grid-export-png.js 200', $j['status'] === 200, 'HTTP ' . $j['status']);
 
-    // =====================================================================
-    // E) VERI KAPSAMI: PDF/PNG (grid HTML) == Excel (.xlsx)
-    // =====================================================================
     echo "\n--- E) Veri kapsami: PDF/PNG ile Excel birebir mi ---\n";
 
-    // E1) Filtresiz
     $ids = grid_record_ids($html);
     $rows = fetch_xlsx_rows('?table_id=' . $tWide, $cookie);
     check('E1) xlsx okunabildi', is_array($rows) && count($rows) > 0);
@@ -403,7 +338,6 @@ try {
         $headerNames === $wideFieldNames && $rows[0] === $wideFieldNames,
         'grid=[' . implode('|', $headerNames) . '] xlsx=[' . implode('|', (array) $rows[0]) . ']');
 
-    // E2) FILTRE: Sehir = Ankara  (12 kayittan 4'u)
     $qFilter = '?table_id=' . $tWide . '&filter_field_1=' . $wideFieldIds['Sehir'] . '&filter_cond_1=equals&filter_value_1=Ankara';
     $gf = http_request('GET', '/grid.php' . $qFilter, $cookie);
     $idsF = grid_record_ids($gf['body']);
@@ -426,7 +360,6 @@ try {
     foreach ($xlsxF as $r) { if (!isset($r[$sehirCol]) || $r[$sehirCol] !== 'Ankara') { $disari = true; } }
     check('E2) filtre: xlsx\'te filtre DISI kayit yok', $disari === false);
 
-    // E3) SIRALAMA: Ad DESC
     $qSort = '?table_id=' . $tWide . '&sort_field_1=' . $wideFieldIds['Ad'] . '&sort_dir_1=desc';
     $gs = http_request('GET', '/grid.php' . $qSort, $cookie);
     $idsS = grid_record_ids($gs['body']);
@@ -443,7 +376,6 @@ try {
     check('E3) siralama: grid sirasi == xlsx sirasi', $gridAdsS === $xlsxAdsS,
         'grid=[' . implode('|', $gridAdsS) . '] xlsx=[' . implode('|', $xlsxAdsS) . ']');
 
-    // E4) GIZLI SUTUN: Telefon + Notlar gizli
     $hidden = $wideFieldIds['Telefon'] . ',' . $wideFieldIds['Notlar'];
     $qHide = '?table_id=' . $tWide . '&hidden_fields=' . $hidden;
     $gh = http_request('GET', '/grid.php' . $qHide, $cookie);
@@ -457,7 +389,6 @@ try {
     check('E4) gizli sutun: gorunur sutunlar iki tarafta AYNI SIRADA',
         $headHide === (is_array($rowsH) ? $rowsH[0] : null));
 
-    // E5) UCU BIR ARADA: filtre + siralama + gizli sutun
     $qAll = '?table_id=' . $tWide
         . '&filter_field_1=' . $wideFieldIds['Sehir'] . '&filter_cond_1=equals&filter_value_1=Ankara'
         . '&sort_field_1=' . $wideFieldIds['Ad'] . '&sort_dir_1=desc'
@@ -477,15 +408,12 @@ try {
     check('E5) filtre+sira+gizli: kayitlar ayni ve ayni sirada', $gridAdsA === $xlsxAdsA && count($gridAdsA) === 4,
         'grid=[' . implode('|', $gridAdsA) . '] xlsx=[' . implode('|', $xlsxAdsA) . ']');
 
-    // =====================================================================
-    // F) Landscape esigi + PNG uyari esigi (veri tarafi)
-    // =====================================================================
     echo "\n--- F) Esikler ---\n";
-    // JS'in saydigi seyin AYNISI: thead th sayisi - rownum - (varsa) "+" sutunu.
+
     $countDataCols = function ($pageHtml) {
         if (!preg_match('#<thead>(.*?)</thead>#s', $pageHtml, $m)) { return -1; }
         $total = preg_match_all('#<th[\s>]#', $m[1]);
-        $total -= 1; // .grid-rownum
+        $total -= 1;
         if (strpos($m[1], 'grid-add-field-th') !== false) { $total -= 1; }
         return $total;
     };
@@ -510,7 +438,6 @@ try {
     $results[] = false;
 }
 
-// --- Gercek base (15) SONRA sayaclari --------------------------------------
 echo "\n--- Gercek base (id " . REAL_BASE_ID . ") dokunulmadi mi ---\n";
 $realAfter = array(
     'tablo'   => (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => REAL_BASE_ID)),

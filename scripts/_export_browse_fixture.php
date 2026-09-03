@@ -1,8 +1,4 @@
 <?php
-// Grid disa aktarma (PDF/PNG) tarayici testi icin GECICI fikstur.
-// "setup" kurar, "teardown" siler. Gercek/canli hicbir hesaba ve gercek
-// base'e (id 15) DOKUNMAZ -- kendi test kullanicisini ve kendi base'ini yaratir.
-// Calistirma: C:\php73\php.exe scripts\_export_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -12,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'export.browse@bcc-test.local');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// gercek "TY" ekibinde owner yetkili bir hesap aciyor; depo acik oldugu icin
-// sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik bilgisi anlamina
-// gelirdi. Deger zaten asagida ekrana basiliyor, saklanmasina gerek yok.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $mode = isset($argv[1]) ? $argv[1] : '';
@@ -77,8 +70,6 @@ $setCell = function ($rid, $fid, $val) {
         array(':r' => $rid, ':f' => $fid, ':v' => $val));
 };
 
-// --- COK SATIRLI + COK SUTUNLU tablo: sayfa bolme + tekrarlayan baslik +
-//     landscape testleri icin. 8 alan, 90 kayit (birden fazla A4 sayfasi).
 $tMulti = $mkTable('Cok Satirli', 0);
 $names = array('Ad', 'Sehir', 'Departman', 'Unvan', 'Telefon', 'Adres', 'Notlar', 'Durum');
 $fids = array();
@@ -97,7 +88,6 @@ for ($i = 0; $i < 90; $i++) {
     $setCell($rid, $fids['Durum'], ($i % 2 === 0) ? 'Aktif' : 'Pasif');
 }
 
-// --- KUCUK tablo: PNG'nin ekranla gorsel karsilastirmasi icin (tek ekrana sigar)
 $tSmall = $mkTable('Kucuk', 1);
 $sAd = $mkField($tSmall, 'Ad', 0);
 $sKod = $mkField($tSmall, 'Kod', 1);
@@ -107,7 +97,6 @@ for ($i = 0; $i < 5; $i++) {
     $setCell($rid, $sKod, 'K-' . ($i + 1));
 }
 
-// --- BUYUK tablo: PNG uyari diyalogu (esik 500) icin 520 kayit
 $tBig = $mkTable('Buyuk', 2);
 $bAd = $mkField($tBig, 'Ad', 0);
 bcc_begin_transaction();

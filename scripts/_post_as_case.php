@@ -1,18 +1,4 @@
 <?php
-// Ic yardimci — _verify_rbac.php tarafindan alt surec olarak calistirilir.
-// Belirtilen kullanicinin oturumuyla GERCEK bir public/*.php sayfasina veya
-// public/api/*.php uc noktasina POST atar. Yetki mantiginin bir kopyasi degil,
-// uygulamanin kendi dosyasi calisir — "gizleme != yetkilendirme" ancak boyle
-// kanitlanabilir.
-//
-// Kullanim: php _post_as_case.php <user_id> <sayfa> <query> <post_json_base64>
-// Cikti: sayfanin/uc noktanin govdesi + son satirda "HTTP_STATUS=<kod>".
-//
-// POST govdesi BASE64 ile gecirilir, ham JSON ile DEGIL: Windows'ta
-// escapeshellarg() cift tirnaklari kaldirdigi icin JSON komut satirinda
-// bozuluyordu (bulunan gercek test hatasi — payload sessizce bosaliyor,
-// uc nokta "Tablo bulunamadi" 404'u donuyor ve test yanlislikla "reddedildi"
-// sanabiliyordu). Base64 alfabesi kabuk icin tamamen zararsizdir.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -28,7 +14,6 @@ if ($postJson === false) {
     exit(1);
 }
 
-// "api/foo.php" gibi tek seviyeli alt klasore izin ver, ustune cikmaya HAYIR.
 if ($page === '' || strpos($page, '..') !== false || !preg_match('#^(api/)?[a-z0-9_]+\.php$#i', $page)) {
     fwrite(STDERR, "Gecersiz sayfa: " . $page . "\n");
     exit(1);
@@ -42,9 +27,6 @@ if (!is_file($path)) {
 
 session_start();
 
-// CSRF gecerli olacak sekilde kurulur — BILEREK: amac CSRF'i degil ROL
-// kapisini test etmek. Istek "her seyi dogru yapmis ama yetkisi olmayan"
-// bir kullaniciyi temsil eder; en zorlu senaryo budur.
 $_SESSION = array('user_id' => $userId, 'csrf_token' => 'RBAC_TEST_TOKEN');
 
 $_SERVER['REQUEST_METHOD'] = 'POST';

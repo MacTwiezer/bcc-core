@@ -1,7 +1,4 @@
 <?php
-// Grup C1 tarayici testi icin GECICI fikstur. "setup" kurar, "teardown" siler.
-// Gercek/canli hicbir hesaba DOKUNMAZ — kendi test kullanicisini yaratir.
-// Calistirma: C:\php73\php.exe scripts\_c1_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -11,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'groupc1.browse@bcc-test.local');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// gercek "TY" ekibinde owner yetkili bir hesap aciyor; depo acik oldugu icin
-// sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik bilgisi anlamina
-// gelirdi. Deger zaten asagida ekrana basiliyor, saklanmasina gerek yok.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $mode = isset($argv[1]) ? $argv[1] : '';
@@ -44,9 +38,6 @@ if ($mode !== 'setup') {
 
 teardown();
 
-// TY yoksa $team false doner; kontrolsuz $team['id'] $teamId'yi 0 yapar ve
-// kullanici/base team_id=0 ile yaratilirdi (hicbir ekibe ait olmayan cop veri).
-// _colresize_browse_fixture.php ile AYNI kontrol.
 $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
 if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
 

@@ -1,16 +1,4 @@
 <?php
-// Demo hesaplarinin rol sinirlarini UCTAN UCA dogrular.
-//
-// Yontem: her demo kullanicisi icin GERCEK sayfalar (dashboard.php, grid.php,
-// workspaces.php, bases.php) ayri bir PHP alt surecinde, o kullanicinin
-// oturumuyla render edilir (bkz. _render_as_case.php) ve uretilen HTML'de
-// role gore GORUNMESI/GORUNMEMESI gereken isaretler aranir. Sayfalarin kendi
-// kodu calisir — yetki mantiginin bir kopyasi test edilmez.
-//
-// Ayrica: giris (attempt_login) her hesap icin gercekten denenir, cunku
-// "sifre calisiyor mu" bu betigin asil sorusudur.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_demo_roles.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -19,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -49,18 +34,11 @@ function render_as($userId, $page, $query = '')
 
 $accounts = bcc_demo_accounts();
 
-// Beklenen rol e-postadan TAHMIN EDILMEZ, demo listesinden turetilir. Onceki
-// hali "editor ise editor, viewer ise viewer, DIGERI owner" seklinde bir
-// ucluydu ve listeye dorduncu bir rol (commenter) eklendiginde sessizce yanlis
-// beklenti uretiyordu.
 $roleByEmail = array();
 foreach ($accounts as $acc) {
     $roleByEmail[$acc['email']] = $acc['role'];
 }
 
-// ---------------------------------------------------------------------------
-// A) Hesaplar ve kimlik bilgileri
-// ---------------------------------------------------------------------------
 echo "--- A) Hesaplar, sifreler, roller ---\n";
 
 $teamRow = bcc_fetch_one("SELECT id FROM teams WHERE name = 'Demo Calisma Alani' LIMIT 1");
@@ -85,9 +63,7 @@ foreach ($accounts as $acc) {
     $userIdByEmail[$acc['email']] = (int) $u['id'];
 
     check($acc['email'] . ' aktif (giris yapabilir)', (int) $u['is_active'] === 1);
-    // Sifre ETIKETE YAZILMAZ. Etiketler her kosuda ekrana basiliyor; deger
-    // terminal gecmisine, ekran goruntusune ve gunluklere dusuyordu. Sifreyi
-    // depodan cikarma gerekcesi (src/demo_accounts.php) burasi icin de gecerli.
+
     check($acc['email'] . ' sifresi config/app.local.php degeriyle dogrulaniyor',
         password_verify($acc['password'], $u['password_hash']));
 
@@ -99,8 +75,6 @@ foreach ($accounts as $acc) {
         $m && $m['role'] === $acc['role'], $m ? $m['role'] : 'uyelik yok');
 }
 
-// attempt_login() GERCEKTEN calistirilir (login.php'nin cagirdigi fonksiyon).
-// Oturum yan etkisi olmasin diye alt surecte.
 echo "\n--- B) attempt_login() gercek giris denemesi ---\n";
 
 foreach ($accounts as $acc) {
@@ -114,13 +88,8 @@ $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/_login_case
     . ' ' . escapeshellarg('owner@bcc.local') . ' ' . escapeshellarg('yanlis-sifre');
 check('yanlis sifre reddediliyor', trim((string) shell_exec($cmd . ' 2>&1')) === 'invalid');
 
-// ---------------------------------------------------------------------------
-// C) dashboard.php — base olusturma/silme yalnizca owner
-// ---------------------------------------------------------------------------
 echo "\n--- C) dashboard.php yetki sinirlari ---\n";
 
-// creator@bcc.local KALDIRILDI: rolu zaten 'owner'di, owner@bcc.local ile AYNI
-// seyi test ediyordu. Yerine commenter@bcc.local — gercekten farkli bir seviye.
 $expectCreate = array(
     'owner@bcc.local' => true,
     'editor@bcc.local' => false,
@@ -142,20 +111,14 @@ foreach ($expectCreate as $email => $shouldSee) {
     check($email . ': olusturma modali ' . ($shouldSee ? 'basilir' : 'HTML\'de HIC YOK'), $hasModal === $shouldSee);
     check($email . ': "Sil" ogesi ' . ($shouldSee ? 'var' : 'YOK'), $hasDelete === $shouldSee);
 
-    // Herkes base'leri GORUR (OpsFlow: "Access all bases ... at your assigned
-    // permission level" bes rolde de acik).
     check($email . ': demo base\'leri goruyor (erisim rolden bagimsiz)',
         strpos($html, 'Demo CRM') !== false);
 
-    // Rol rozeti kartta dogru yaziyor mu?
     $role = $roleByEmail[$email];
     check($email . ': kart rozeti home-base-role--' . $role,
         strpos($html, 'home-base-role--' . $role) !== false);
 }
 
-// ---------------------------------------------------------------------------
-// D) grid.php — duzenleme yalnizca editor+
-// ---------------------------------------------------------------------------
 echo "\n--- D) grid.php yetki sinirlari ---\n";
 
 $tableRow = bcc_fetch_one(
@@ -168,8 +131,6 @@ $tableId = $tableRow ? (int) $tableRow['id'] : 0;
 check('demo tablosu var', $tableId > 0);
 
 if ($tableId > 0) {
-    // Duzenleme editor+ (bkz. bcc_can_edit_records) — commenter YORUM yazar
-    // ama hucre duzenleyemez, o yuzden false.
     $expectEdit = array(
         'owner@bcc.local' => true,
         'editor@bcc.local' => true,
@@ -190,7 +151,6 @@ if ($tableId > 0) {
             strpos($html, 'var BCC_CAN_EDIT = ' . ($shouldEdit ? 'true' : 'false') . ';') !== false);
     }
 
-    // viewer'da yorum da kapali (commenter+ gerekir), editor'de acik.
     $viewerHtml = render_as($userIdByEmail['viewer@bcc.local'], 'grid.php', 'table_id=' . $tableId);
     check('viewer: BCC_CAN_COMMENT = false', strpos($viewerHtml, 'var BCC_CAN_COMMENT = false;') !== false);
 
@@ -198,9 +158,6 @@ if ($tableId > 0) {
     check('editor: BCC_CAN_COMMENT = true', strpos($editorHtml, 'var BCC_CAN_COMMENT = true;') !== false);
 }
 
-// ---------------------------------------------------------------------------
-// E) workspaces.php + bases.php
-// ---------------------------------------------------------------------------
 echo "\n--- E) workspaces.php / bases.php ---\n";
 
 foreach (array('owner@bcc.local', 'editor@bcc.local', 'viewer@bcc.local') as $email) {
@@ -211,7 +168,6 @@ foreach (array('owner@bcc.local', 'editor@bcc.local', 'viewer@bcc.local') as $em
     $ws = render_as($userIdByEmail[$email], 'workspaces.php');
     check($email . ': workspaces.php acildi', strpos($ws, 'Demo Calisma Alani') !== false);
 
-    // Rol hapi herkeste kendi rolunu gostermeli.
     $role = $roleByEmail[$email];
     check($email . ': workspaces rol hapi sp-role--' . $role,
         strpos($ws, 'sp-role--' . $role) !== false);
@@ -227,18 +183,12 @@ foreach (array('owner@bcc.local', 'editor@bcc.local', 'viewer@bcc.local') as $em
     }
 }
 
-// ---------------------------------------------------------------------------
-// F) login.php demo bloğu bayraga bagli
-// ---------------------------------------------------------------------------
 echo "\n--- F) Demo blogu bayrak kontrolu ---\n";
 
 $loginSrc = file_get_contents(__DIR__ . '/../public/login.php');
 check('login.php demo blogunu bcc_demo_login_enabled() ile sariyor',
     substr_count($loginSrc, 'bcc_demo_login_enabled()') >= 2);
-// Sifre literali ARTIK HICBIR izlenen dosyada olmamali (guvenlik denetimi):
-// deger yalnizca git'e girmeyen config/app.local.php'de yasiyor. Kontrol,
-// literali BU DOSYAYA da gommemek icin yapilandirmadan okunan gercek
-// degeri ariyor - yoksa test dosyasinin kendisi sizinti kaynagi olurdu.
+
 $demoPass = bcc_demo_password();
 check('login.php sabit sifreyi KENDI ICINDE tasimiyor (tek kaynak: demo_accounts.php)',
     $demoPass === null || strpos($loginSrc, $demoPass) === false);
@@ -250,11 +200,6 @@ check('seed betigi de bcc_demo_accounts() kullaniyor (kopya liste yok)',
     strpos($seedSrc, 'bcc_demo_accounts()') !== false
     && ($demoPass === null || strpos($seedSrc, $demoPass) === false));
 
-// Yukaridaki iki kontrol yalnizca IKI dosyaya bakiyordu. Denetim turunda
-// sizintinin baska yerlerden de cikabilecegi gorildu (bir test KONTROL
-// ETIKETINDE sifreyi basiyordu, kaynakta literal yoktu). Bu yuzden tarama
-// izlenen TUM kaynak dosyalarina genisletildi; git'e girmeyen *.local.php
-// haric (deger zaten orada yasiyor).
 if ($demoPass !== null) {
     $sizinti = array();
     $desenler = array('/../config/*.php', '/../src/*.php', '/../src/partials/*.php',
@@ -272,7 +217,6 @@ if ($demoPass !== null) {
         empty($sizinti), implode(', ', $sizinti));
 }
 
-// ---------------------------------------------------------------------------
 echo "\n";
 $failed = count(array_filter($results, function ($r) { return !$r; }));
 echo ($failed === 0 ? 'TUM TESTLER GECTI' : $failed . ' TEST KALDI') . ' (' . count($results) . " kontrol)\n";

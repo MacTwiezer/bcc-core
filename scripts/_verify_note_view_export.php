@@ -1,14 +1,4 @@
 <?php
-// "Temsilci İnceleme Geçmişi" -> Excel indirme (api/note_view_export_xlsx.php)
-// ve panelin ROL KAPISI doğrulaması.
-//
-// curl KULLANILMAZ — PHP'nin http:// stream sarmalayicisiyla gercek oturum
-// cerezi alinip gercek uc noktalara istek atilir (_verify_group_c2.php deseni).
-// Kendi izole takimini/kullanicilarini/base'ini kurar, dogrular, SONUNDA temizler.
-// GERCEK verilere DOKUNMAZ.
-//
-// On kosul: Apache + MySQL ayakta (XAMPP), DocumentRoot = public, localhost:80.
-// Calistirma: C:\php73\php.exe scripts\_verify_note_view_export.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -17,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -40,11 +27,6 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// Ham gövde + durum kodu döner (xlsx ikili veri, json_decode edilmez).
-// $followRedirect: varsayilan true. Oturum kontrolu testinde BILEREK false —
-// require_login() 302 ile /login.php'ye atiyor ve stream sarmalayici bunu
-// takip edip 200 (login SAYFASI) donduruyordu; o 200 "dosya indirildi"
-// sanilirsa test yanlis yere bakar.
 function http_request($method, $path, $cookie = null, $postFields = null, $followRedirect = true)
 {
     $headers = array();
@@ -105,7 +87,6 @@ function login_as($email)
     return $resp['cookie'] ? $resp['cookie'] : $cookie;
 }
 
-// .xlsx bir ZIP'tir; sheet1.xml icindeki metinleri cikarir.
 function xlsx_texts($binary)
 {
     $tmp = tempnam(sys_get_temp_dir(), 'bcc_xlsx_check_');
@@ -149,7 +130,6 @@ $cleanup();
 register_shutdown_function($cleanup);
 
 try {
-    // --- Izole fikstur ----------------------------------------------------
     bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => TEST_TEAM));
     $teamId = (int) bcc_last_insert_id();
 
@@ -167,8 +147,6 @@ try {
         );
     }
 
-    // Platform admini: takimda HIC uyeligi YOK — sanal 'owner' rolunu
-    // (src/auth.php current_user_role_in_team) dogrulamak icin.
     bcc_execute(
         'INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 1, 1)',
         array(':e' => 'admin' . EMAIL_SUFFIX, ':h' => password_hash(TEST_PASS, PASSWORD_DEFAULT), ':n' => 'NX Admin')
@@ -203,8 +181,6 @@ try {
         array(':r' => $recordId, ':f' => $fieldId, ':v' => 'Onemli Musteri Notu')
     );
 
-    // Inceleme kayitlari: biri tamamlanmis, biri acik (closed_at NULL),
-    // biri de 15 GUNDEN ESKI (rapora GIRMEMELI).
     $mkView = function ($userId, $role, $openedAt, $closedAt, $duration) use ($recordId, $teamId) {
         bcc_execute(
             'INSERT INTO record_view_log (record_id, user_id, team_id, role_at_view, opened_at, closed_at, duration_seconds)
@@ -217,9 +193,6 @@ try {
     $mkView($uid['commenter'], 'commenter', date('Y-m-d H:i:s', time() - 600), null, 45);
     $mkView($uid['commenter'], 'commenter', date('Y-m-d H:i:s', time() - (20 * 86400)), date('Y-m-d H:i:s', time() - (20 * 86400) + 60), 60);
 
-    // =====================================================================
-    // A) ROL KAPISI — panelin HTML'i ve export ucnoktasi
-    // =====================================================================
     echo "\n=== A) Rol kapisi ===\n";
 
     $ifPath = "/interface.php?base_id={$baseId}&table_id={$tableId}";
@@ -260,9 +233,6 @@ try {
         );
     }
 
-    // =====================================================================
-    // B) EXCEL ICERIGI
-    // =====================================================================
     echo "\n=== B) Excel icerigi ===\n";
 
     $cookie = login_as('owner' . EMAIL_SUFFIX);
@@ -290,7 +260,6 @@ try {
         check('B) "Dönem bitişi" satiri var', in_array('Dönem bitişi', $texts, true), $blob);
         check('B) donem uzunlugu 15 gun', in_array('15 gün', $texts, true), $blob);
 
-        // Donem baslangici = bitis - 15 gun olmali (Excel icindeki tarihler).
         $bi = array_search('Dönem başlangıcı', $texts, true);
         $ei = array_search('Dönem bitişi', $texts, true);
         $okAralik = false;
@@ -315,9 +284,6 @@ try {
             in_array('Toplam inceleme', $texts, true) && in_array('2', $texts, true), $blob);
     }
 
-    // =====================================================================
-    // C) PANEL ILE EXCEL AYNI VERIYI GOSTERIYOR MU (tek kaynak)
-    // =====================================================================
     echo "\n=== C) Panel <-> Excel tutarliligi ===\n";
 
     $resp = http_request('GET', "/api/note_view_list.php?record_id={$recordId}", $cookie);
@@ -328,9 +294,6 @@ try {
         isset($j['views']) && count($j['views']) === 2,
         'bulunan: ' . (isset($j['views']) ? count($j['views']) : 'yok'));
 
-    // =====================================================================
-    // D) HATALI GIRDI
-    // =====================================================================
     echo "\n=== D) Hatali girdi ===\n";
     $resp = http_request('GET', '/api/note_view_export_xlsx.php?record_id=99999999', $cookie);
     check('D) olmayan record_id -> 404', $resp['status'] === 404, 'status: ' . $resp['status']);
@@ -340,14 +303,11 @@ try {
     $loginaAtti = $resp['status'] === 302
         && stripos(implode("\n", $resp['headers']), 'Location: /login.php') !== false;
     check('D) oturumsuz -> 302 ile /login.php', $loginaAtti, 'status: ' . $resp['status']);
-    // Asil guvence: donen sey bir .xlsx OLMAMALI (ZIP imzasi "PK").
+
     check('D) oturumsuz -> govde .xlsx DEGIL',
         substr((string) $resp['body'], 0, 2) !== 'PK',
         'ilk baytlar: ' . bin2hex(substr((string) $resp['body'], 0, 4)));
 
-    // =====================================================================
-    // E) DENETIM IZI — rapor indirmenin kendisi de loglanmali
-    // =====================================================================
     echo "\n=== E) Denetim izi ===\n";
     $n = (int) bcc_fetch_column(
         "SELECT COUNT(*) FROM audit_log WHERE action = 'note_view.export_xlsx' AND entity_id = :r",
@@ -355,7 +315,6 @@ try {
     );
     check('E) her indirme audit_loga yaziliyor', $n >= 1, 'bulunan: ' . $n);
 
-    // Rapor indirmek VERI SILMEMELI (firsatci temizlik yalnizca listelemede).
     $exportJs = file_get_contents(__DIR__ . '/../public/api/note_view_export_xlsx.php');
     check('E) export ucnoktasi temizlik/DELETE calistirmiyor',
         strpos($exportJs, 'sweep') === false && stripos($exportJs, 'DELETE') === false);

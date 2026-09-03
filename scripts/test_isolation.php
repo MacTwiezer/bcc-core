@@ -1,15 +1,4 @@
 <?php
-// KVKK ekip izolasyonu testi.
-// TY ekibi üyesi bir kullanıcının GULF ekibinin verisine erişemediğini,
-// kendi ekibinin verisine erişebildiğini doğrudan doğrular. curl/HTTP kullanılmaz:
-// - erişim kararı, uygulamanın gerçek require_team_access() fonksiyonunu ayrı bir
-//   PHP alt sürecinde çağırarak test edilir (_isolation_case.php üzerinden),
-// - veri filtresi, dashboard.php ile birebir aynı SQL deseniyle test edilir.
-//
-// Çalıştırma: C:\php73\php.exe scripts\test_isolation.php
-//
-// Betik kendi test kullanıcılarını/kayıtlarını kurar ve sonunda (başarılı ya da
-// başarısız fark etmeksizin) temizler; veritabanında kalıcı iz bırakmaz.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -18,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../config/database.php';
 
-// Bu betik denetim satiri uretiyor; test kullanicisi silinince o satirlar
-// audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu kosunun urettigi ve
-// aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -41,14 +27,8 @@ function check($label, $passed, $detail = null)
     }
 }
 
-// require_team_access($teamId)'i, verilen kullanıcı için ayrı bir PHP sürecinde
-// çalıştırır ve erişimin verilip verilmediğini döndürür.
 function run_access_case($userId, $teamId, &$rawOutput = null)
 {
-    // NOT: PHP_BINARY (ör. C:\php73\php.exe) kasıtlı olarak escapeshellarg ile
-    // sarılmıyor — cmd.exe, komut dizisi tırnakla başlayıp ortada başka tırnaklı
-    // parça daha varsa dış tırnakları yanlış yorumluyor ("sözdizimi hatalı" hatası).
-    // Yol boşluk içermediği için çıplak kullanmak güvenli.
     $php = PHP_BINARY;
     $script = escapeshellarg(__DIR__ . '/_isolation_case.php');
     $cmd = "{$php} {$script} " . (int) $userId . ' ' . (int) $teamId;
@@ -80,19 +60,13 @@ function cleanup()
     bcc_execute('DELETE FROM bases WHERE name IN (:b1, :b2)', array(':b1' => TEST_BASE_TY, ':b2' => TEST_BASE_GULF));
 
     bcc_execute('DELETE FROM users WHERE email IN (:e1, :e2)', array(':e1' => TEST_TY_EMAIL, ':e2' => TEST_GULF_EMAIL));
-    // team_members ve created_by referansları ON DELETE CASCADE / SET NULL ile temizlenir.
 }
 
-// Önceki başarısız bir çalıştırmadan kalıntı olabilir; baştan temizle.
 cleanup();
 
-// Temizlik kapanisa da baglanir: asagidaki try/catch yalnizca ISTISNALARI
-// yakaliyor, exit() ya da olumcul hatada calismazdi. Adlar sabit oldugu icin
-// sonraki kosu de temizlerdi, ama artik ilk kosunun sonunda temiz kaliyor.
 register_shutdown_function('cleanup');
 
 try {
-    // --- Kurulum -------------------------------------------------------
     $teamRows = bcc_fetch_all("SELECT id, name FROM teams WHERE name IN ('TY', 'GULF')");
     $teamIdByName = array();
     foreach ($teamRows as $row) {
@@ -130,7 +104,6 @@ try {
 
     echo "Kurulum tamam: TY kullanicisi #{$tyUserId}, GULF kullanicisi #{$gulfUserId}.\n\n";
 
-    // --- Test 1-4: require_team_access() gerçek fonksiyonu ------------
     $out = null;
 
     $ok = run_access_case($tyUserId, $tyTeamId, $out);
@@ -148,8 +121,6 @@ try {
     $ok = run_access_case($gulfUserId, $tyTeamId, $out);
     check('GULF kullanicisi TY ekibine erisemiyor (KVKK izolasyonu)', $ok === false, $out);
 
-    // --- Test 5: veri sorgusu düzeyinde izolasyon (dashboard.php deseni) ---
-    // current_user_team_ids() ile aynı sorgu: kullanıcının üye olduğu ekipler.
     $tyAccessibleTeamIds = array_map('intval', array_column(
         bcc_fetch_all('SELECT team_id FROM team_members WHERE user_id = :uid', array(':uid' => $tyUserId)),
         'team_id'
@@ -176,7 +147,6 @@ try {
     echo "\nTemizlik tamam (test kullanicilari/base'leri silindi).\n";
 }
 
-// --- Özet ----------------------------------------------------------------
 $total = count($results);
 $passed = count(array_filter($results));
 $failed = $total - $passed;

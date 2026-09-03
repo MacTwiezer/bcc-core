@@ -1,10 +1,4 @@
 <?php
-// Toplu satir ekleme UI'si TARAYICI testi icin GECICI fikstur.
-// "setup" kurar, "teardown" siler. Gercek/canli hicbir hesaba veya base'e
-// DOKUNMAZ — kendi takimini, kullanicisini ve base'ini yaratir
-// (_colresize_browse_fixture.php ile AYNI desen, ikinci bir mekanizma yok).
-//
-// Calistirma: C:\php73\php.exe scripts\_bulkadd_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -14,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'bulkadd.browse@bcc-test.local');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// (kendi gecici ekibinde) owner yetkili gercek bir hesap aciyor; depo acik
-// oldugu icin sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik
-// bilgisi anlamina gelirdi. Deger zaten asagida ekrana basiliyor.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 define('TEST_TEAM', 'ZZ Bulk Add Browse');
 
@@ -86,8 +77,6 @@ foreach ($fields as $i => $f) {
     );
 }
 
-// Renkli tekli-secim alani: dark temada .choice-chip okunabilirligi ancak
-// gercek renkli rozetlerle gorulur.
 $durumOptions = json_encode(array(
     'choices' => array('Yeni', 'Gorusuluyor', 'Kazanildi', 'Kaybedildi'),
     'colors' => array('Yeni' => 'blue', 'Gorusuluyor' => 'yellow', 'Kazanildi' => 'green', 'Kaybedildi' => 'red'),
@@ -98,8 +87,6 @@ bcc_execute(
 );
 $durumFieldId = (int) bcc_last_insert_id();
 
-// Birkac dolu satir: "+" satirinin veri satirlariyla ayni yukseklikte olup
-// olmadigi ancak ustunde gercek satirlar varken gorunur.
 $primaryFieldId = (int) bcc_fetch_column(
     'SELECT id FROM fields WHERE table_id = :t ORDER BY position, id LIMIT 1',
     array(':t' => $tableId)

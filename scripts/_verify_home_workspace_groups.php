@@ -1,24 +1,4 @@
 <?php
-// Home (dashboard.php) — base kartlarinin CALISMA ALANINA gore gruplanmasi.
-//
-// Neden: platform yoneticisi TUM ekipleri gormeye baslayinca Home'da onlarca
-// base tek duz listede karisiyordu; hangisinin hangi alana ait oldugu hicbir
-// yerden okunamiyordu (kartlardaki "Calisma alani" hucresi de BOS basiliyordu).
-//
-// Kapsam:
-//   A) Birden cok calisma alani: gruplaniyor, her grubun basliginda ALAN ADI
-//   B) Rol rozeti grup BASLIGINDA, kartlarda DEGIL (kart adini kirpiyordu)
-//   C) Bir base yalnizca KENDI alaninin grubunda
-//   D) Tek calisma alani: gruplama YOK (gereksiz baslik eklenmiyor)
-//   E) Liste gorunumunun "Calisma alani" hucresi artik DOLU
-//   F) Silme yetkisi rozet gizlenince ETKILENMIYOR (gorsel tercih != yetki)
-//   G) home.js coklu izgarayi destekliyor (getElementById -> querySelectorAll)
-//
-// ⚠️ GERCEK HESAPLARA DOKUNULMAZ: kendi admin/normal kullanicisini ve
-// ekiplerini yaratir, sonunda siler.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_home_workspace_groups.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -29,9 +9,6 @@ require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 require __DIR__ . '/../src/audit.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -90,12 +67,10 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// Bir grup basliginin govdesini dondurur (yoksa null).
 function ws_head_for($html, $teamName)
 {
     $esc = preg_quote(htmlspecialchars($teamName, ENT_QUOTES, 'UTF-8'), '#');
     if (preg_match('#<div class="home-section-head home-ws-head">(.*?)</div>\s*</div>#s', $html)) {
-        // Basliklari tek tek gez: her biri </div> ile kapanir.
     }
     if (preg_match_all('#<div class="home-section-head home-ws-head">(.*?)<div class="home-base-grid#s', $html, $ms)) {
         foreach ($ms[1] as $blk) {
@@ -118,10 +93,6 @@ $wipe();
 register_shutdown_function($wipe);
 
 try {
-    // ORTAM: iki ekip. MULTI ikisinin de uyesi, SOLO yalnizca birinin.
-    // ⚠️ Ikisi de is_admin=0: bu test GRUPLAMAYI olcuyor, admin kapsamini degil
-    // (o _verify_team_create.php'de). Boylece gruplama admin'e bagli olmadan
-    // dogrulanir.
     bcc_execute("INSERT INTO teams (name) VALUES (:n)", array(':n' => TEAM_PREFIX . 'Alfa'));
     $teamAlfa = (int) bcc_last_insert_id();
     bcc_execute("INSERT INTO teams (name) VALUES (:n)", array(':n' => TEAM_PREFIX . 'Beta'));
@@ -134,7 +105,6 @@ try {
         array(':e' => SOLO_EMAIL, ':h' => password_hash(TEST_PASS, PASSWORD_DEFAULT), ':n' => 'HWG Solo'));
     $soloId = (int) bcc_last_insert_id();
 
-    // MULTI: Alfa'da owner, Beta'da editor -> rol rozetleri FARKLI olmali.
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t, :u, :r)',
         array(':t' => $teamAlfa, ':u' => $multiId, ':r' => 'owner'));
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t, :u, :r)',
@@ -142,7 +112,6 @@ try {
     bcc_execute('INSERT INTO team_members (team_id, user_id, role) VALUES (:t, :u, :r)',
         array(':t' => $teamAlfa, ':u' => $soloId, ':r' => 'owner'));
 
-    // Base adlari BILEREK UZUN: kirpilma (ellipsis) davranisi gozlemlensin.
     $baseAlfa = 'HWG Cok Uzun Base Adi Alfa';
     $baseBeta = 'HWG Cok Uzun Base Adi Beta';
     bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',
@@ -153,9 +122,6 @@ try {
     $multiCookie = login(MULTI_EMAIL);
     $soloCookie = login(SOLO_EMAIL);
 
-    // =====================================================================
-    // A) Coklu alan -> gruplama + alan adlari
-    // =====================================================================
     echo "\n--- A) Gruplama ve alan adlari ---\n";
     $page = http_request('GET', '/dashboard.php', $multiCookie);
     check('A) dashboard.php 200', $page['status'] === 200, 'HTTP ' . $page['status']);
@@ -172,22 +138,16 @@ try {
     check('A) her grubun kendi base sayaci var',
         $headAlfa !== null && strpos($headAlfa, '1 base') !== false);
 
-    // =====================================================================
-    // B) Rol rozeti BASLIKTA, kartta DEGIL
-    // =====================================================================
     echo "\n--- B) Rol rozeti yeri ---\n";
     check('B) Alfa basliginda owner rozeti', $headAlfa !== null && strpos($headAlfa, 'home-base-role--owner') !== false);
     check('B) Beta basliginda editor rozeti', $headBeta !== null && strpos($headBeta, 'home-base-role--editor') !== false);
-    // Kartlarin ICINDE rozet kalmamali: toplam rozet sayisi = grup sayisi.
+
     check('B) rozet YALNIZCA basliklarda (kartlarda tekrarlanmiyor)',
         substr_count($page['body'], 'home-base-role home-base-role--') === 2,
         'toplam rozet: ' . substr_count($page['body'], 'home-base-role home-base-role--'));
 
-    // =====================================================================
-    // C) Kartlar dogru gruba giriyor
-    // =====================================================================
     echo "\n--- C) Kart-grup eslesmesi ---\n";
-    // Sayfayi grup basliklarindan bol; her parcada YALNIZCA kendi base'i olmali.
+
     $parts = preg_split('#<div class="home-section-head home-ws-head">#', $page['body']);
     $alfaPart = null; $betaPart = null;
     foreach ($parts as $p) {
@@ -201,9 +161,6 @@ try {
     check('C) Alfa bolumunde Beta base i YOK (sizinti yok)',
         $alfaPart !== null && strpos($alfaPart, htmlspecialchars($baseBeta, ENT_QUOTES, 'UTF-8')) === false);
 
-    // =====================================================================
-    // D) Tek alan -> gruplama YOK
-    // =====================================================================
     echo "\n--- D) Tek calisma alani ---\n";
     $soloPage = http_request('GET', '/dashboard.php', $soloCookie);
     check('D) solo kullanici dashboard 200', $soloPage['status'] === 200, 'HTTP ' . $soloPage['status']);
@@ -214,11 +171,8 @@ try {
     check('D) tek alanda kart rozeti yine kartta',
         strpos($soloPage['body'], 'home-base-role home-base-role--owner') !== false);
 
-    // =====================================================================
-    // E) Liste gorunumunun "Calisma alani" hucresi DOLU
-    // =====================================================================
     echo "\n--- E) Calisma alani hucresi ---\n";
-    // ⚠️ ESKIDEN BOS BASILIYORDU: <div class="home-base-workspace"></div>
+
     check('E) bos calisma alani hucresi KALMADI',
         strpos($page['body'], '<div class="home-base-workspace"></div>') === false);
     check('E) hucre GERCEK alan adini tasiyor',
@@ -226,12 +180,8 @@ try {
     check('E) solo sayfada da hucre dolu',
         strpos($soloPage['body'], '<div class="home-base-workspace"></div>') === false);
 
-    // =====================================================================
-    // F) Rozet gizlenmesi YETKIYI etkilemiyor
-    // =====================================================================
     echo "\n--- F) Yetki, gorsel tercihten bagimsiz ---\n";
-    // MULTI Alfa'da owner -> o karttaki "Sil" gorunmeli; Beta'da editor -> gorunmemeli.
-    // Silme tetikleyicisi kartin ⋯ menusunde; base_id ile eslestirip sayiyoruz.
+
     $alfaBaseId = (int) bcc_fetch_column('SELECT id FROM bases WHERE name = :n', array(':n' => $baseAlfa));
     $betaBaseId = (int) bcc_fetch_column('SELECT id FROM bases WHERE name = :n', array(':n' => $baseBeta));
     $alfaCard = '';
@@ -245,9 +195,6 @@ try {
     check('F) editor alanindaki kartta silme tetikleyicisi YOK',
         $betaCard !== '' && stripos($betaCard, 'delete') === false);
 
-    // =====================================================================
-    // G) home.js coklu izgara
-    // =====================================================================
     echo "\n--- G) home.js coklu izgara ---\n";
     $js = file_get_contents(__DIR__ . '/../public/assets/home.js');
     check('G) gorunum degistirici TUM izgaralari geziyor',
@@ -258,17 +205,6 @@ try {
         substr_count($page['body'], 'class="home-base-grid') >= 2,
         'adet: ' . substr_count($page['body'], 'class="home-base-grid'));
 
-    // =====================================================================
-    // H) "Yeni Base Olustur" kutucugunun YERI
-    //
-    // ⚠️ GERCEK BIR YANLIS OKUMA: kutucuk eskiden TUM gruplarin ALTINDA
-    // basiliyordu ve son grubun kart izgarasinin hemen altina dustugu icin
-    // "yeni base O calisma alanina olusturulacak" gibi gorunuyordu. Kutucuk
-    // hicbir alana ait degil -- actigi modalin KENDI team_id secicisi var.
-    // Artik gruplu modda gruplarin USTUNDE; tek alanli kullanicida ise
-    // (secilecek alan yok, belirsizlik de yok) izgaranin SON hucresi olarak
-    // kaliyor.
-    // =====================================================================
     echo "\n--- H) 'Yeni Base Olustur' kutucugunun yeri ---\n";
     $leadPos = strpos($page['body'], 'home-base-grid--lead');
     $firstHeadPos = strpos($page['body'], 'home-section-head home-ws-head');
@@ -286,8 +222,7 @@ try {
         && $leadPos !== false
         && strpos($page['body'], 'home-base-create') > $leadPos
         && strpos($page['body'], 'home-base-create') < $firstHeadPos);
-    // Tek alanli kullanicida yerlesim DEGISMEDI: lead izgarasi yok, kutucuk
-    // normal izgaranin son hucresi. (Bu dal bilerek disarida birakildi.)
+
     check('H) tek alanli kullanicida lead izgarasi YOK (eski yerlesim korundu)',
         strpos($soloPage['body'], 'home-base-grid--lead') === false);
     check('H) tek alanli kullanicida kutucuk yine de VAR',

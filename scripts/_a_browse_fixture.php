@@ -1,7 +1,4 @@
 <?php
-// Grup A tarayici testi icin GECICI fikstur. "setup" kurar, "teardown" siler.
-// Gercek/canli hicbir hesaba DOKUNMAZ — kendi test kullanicisini yaratir.
-// Calistirma: C:\php73\php.exe scripts\_a_browse_fixture.php setup|teardown
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -11,10 +8,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 
 define('TEST_EMAIL', 'groupa.browse@bcc-test.local');
-// Sifre HER KURULUMDA YENIDEN URETILIR, depoda sabit DURMAZ. Bu fikstur
-// gercek "TY" ekibinde owner yetkili bir hesap aciyor; depo acik oldugu icin
-// sabit bir sifre, teardown unutuldugunda yayinlanmis kimlik bilgisi anlamina
-// gelirdi. Deger zaten asagida ekrana basiliyor, saklanmasina gerek yok.
+
 define('TEST_PASS', 'bcc-' . bin2hex(random_bytes(9)));
 
 $mode = isset($argv[1]) ? $argv[1] : '';
@@ -44,9 +38,6 @@ if ($mode !== 'setup') {
 
 teardown();
 
-// TY yoksa $team false doner; kontrolsuz $team['id'] $teamId'yi 0 yapar ve
-// kullanici/base team_id=0 ile yaratilirdi (hicbir ekibe ait olmayan cop veri).
-// _colresize_browse_fixture.php ile AYNI kontrol.
 $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
 if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
 
@@ -75,8 +66,6 @@ $fUrl = $mkField('Site', 'url', 1);
 $fMail = $mkField('Eposta', 'email', 2);
 $fTel = $mkField('Telefon', 'phone', 3);
 
-// Satir 1: hepsi GECERLI -> ikon cikmali
-// Satir 2: hepsi GECERSIZ -> ikon CIKMAMALI (XSS degeri dahil)
 $rows = array(
     array('Gecerli', 'https://example.com', 'ali@ornek.com', '0212 555 00 00'),
     array('Gecersiz', 'javascript:alert(1)', 'gecersiz-eposta', '555'),
@@ -92,13 +81,6 @@ foreach ($rows as $i => $vals) {
             array(':r' => $recordId, ':f' => $fieldId, ':v' => $vals[$k]));
     }
 }
-
-// VIEW_ID BILEREK BASILMIYOR: varsayilan gorunumu uygulama TEMBEL olusturur
-// (src/schema.php, grid ilk acildiginda), veritabaninda tetikleyici yok ve bu
-// fikstur tablosunu ham SQL ile yaratiyor — yani burada views tablosunda HENUZ
-// satir yok. Eskiden buradaki sorgu HER ZAMAN 0 donuyor ve "VIEW_ID=0"
-// basiyordu; o degerle kurulan URL calismaz. Gorunum id'si gerekiyorsa
-// grid.php bir kez acildiktan SONRA okunmali.
 
 echo "TABLE_ID=" . $tableId . "\n";
 echo "URL_FIELD_ID=" . $fUrl . "\n";

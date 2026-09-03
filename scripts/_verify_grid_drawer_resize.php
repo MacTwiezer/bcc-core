@@ -1,27 +1,4 @@
 <?php
-// Grid'deki gorunum panelinin (.gs-view-drawer) GENISLIK AYARI.
-//
-// Panelle grid arasindaki ince serit surukleneRek panel genisletilip
-// daraltilabilir; deger --gs-drawer-w CSS degiskeninde tasinir ve
-// localStorage'a yazilir.
-//
-// Kapsam:
-//   A) Tutamac sayfada basiliyor ve panelin HEMEN ARDINDA (kardes)
-//   B) Erisilebilirlik: role/aria/tabindex — fare kullanamayan da ayarlayabilsin
-//   C) Genislik CSS DEGISKENIYLE veriliyor (satir ici width DEGIL) —
-//      satir ici width ".is-collapsed { width: 0 }" kuralini ezip daraltmayi
-//      KALICI OLARAK bozardi
-//   D) Daraltilinca tutamac gizleniyor
-//   E) Betik SENKRON yukleniyor (FOUC: panel once 260px cizilip sonra
-//      kayitli degere sicramasin)
-//   F) Disa aktarma/yazdirma: tutamac gizlenenler listesinde
-//   G) Surukleme sirasinda width gecisi kapaniyor (lastikli his olmasin)
-//   H) Sinirlar ve varsayilana donus mevcut
-//
-// ⚠️ GERCEK VERIYE DOKUNMAZ: kendi kullanicisini/base'ini yaratir, siler.
-//
-// On kosul: Apache ayakta. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_drawer_resize.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -31,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -91,8 +65,6 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// CSS yorumlarini soyar — bu projede testler daha once aciklama YORUMLARINA
-// takilip yanlis "GECTI" verdi.
 function css_rules($css)
 {
     return preg_replace('#/\*.*?\*/#s', '', $css);
@@ -137,22 +109,18 @@ try {
     $exportCss = css_rules(file_get_contents(__DIR__ . '/../public/assets/grid-export.css'));
     $js = file_get_contents(__DIR__ . '/../public/assets/grid-drawer-resize.js');
 
-    // =====================================================================
     echo "\n--- A) Tutamac basiliyor ve panelin KARDESI ---\n";
-    // =====================================================================
+
     check('A) tutamac sayfada var', strpos($html, 'id="gs-view-drawer-resizer"') !== false);
-    // ⚠️ KARDES OLMALI: CSS'teki gizleme kurali bitisik-kardes seciciyle
-    // (".is-collapsed + .gs-view-drawer-resizer") yazildi. Tutamac panelin
-    // ICINE tasinirsa o kural sessizce calismaz.
+
     check('A) tutamac panelin HEMEN ardinda (bitisik kardes)',
         preg_match('#</div>\s*(?:<\?php.*?\?>\s*)?<div class="gs-view-drawer-resizer"#s', $html) === 1
         || preg_match('#id="gs-view-drawer"[\s\S]*?<div class="gs-view-drawer-resizer"[\s\S]*?<main class="gs-main"#', $html) === 1);
     check('A) tutamac <main> ten ONCE (yani .gs-body-row icinde)',
         strpos($html, 'gs-view-drawer-resizer') < strpos($html, '<main class="gs-main"'));
 
-    // =====================================================================
     echo "\n--- B) Erisilebilirlik ---\n";
-    // =====================================================================
+
     check('B) role="separator"', strpos($html, 'role="separator"') !== false);
     check('B) aria-orientation="vertical"', strpos($html, 'aria-orientation="vertical"') !== false);
     check('B) aria-label var', strpos($html, 'aria-label="Görünüm panelinin genişliğini ayarla"') !== false);
@@ -161,12 +129,8 @@ try {
     check('B) ok tuslariyla ayarlanabiliyor',
         strpos($js, "ArrowLeft") !== false && strpos($js, "ArrowRight") !== false);
 
-    // =====================================================================
     echo "\n--- C) Genislik CSS DEGISKENIYLE (satir ici width DEGIL) ---\n";
-    // =====================================================================
-    // ⚠️ ASIL TUZAK: satir ici bir width, ".gs-view-drawer.is-collapsed
-    // { width: 0 }" kuralini ezer ve panel bir kez suruklendikten sonra
-    // hamburger dugmesiyle bir daha DARALMAZDI.
+
     check('C) panel genisligi var(--gs-drawer-w) okuyor',
         preg_match('#\.gs-view-drawer\s*\{[^}]*width:\s*var\(--gs-drawer-w#s', $shellCss) === 1);
     check('C) JS satir ici width YAZMIYOR',
@@ -176,17 +140,13 @@ try {
     check('C) daraltma kurali hala width:0 veriyor',
         preg_match('#\.gs-view-drawer\.is-collapsed\s*\{[^}]*width:\s*0#s', $shellCss) === 1);
 
-    // =====================================================================
     echo "\n--- D) Daraltilinca tutamac gizleniyor ---\n";
-    // =====================================================================
+
     check('D) .is-collapsed + tutamac -> display:none',
         preg_match('#\.gs-view-drawer\.is-collapsed\s*\+\s*\.gs-view-drawer-resizer\s*\{[^}]*display:\s*none#s', $shellCss) === 1);
 
-    // =====================================================================
     echo "\n--- E) FOUC: betik SENKRON yukleniyor ---\n";
-    // =====================================================================
-    // defer edilseydi panel once 260px cizilir, sonra kayitli genislige
-    // sicrardi — gorunur titreme.
+
     check('E) grid-drawer-resize.js sayfada',
         strpos($html, 'grid-drawer-resize.js') !== false);
     check('E) defer YOK (senkron)',
@@ -196,17 +156,13 @@ try {
     check('E) localStorage kapaliysa cokmuyor (try/catch)',
         preg_match('#try\s*\{[\s\S]{0,200}localStorage[\s\S]{0,200}\}\s*catch#', $js) === 1);
 
-    // =====================================================================
     echo "\n--- F) Disa aktarma / yazdirma ---\n";
-    // =====================================================================
-    // Panel gizleniyor ama tutamac AYRI bir kardes oge — ayrica listelenmeli,
-    // yoksa 5px'lik bos serit kagida/PNG'ye duserdi.
+
     check('F) tutamac gizlenenler listesinde',
         strpos($exportCss, '.gs-view-drawer-resizer') !== false);
 
-    // =====================================================================
     echo "\n--- G) Surukleme hissi ---\n";
-    // =====================================================================
+
     check('G) surukleme sirasinda width gecisi kapaniyor',
         preg_match('#body\.gs-drawer-resizing\s+\.gs-view-drawer\s*\{[^}]*transition:\s*none#s', $shellCss) === 1);
     check('G) surukleme sirasinda imlec tum sayfada col-resize',
@@ -214,9 +170,8 @@ try {
     check('G) tutamac imleci col-resize',
         preg_match('#\.gs-view-drawer-resizer\s*\{[^}]*cursor:\s*col-resize#s', $shellCss) === 1);
 
-    // =====================================================================
     echo "\n--- H) Sinirlar ve varsayilana donus ---\n";
-    // =====================================================================
+
     check('H) alt/ust sinir var (kullanilamaz genislik olusmasin)',
         preg_match('#MIN\s*=\s*\d+#', $js) === 1 && preg_match('#MAX\s*=\s*\d+#', $js) === 1);
     check('H) deger sinirlara kirpiliyor',

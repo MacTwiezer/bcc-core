@@ -1,16 +1,4 @@
 <?php
-// Chrome'un urettigi PDF'i incelemek icin kucuk yardimci (yalnizca test amacli,
-// uygulama kodu DEGIL): sayfa sayisi, sayfa yonu (MediaBox) ve SAYFA SAYFA metin.
-//
-// Neden gerekli: Chrome PDF'i altkume (subset) Type0/CID fontlarla yaziyor --
-// icerik akislarindaki <0003 0024 ...> dizileri harf DEGIL glif numarasi. Duz
-// bir "(...)" taramasi hicbir sey bulmaz (ilk denemede tam olarak bu oldu).
-// Burada fontlarin /ToUnicode CMap'leri (beginbfchar/beginbfrange) okunup glif
-// -> unicode haritasi kuruluyor, sonra her sayfanin icerik akisi ayri ayri
-// cozuluyor. "Baslik HER sayfada tekrarliyor mu" ancak boyle kanitlanabiliyor.
-//
-// Calistirma:
-//   C:\php73\php.exe scripts\_pdf_inspect.php <dosya.pdf> [aranacak-metin ...]
 
 if (PHP_SAPI !== 'cli') { http_response_code(403); die("CLI only\n"); }
 
@@ -19,7 +7,6 @@ if (!is_file($path)) { echo "Dosya yok: {$path}\n"; exit(1); }
 
 $raw = file_get_contents($path);
 
-// --- Tum stream'leri AYRI AYRI ac (sayfa ayrimi icin birlestirilmiyor) ------
 $streams = array();
 $off = 0;
 while (($s = strpos($raw, 'stream', $off)) !== false) {
@@ -35,13 +22,6 @@ while (($s = strpos($raw, 'stream', $off)) !== false) {
     $off = $e + 9;
 }
 
-// --- ToUnicode CMap'leri: glif kodu -> unicode -----------------------------
-// DIKKAT: her font altkumesinin KENDI CMap'i var ve glif numaralari fontlar
-// arasinda CAKISIYOR (normal metin F64, kalin tablo basligi F65). Ilk surumde
-// hepsi TEK bir haritada birlestirilmisti; kalin font normalin uzerine yazdigi
-// icin "Departman"/"Telefon" basliklari HIC bulunamiyordu (yanlis "baslik
-// tekrarlamıyor" sonucu). Bu yuzden CMap'ler AYRI tutuluyor ve her sayfa her
-// CMap ile ayri ayri cozuluyor; aranan metin herhangi birinde gecerse sayilir.
 $cmaps = array();
 foreach ($streams as $s) {
     if (strpos($s, 'beginbfchar') === false && strpos($s, 'beginbfrange') === false) { continue; }
@@ -58,7 +38,6 @@ foreach ($streams as $s) {
 
     if (preg_match_all('/beginbfrange(.*?)endbfrange/s', $s, $br)) {
         foreach ($br[1] as $block) {
-            // <start> <end> <dst>
             preg_match_all('/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/', $block, $r, PREG_SET_ORDER);
             foreach ($r as $m) {
                 $start = hexdec($m[1]); $end = hexdec($m[2]); $dst = hexdec($m[3]);
@@ -67,7 +46,7 @@ foreach ($streams as $s) {
                     $cmap[strtoupper(str_pad(dechex($i), 4, '0', STR_PAD_LEFT))] = code_to_utf8($dst + ($i - $start));
                 }
             }
-            // <start> <end> [ <d1> <d2> ... ]
+
             preg_match_all('/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*\[(.*?)\]/s', $block, $r2, PREG_SET_ORDER);
             foreach ($r2 as $m) {
                 $start = hexdec($m[1]);
@@ -98,7 +77,6 @@ function hex_to_utf8($hex)
     return $out;
 }
 
-// --- Icerik akislarini (sayfalari) coz ------------------------------------
 function decode_content($content, $cmap)
 {
     $text = '';
@@ -113,7 +91,6 @@ function decode_content($content, $cmap)
     return $text;
 }
 
-// Her sayfa, HER CMap ile ayri cozulur -> sayfa basina metin varyantlari.
 $pages = array();
 foreach ($streams as $s) {
     if (strpos($s, 'Tj') === false || strpos($s, 'BT') === false) { continue; }
@@ -125,7 +102,6 @@ foreach ($streams as $s) {
     if (!empty($variants)) { $pages[] = $variants; }
 }
 
-// --- MediaBox / sayfa sayisi ----------------------------------------------
 $all = $raw . "\n" . implode("\n", $streams);
 preg_match_all('#/Type\s*/Page(?![s])#', $all, $pm);
 $pageCount = count($pm[0]);
@@ -146,9 +122,6 @@ echo "Cozulen icerik akisi (sayfa): " . count($pages) . "\n";
 echo "Font CMap sayisi: " . count($cmaps) . " (girdiler: "
     . implode('/', array_map('count', $cmaps)) . ")\n";
 
-// --dump=<regex>: her sayfada eslesenleri listeler. Satirlarin sayfa sinirinda
-// BOLUNUP bolunmedigini kanitlamak icin: ayni kayit iki sayfada gorunuyorsa
-// satir bolunmustur.
 foreach ($argv as $arg) {
     if (strpos($arg, '--dump=') !== 0) { continue; }
     $re = substr($arg, 7);
@@ -181,7 +154,6 @@ for ($i = 2; $i < count($argv); $i++) {
     $counts = array();
     $totalHits = 0;
     foreach ($pages as $variants) {
-        // Sayfadaki en yuksek eslesme (dogru fontun CMap'i).
         $best = 0;
         foreach ($variants as $t) { $best = max($best, substr_count($t, $needle)); }
         $counts[] = $best;

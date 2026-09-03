@@ -1,7 +1,4 @@
 <?php
-// Tek seferlik ilk admin oluşturma betiği.
-// Çalıştırma: C:\php73\php.exe scripts\create_admin.php
-// Zaten bir admin (is_admin=1) varsa çalışmayı reddeder.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -35,10 +32,6 @@ if (!bcc_is_valid_email($email)) {
 }
 
 if (mb_strlen($email, 'UTF-8') > 190) {
-    // users.email VARCHAR(190) — public/register.php/admin/create_user.php ile
-    // AYNI kontrol; bu betik atlanmıştı. sql_mode'da STRICT_TRANS_TABLES yok,
-    // bu kontrol olmadan uzun bir e-posta hatasız sessizce kırpılır — ilk admin
-    // hesabı yanlışlıkla farklı (kırpılmış) bir e-postayla oluşturulmuş olur.
     fwrite(STDERR, "HATA: E-posta en fazla 190 karakter olabilir.\n");
     exit(1);
 }
@@ -49,7 +42,6 @@ if ($fullName === '') {
 }
 
 if (mb_strlen($fullName, 'UTF-8') > 150) {
-    // users.full_name VARCHAR(150) — aynı gerekçe.
     fwrite(STDERR, "HATA: Ad Soyad en fazla 150 karakter olabilir.\n");
     exit(1);
 }

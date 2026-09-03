@@ -1,24 +1,4 @@
 <?php
-// interface.php sol kenar cubugu: renk paleti, tek satirlik alt arac cubugu,
-// ikon kutusu kenarliklari.
-//
-// Kapsam:
-//   A) Renk paleti (uc hex, token uzerinden)
-//   B) Alt arac cubugu TEK SATIR: "Paylas" satir ici, footer kabi zeminli
-//   C) Workspace ikonu: canli renk kalkti, koyu kenarlik geldi
-//   D) CSS YORUM BUTUNLUGU — bu isde bulunan gercek bug sinifi icin repo
-//      genelinde koruma
-//   E) Regresyon: daraltilmis hal, paylasim popover'lari, ikinci kopya yok
-//   F) Gercek base (15) dokunulmamis olmali
-//
-// OLCUM NOTU: gorsel sonuclar TARAYICIDA olculdu (/browse, 1440x900):
-// panel rgb(255,186,5); aktif oge rgb(243,172,4); footer rgb(255,193,30) ve
-// genisliği panelle AYNI (220px acik, 64px daraltilmis); ikon 22x22, zemin
-// rgba(255,255,255,.55), kenarlik 1.5px solid rgb(30,41,59); alt satir
-// tasmiyor (196/196 px).
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_interface_nav_ui.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -28,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -104,9 +81,6 @@ function rule_body($css, $selector)
     return null;
 }
 
-// Bir CSS dosyasindaki KACAK yorum sonlandiricilarini bulur. Yorum ICINDE
-// gecen bir "*" + "/" ikilisi yorumu ORADA kapatir; kalan satirlar ham metne
-// doner ve ayristirici ARDINDAN GELEN KURALI sessizce ATAR.
 function stray_comment_terminators($css)
 {
     $stripped = preg_replace('#/\*.*?\*/#s', '', $css);
@@ -132,10 +106,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -152,9 +122,6 @@ try {
     $ifCss = css_rules($ifCssRaw);
     $ifPhp = file_get_contents(__DIR__ . '/../public/interface.php');
 
-    // =====================================================================
-    // A) RENK PALETI
-    // =====================================================================
     echo "--- A) Renk paleti ---\n";
     $navRule = rule_body($ifCss, '.if-nav');
     check('A) panel zemini #ffba05',
@@ -163,7 +130,7 @@ try {
         $navRule !== null && strpos($navRule, '--if-nav-active-bg: #f3ac04;') !== false, (string) $navRule);
     check('A) footer zemini #ffc11e',
         $navRule !== null && strpos($navRule, '--if-nav-footer-bg: #ffc11e;') !== false, (string) $navRule);
-    // Hex'ler TEK yerde: kurallar token kullanmali, hex tekrar YAZILMAMALI.
+
     check('A) .if-nav zemini token uzerinden',
         $navRule !== null && strpos($navRule, 'background: var(--if-nav-bg);') !== false);
     check('A) aktif oge token uzerinden',
@@ -175,43 +142,37 @@ try {
             substr_count(strtolower($ifCss), $hex) === $expected,
             'sayim=' . substr_count(strtolower($ifCss), $hex));
     }
-    // Eski panel rengi tamamen kalkmali.
+
     check('A) eski #f6c343 zemini KALKTI', stripos($ifCss, '#f6c343') === false);
 
-    // =====================================================================
-    // B) ALT ARAC CUBUGU — TEK SATIR
-    // =====================================================================
     echo "\n--- B) Alt arac cubugu tek satir ---\n";
     check('B) .if-nav-share-row sarmalayicisi markup tan KALKTI',
         strpos($ifPhp, 'if-nav-share-row') === false);
     check('B) .if-nav-share-row kurallari CSS ten de KALKTI',
         strpos($ifCss, '.if-nav-share-row') === false);
-    // "Paylas" artik yardimci satirin ICINDE olmali: util-row acilisi ile
-    // collab-share arasinda baska bir kapanis <div> olmamali.
+
     check('B) "Paylas" .if-nav-util-row un ICINDE',
         preg_match('#<div class="if-nav-util-row">\s*(?:<!--.*?-->\s*)?<details class="if-nav-collab-share#s', $ifPhp) === 1);
-    // Alt satirin BES ogesi + avatar: sira `order` ile suruluyor.
-    // "Baglanti" (.if-nav-share) KALDIRILDI — ise yaramayan link kopyalama kutusuydu.
+
     foreach (array('.if-account' => 1, '.if-nav-spacer' => 2, '.if-nav-collab-share' => 3,
                    '.if-nav-util-row .home-notif' => 5,
                    '.if-nav-collapse-btn' => 6, '.if-nav-expand-btn' => 7) as $sel => $ord) {
         check("B) {$sel} order: {$ord}",
             preg_match('#' . preg_quote($sel, '#') . ' \{ order: ' . $ord . ';#', $ifCss) === 1);
     }
-    // ⚠️ TASMA KORUMASI: etiketler gorunur olsaydi alti oge 220px'e sigmazdi
-    // (dosyanin gecmisinde tam olarak bu yasandi).
+
     check('B) kalan paylasim dugmesinin METIN etiketi gizli (tasma korumasi)',
         preg_match('#\.if-nav-collab-share \.if-nav-bottom-label \{ display: none; \}#s', $ifCss) === 1);
     check('B) kaldirilan "Baglanti" dugmesinin CSS kurallari da GITTI',
         strpos($ifCss, '.if-nav-share ') === false && strpos($ifCss, '.if-nav-share{') === false);
     check('B) "Paylas" artik tam genislikte buton DEGIL',
         preg_match('#\.if-nav-collab-share-btn \{[^}]*width: 100%#s', $ifCss) === 0);
-    // Footer KABI: zemin + panelin yatay padding ini geri alan negatif margin.
+
     check('B) footer kabi panel genisligini kapliyor (negatif margin)',
         preg_match('#\.if-nav-bottom \{[^}]*margin: auto -0\.75rem -1rem;#s', $ifCss) === 1);
     check('B) daraltilmisken footer dar raya gore yeniden hesaplaniyor',
         preg_match('#\.if-nav\.is-collapsed \.if-nav-bottom \{[^}]*margin: auto -0\.5rem -1rem;#s', $ifCss) === 1);
-    // align-self: stretch olmadan footer 45px'lik bir ada olarak kaliyordu.
+
     check('B) daraltilmisken footer align-self: stretch ile geriliyor',
         preg_match('#\.if-nav\.is-collapsed \.if-nav-bottom \{[^}]*align-self: stretch;#s', $ifCss) === 1);
     check('B) erisilebilirlik: kalan dugmede title + aria-label duruyor',
@@ -220,23 +181,15 @@ try {
         strpos($ifPhp, 'aria-label="Bağlantı"') === false
         && strpos($ifPhp, 'if-nav-share-btn') === false);
 
-    // =====================================================================
-    // C) WORKSPACE IKONU
-    // =====================================================================
     echo "\n--- C) Workspace ikonu ---\n";
-    // ⚠️ Yorumlar SOYULARAK bakiliyor: fonksiyonun ADI, neden kaldirildigini
-    // anlatan HTML yorumunda GECIYOR — cagrilmadigini dogrulamak istiyoruz,
-    // adinin hic anilmadigini degil.
+
     $ifPhpCode = preg_replace('#<!--.*?-->#s', '', $ifPhp);
     $ifPhpCode = preg_replace('#/\*.*?\*/#s', '', $ifPhpCode);
     check('C) satir ici canli renk (bcc_base_icon_color) artik CAGRILMIYOR',
         strpos($ifPhpCode, 'bcc_base_icon_color') === false);
     check('C) ikon span inda satir ici style KALMADI',
         preg_match('#home-base-icon"\s+style=#', $ifPhp) === 0);
-    // ⚠️ Cagri UCUNCU parametreyi (kullanicinin sectigi ikon, migrations/020)
-    // aldiktan sonra bu kontrol eskimisti: iki parametreli imzayi ariyordu ve
-    // kod dogru oldugu halde KALIYORDU. Artik fonksiyon adi + ilk iki argumana
-    // bakiliyor, ucuncu argumanin varligi testi kirmiyor.
+
     check('C) kategori glifi KORUNDU (base ler ayirt edilebilir kalsin)',
         preg_match('#bcc_base_icon_svg\(14,\s*\$base\[\'name\'\]#', $ifPhp) === 1);
     $iconRule = rule_body($ifCss, '.if-nav-back .home-base-icon');
@@ -250,19 +203,12 @@ try {
         && strpos($iconRule, '#fff') === false, (string) $iconRule);
     check('C) kenarlik rengi token uzerinden (#1e293b)',
         $navRule !== null && strpos($navRule, '--if-nav-ink: #1e293b;') !== false);
-    // "tum ikon rozetleri": bu panelde ikinci ikon kutusu avatardir.
+
     check('C) avatar da AYNI kenarligi aliyor',
         preg_match('#\.if-avatar \{[^}]*border: 1\.5px solid var\(--if-nav-ink\);#s', $ifCss) === 1);
 
-    // =====================================================================
-    // D) CSS YORUM BUTUNLUGU (bu iste bulunan gercek bug sinifi)
-    // =====================================================================
     echo "\n--- D) CSS yorum butunlugu ---\n";
-    // Yorum ICINDE gecen bir "*" + "/" ikilisi yorumu orada kapatir ve
-    // ARDINDAN GELEN KURAL sessizce DUSER. Uc gercek ornek bulundu:
-    //   interface.css  ".home-*[/].gs-*"  -> `* { box-sizing }` dusuyordu
-    //   interface.css  ikon yorumu        -> .if-nav-back .home-base-icon dusuyordu
-    //   home.css       "ws-*[/]tm-*"      -> .settings-breadcrumb dusuyordu
+
     $cssFiles = glob($assetsDir . '/*.css');
     check('D) taranacak CSS dosyasi bulundu', count($cssFiles) > 0, count($cssFiles) . ' dosya');
     $offenders = array();
@@ -272,15 +218,12 @@ try {
     }
     check('D) HICBIR CSS dosyasinda kacak yorum sonlandirici yok',
         count($offenders) === 0, implode(' | ', $offenders));
-    // Dusen uc kuralin GERI GELDIGINI dogrula (yorum duzeldi -> kural ayristiriliyor).
+
     check('D) interface.css: `* { box-sizing }` kurali saglam',
         preg_match('#(^|\})\s*\*\s*\{\s*box-sizing: border-box;\s*\}#s', $ifCssRaw) === 1);
     check('D) home.css: .settings-breadcrumb kurali saglam',
         preg_match('#(^|\})\s*\.settings-breadcrumb \{#s', file_get_contents($assetsDir . '/home.css')) === 1);
 
-    // =====================================================================
-    // E) REGRESYON
-    // =====================================================================
     echo "\n--- E) Regresyon ---\n";
     check('E) daraltilmis hal kurallari duruyor',
         preg_match('#\.if-nav\.is-collapsed \{[^}]*width: 64px;#s', $ifCss) === 1);
@@ -291,7 +234,7 @@ try {
         && strpos($ifCss, '.if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }') !== false);
     check('E) daraltilmisken "Paylas" ikon yiginin SONUNDA',
         strpos($ifCss, '.if-nav.is-collapsed .if-nav-collab-share { order: 5; }') !== false);
-    // Paylasim mantigi ORTAK partial/JS te kalmali — ikinci kopya YOK.
+
     check('E) share_link_popover artik bu sayfada KULLANILMIYOR ("Baglanti" kaldirildi)',
         strpos($ifPhp, "partials/share_link_popover.php") === false);
     check('E) share-popover.js de artik yuklenmiyor (olu script kalmadi)',
@@ -302,7 +245,6 @@ try {
     check('E) geriye TEK paylasim <details> i kaldi',
         substr_count($ifPhp, 'name="if-nav-share"') === 1);
 
-    // CANLI: sayfa gercekten aciliyor ve yeni yapi HTML de var mi.
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
     if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
     bcc_execute('INSERT INTO users (email, password_hash, full_name, is_admin, is_active) VALUES (:e, :h, :n, 0, 1)',

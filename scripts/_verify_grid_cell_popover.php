@@ -1,23 +1,4 @@
 <?php
-// Hucre duzenleme popover'i (tasma/konumlandirma) + "+ Yeni olustur..." menusu
-// etiketi dogrulamasi.
-//
-// Kapsam:
-//   A) Ortak konumlandirma yardimcisi (bcc_positionFloating) ve dikey cevirme
-//   B) grid.js'in IKI hucre popover'inin da yardimciyi KULLANMASI (kopya yok)
-//      + dinleyici sizintisi olmamasi
-//   C) CSS: ek dosya popover'i artik fixed, ikisi de max-height'i kaydirabilir
-//   D) Yukleme sirasi (yardimci grid.js'ten ONCE)
-//   E) "+ Yeni olustur..." bir GORUNUM yaratir, TABLO degil; etiket bunu soyler
-//   F) Gercek base (15) dokunulmamis olmali
-//
-// GEOMETRI NOTU: "asagi sigmazsa yukari cevir" davranisi TARAYICIDA olculdu
-// (/browse): viewport dibindeki bir hucrede eski kod popover'i 140px ekran
-// disina tasiriyordu, en sagdaki sutunda 113px; yeni kodda ikisi de 0.
-// Burasi o davranisin KODDA durdugunu ve regresyona ugramadigini bekler.
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_grid_cell_popover.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -27,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -97,14 +75,11 @@ function login($email)
     return $r['cookie'] ? $r['cookie'] : $c;
 }
 
-// CSS yorumlarini soyar: gecmiste testler ACIKLAMA YORUMLARINA takilip yanlis
-// "GECTI" verdi (bu projede uc kez oldu), kural metnine bakiyoruz.
 function css_rules($css)
 {
     return preg_replace('#/\*.*?\*/#s', '', $css);
 }
 
-// JS yorumlarini (satir ve blok) soyar - AYNI tuzak.
 function js_code_only($js)
 {
     $js = preg_replace('#/\*.*?\*/#s', '', $js);
@@ -123,10 +98,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -145,9 +116,6 @@ try {
     $gridJs  = js_code_only(file_get_contents($assetsDir . '/grid.js'));
     $styleCss = css_rules(file_get_contents($assetsDir . '/style.css'));
 
-    // =====================================================================
-    // A) ORTAK KONUMLANDIRMA YARDIMCISI
-    // =====================================================================
     echo "--- A) Ortak yardimci (bcc_positionFloating) ---\n";
     check('A) yardimci disa aciliyor',
         strpos($panelJs, 'window.bcc_positionFloating = function') !== false);
@@ -156,41 +124,30 @@ try {
         && strpos($panelJs, 'panel.style.bottom =') !== false);
     check('A) hicbir tarafa sigmazsa max-height ile kirpiliyor (gizlenmiyor)',
         strpos($panelJs, 'panel.style.maxHeight =') !== false);
-    // Bulunan gercek tuzak: max-height sifirlanmazsa bir kez daralan panel,
-    // yer acildiginda dar KALIRDI.
+
     check('A) max-height her cagride SIFIRLANIYOR',
         preg_match("/panel\.style\.maxHeight = '';[\s\S]{0,200}offsetHeight/", $panelJs) === 1);
-    // ⚠️ Bu kontrol kodun GERISINDE kalmisti: konum matematigi UI olcegine
-    // (--bcc-zoom / uiScale) gecince "window.innerWidth" yerine olcege bolunmus
-    // "viewportW" kullanilmaya baslandi. Kod DOGRUYDU, test eskimisti.
+
     check('A) YATAY tasma korumasi korundu (sag + sol kenar)',
         strpos($panelJs, 'viewportW = window.innerWidth / uiScale') !== false
         && strpos($panelJs, 'viewportW - margin - panelWidth') !== false
         && strpos($panelJs, 'viewportW - margin - pw') !== false);
     check('A) bindFloatingPanel matematigi KOPYALAMIYOR, yardimciya deleg ediyor',
         preg_match('/function position\(\) \{\s*window\.bcc_positionFloating\(panel, anchor\.getBoundingClientRect\(\), options\);\s*\}/', $panelJs) === 1);
-    // Regresyon: eski surumde konum matematigi bindFloatingPanel govdesindeydi.
-    // ⚠️ Ayni eskime: olcege gecisle birlikte window.innerWidth yerine viewportW.
-    // Korunan guvence AYNI — konum matematigi TEK yerde (yardimci fonksiyonda),
-    // bindFloatingPanel govdesinde kopyasi YOK.
+
     check('A) eski satir-ici matematik bindFloatingPanel den KALKTI',
         substr_count($panelJs, 'var rightOffset = viewportW - rect.right;') === 1);
 
-    // =====================================================================
-    // B) grid.js — IKI HUCRE POPOVER'I DA YARDIMCIYI KULLANIYOR
-    // =====================================================================
     echo "\n--- B) grid.js hucre popover'lari ---\n";
     check('B) zengin metin popover i yardimciyi cagiriyor',
         substr_count($gridJs, 'window.bcc_positionFloating(popover, td.getBoundingClientRect())') === 2,
         'cagri sayisi=' . substr_count($gridJs, 'window.bcc_positionFloating(popover, td.getBoundingClientRect())'));
-    // Bulunan gercek bug: kosulsuz "hucrenin ALTI".
+
     check('B) kosulsuz "tdRect.bottom + 4" konumlandirmasi KALKTI',
         strpos($gridJs, 'tdRect.bottom + 4') === false);
     check('B) grid.js kendi tasma matematigini YAZMIYOR (kopya yok)',
         strpos($gridJs, 'window.innerHeight -') === false && strpos($gridJs, 'window.innerWidth -') === false);
 
-    // Dinleyici sizintisi: her eklenen scroll/resize dinleyicisi KALDIRILMALI.
-    // (Popover'lar surekli yaratilip yok ediliyor; sizinti birikirdi.)
     check('B) scroll dinleyicisi eklenen kadar KALDIRILIYOR',
         substr_count($gridJs, "addEventListener('scroll', positionPopover, true)")
         === substr_count($gridJs, "removeEventListener('scroll', positionPopover, true)"),
@@ -204,35 +161,26 @@ try {
     check('B) her IKI popover da resize e abone (pencere kuculunce yeniden olcum)',
         substr_count($gridJs, "addEventListener('resize', positionPopover)") === 2);
 
-    // =====================================================================
-    // C) CSS
-    // =====================================================================
     echo "\n--- C) CSS ---\n";
     check('C) ek dosya popover i artik position: fixed',
         preg_match('/\.attachment-popover \{[^}]*position: fixed;/s', $styleCss) === 1);
-    // absolute iken .grid-wrap { overflow:auto } kutusuna kirpiliyordu.
+
     check('C) ek dosya popover inda position: absolute KALMADI',
         preg_match('/\.attachment-popover \{[^}]*position: absolute;/s', $styleCss) === 0);
     check('C) CSS teki sabit top/left kalintisi temizlendi (konum JS ten)',
         preg_match('/\.attachment-popover \{[^}]*top: calc\(100% \+ 0\.35rem\);/s', $styleCss) === 0);
     check('C) zengin metin popover i fixed kaldi',
         preg_match('/\.richtext-popover \{[^}]*position: fixed;/s', $styleCss) === 1);
-    // max-height kirpma yerine KAYDIRMA olsun diye.
+
     check('C) iki popover da max-height i kaydirabiliyor (overflow-y: auto)',
         preg_match('/\.richtext-popover \{[^}]*overflow-y: auto;/s', $styleCss) === 1
         && preg_match('/\.attachment-popover \{[^}]*overflow-y: auto;/s', $styleCss) === 1);
 
-    // =====================================================================
-    // D) YUKLEME SIRASI
-    // =====================================================================
     echo "\n--- D) Yukleme sirasi ---\n";
     $gridPhp = file_get_contents(__DIR__ . '/../public/grid.php');
     check('D) dismissable-panel.js, grid.js ten ONCE yukleniyor',
         strpos($gridPhp, "bcc_asset_url('dismissable-panel.js')") < strpos($gridPhp, "bcc_asset_url('grid.js')"));
 
-    // =====================================================================
-    // E) "+ Yeni olustur..." GORUNUM yaratir, TABLO degil
-    // =====================================================================
     echo "\n--- E) \"+ Yeni olustur...\" etiketi ve davranisi ---\n";
     check('E) grid etiketi artik "Tablo gorunumu" (yalin "Tablo" degil)',
         $GLOBALS['BCC_VIEW_TYPES']['grid'] === 'Tablo görünümü',
@@ -268,12 +216,7 @@ try {
 
     check('E) menude "Tablo görünümü" yaziyor',
         strpos($html, '>Tablo görünümü<') !== false);
-    // ⚠️ AYRI BOLUM BASLIGI BILEREK KALDIRILDI, kontrol ona gore guncellendi.
-    // Eskiden menude "Bu tablonun yeni görünümü" diye bir baslik vardi; menuye
-    // "Boş tablo oluştur" eklenince o baslik YANLIS oldu (o kalem yeni bir
-    // TABLO aciyor, gorunum degil) ve kaldirildi. Ayrimi artik ETIKETLERIN
-    // KENDISI tasiyor (gerekce grid.php'de yazili).
-    // Korunan guvence AYNI: kullanici neyin yaratilacagini menuden okuyabilmeli.
+
     check('E) menu etiketleri ne yaratildigini KENDILERI soyluyor',
         strpos($html, 'Boş tablo oluştur') !== false
         && strpos($html, '>Tablo görünümü<') !== false);
@@ -283,7 +226,6 @@ try {
         strpos($html, 'class="gs-table-tab-add"') !== false
         && strpos($html, '/base_tables.php?base_id=') !== false);
 
-    // DAVRANIS: uc nokta yeni bir TABLO degil, AYNI tablonun yeni GORUNUMUNU yaratir.
     $tablesBefore = (int) bcc_fetch_column('SELECT COUNT(*) FROM tables_meta WHERE base_id = :b', array(':b' => $baseId));
     $fieldsBefore = (int) bcc_fetch_column('SELECT COUNT(*) FROM fields WHERE table_id = :t', array(':t' => $tableId));
     $r = http_request('POST', '/api/view_create.php', $cookie, array(

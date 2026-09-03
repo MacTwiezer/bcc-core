@@ -1,26 +1,4 @@
 <?php
-// Ust gezinme cubugundaki "Ana sayfa" dugmesi: ev simgesi yerine marka logosu.
-//
-// MARKA GUNCELLEMESI (OpsFlow / opsflow.bcccrm.com): logo artik
-// assets/logo.png DEGIL. O dosya icinde "bcc" harfleri PIKSEL olarak basili
-// bir bitmap'ti; urun adi degisince guncellenemedi ve ust barda eski ad
-// gorunmeye devam ediyordu. Yerine satir ici SVG kelime isareti geldi:
-// src/partials/brand_logo.php — ad bcc_brand_name()'den (config/app.php)
-// okunur, kelime isareti currentColor ile cizilir (koyu tema uyumu).
-//
-// Kapsam:
-//   A) Markup: ortak kabuk marka partial'ini include ediyor, ev SVG'si kalkti
-//   B) CSS: olcu YALNIZCA yukseklikten (en-boy orani korunur), 24px; kutu
-//      acikca metin rengi veriyor (currentColor'in kaynagi)
-//   C) CANLI: kabugu kullanan sayfalarda render oluyor, marka adi SVG'nin
-//      icinde gercekten basiliyor, favicon 200 donuyor
-//   D) Kapsam disi: grid.php'nin dar sol seridi (.gs-rail-home) BILEREK
-//      degismedi — gerekcesiyle birlikte sabitlendi
-//   E) login/register/verify_email AYNI partial'i kullaniyor (tek kaynak)
-//   F) Gercek base (15) dokunulmamis olmali
-//
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_topbar_logo.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -30,9 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -127,10 +102,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Nobetci ancak base GERCEKTEN varsa bir sey koruyor: base silinir ya da
-// yeniden numaralanirsa asagidaki sayimlarin hepsi 0 olur ve sondaki
-// "degismedi" kontrolu 0 === 0 diye SESSIZCE gecer — koruma islevini
-// kaybeder ama test yesil kalmaya devam eder.
 if ((int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE id = :b', array(':b' => REAL_BASE_ID)) !== 1) {
     echo 'HATA: gercek base (id ' . REAL_BASE_ID . ') bulunamadi; dokunulmazlik nobetcisi anlamsiz olurdu.' . PHP_EOL;
     exit(1);
@@ -147,40 +118,16 @@ try {
     $shellCode = php_code_only($shellPhp);
     $homeCss = css_rules(file_get_contents($assetsDir . '/home.css'));
 
-    // =====================================================================
-    // A) MARKUP
-    // =====================================================================
     echo "--- A) Ortak kabuk markup ---\n";
-    // MARKA DEGISIKLIGI (OpsFlow): logo artik assets/logo.png DEGIL.
-    // O dosyada "bcc" harfleri PIKSEL olarak basiliydi; urun adi
-    // opsflow.bcccrm.com olunca guncellenemeyen bir varlik haline geldi.
-    // Yerine satir ici SVG kelime isareti: src/partials/brand_logo.php.
-    // Ad literal degil, bcc_brand_name()'den (config/app.php) geliyor.
+
     $brandPartial = __DIR__ . '/../src/partials/brand_logo.php';
     check('A) marka isareti partial i projede duruyor', is_file($brandPartial));
     $brandSrc = is_file($brandPartial) ? file_get_contents($brandPartial) : '';
-    // ⚠️ BU BOLUM TAMAMEN YENIDEN YAZILDI -- 20 KONTROL BAYATTI, KOD DEGIL TEST
-    // YANLISTI. Test, marka isaretinin "satir ici SVG kelime isareti"
-    // (currentColor + marka adi metni) oldugu bir TASARIMI dogruluyordu. O
-    // tasarim BILEREK BIRAKILDI: brand_logo.php'nin kendi basligi iki eski
-    // halini de sayiyor ("(1) satir ici SVG rozet + kelime isareti, (2) logo +
-    // 'OpsFlow' yazisi yan yana. Ikisi de birakildi -- logo tek basina
-    // duruyor."). Yani kontroller mevcut tasarimla ASLA gecemezdi ve 20 kirik
-    // satir, ileride GERCEK bir regresyonu maskeleyecekti.
-    //
-    // Korunan guvenceler (mevcut tasarima gore yeniden ifade edildi):
-    //   - marka isareti TEK KAYNAK (brand_logo.php) ve kabuk da onu kullanir
-    //   - marka adi LITERAL degil, bcc_brand_name()'den
-    //   - dogal olculer basilir (CLS yok) ve oran korunur
-    //   - gezinme + erisilebilirlik bozulmaz
+
     check('A) marka adi LITERAL yazilmamis (bcc_brand_name tek kaynak)',
         strpos($brandSrc, 'bcc_brand_name()') !== false
         && strpos($brandSrc, '>OpsFlow<') === false);
 
-    // ⚠️ BU KABUK DUZELTMESI BU TURDA YAPILDI: kabuk kendi <img>'ini yaziyordu,
-    // yani bes auth sayfasinin kullandigi partial'in IKINCI bir uygulamasi
-    // vardi (logo dosyasi ya da 94x44 orani degisse biri guncellenip digeri
-    // unutulurdu). Artik ikisi de ayni partial'dan geciyor.
     check('A) kabuk marka partial ini KULLANIYOR (kopya <img> yazmiyor)',
         strpos($shellCode, "require __DIR__ . '/brand_logo.php'") !== false);
     check('A) kabukta artik ciplak logo <img> etiketi YOK',
@@ -188,41 +135,34 @@ try {
     check('A) kabuk partial e yukseklik veriyor (oran partial de hesaplanir)',
         preg_match('#\$brandLogoHeight\s*=\s*44;#', $shellCode) === 1);
 
-    // Dogal olculer yer kaymasini (CLS) onler; oran GERCEK dosyadan (94x44).
     check('A) width/height oznitelikleri basiliyor (CLS yok)',
         strpos($brandSrc, 'height="<?php echo $brandLogoHeight; ?>"') !== false
         && strpos($brandSrc, '94 / 44') !== false);
     check('A) alt metni DOLU (yaninda marka adi yazan metin yok)',
         strpos($brandSrc, 'alt="<?php echo htmlspecialchars(bcc_brand_name()') !== false);
 
-    // Eski ev (house) SVG'si kalkmis olmali -- bu kontrol HALA GECERLI.
     check('A) eski ev (house) SVG i .home-logo dan KALKTI',
         preg_match('#class="home-logo"[^>]*>\s*<svg#s', $shellCode) === 0);
     check('A) house path i kabukta hic kalmadi',
         strpos($shellCode, 'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8') === false);
-    // Gezinme + erisilebilirlik.
+
     check('A) bag hala /dashboard.php ye gidiyor',
         preg_match('#<a href="/dashboard\.php" class="home-logo"#', $shellCode) === 1);
     check('A) aria-label + title korundu',
         strpos($shellCode, 'title="Ana sayfa" aria-label="Ana sayfa"') !== false);
 
-    // =====================================================================
-    // B) CSS
-    // =====================================================================
     echo "\n--- B) Olculendirme ---\n";
     $logoRule = rule_body($homeCss, '.home-logo');
     check('B) .home-logo kurali var', $logoRule !== null);
     check('B) kutu yuksekligi sabit (dokunma hedefi 32px)',
         $logoRule !== null && strpos($logoRule, 'height: 32px;') !== false, (string) $logoRule);
-    // ⚠️ Kare kutu (width:32px) GERILME/EZILME demekti — logo 94x44, yani ~2.14:1.
+
     check('B) kutu genisligi auto (kare kutuya sikistirilmiyor)',
         $logoRule !== null && strpos($logoRule, 'width: auto;') !== false
         && strpos($logoRule, 'width: 32px;') === false, (string) $logoRule);
     check('B) daralan cubukta sikismiyor (flex-shrink: 0)',
         $logoRule !== null && strpos($logoRule, 'flex-shrink: 0;') !== false);
-    // Kural artik GRUPLU yazili (".home-logo img, .home-logo svg") — eski
-    // <img> yolu da calismaya devam etsin diye ikisi birlikte hedefleniyor.
-    // rule_body() tek bir secici bekledigi icin burada dogrudan regex.
+
     $markRule = null;
     if (preg_match('#\.home-logo img,\s*\.home-logo svg\s*\{([^}]*)\}#s', $homeCss, $mr)) {
         $markRule = $mr[1];
@@ -234,9 +174,7 @@ try {
         $markRule !== null && strpos($markRule, 'width: auto;') !== false, (string) $markRule);
     check('B) display: block (taban cizgisi bosluğu kalksin)',
         $markRule !== null && strpos($markRule, 'display: block;') !== false);
-    // Kelime isareti currentColor ile ciziliyor: .home-logo ACIKCA bir metin
-    // rengi vermezse baglantinin varsayilan mavisini alir ve koyu temada
-    // yanlis kontrast olusur.
+
     check('B) .home-logo metin rengi acikca veriliyor (currentColor kaynagi)',
         $logoRule !== null && strpos($logoRule, 'color: var(--bcc-text);') !== false, (string) $logoRule);
     check('B) hover geri bildirimi korundu',
@@ -244,9 +182,6 @@ try {
     check('B) klavye odagi halkasi korundu',
         preg_match('#\.home-logo:focus-visible \{[^}]*outline:#s', $homeCss) === 1);
 
-    // =====================================================================
-    // C) CANLI
-    // =====================================================================
     echo "\n--- C) Canli render ---\n";
     $teamId = (int) bcc_fetch_column("SELECT id FROM teams WHERE name = 'TY' LIMIT 1");
     if (!$teamId) { echo "HATA: TY ekibi yok.\n"; exit(1); }
@@ -267,7 +202,6 @@ try {
     $cookie = login(OWNER_EMAIL);
     check('C) Giris yapildi', $cookie !== null);
 
-    // Kabugu kullanan SAYFA AILESINDEN ornekler — logo hepsinde ayni.
     $pages = array(
         'dashboard.php'    => '/dashboard.php',
         'workspaces.php'   => '/workspaces.php',
@@ -276,17 +210,14 @@ try {
         'table_fields.php' => '/table_fields.php?table_id=' . $tableId,
         'account.php'      => '/account.php',
     );
-    // ⚠️ BU BOLUM DE YENIDEN YAZILDI (bkz. A bolumundeki gerekce): kontroller
-    // "satir ici SVG kelime isareti" tasarimini ariyordu, o tasarim BILEREK
-    // birakildi ve marka artik sade bir <img> (logo.png). Guvenceler AYNI,
-    // yalnizca mevcut tasarima gore ifade edildi.
+
     foreach ($pages as $name => $path) {
         $r = http_request('GET', $path, $cookie);
-        // Bag + marka isareti CANLI ciktida birlikte basiliyor mu?
+
         $ok = $r['status'] === 200
             && preg_match('#<a href="/dashboard\.php" class="home-logo"[^>]*>\s*<img[^>]*class="brand-logo#s', $r['body']) === 1;
         check("C) {$name}: marka isareti basiliyor ve /dashboard.php ye bagli", $ok, 'HTTP ' . $r['status']);
-        // Bos/kirik gorsel regresyonu: alt metni marka adini tasimali.
+
         check("C) {$name}: marka isaretinin alt metni DOLU",
             preg_match('#<img[^>]*class="brand-logo[^"]*"[^>]*alt="[^"]+"#s', $r['body']) === 1
             || preg_match('#<img[^>]*alt="[^"]+"[^>]*class="brand-logo#s', $r['body']) === 1);
@@ -294,36 +225,27 @@ try {
             strpos($r['body'], 'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8') === false
             || strpos($r['body'], 'gs-rail-home') !== false);
     }
-    // CANLI CIKTIDA erisilebilirlik + CLS oznitelikleri (kaynak yerine
-    // tarayiciya GERCEKTEN giden HTML uzerinden).
+
     $dashBody = http_request('GET', '/dashboard.php', $cookie)['body'];
     if (preg_match('#<a href="/dashboard\.php" class="home-logo"[^>]*>\s*(<img[^>]*>)#s', $dashBody, $im)) {
         check('C) render edilen marka isareti bulundu', true);
-        // ⚠️ CLS: oznitelikler BASILMALI. Yukseklik 44 (kabuk oyle veriyor),
-        // genislik partial'da 94/44 oranindan HESAPLANIR -> 94.
+
         check('C) render edilen <img> de width/height var (yer kaymasi yok)',
             preg_match('#height="44"#', $im[1]) === 1 && preg_match('#width="94"#', $im[1]) === 1, $im[1]);
         check('C) alt metni marka adini tasiyor',
             preg_match('#alt="[^"]+"#', $im[1]) === 1, $im[1]);
-        // Gorunen olcu CSS'ten gelir; oznitelikler yalnizca orani sabitler.
+
         check('C) kaynak ORTAK logo varligini gosteriyor',
             strpos($im[1], 'logo.png') !== false, $im[1]);
     } else {
         check('C) render edilen marka isareti bulundu', false, 'esleme yok');
     }
-    // Satir ici SVG oldugu icin AYRI bir dosya istegi YOK — eski kirik-gorsel
-    // regresyonunun karsiligi burada "favicon hala sunuluyor mu"ya donusuyor.
+
     $fav = http_request('GET', '/assets/favicon.svg');
     check('C) favicon 200 donuyor (kirik ikon yok)',
         $fav['status'] === 200 && strpos($fav['body'], '<svg') !== false,
         'HTTP ' . $fav['status']);
-    // ⚠️ BU KONTROL TERSINE CEVRILDI. Eskiden "gomulu bitmap OLMAMALI" diyordu
-    // -- o, birakilan "satir ici SVG kelime isareti" tasariminin varsayimiydi.
-    // MEVCUT tasarim bitmap'i BILEREK gomuyor: favicon.svg, assets/logo.png'yi
-    // KARE bir tuvale orani bozulmadan oturtulmus halidir (gerekce dosyanin
-    // kendi basliginda yazili -- favicon kare olmali, logo ise 94x44).
-    // Korunan guvence AYNI: ikon marka adini tasiyor ve ORTAK logo varligindan
-    // tureiyor, yani ayri bir "ikinci marka" degil.
+
     check('C) favicon marka adini tasiyor (aria-label)',
         strpos($fav['body'], 'OpsFlow') !== false);
     check('C) favicon ORTAK logo varligindan turetilmis (ikinci marka degil)',
@@ -331,14 +253,8 @@ try {
     check('C) favicon kare tuvalde (sekme ikonu bozulmasin)',
         strpos($fav['body'], 'viewBox="0 0 32 32"') !== false);
 
-    // =====================================================================
-    // D) KAPSAM DISI: grid.php'nin dar sol seridi
-    // =====================================================================
     echo "\n--- D) Kapsam disi birakilan: grid.php sol serit ---\n";
-    // ⚠️ BILINCLI KARAR: .gs-rail 52px GENIS bir DIKEY serit; logo 94x44
-    // yani 24px yukseklikte ~51px genisler — seridi kenardan kenara doldurur,
-    // 28px'te (60px) tasar. Ustelik istek "yan menu dugmesinin YANINDAKI ust
-    // gezinme cubugu" diyor; serit o degil. Ev simgesi orada KALDI.
+
     $gridPhp = file_get_contents(__DIR__ . '/../public/grid.php');
     check('D) grid.php sol seridindeki ev simgesi KORUNDU (dar serit, 52px)',
         strpos($gridPhp, 'class="gs-rail-home"') !== false
@@ -349,9 +265,6 @@ try {
     check('D) serit ev dugmesi de /dashboard.php ye gidiyor (davranis ayni)',
         preg_match('#<a href="/dashboard\.php" class="gs-rail-home"#', $gridPhp) === 1);
 
-    // =====================================================================
-    // E) REGRESYON: ust cubugun geri kalani
-    // =====================================================================
     echo "\n--- E) Ust cubugun geri kalani ---\n";
     $dash = http_request('GET', '/dashboard.php', $cookie);
     check('E) yan menu ac/kapat dugmesi duruyor',
@@ -362,13 +275,7 @@ try {
         && strpos($dash['body'], 'home-account') !== false);
     check('E) sol bolge genisligi degismedi (240px, yan panelle hizali)',
         preg_match('#\.home-topbar-left \{[^}]*width: 240px;#s', $homeCss) === 1);
-    // Giris/kayit/dogrulama sayfalari da AYNI marka partial ini kullanir —
-    // eskiden ucu de assets/logo.png'yi ayri ayri basiyordu; marka degisince
-    // uc yer birden guncellenmek zorundaydi. Artik tek kaynak.
-    // ⚠️ Kontrol eskimisti: bu uc sayfa marka partial'ini artik DOGRUDAN degil,
-    // ortak oturumsuz kabuk (auth_shell_top.php) uzerinden aliyor — tek kaynak
-    // ilkesi GUCLENDI, test onu gormuyordu. Marka partial'inin gercekten
-    // kabukta oldugu da ayrica dogrulaniyor.
+
     check('E) auth kabugu marka partial ini kullaniyor (tek kaynak)',
         strpos(file_get_contents(__DIR__ . '/../src/partials/auth_shell_top.php'), "require __DIR__ . '/brand_logo.php'") !== false);
     foreach (array('login.php', 'register.php', 'verify_email.php') as $authPage) {

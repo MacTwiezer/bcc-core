@@ -1,8 +1,4 @@
 <?php
-// api/field_create.php: yetki, dogrulama ve COP KUTUSUNDAKI base korumasi.
-//
-// CALISTIRMA: C:/php73/php.exe scripts/_verify_field_create.php
-// Apache ayakta olmali. Kendi ekip/kullanici/base'ini kurar ve siler.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -11,9 +7,6 @@ if (PHP_SAPI !== 'cli') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-// Bu betik gercek uc noktalardan yaziyor; olusan denetim satirlari test
-// kullanicisi silinince audit_log'da OKSUZ kaliyordu. Kapanista yalnizca bu
-// kosunun urettigi ve aktoru artik var olmayan satirlar temizlenir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_purge_own_audit();
 
@@ -57,7 +50,6 @@ function jeton($url)
 $r = istek($BASE . '/login.php');
 if (!$r || $r['code'] !== 200) { fwrite(STDERR, "Apache'ye ulasilamadi.\n"); exit(2); }
 
-// --- izole ortam ---
 $SON = bin2hex(random_bytes(4));
 $SIFRE = 'FcTest!' . $SON;
 
@@ -81,11 +73,6 @@ bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b,:n,0)'
 $copTable = (int) bcc_last_insert_id();
 bcc_execute('UPDATE bases SET deleted_at = NOW() WHERE id = :i', array('i' => $copBase));
 
-// Temizlik BURADA baglanir, sonda degil: ekip adi ve e-postalar rastgele ek
-// tasiyor (FcTeam <hex>), yani betik ortada olurse (Apache dusmesi, fatal,
-// Ctrl+C) kalan ekip/kullanicilari SONRAKI kosu de bulamaz.
-// bases/tables_meta/fields ayrica silinmiyor: FK zinciri CASCADE, ekip
-// silinince hepsi kendiliginden gider.
 $cleanup = function () use ($teamId, $ownerId, $editorId, $SON, $COOKIE) {
     bcc_execute('DELETE FROM audit_log WHERE team_id = :t', array('t' => $teamId));
     bcc_execute('DELETE FROM team_members WHERE team_id = :t', array('t' => $teamId));
@@ -104,17 +91,15 @@ function girisYap($BASE, $email, $sifre) {
     istek($BASE . '/login.php', 'csrf_token=' . $t . '&email=' . rawurlencode($email) . '&password=' . rawurlencode($sifre));
 }
 
-// ---------------------------------------------------------------------------
 echo "A) EDITOR sutun ekleyemez (owner gerekir)\n";
-// ---------------------------------------------------------------------------
+
 girisYap($BASE, "fc.editor.$SON@bcc-test.local", $SIFRE);
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=' . $aktifTable . '&name=X&field_type=single_line_text');
 check('editor -> 403', $r['code'] === 403, $r['code'] . ' ' . substr($r['body'], 0, 60));
 
-// ---------------------------------------------------------------------------
 echo "\nB) OWNER aktif tabloya sutun ekler\n";
-// ---------------------------------------------------------------------------
+
 girisYap($BASE, "fc.owner.$SON@bcc-test.local", $SIFRE);
 $tok = jeton($BASE . '/account.php');
 $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=' . $aktifTable . '&name=Musteri&field_type=single_line_text');
@@ -130,9 +115,8 @@ check('bos isim -> 422', $r['code'] === 422, $r['code']);
 $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=' . $aktifTable . '&name=X&field_type=uydurma_tip');
 check('gecersiz alan tipi -> 422', $r['code'] === 422, $r['code'] . ' ' . substr($r['body'], 0, 70));
 
-// ---------------------------------------------------------------------------
 echo "\nC) DUZELTME — COP KUTUSUNDAKI base'in tablosuna sutun EKLENEMEZ\n";
-// ---------------------------------------------------------------------------
+
 $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=' . $copTable . '&name=Sizinti&field_type=single_line_text');
 check('cop kutusundaki tablo -> 404', $r['code'] === 404, $r['code'] . ' ' . substr($r['body'], 0, 80));
 check('yanit JSON', json_decode($r['body'], true) !== null, substr($r['body'], 0, 60));
@@ -142,7 +126,6 @@ check('cop kutusundaki tabloya alan EKLENMEDI',
 $r = istek($BASE . '/api/field_create.php', 'csrf_token=' . $tok . '&table_id=99999999&name=X&field_type=single_line_text');
 check('olmayan tablo -> 404', $r['code'] === 404, $r['code']);
 
-// --- temizlik ---
 $cleanup();
 
 $kalan = (int) bcc_fetch_column('SELECT COUNT(*) FROM teams WHERE id = :t', array('t' => $teamId))

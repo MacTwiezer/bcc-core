@@ -1,7 +1,4 @@
 <?php
-// Grup View-Kanban dogrulamasi.
-// On kosul: Apache ayakta olmali. Calistirma:
-//   C:\php73\php.exe scripts\_verify_view_kanban.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -11,10 +8,6 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../src/schema.php';
 
-// Bu betik GERCEK uc noktalardan yaziyor; bir kayit/hucre degisikligi
-// bcc_slack_dispatch() uzerinden CANLI Slack kanalina mesaj gonderiyordu
-// (denetim turunda olculdu). Aktif webhooklar test suresince susturulur,
-// kapanista geri acilir.
 require __DIR__ . '/_test_slack_guard.php';
 bcc_test_silence_slack();
 bcc_test_purge_own_audit();
@@ -134,7 +127,6 @@ try {
             array(':r' => $rid, ':f' => $fid, ':v' => $val));
     };
 
-    // --- Tablo: single_select'li -------------------------------------------
     $tA = $mkTable('Kanban Tablosu');
     $fAd = $mkField($tA, 'Ad', 'single_line_text', 0);
     $selOpts = json_encode(array('choices' => array('Yapilacak', 'Devam', 'Bitti')), JSON_UNESCAPED_UNICODE);
@@ -144,20 +136,17 @@ try {
 
     $r1 = $mkRecord($tA, 0); $setCell($r1, $fAd, 'value_text', 'Kayit 1'); $setCell($r1, $fDurum, 'value_text', 'Yapilacak'); $setCell($r1, $fNot, 'value_text', 'not1');
     $r2 = $mkRecord($tA, 1); $setCell($r2, $fAd, 'value_text', 'Kayit 2'); $setCell($r2, $fDurum, 'value_text', 'Bitti');
-    $r3 = $mkRecord($tA, 2); $setCell($r3, $fAd, 'value_text', 'Kayit 3'); // Durum hucresi YOK -> Atanmamis
-    $r4 = $mkRecord($tA, 3); $setCell($r4, $fAd, 'value_text', 'Kayit 4'); $setCell($r4, $fDurum, 'value_text', 'ESKI_SECENEK'); // choices'ta YOK
+    $r3 = $mkRecord($tA, 2); $setCell($r3, $fAd, 'value_text', 'Kayit 3');
+    $r4 = $mkRecord($tA, 3); $setCell($r4, $fAd, 'value_text', 'Kayit 4'); $setCell($r4, $fDurum, 'value_text', 'ESKI_SECENEK');
     $r5 = $mkRecord($tA, 4); $setCell($r5, $fAd, 'value_text', 'Silinmis'); $setCell($r5, $fDurum, 'value_text', 'Devam');
     bcc_execute('UPDATE records SET deleted_at = NOW(), deleted_by = :u WHERE id = :r', array(':u' => $ownerId, ':r' => $r5));
 
     $cookie = login(OWNER_EMAIL);
     check('Giris yapildi (owner)', $cookie !== null);
 
-    // =======================================================================
-    // A) ORTAK TEMEL
-    // =======================================================================
     echo "\n--- A) Ortak temel ---\n";
     check('A) BCC_VIEW_TYPES kanban iceriyor', isset($GLOBALS['BCC_VIEW_TYPES']['kanban']));
-    // 3 -> 2: 'form' rotasi form ozelligiyle birlikte kaldirildi (migrations/023).
+
     check('A) BCC_VIEW_ROUTES haritasi var', isset($GLOBALS['BCC_VIEW_ROUTES']) && count($GLOBALS['BCC_VIEW_ROUTES']) === 2,
         isset($GLOBALS['BCC_VIEW_ROUTES']) ? implode(',', array_keys($GLOBALS['BCC_VIEW_ROUTES'])) : 'YOK');
     check('A) route(kanban) -> kanban.php', bcc_view_route_for('kanban', 1, 2) === '/kanban.php?table_id=1&view_id=2');
@@ -174,9 +163,6 @@ try {
             preg_match('/\.view-type-badge--' . $vt . '\b[^{]*\{[^}]*--view-icon:/', $themeCss) === 1);
     }
 
-    // =======================================================================
-    // B) OLUSTURMA + VARSAYILAN ALAN
-    // =======================================================================
     echo "\n--- B) Kanban olusturma ---\n";
     $g = http_request('GET', "/grid.php?table_id={$tA}", $cookie);
     $csrf = extract_csrf($g['body']);
@@ -193,18 +179,12 @@ try {
     check('B) Varsayilan kanban_field_id = ilk single_select', $cfg['kanban_field_id'] === $fDurum,
         'beklenen ' . $fDurum . ' bulunan ' . $cfg['kanban_field_id']);
 
-    // =======================================================================
-    // C) YONLENDIRME
-    // =======================================================================
     echo "\n--- C) Yonlendirme ---\n";
     $resp = http_request('GET', "/grid.php?table_id={$tA}&view_id={$kanbanViewId}", $cookie, null, false);
     check('C) grid.php -> 302 kanban.php',
         $resp['status'] === 302 && strpos((string) $resp['location'], '/kanban.php') !== false,
         'durum ' . $resp['status'] . ' konum ' . $resp['location']);
 
-    // =======================================================================
-    // D) SUTUNLAR
-    // =======================================================================
     echo "\n--- D) Sutunlar ---\n";
     $kb = http_request('GET', "/kanban.php?table_id={$tA}&view_id={$kanbanViewId}", $cookie);
     check('D) kanban.php acildi', $kb['status'] === 200, 'durum ' . $kb['status']);
@@ -219,7 +199,6 @@ try {
         return '';
     };
     $columnOf = function ($html, $rid) {
-        // Kartin icinde bulundugu sutunun data-column-value'su
         $parts = preg_split('/<section class="kanban-column"[^>]*data-column-value="([^"]*)"/', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
         for ($i = 1; $i < count($parts); $i += 2) {
             if (strpos($parts[$i + 1], 'data-record-id="' . $rid . '"') !== false) { return $parts[$i]; }
@@ -236,9 +215,6 @@ try {
     check('D) Kayit sayisi 4 (silinmis haric)', strpos($kb['body'], '>4 kayıt<') !== false || substr_count($kb['body'], 'data-kanban-card') === 4,
         'kart sayisi: ' . substr_count($kb['body'], 'data-kanban-card'));
 
-    // =======================================================================
-    // E) KART ALANLARI
-    // =======================================================================
     echo "\n--- E) Kart alanlari ---\n";
     check('E) Varsayilan: yalnizca birincil alan (Not gorunmuyor)',
         strpos($cardOf($kb['body'], $r1), 'not1') === false, $cardOf($kb['body'], $r1));
@@ -255,7 +231,6 @@ try {
     $kb2 = http_request('GET', "/kanban.php?table_id={$tA}&view_id={$kanbanViewId}", $cookie);
     check('E) Kartta artik Not alani gorunuyor', strpos($cardOf($kb2['body'], $r1), 'not1') !== false);
 
-    // config'in DIGER anahtarlari ezilmedi mi
     bcc_update_view_config($kanbanViewId, array('frozen_column_count' => 3));
     http_request('POST', '/api/kanban_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $kanbanViewId, 'kanban_field_id' => $fDurum,
@@ -264,12 +239,9 @@ try {
     check('E) Diger config anahtarlari EZILMEDI (frozen_column_count durdu)',
         isset($raw['frozen_column_count']) && (int) $raw['frozen_column_count'] === 3, json_encode($raw));
 
-    // =======================================================================
-    // F) SURUKLE-BIRAK = cell_update.php
-    // =======================================================================
     echo "\n--- F) Kart tasima ---\n";
     $before = bcc_fetch_one('SELECT updated_at, updated_by FROM records WHERE id = :r', array(':r' => $r1));
-    sleep(1); // updated_at farkinin gorunmesi icin
+    sleep(1);
     $resp = http_request('POST', '/api/cell_update.php', $cookie, array(
         'csrf_token' => $csrf, 'record_id' => $r1, 'field_id' => $fDurum, 'value' => 'Bitti',
     ));
@@ -289,9 +261,6 @@ try {
     check('F) Reddedilen deger DB ye yazilmadi',
         bcc_fetch_column('SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f', array(':r' => $r1, ':f' => $fDurum)) === 'Bitti');
 
-    // =======================================================================
-    // G) YETKI
-    // =======================================================================
     echo "\n--- G) Yetki ---\n";
     foreach (array('viewer' => VIEWER_EMAIL, 'commenter' => COMMENTER_EMAIL) as $roleName => $email) {
         $rc = login($email);
@@ -301,7 +270,6 @@ try {
         check("G) {$roleName} icin Sutunlama paneli YOK", strpos($page['body'], 'data-kanban-settings') === false);
         check("G) {$roleName} kartlari surukleyemez (is-draggable YOK)", strpos($page['body'], 'is-draggable') === false);
 
-        // BACKEND BYPASS
         $rcsrf = extract_csrf($page['body']);
         $resp = http_request('POST', '/api/cell_update.php', $rc, array(
             'csrf_token' => $rcsrf, 'record_id' => $r2, 'field_id' => $fDurum, 'value' => 'Devam',
@@ -319,9 +287,6 @@ try {
 
     $cookie = login(OWNER_EMAIL);
 
-    // =======================================================================
-    // H) AYAR DOGRULAMASI
-    // =======================================================================
     echo "\n--- H) Ayar dogrulamasi ---\n";
     $g = http_request('GET', "/kanban.php?table_id={$tA}&view_id={$kanbanViewId}", $cookie);
     $csrf = extract_csrf($g['body']);
@@ -336,16 +301,12 @@ try {
     ));
     check('H) Yabanci field_id REDDEDILDI (422)', $resp['status'] === 422, 'durum ' . $resp['status']);
 
-    // grid gorunumune kanban ayari yazilamaz
     $gridViewId = (int) bcc_fetch_column("SELECT id FROM views WHERE table_id = :t AND view_type = 'grid' ORDER BY id LIMIT 1", array(':t' => $tA));
     $resp = http_request('POST', '/api/kanban_config_update.php', $cookie, array(
         'csrf_token' => $csrf, 'view_id' => $gridViewId, 'kanban_field_id' => $fDurum,
     ));
     check('H) grid gorunumune kanban ayari yazilamaz (422)', $resp['status'] === 422, 'durum ' . $resp['status']);
 
-    // =======================================================================
-    // I) BOS DURUM
-    // =======================================================================
     echo "\n--- I) Bos durum (single_select YOK) ---\n";
     $tB = $mkTable('Secimsiz Tablo');
     $mkField($tB, 'Ad', 'single_line_text', 0);
@@ -364,9 +325,6 @@ try {
     check('I) "alan olustur" baglantisi var', strpos($eb['body'], '/table_fields.php?table_id=' . $tB) !== false);
     check('I) Tahta render EDILMEDI', strpos($eb['body'], 'data-kanban-board') === false);
 
-    // =======================================================================
-    // J) STATIK KONTROLLER
-    // =======================================================================
     echo "\n--- J) Statik kontroller ---\n";
     $kanbanJs = file_get_contents(__DIR__ . '/../public/assets/kanban.js');
     check('J) Surukleme ortak iskeleti kullaniyor (bcc_bindColumnDrag)',
@@ -383,8 +341,6 @@ try {
     check('J) bcc_config_field_id_list ortak yardimcisi var', strpos($schemaSrc, 'function bcc_config_field_id_list') !== false);
     $vcu = file_get_contents(__DIR__ . '/../public/api/view_config_update.php');
     check('J) view_config_update ortak yardimciya bagli', strpos($vcu, 'bcc_update_view_config(') !== false);
-    // form_edit.php SILINDI (form ozelligi kaldirildi, migrations/023) —
-    // ortak yardimcinin tek kalan tuketicisi view_config_update.php, o da yukarida.
 
     check('J) DDL YOK: views semasi degismedi',
         bcc_fetch_one("SELECT COLUMN_NAME FROM information_schema.COLUMNS

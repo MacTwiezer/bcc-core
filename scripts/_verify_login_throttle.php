@@ -82,44 +82,73 @@ echo "\nD) Zaman sabitligi kilitten ONCE korunuyor mu (yan kanal)\n";
 // ---------------------------------------------------------------------------
 temizle();
 
-// Iki olcum ARDISIK yapilirsa (once 5 kez A, sonra 5 kez B) makinenin isinmasi
-// / arka plan yuku tamamen ikinci gruba biner: gercek bir sizinti olmadigi
-// halde 50 ms'ye varan fark cikiyordu, hatta bazen "var olan" DAHA HIZLI
-// olculuyordu (sizintinin tersi yon = saf gurultu). Bu yuzden olcumler
-// DONUSUMLU alinir (A,B,A,B...) ve ilk tur isinma olarak atilir.
+// YONTEM DEGISTI. Onceki hal yalnizca duvar saati olcumune bagliydi ve makine
+// yuk altindayken duzenli olarak yanlis KALDI veriyordu (olculdu: dort ardisik
+// kosunun ikisi kaldi, farklar 25.4 ve 41.1 ms). Sorun uygulamada degil TESTTE
+// idi: ~100 ms'lik bir bcrypt'in sabitligini Windows'ta, yuk altinda, duvar
+// saatiyle kanitlamak guvenilir degil. Ustelik sure ZATEN dolayli bir gosterge.
+//
+// ASIL DEGISMEZ YAPISAL: attempt_login() (src/auth.php) kullanici bulunamasa da
+// GERCEK bir bcrypt hash'ine karsi password_verify() cagirmali. Eski bug
+// "!$row || !password_verify(...)" kisa devresiydi; $row yokken bcrypt HIC
+// calismiyordu (canli olcum: ~6 ms'ye karsi ~141 ms). Asagidaki uc kontrol tam
+// olarak bunu BELIRLEYICI olcuyor, gurultuye bagli degiller.
+$authCode = '';
+foreach (token_get_all(file_get_contents(__DIR__ . '/../src/auth.php')) as $tok) {
+    if (is_array($tok) && ($tok[0] === T_COMMENT || $tok[0] === T_DOC_COMMENT)) { continue; }
+    $authCode .= is_array($tok) ? $tok[1] : $tok;
+}
+$fnPos = strpos($authCode, 'function attempt_login');
+// Bosluk dizileri tek boslugua indirgenir: kontroller kodun BICIMLENDIRMESINE
+// degil YAPISINA baksin (token_get_all yorumlari cikarir ama girintiyi birakir).
+$govde = $fnPos === false ? '' : preg_replace('/\s+/', ' ', substr($authCode, $fnPos, 2000));
+
+$posVerify = strpos($govde, 'password_verify(');
+$posRowGate = strpos($govde, 'if (!$row');
+check('D) password_verify() $row kapisindan ONCE cagriliyor (kisa devre yok)',
+    $posVerify !== false && $posRowGate !== false && $posVerify < $posRowGate,
+    'verify@' . var_export($posVerify, true) . '  kapi@' . var_export($posRowGate, true));
+
+// Kullanici YOKKEN kullanilan yedek hash gercek bir bcrypt hash'i mi?
+$yedek = '';
+if (preg_match('/\$hashToCheck\s*=\s*\$row\s*\?[^:]*:\s*\x27([^\x27]+)\x27/', $govde, $hm)) { $yedek = $hm[1]; }
+$bilgi = $yedek !== '' ? password_get_info($yedek) : array('algoName' => 'bulunamadi');
+check('D) kullanici YOKKEN gercek bir bcrypt hash dogrulaniyor (bos/sahte degil)',
+    isset($bilgi['algoName']) && $bilgi['algoName'] === 'bcrypt',
+    isset($bilgi['algoName']) ? $bilgi['algoName'] : 'bulunamadi');
+
+// Yedek hash'in MALIYETI uygulamanin uretttigiyle ayni olmali; daha ucuz bir
+// maliyet (or. cost=4) sizintiyi sessizce geri getirirdi.
+$varsayilan = password_get_info(password_hash('x', PASSWORD_DEFAULT));
+$mYedek = isset($bilgi['options']['cost']) ? (int) $bilgi['options']['cost'] : -1;
+$mVar = isset($varsayilan['options']['cost']) ? (int) $varsayilan['options']['cost'] : -2;
+check('D) yedek hash maliyeti uygulamanin varsayilaniyla AYNI (ucuz hash sizdirir)',
+    $mYedek === $mVar, 'yedek=' . $mYedek . ' varsayilan=' . $mVar);
+
+// Kaba EMNIYET olcumu: yapisal kontroller bir gun yanilirsa diye. Esik bilerek
+// cok gevsek ve KAT cinsinden — duzeltme oncesi fark 206 KAT idi, bu esik onu
+// rahat yakalar ama makine yukunden etkilenmez.
 function olc_tek($email, $sifre)
 {
     $b = microtime(true);
     attempt_login($email, $sifre);
     $ms = (microtime(true) - $b) * 1000;
-    // Olcumun kendisi esigi doldurmasin.
     bcc_execute('DELETE FROM login_attempts WHERE ip = :ip', array('ip' => bcc_client_ip_binary()));
     return $ms;
 }
-$tur = 13;
-olc_tek($VAR, $YANLIS); // isinma (opcode/onbellek), olcume katilmaz
+olc_tek($VAR, $YANLIS);
 olc_tek($YOK, $YANLIS);
 $olcVar = array();
 $olcYok = array();
-for ($i = 0; $i < $tur; $i++) {
+for ($i = 0; $i < 5; $i++) {
     $olcVar[] = olc_tek($VAR, $YANLIS);
     $olcYok[] = olc_tek($YOK, $YANLIS);
 }
-// Ortanca bile bir bursta denk gelen CPU frekans dususunden etkileniyordu
-// (turlarin yarisi yavaslayinca ortanca da kayiyor). Gurultu SURENIN
-// USTUNE biner, altina inemez; bu yuzden gercek hesaplama maliyetinin en
-// temiz tahmini EN KUCUK olcumdur. Gercek bir sizinti minimumda da gorunur.
 $tVar = min($olcVar);
 $tYok = min($olcYok);
-$fark = abs($tVar - $tYok);
-// Esik MUTLAK degil ORANLI: bcrypt maliyeti makineye gore 80-400 ms arasi
-// degisir, sabit 10 ms bazi makinelerde imkansiz olur. Yakalanmak istenen
-// sizinti (duzeltme oncesi 206 kat) bu esigin cok otesinde.
-$esik = max(15.0, 0.20 * min($tVar, $tYok));
-printf("  var olan: %.1f ms   olmayan: %.1f ms   fark: %.1f ms   (esik %.1f ms, %d donusumlu turun en kucugu)\n",
-    $tVar, $tYok, $fark, $esik, $tur);
-check('fark esigin altinda (kullanici sayimi kapali)', $fark < $esik,
-    sprintf('%.1f ms >= %.1f ms', $fark, $esik));
+$kat = ($tVar > 0 && $tYok > 0) ? (max($tVar, $tYok) / min($tVar, $tYok)) : 999.0;
+printf("  var olan: %.1f ms   olmayan: %.1f ms   oran: %.2fx  (emniyet esigi 3x)\n", $tVar, $tYok, $kat);
+check('D) sureler ayni buyukluk mertebesinde (emniyet olcumu)', $kat < 3.0, sprintf('%.2fx', $kat));
 
 // ---------------------------------------------------------------------------
 echo "\nE) Basarili giris hata gecmisini siler\n";

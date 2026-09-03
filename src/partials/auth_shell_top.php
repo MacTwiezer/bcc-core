@@ -1,22 +1,4 @@
 <?php
-// Oturum AÇMADAN erişilen sayfaların ortak kabuğu — ÜST yarısı.
-//
-// NEDEN VAR (denetimde bulundu): login, register, forgot-password,
-// reset-password ve verify_email sayfalarının HEPSİ bu 14 satırı birebir
-// kopyalıyordu; aralarındaki tek fark <title> metniydi. Bir stylesheet
-// eklemek ya da sekme başlığı biçimini değiştirmek BEŞ dosyaya ayrı ayrı
-// dokunmak demekti (sekme başlığı işi tam olarak böyle geçti).
-//
-// home_shell_top.php / home_shell_bottom.php ikilisiyle AYNI desen — oturumlu
-// sayfalar bu sorunu zaten böyle çözmüştü, oturumsuz sayfalar geride kalmıştı.
-//
-// Beklenen değişkenler (çağıran sayfa ayarlar):
-//   $authPageTitle - string, sekmede görünecek SAYFA ADI ("Giriş", "Kayıt ol").
-//                    Marka ve ayırıcı BURADA eklenmez; tek kural
-//                    bcc_tab_title() (bkz. src/schema.php).
-//
-// ⚠️ Kart gövdesi (.login-card-body) BURADA AÇILIR, auth_shell_bottom.php'de
-// kapanır. Çağıran sayfa yalnızca gövdeyi yazar.
 
 if (!isset($authPageTitle)) {
     $authPageTitle = '';

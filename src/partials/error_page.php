@@ -1,19 +1,4 @@
 <?php
-// Yetki/bulunamadı hatalarının ortak sayfası.
-//
-// NEDEN VAR: bu hatalar 16 ayrı yerde `die('Bu tablo bu base'e ait değil.')`
-// gibi ÇIPLAK METİN basıyordu — kullanıcı beyaz bir ekranda tek satır yazı
-// görüyor, geri dönmek için tarayıcının geri düğmesini bulmak zorunda kalıyordu.
-// Marka, tema (koyu/açık) ve dönüş bağlantısı yoktu.
-//
-// auth_shell_top.php ile AYNI gerekçe: aynı 14 satırı her sayfaya kopyalamak
-// yerine tek partial. Buraya doğrudan require edilmez — bcc_error_page()
-// (src/errors.php) üzerinden çağrılır, o fonksiyon HTTP durum kodunu da yazar.
-//
-// Beklenen değişkenler:
-//   $errorTitle   - başlık ("Erişim yetkiniz yok")
-//   $errorMessage - açıklama; kullanıcıya gösterilecek metin
-//   $errorStatus  - HTTP durum kodu (yalnızca gösterim için)
 
 if (!isset($errorTitle)) { $errorTitle = 'Bir şeyler ters gitti'; }
 if (!isset($errorMessage)) { $errorMessage = ''; }
@@ -41,11 +26,7 @@ if (!isset($errorStatus)) { $errorStatus = 500; }
             <p class="hint" style="text-align:center;"><?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
         <p style="text-align:center; margin-top:1.2rem;">
-            <?php // Oturumu olan kullanıcı ana sayfaya, olmayan girişe döner —
-                  // "yetkiniz yok" görüp giriş ekranına atılmak kafa karıştırıcı olurdu. ?>
-            <?php // .login-submit: bu sayfa login.css yükler, giriş düğmesiyle AYNI
-                  // görünüm. Genel .btn burada TANIMSIZ olurdu (style.css yüklü değil). ?>
-            <a class="login-submit" style="display:inline-block; text-decoration:none;"
+                                    <a class="login-submit" style="display:inline-block; text-decoration:none;"
                href="<?php echo current_user() !== null ? '/dashboard.php' : '/login.php'; ?>">
                 <?php echo current_user() !== null ? 'Ana sayfaya dön' : 'Giriş yap'; ?>
             </a>

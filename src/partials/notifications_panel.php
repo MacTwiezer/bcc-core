@@ -1,16 +1,4 @@
 <?php
-// Bildirim paneli (zil ikonu + panel) — Home kabuğu (src/partials/home_shell_top.php)
-// VE grid.php'nin sol şeridi TARAFINDAN PAYLAŞILIR; veri hazırlama (bcc_fetch_notifications,
-// $lastSeenAt, $unreadCount hesaplama) VE tüm DOM burada tek yerde, ikinci bir kopya YOK.
-// JS (home.js, #home-notif elemanına bağlanır) ve endpoint (/api/notifications_mark_read.php)
-// zaten ortaktı, değişmedi.
-//
-// Beklenen değişkenler (include eden dosya ayarlar):
-//   $notifUser          - current_user() dizisi (last_seen_notifications_at için)
-//   $notifTriggerClass  - (opsiyonel) summary'nin ekstra class'ı — bağlama göre farklı
-//                         görünüm (home topbar'ı açık, grid'in sol şeridi koyu zemin)
-//   $notifIconSize      - (opsiyonel) zil ikonunun width/height'ı (px)
-//   $notifIconStroke    - (opsiyonel) zil ikonunun stroke rengi
 
 if (!isset($notifTriggerClass)) {
     $notifTriggerClass = 'home-icon-btn';
@@ -25,11 +13,6 @@ if (!isset($notifIconStroke)) {
 $notifications = bcc_fetch_notifications();
 $lastSeenAt = $notifUser['last_seen_notifications_at'];
 
-// Okundu/okunmadı İKİ kaynaktan gelir (bkz. migrations/021):
-//   1) $lastSeenAt        — "Tümünü okundu işaretle"nin çektiği toplu damga
-//   2) $readIds           — göz ikonuyla TEK TEK işaretlenenler
-// okunmamış = damgadan yeni VE tek tek işaretlenmemiş. Tek sorgu, bildirim
-// başına ayrı sorgu yok.
 $readIds = bcc_read_notification_ids(array_column($notifications, 'id'));
 
 $isUnreadFn = function ($n) use ($lastSeenAt, $readIds) {
@@ -82,21 +65,9 @@ foreach ($notifications as $n) {
                         <div class="home-notif-avatar"><?php echo htmlspecialchars($initial, ENT_QUOTES, 'UTF-8'); ?></div>
                         <div class="home-notif-body">
                             <div class="home-notif-message"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
-                            <?php // Kaba yakınlık ("Bugün") DEĞİL kesin saat: aynı gün
-                                  // içinde onlarca bildirim birikiyor ve hepsi "Bugün"
-                                  // yazınca hangisinin ne zaman geldiği okunamıyordu.
-                                  // Bugünse yalnızca saat, diğer günlerde tarih + saat
-                                  // (bkz. bcc_notification_time_text). Base kartlarının
-                                  // "Açıldı: 10 gün önce" biçimi DEĞİŞMEDİ. ?>
-                            <div class="home-notif-time"><?php echo htmlspecialchars(bcc_notification_time_text($n['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
+                                                        <div class="home-notif-time"><?php echo htmlspecialchars(bcc_notification_time_text($n['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
-                        <?php // Tek tek "okundu" — göz ikonu. YALNIZCA okunmamış
-                              // satırlarda basılır: zaten okunmuş bir bildirimi
-                              // yeniden okundu yapmanın anlamı yok, buton da
-                              // "tıklayınca hiçbir şey olmayan" bir öğeye dönerdi.
-                              // Okundu işaretlemeyi GERİ ALMA bu turun kapsamı
-                              // dışında (uçnokta yalnızca INSERT yapıyor). ?>
-                        <?php if ($isUnread): ?>
+                                                <?php if ($isUnread): ?>
                             <button type="button" class="home-notif-read-btn" data-notif-read="<?php echo (int) $n['id']; ?>" title="Okundu işaretle" aria-label="Okundu işaretle">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>

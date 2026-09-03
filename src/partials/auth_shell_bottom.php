@@ -1,19 +1,4 @@
 <?php
-// Oturumsuz sayfaların ortak kabuğu — ALT yarısı. auth_shell_top.php'nin açtığı
-// .login-card-body ve .login-card kutularını kapatır.
-//
-// Beklenen değişkenler (hepsi OPSİYONEL — hiçbiri verilmezse en sade kapanış):
-//   $authShowLegal - bool (varsayılan true). Alttaki marka/tanıtım satırı.
-//                    verify_email.php false verir: orası bir akışın ORTASI
-//                    (şifre belirleme adımı), pazarlama cümlesi oraya ait değil.
-//   $authScripts   - string[] (varsayılan boş). Sayfaya özel <script src>
-//                    dosyaları, ör. array('password-toggle.js'). defer ile
-//                    basılır; sıra dizideki sırayla korunur.
-//
-// ⚠️ SAYFAYA ÖZEL INLINE <script> BURAYA GİRMEZ: register.php'nin gönderim
-// kilidi gibi satır içi betikler çağıran sayfada, bu require'dan ÖNCE kalır —
-// partial'a taşımak onu "bazı sayfalarda çalışan gizli davranış" hâline
-// getirirdi.
 
 if (!isset($authShowLegal)) {
     $authShowLegal = true;

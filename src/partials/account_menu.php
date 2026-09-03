@@ -1,22 +1,4 @@
 <?php
-// Ortak hesap menüsü: avatar + açılır panel (isim/e-posta + çıkış formu).
-// dashboard.php ("home" öneki), grid.php ("gs" öneki) ve interface.php ("if"
-// öneki) tarafından paylaşılır — görünüm (konum, açılma yönü, renk teması)
-// çağıran sayfanın kendi CSS'inden (home.css / grid-shell.css / interface.css)
-// gelir, bu partial yalnızca ortak HTML yapısını üretir. data-account-toggle /
-// data-account-menu, önekten bağımsız çalışan assets/account-menu.js
-// tarafından kullanılır.
-//
-// "Görünüm" (Açık/Koyu) alt-paneli: menü İKİ "sayfa" barındırır
-// (data-account-page="main"/"appearance"), assets/account-menu.js sayfa
-// yenilemeden ikisi arasında geçiş yapar (geri oku / "Görünüm" satırı) — yeni
-// ok/onay ikonları prefix'ten bağımsız (home.css'te tek yerde, .bcc-account-*
-// jenerik sınıflar, renk currentColor'dan gelir — .X-account-item zaten
-// prefix'e göre renkleniyor).
-//
-// Beklenen değişkenler (include eden sayfa tarafından ayarlanır):
-//   $accountMenuPrefix - string, CSS sınıf öneki ("home", "gs" veya "if")
-//   $accountMenuUser    - array, current_user() satırı (full_name, email içerir)
 
 $accountMenuInitial = bcc_user_initial($accountMenuUser);
 $p = $accountMenuPrefix;
@@ -30,9 +12,6 @@ $p = $accountMenuPrefix;
                 <div class="<?php echo $p; ?>-account-email"><?php echo htmlspecialchars($accountMenuUser['email'], ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
 
-            <!-- Trash işlev yapmaz (özelliği yazılmamış) — tıklanınca sessizce hiçbir
-                 şey yapmaz, onaylanmış karar (bkz. PROJE-DURUM.md). "Hesap" artık
-                 gerçek bir sayfaya gidiyor (bkz. public/account.php). -->
             <div class="<?php echo $p; ?>-account-section">
                 <a href="/account.php" class="<?php echo $p; ?>-account-item">Hesap</a>
                 <?php if (is_platform_admin()): ?>
@@ -55,8 +34,6 @@ $p = $accountMenuPrefix;
                 <button type="button" class="<?php echo $p; ?>-account-item" data-account-trash-open>Çöp kutusu</button>
             </div>
 
-            <!-- Trash/Log out arasında bilinçli ikinci ayırıcı: ikisi yan yana/bitişik
-                 olduğu için yanlış tıklama riskine karşı (bkz. YAPILACAKLAR-UI.md). -->
             <div class="<?php echo $p; ?>-account-divider"></div>
 
             <form method="post" action="/logout.php" class="<?php echo $p; ?>-account-logout">
@@ -89,12 +66,6 @@ $p = $accountMenuPrefix;
     </div>
 </div>
 
-<!-- Trash — OpsFlow'un workspace trash referansı (bkz. api/trash_list.php
-     yorumu). Sayfa-geneli bir overlay olduğu için .X-account'ın dışında,
-     tek kopya (bu partial sayfa başına zaten tek kez require ediliyor).
-     Jenerik (prefix'siz) .bcc-trash-* sınıflar — home.css'te TEK yerde
-     tanımlı, 3 CSS dosyasında kopya YOK (Görünüm alt-panelindeki
-     .bcc-account-menu-* ile AYNI gerekçe). -->
 <div class="bcc-trash-overlay" id="<?php echo $p; ?>-trash-overlay" hidden>
     <div class="bcc-trash-modal">
         <div class="bcc-trash-header">
@@ -108,9 +79,6 @@ $p = $accountMenuPrefix;
         <div class="bcc-trash-list" data-trash-list>
             <div class="bcc-trash-empty" data-trash-empty hidden>Çöp kutusu boş.</div>
         </div>
-        <!-- Kayıtlar bölümü — Adım 3d. AYNI overlay/modal içinde, kopya bir
-             arayüz YOK; base'lerle AYNI .bcc-trash-list/.bcc-trash-item
-             sınıfları yeniden kullanılıyor, tek yeni şey bu küçük başlık. -->
         <h3 class="bcc-trash-section-title">Kayıtlar</h3>
         <div class="bcc-trash-list" data-trash-record-list>
             <div class="bcc-trash-empty" data-trash-record-empty hidden>Çöp kutusu boş.</div>

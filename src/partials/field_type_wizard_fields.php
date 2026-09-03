@@ -1,33 +1,13 @@
 <?php
-// Tip-önce-isim-sonra alan ekleme sihirbazının DOM iskeleti (Adım 1: tip grid'i,
-// Adım 2: isim/seçenekler formu) — table_fields.php'nin tam sayfa formu VE
-// grid.php'nin "+" popup'ı (Bölüm A madde 3 / Bölüm B madde 7) TARAFINDAN
-// PAYLAŞILIR, ikinci bir kopya YOK. Adım geçişi field-type-wizard.js'de (o da
-// paylaşılıyor); bu partial yalnızca statik DOM'u basar. <form> etiketi,
-// action/hidden input'lar (table_id, csrf_token vb.) ve gönderim davranışı
-// (tam sayfa POST vs. fetch) çağıran tarafta kalır — o kısım context'e göre
-// farklı, burada değil.
-//
-// Beklenen değişkenler (include eden dosya ayarlar):
-//   $fieldTypeLabels        - array, field_type => Türkçe etiket ($GLOBALS['BCC_FIELD_TYPES'])
-//                              (tip rozeti artık field-type-badge--{type} CSS sınıfıyla
-//                              basılan bir ikon — metin rozet gerekmiyor)
-//   $fieldWizardShowRequired - (opsiyonel, varsayılan true) "Zorunlu alan" onay kutusu
-//                              gösterilsin mi (grid.php'nin kompakt popup'ı bunu
-//                              GÖSTERMEZ — davranış tabloya taşınmadan önceki hâliyle
-//                              AYNI kalsın diye, table_fields.php ise gösterir).
 
 if (!isset($fieldWizardShowRequired)) {
     $fieldWizardShowRequired = true;
 }
 
-//   $fieldWizardSubmitLabel  - (opsiyonel, varsayılan "Alan Oluştur") gönder
-//                              düğmesinin metni. grid.php "Sütun ekle" geçiyor.
 if (!isset($fieldWizardSubmitLabel)) {
     $fieldWizardSubmitLabel = 'Alan Oluştur';
 }
 ?>
-<!-- Adım 1: önce TİP (OpsFlow gibi) — liste $fieldTypeLabels'tan gelir, elle tekrar yazılmaz. -->
 <div id="new-field-type-step">
     <p class="hint">Alan tipini seçin</p>
     <div class="field-type-grid">
@@ -45,7 +25,6 @@ if (!isset($fieldWizardSubmitLabel)) {
     </div>
 </div>
 
-<!-- Adım 2: TİP seçilince görünür — başlık burada sorulur. -->
 <div id="new-field-details-step" hidden>
     <p class="hint">
         Seçilen tip: <strong id="new-field-type-chosen-label"></strong>
@@ -54,26 +33,9 @@ if (!isset($fieldWizardSubmitLabel)) {
     <label>Alan adı
         <input type="text" name="name" id="new-field-name-input">
     </label>
-    <?php // Seçenek kutusu YALNIZCA tekli/çoklu seçimde görünür ve o tiplerde
-          // ZORUNLUDUR — sunucu zaten boş seçeneği reddediyordu ama hata tam
-          // sayfa POST'undan sonra sayfanın EN ÜSTÜNDE çıkıyordu; kullanıcı
-          // modalın içinde kaldığı için "hiçbir şey olmadı" sanıyordu (bildirildi).
-          // Artık required + özel mesaj: tarayıcı gönderimi durdurup uyarıyı
-          // kutunun YANINDA gösteriyor (bkz. assets/field-type-wizard.js).
-          // Placeholder de somut bir örnek veriyor — "her satıra bir seçenek"
-          // ifadesi tek başına yeterince açık değildi. ?>
-    <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
+        <label id="new-field-options-row" hidden>Seçenekler (her satıra bir seçenek)
         <textarea name="options_text" rows="4" placeholder="Örn.&#10;Düşük&#10;Orta&#10;Yüksek"></textarea>
     </label>
-    <!-- Currency/Percent/Rating (Grup C1) — field-type-wizard.js seçilen tipe göre
-         gösterir/gizler, select'in #new-field-options-row'uyla AYNI desen.
-         Bulunan gerçek bug (önce fark edilip düzeltildi): currency VE percent'in
-         ondalık basamak input'ları AYNI name="decimal_places" kullansaydı, biri
-         hidden olsa bile İKİSİ DE forma dahil olurdu (hidden yalnızca GÖRÜNÜRLÜĞÜ
-         etkiler, form gönderimini DEĞİL) — hangisinin $_POST'a gireceği belirsiz
-         olurdu. Bu yüzden İKİSİNİN de kendi tipine özgü, benzersiz adı var.
-         Varsayılan değerler bcc_build_field_options()'taki (₺, 2/0 ondalık basamak,
-         5 max yıldız) AYNI varsayılanlarla eşleşiyor. -->
     <div id="new-field-currency-row" hidden>
         <label>Para birimi sembolü
             <input type="text" name="currency_symbol" maxlength="5" value="₺">
@@ -93,20 +55,10 @@ if (!isset($fieldWizardSubmitLabel)) {
         </label>
     </div>
     <?php if ($fieldWizardShowRequired): ?>
-        <?php /* id: field-type-wizard.js autonumber seçilince bu satırı gizler —
-                autonumber her kayıtta OTOMATİK dolar, "zorunlu" işaretlemek
-                anlamsız (kullanıcının doldurabileceği bir şey değil). Gizli
-                kalsa bile işaretlenmemiş checkbox forma HİÇ dahil olmaz
-                (HTML kuralı), bu yüzden ekstra bir sunucu kontrolü gerekmedi. */ ?>
-        <label id="new-field-required-row">
+                <label id="new-field-required-row">
             <input type="checkbox" name="is_required" value="1" style="display:inline-block;width:auto;">
             Zorunlu alan
         </label>
     <?php endif; ?>
-    <?php /* Gönder düğmesinin metni çağırana bırakıldı: grid'de kullanıcı bir
-             SÜTUN ekliyor ("Sütun ekle" — kullanıcı isteği), ayarlar
-             sayfasında (table_fields.php) ise bir ALAN tanımlıyor. Varsayılan
-             eski metin, yani bu parametreyi geçmeyen çağıran hiçbir şey
-             kaybetmez. */ ?>
-    <button type="submit"><?php echo htmlspecialchars($fieldWizardSubmitLabel, ENT_QUOTES, 'UTF-8'); ?></button>
+        <button type="submit"><?php echo htmlspecialchars($fieldWizardSubmitLabel, ENT_QUOTES, 'UTF-8'); ?></button>
 </div>

@@ -1,25 +1,3 @@
-<?php
-// "Paylaş" modalı — OpsFlow'un Collaborators diyaloğunun karşılığı.
-// grid.php'nin "Paylaş" popover'ındaki "N kişinin erişimi var" bağlantısı ARTIK
-// team_members.php'ye YÖNLENDİRMİYOR; bu overlay'i açıyor (assets/share-modal.js).
-//
-// Değişkenler (çağıran sayfa hazırlar):
-//   $shareModalTeamName  — başlıkta gösterilecek çalışma alanı/base adı
-//   $shareModalPayload   — bcc_share_modal_payload() sonucu (JSON'a çevrilip
-//                          BCC_SHARE_MODAL global'ine yazılır)
-//   $shareModalTeamId    — "Tüm üye ayarları" bağlantısı için
-//
-// BURADA LİSTE BASILMAZ: katılımcı/bekleyen satırlarını share-modal.js'in
-// renderLists()'i basar — hem ilk açılışta hem her mutasyondan sonra AYNI
-// fonksiyon. İkinci bir şablon olsaydı (PHP'de bir kez, JS'te bir kez) ilk
-// render ile güncellenmiş render ilk değişiklikte ayrışırdı.
-//
-// BACKDROP SINIFI YENİDEN KULLANILIYOR: .gs-view-desc-overlay (grid-shell.css)
-// — "Görünüm açıklaması" ve "Veri içe aktar" modallarının AYNI kanıtlanmış
-// kutusu. Böylece yazdırma/PNG'de gizlenmesi de bedavaya geliyor
-// (grid-export.css zaten bu sınıfı gizliyor). Yalnızca iç kutu farklı
-// (.gs-share-modal — daha geniş, sekmeli).
-?>
 <div class="gs-view-desc-overlay gs-share-overlay" id="gs-share-overlay" hidden>
     <div class="gs-share-modal" role="dialog" aria-modal="true" aria-labelledby="gs-share-modal-title">
         <div class="gs-share-head">
@@ -34,26 +12,9 @@
             </button>
         </div>
 
-        <?php // Davet kutusu YALNIZCA yetkiliye basılır (sunucu hiç göndermez —
-              // CSS ile gizlenmiş bir form değil). Yetkisiz kullanıcı için
-              // yerine tek satırlık gerekçe: sessizce eksik bir arayüz "bozuk"
-              // gibi okunur (team_members.php'deki .tm-readonly-note ile AYNI karar). ?>
-        <div class="gs-share-invite" data-share-invite hidden>
+                <div class="gs-share-invite" data-share-invite hidden>
             <div class="gs-share-invite-row">
-                <?php // ⚠️ NATIVE <datalist> KALDIRILDI (kullanıcı bildirdi:
-                      // "bu liste bozuk gözüküyor"). Sebep: datalist'in görünümü
-                      // tarayıcıya aittir — ne yüksekliği ne konumu ne de tipografisi
-                      // ayarlanabiliyordu. Sistemde 35 aktif hesap olduğu için
-                      // açılan yerleşik kutu sayfa boyunda bir şeride dönüşüp
-                      // modalın ve grid'in üstüne taşıyordu; üstelik yazmadan da
-                      // TÜM listeyi açıyordu.
-                      //
-                      // Yerine input'a bağlı, kendi CSS'i olan bir öneri kutusu
-                      // (aşağıdaki [data-share-suggest]) geldi: yazdıkça süzer,
-                      // en fazla 8 sonuç gösterir, klavye ile gezilir. Serbest
-                      // metin girişi ENGELLENMEZ — sunucu e-postayı yine kendisi
-                      // çözer, yani davranış sözleşmesi değişmedi. ?>
-                <div class="gs-share-invite-field">
+                                <div class="gs-share-invite-field">
                     <input
                         type="email"
                         class="gs-share-invite-email"
@@ -93,11 +54,7 @@
         <div class="gs-share-list" data-share-panel="pending" role="tabpanel" hidden></div>
 
         <div class="gs-share-foot">
-            <?php // Tam yönetim ekranı (arama, rol filtresi, toplu çıkarma,
-                  // Excel indir, "Ekleyen"/"Eklenme tarihi" kolonları) hâlâ
-                  // team_members.php'de YAŞIYOR — modal onun yerini almıyor,
-                  // sık yapılan işi sayfadan çıkmadan yapılabilir kılıyor. ?>
-            <a class="gs-share-foot-link" href="/team_members.php?team_id=<?php echo (int) $shareModalTeamId; ?>">Tüm üye ayarları →</a>
+                        <a class="gs-share-foot-link" href="/team_members.php?team_id=<?php echo (int) $shareModalTeamId; ?>">Tüm üye ayarları →</a>
         </div>
     </div>
 </div>

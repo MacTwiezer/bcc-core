@@ -237,58 +237,6 @@
 }
 .sp-page .wsx-newnote strong { color: var(--bcc-text); }
 
-.sp-page .wsx-plan {
-    padding: 0.6rem 0.65rem;
-    border: 1px solid var(--bcc-border);
-    border-radius: 9px;
-    background: var(--bcc-surface);
-}
-
-.sp-page .wsx-plan-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.4rem;
-}
-.sp-page .wsx-plan-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--bcc-text-muted);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.sp-page .wsx-plan-value {
-    font-size: 0.76rem;
-    color: var(--bcc-text-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.sp-page .wsx-plan-value strong { color: var(--bcc-text); font-weight: 700; }
-.sp-page .wsx-plan-track {
-    height: 5px;
-    border-radius: 999px;
-    background: var(--bcc-surface-hover);
-    overflow: hidden;
-}
-.sp-page .wsx-plan-fill {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--bcc-accent);
-}
-.sp-page .wsx-plan-note {
-    margin: 0.45rem 0 0;
-    font-size: 0.68rem;
-    line-height: 1.35;
-    color: var(--bcc-text-muted);
-}
-
 .sp-page .wsx-main {
     display: flex;
     flex-direction: column;
@@ -806,12 +754,6 @@
     color: var(--bcc-text-muted);
 }
 .sp-page .wsx-integration-text strong { color: var(--bcc-text); }
-.sp-page .wsx-limit-note {
-    margin: 0.75rem 0 0;
-    font-size: 0.72rem;
-    line-height: 1.4;
-    color: var(--bcc-text-muted);
-}
 
 .sp-page .wsx-act-list {
     list-style: none;

@@ -3508,14 +3508,6 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId,
     return bcc_fetch_all($sql, $params);
 }
 
-$GLOBALS['BCC_WORKSPACE_SOFT_LIMITS'] = array(
-    'records' => 50000,
-    'storage_bytes' => 2 * 1024 * 1024 * 1024,
-    'bases' => 25,
-);
-
-$GLOBALS['BCC_USER_WORKSPACE_SOFT_LIMIT'] = 5;
-
 function bcc_format_bytes($bytes)
 {
     $bytes = (int) $bytes;

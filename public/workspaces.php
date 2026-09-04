@@ -194,34 +194,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     Yeni çalışma alanını <strong>platform yöneticisi</strong> oluşturur.
                                 </p>
                             <?php endif; ?>
-
-                            <?php
-                            $wsCount = count($teams);
-                            $wsLimit = (int) $GLOBALS['BCC_USER_WORKSPACE_SOFT_LIMIT'];
-                            $wsWithinLimit = $wsLimit > 0 && $wsCount <= $wsLimit;
-                            $wsPct = $wsWithinLimit ? (int) round($wsCount / $wsLimit * 100) : 100;
-                            ?>
-                            <div class="wsx-plan">
-                                <div class="wsx-plan-head">
-                                    <span class="wsx-plan-label">
-                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.5"/></svg>
-                                        Çalışma alanı kullanımı
-                                    </span>
-                                    <span class="wsx-plan-value">
-                                        <?php if ($wsWithinLimit): ?>
-                                            <strong><?php echo $wsCount; ?></strong> / <?php echo $wsLimit; ?>
-                                        <?php else: ?>
-                                            <strong><?php echo $wsCount; ?></strong>
-                                        <?php endif; ?>
-                                    </span>
-                                </div>
-                                <?php if ($wsWithinLimit): ?>
-                                    <div class="wsx-plan-track" role="img" aria-label="<?php echo htmlspecialchars($wsCount . ' / ' . $wsLimit . ' çalışma alanı', ENT_QUOTES, 'UTF-8'); ?>">
-                                        <span class="wsx-plan-fill" style="width: <?php echo $wsPct; ?>%;"></span>
-                                    </div>
-                                <?php endif; ?>
-                                <p class="wsx-plan-note">Eşik kapasite göstergesidir; zorlanmaz.</p>
-                            </div>
                         </div>
 
                     </div>

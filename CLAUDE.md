@@ -8,7 +8,12 @@ akışı ve sorun giderme — hepsi orada ve güncel tutuluyor. Herhangi bir iş
 başlamadan önce oku.
 
 Veri modelinin gerekçesi: `docs/GEREKSINIMLER.md` (dondurulmuş orijinal
-istekler). Açık UI iş listesi: `docs/YAPILACAKLAR-UI.md`.
+istekler). Canlıya alma adımları: `docs/CANLIYA-ALMA.md`.
+
+> `docs/YAPILACAKLAR-UI.md` **kaldırıldı** (2026-09-04): içindeki 15 işin hepsi
+> bitmişti ve dosya boş kalmıştı. Hâlâ geçerli olan kurallar
+> `docs/PROJE-DURUM.md` §3'e taşındı. Açık iş takibi artık tek yerde: o
+> dosyanın "Kalan İşler" bölümü.
 
 Bir iş bitip **test edildikten sonra** `docs/PROJE-DURUM.md` güncellenir:
 "Biten İşler"e bir satır eklenir, "Kalan İşler"den ilgili madde çıkarılır.

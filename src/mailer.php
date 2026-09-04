@@ -3,38 +3,8 @@
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/mail_template.php';
 
-// SMTP zaman asimi (saniye). PHPMailer'in VARSAYILANI 300 ve bu deger bir web
-// istegi icin anlamsiz: gonderim SENKRON, yani kullanici kayit olurken ya da
-// parola sifirlama isterken sunucu yanit vermezse ISTEK O KADAR BEKLER.
-// Pratikte PHP once oldurur (php.ini max_execution_time = 30) ve kullanici 30
-// saniye bekledikten sonra hata sayfasi gorur - ustelik hesap ZATEN
-// olusturulmus olabilir, cunku mail gonderimi DB yazmasindan sonra geliyor.
-//
-// 15 sn bilincli secildi: Office 365'e TLS ile gonderim pratikte 1-5 sn
-// suruyor, 15 rahat bir tavan; PHP'nin 30 sn sinirinin ALTINDA kaldigi icin
-// PHPMailer kendi istisnasini firlatabiliyor ve uygulama duzgun bir hata
-// donduruyor (PHP surecin ortasinda oldurmuyor).
-//
-// AYNI GEREKCE src/slack.php'de de var: orada CONNECTTIMEOUT 3 / TIMEOUT 5
-// secilmis, cunku o cagri da kayit olusturmanin ICINDE senkron calisiyor.
-// Mail tarafinda bu disiplin atlanmisti.
 define('BCC_SMTP_TIMEOUT', 15);
 
-// ⚠️ IKI AYRI SINIR GEREKIYOR - YALNIZCA $mail->Timeout YETMEZ.
-//
-// Olculdu (yerel, sessiz dinleyen bir soketle): sunucu TCP baglantisini kabul
-// edip SMTP karsilamasini (220) HIC gondermezse, $mail->Timeout = 3 iken bile
-// gonderim TAM 300,0 SANIYE asili kaldi - yani Timelimit varsayilani kadar.
-// Sebep PHPMailer'in kaynaginda:
-//   * PHPMailer::$Timeout  -> yalnizca BAGLANMA ve stream_set_timeout icin
-//     (SMTP.php:1348, PHPMailer.php:2340/2405)
-//   * SMTP::$Timelimit     -> veriyi BEKLEYEN asil cagri
-//     (SMTP.php:1360, stream_select($..., $this->Timelimit)), varsayilan 300
-// ve Timelimit PHPMailer uzerinden HIC ACILMAMIS; yalnizca SMTP nesnesinde var.
-// Ikisi birlikte ayarlanince AYNI deneme 3.0 sn'de kesildi (300 -> 3).
-//
-// getSMTPInstance() SMTP nesnesini tembel olusturur ve saklar, yani send()
-// oncesi verilen bu deger korunur.
 function bcc_apply_smtp_timeout($mail)
 {
     $mail->Timeout = BCC_SMTP_TIMEOUT;

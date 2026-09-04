@@ -1,25 +1,4 @@
 <?php
-// Grid filtresinin "icerir"/"icermez" kosullarinda LIKE joker karakterlerinin
-// LITERAL kabul edildigini dogrular.
-//
-// BULUNAN GERCEK BUG: bu kacis YALNIZCA Duyuru aramasinda
-// (bcc_interface_fetch_records) vardi ve orada yorumla da belgelenmisti; grid
-// filtresi (filter_condition_sql) kullanicinin yazdigini dogrudan '%...%'
-// arasina koyuyordu.
-//
-// Olculdu: "icerir: 50%off" filtresi, o metni HIC icermeyen ama "50" ve "off"u
-// ayri yerlerde geciren "50 lira ve off" kaydini da donduruyordu ("%" joker
-// karakteri araya her seyi kabul ediyor). Tek basina bir "%" yazmak butun dolu
-// hucreleri esitliyordu. "_" de tek karakter jokeri oldugu icin "a_b" filtresi
-// "axb" kaydini yakaliyordu.
-//
-// Ayni sorgu kurucusu (bcc_build_grid_records_query) Excel disa aktarimini da
-// besledigi icin yanlis satir kumesi dosyaya da gidiyordu.
-//
-// Duzeltme: bcc_like_escape() + sorguya ESCAPE '\\' - Duyuru aramasindaki
-// kacisin AYNISI, artik tek yardimci fonksiyondan.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_filter_like_escape.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -45,41 +24,36 @@ function check($ad, $kosul, $ek = '')
     else        { $kaldi++; echo "  [HATA] $ad" . ($ek !== '' ? "  -> $ek" : '') . "\n"; }
 }
 
-// ---------------------------------------------------------------------------
 echo "A) bcc_like_escape() sozlesmesi\n";
-// ---------------------------------------------------------------------------
+
 check('A) yuzde kacirilir', bcc_like_escape('50%off') === '50\\%off', bcc_like_escape('50%off'));
 check('A) alt tire kacirilir', bcc_like_escape('a_b') === 'a\\_b', bcc_like_escape('a_b'));
 check('A) ters boluk kacirilir', bcc_like_escape('a\\b') === 'a\\\\b', bcc_like_escape('a\\b'));
 check('A) duz metin degismez', bcc_like_escape('duz metin') === 'duz metin');
-// Sira kontrolu: once "\", sonra jokerler. Ters sirada "%" -> "\%" -> "\\%"
-// olur ve joker yeniden ortaya cikardi.
+
 check('A) kacis SIRASI dogru ("\\%" tek turda)', bcc_like_escape('\\%') === '\\\\\\%', bcc_like_escape('\\%'));
 
-// ---------------------------------------------------------------------------
 echo "\nB) filter_condition_sql ESCAPE cumlesini uretiyor\n";
-// ---------------------------------------------------------------------------
+
 foreach (array('contains', 'not_contains') as $op) {
     $r = filter_condition_sql('single_line_text', $op, '50%off', 'fv0', ':fval0');
     check('B) ' . $op . ' ESCAPE tasiyor', strpos($r['sql'], "ESCAPE '\\\\'") !== false, $r['sql']);
     check('B) ' . $op . ' baglanan deger kacirilmis',
         $r['params'][':fval0'] === '%50\\%off%', json_encode($r['params']));
 }
-// equals/not_equals LIKE kullanmaz — kacis UYGULANMAMALI.
+
 $r = filter_condition_sql('single_line_text', 'equals', '50%off', 'fv0', ':fval0');
 check('B) equals ham degeri kullaniyor (LIKE degil)',
     $r['params'][':fval0'] === '50%off' && strpos($r['sql'], 'LIKE') === false, json_encode($r));
 
-// Metin benzeri TUM tipler ayni yoldan gecmeli.
 foreach (array('single_line_text', 'long_text', 'single_select', 'url', 'email', 'phone') as $tip) {
     $r = filter_condition_sql($tip, 'contains', '%', 'fv0', ':fval0');
     check('B) ' . $tip . ' de kaciriyor', $r !== null && $r['params'][':fval0'] === '%\\%%',
         $r === null ? 'null' : json_encode($r['params']));
 }
 
-// ---------------------------------------------------------------------------
 echo "\nC) CANLI SQL: dogruluk tablosu\n";
-// ---------------------------------------------------------------------------
+
 $vakalar = array(
     array('50 lira ve off',   '50%off', false),
     array('50%off',           '50%off', true),
@@ -97,9 +71,8 @@ foreach ($vakalar as $v) {
         $sonuc === $v[2]);
 }
 
-// ---------------------------------------------------------------------------
 echo "\nD) CANLI: gercek grid sayfasi dogru satiri gosteriyor\n";
-// ---------------------------------------------------------------------------
+
 $BASE = 'http://localhost';
 $COOKIE = tempnam(sys_get_temp_dir(), 'bcclk');
 
@@ -149,8 +122,6 @@ bcc_execute('INSERT INTO fields (table_id, name, field_type, position) VALUES (:
     array(':t' => $tableId, ':n' => 'Baslik', ':ft' => 'single_line_text'));
 $fieldId = (int) bcc_last_insert_id();
 
-// Iki kayit: biri ARANAN metni GERCEKTEN iceriyor, digeri yalnizca "%"
-// jokeri sayesinde yanlislikla eslesiyordu.
 $kayitlar = array('50%off', '50 lira ve off');
 $recIds = array();
 foreach ($kayitlar as $i => $metin) {
@@ -184,7 +155,6 @@ check('D) "50 lira ve off" kaydi GORUNMUYOR',
     !in_array('50 lira ve off', $gorunen, true), implode(' | ', $gorunen));
 check('D) toplam yalnizca 1 satir dondu', count($gorunen) === 1, implode(' | ', $gorunen));
 
-// Tek basina "%" tum kayitlari getirmemeli.
 $url2 = $BASE . '/grid.php?' . http_build_query(array(
     'table_id' => $tableId, 'filter_field_1' => $fieldId,
     'filter_cond_1' => 'contains', 'filter_value_1' => '%',
@@ -196,11 +166,8 @@ foreach ($recIds as $rid) {
 }
 check('D) tek basina "%" filtresi 1 kayit getiriyor (hepsini degil)', $gorunen2 === 1, (string) $gorunen2);
 
-// ---------------------------------------------------------------------------
 echo "\nE) Excel disa aktarimi AYNI sorgu kurucusunu kullaniyor\n";
-// ---------------------------------------------------------------------------
-// Paralel bir sorgu yolu olmadigini kanitlar: duzeltme tek yerde yapildi ve
-// export da ondan besleniyor.
+
 $fieldsById = array($fieldId => array('id' => $fieldId, 'field_type' => 'single_line_text', 'options' => null));
 $kurallar = parse_grid_filter_rules(array(
     'filter_field_1' => $fieldId, 'filter_cond_1' => 'contains', 'filter_value_1' => '50%off',

@@ -111,8 +111,8 @@ bcc-core/
   docs/
     PROJE-DURUM.md          GÜNCEL proje durumu (otoriter kaynak, sık güncellenir)
     GEREKSINIMLER.md        orijinal (dondurulmuş) istekler
-    YAPILACAKLAR-UI.md      aktif UI iş listesi
-  schema.sql               veritabanı şeması (otoriter kaynak)
+    CANLIYA-ALMA.md         sunucuya alma adımları + yerel yapılandırma şablonları
+  schema.sql               veritabanı şeması (otoriter kaynak, migrations/ YOK)
 ```
 
 ## Proje durumu

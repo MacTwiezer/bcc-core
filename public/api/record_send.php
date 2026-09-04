@@ -144,8 +144,7 @@ try {
     $mail->Password = $mailConfig['password'];
     $mail->SMTPSecure = $mailConfig['encryption'];
     $mail->CharSet = 'UTF-8';
-    // src/mailer.php ile AYNI tavan (gerekcesi orada yazili): gonderim senkron,
-    // PHPMailer'in 300 sn varsayilani bir web istegini kilitlerdi.
+
     bcc_apply_smtp_timeout($mail);
 
     $mail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);

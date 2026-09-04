@@ -1,21 +1,4 @@
 <?php
-// Oturumdaki kullanici DEGISTIGINDE yetki onbelleklerinin bayat kalmadigini
-// dogrular.
-//
-// BULUNAN GERCEK TUZAK: current_user_team_roles() tek bir "static $cache"
-// kullaniyordu ve bu harita current_user(true) ile kullanici degistirildiginde
-// SIFIRLANMIYORDU. attempt_login() tam da bunu yapar: $_SESSION['user_id']'i
-// yazip current_user(true) cagirir.
-//
-// Olculdu: A kullanicisinin ekipleri okunduktan sonra B'ye gecilince fonksiyon
-// HALA A'nin ekiplerini donduruyordu. Bu harita current_user_team_ids() ->
-// require_team_access() zincirini ve bildirim kapsamini besledigi icin bir
-// YETKI kaynagidir; bayat kalmasi, bir kullanicinin baska bir kullanicinin
-// ekip kumesiyle degerlendirilmesi demektir.
-//
-// Duzeltme: onbellek kullanici kimligine gore anahtarlandi (src/auth.php).
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_auth_cache_isolation.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -55,7 +38,6 @@ $cleanup = function () {
 $cleanup();
 register_shutdown_function($cleanup);
 
-// Iki AYRI ekip, iki AYRI kullanici — kesisim YOK.
 bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => A_TEAM));
 $teamA = (int) bcc_last_insert_id();
 bcc_execute('INSERT INTO teams (name) VALUES (:n)', array(':n' => B_TEAM));
@@ -72,13 +54,11 @@ $mk = function ($mail, $ad, $teamId) {
 
     return $uid;
 };
-// ⚠️ is_admin = 0 SART: platform admini HER ekipte sanal owner sayilir
-// (current_user_team_roles), o zaman bu test hicbir sey olcemezdi.
+
 $uidA = $mk(A_MAIL, 'AuthCache A', $teamA);
 $uidB = $mk(B_MAIL, 'AuthCache B', $teamB);
 check('A) iki atilir kullanici ve iki ayri ekip kuruldu', $uidA > 0 && $uidB > 0 && $teamA !== $teamB);
 
-// Her kullaniciya KENDI ekibinde bir yildizli base — F bolumu icin.
 $mkBase = function ($teamId, $ad, $uid) {
     bcc_execute('INSERT INTO bases (team_id, name, created_by) VALUES (:t, :n, :u)',
         array(':t' => $teamId, ':n' => $ad, ':u' => $uid));
@@ -91,9 +71,8 @@ $mkBase = function ($teamId, $ad, $uid) {
 $baseA = $mkBase($teamA, 'ZZ AuthCache Base A', $uidA);
 $baseB = $mkBase($teamB, 'ZZ AuthCache Base B', $uidB);
 
-// ---------------------------------------------------------------------------
 echo "\nB) Kullanici A olarak oku\n";
-// ---------------------------------------------------------------------------
+
 $_SESSION['user_id'] = $uidA;
 current_user(true);
 $rolesA = current_user_team_roles();
@@ -104,9 +83,8 @@ check('B) rol haritasi owner diyor',
     isset($rolesA[$teamA]) && $rolesA[$teamA] === 'owner',
     json_encode($rolesA));
 
-// ---------------------------------------------------------------------------
 echo "\nC) AYNI surecte kullanici B ye gec (attempt_login'in yaptigi sey)\n";
-// ---------------------------------------------------------------------------
+
 $_SESSION['user_id'] = $uidB;
 current_user(true);
 $u = current_user();
@@ -114,7 +92,7 @@ check('C) current_user() gercekten B yi dondurdu',
     $u !== null && $u['email'] === B_MAIL, $u ? $u['email'] : 'null');
 
 $idsB = current_user_team_ids();
-// ASIL KONTROL: bayat onbellek burada A'nin ekibini dondururdu.
+
 check('C) ⭐ B, A nin ekibini GORMUYOR (onbellek bayat degil)',
     !in_array($teamA, $idsB, true), implode(',', $idsB));
 check('C) B kendi ekibini goruyor', in_array($teamB, $idsB, true), implode(',', $idsB));
@@ -123,32 +101,21 @@ $rolesB = current_user_team_roles();
 check('C) rol haritasi B nin ekibiyle sinirli',
     array_keys($rolesB) === array($teamB), json_encode($rolesB));
 
-// ---------------------------------------------------------------------------
 echo "\nD) Geri A ya donunce yine dogru\n";
-// ---------------------------------------------------------------------------
+
 $_SESSION['user_id'] = $uidA;
 current_user(true);
 $idsA2 = current_user_team_ids();
 check('D) A tekrar kendi ekibini goruyor', in_array($teamA, $idsA2, true), implode(',', $idsA2));
 check('D) A, B nin ekibini yine GORMUYOR', !in_array($teamB, $idsA2, true), implode(',', $idsA2));
 
-// ---------------------------------------------------------------------------
 echo "\nE) Onbellek gercekten calisiyor (duzeltme onu bozmadi)\n";
-// ---------------------------------------------------------------------------
-// Ayni kullanici icin ikinci cagri yeni sorgu ACMAMALI; dogrudan olcemedigimiz
-// icin en azindan AYNI sonucu dondurmesini dogruluyoruz (kimlige gore
-// anahtarlama sonucu degistirmemeli).
+
 $tekrar = current_user_team_roles();
 check('E) ayni kullanici icin sonuc kararli', $tekrar === current_user_team_roles());
 
-// ---------------------------------------------------------------------------
 echo "\nF) AYNI SINIFTAKI ikinci onbellek: yildizli base'ler\n";
-// ---------------------------------------------------------------------------
-// bcc_starred_bases_for_current_user() de kullaniciya gore anahtarlanmamis tek
-// bir "static $cache" kullaniyordu. Bugun web'den erisilebilir DEGIL (login.php
-// attempt_login'den hemen sonra yonlendirip cikiyor, kullanici degistikten
-// sonra bu istekte hicbir sayfa render edilmiyor) — ama ayni sinifta bir mayin
-// oldugu icin ayni sekilde anahtarlandi ve burada kilitlendi.
+
 $idler = function ($satirlar) {
     $o = array();
     foreach ($satirlar as $s) { $o[] = (int) $s['id']; }

@@ -128,23 +128,7 @@ function head_status($url, $attempt = 1)
 
     return array($status, $body === false ? 0 : strlen($body));
 }
-// ⚠️ BAGLANTI KURULAMAMASI ile "adres YANLIS" AYRI SEYLER.
-//
-// Bu iki kontrol bu projenin DISINDAKI bir sunucuya (bcciletisim.com.tr)
-// bagimli. Once "HTTP 200 degilse KALDI" deniyordu ve bu, suiti dis dunyaya
-// bagimli hale getiriyordu: 2026-09-04'te ayni gun icinde once 25/25 gecti,
-// sonra 23/25 kaldi - kodda hicbir sey degismeden. Sebep olculdu: DNS cozuluyor
-// (94.73.151.142) ve http:// 301 donuyor, ama https:// TLS el sikismasinda
-// dusuyor (curl (35) schannel: failed to receive handshake).
-//
-// Ayni sinif hata bu projede iki kez daha yasandi ve iki kez duzeltildi
-// (629803c, 529c886 - giris zamanlama testi duvar saatine bagliydi). Kural:
-// bir test, DENETLEDIGI KODUN kontrolu disindaki bir seye takilip KALMAMALI.
-//
-// Ayrim:
-//   HTTP 0   -> baglanti hic kurulamadi (ag/uzak sunucu/TLS). UYARI, KALDI degil.
-//   HTTP 200 -> gecerli.
-//   diger    -> adres GERCEKTEN yanlis (404/500...). KALDI.
+
 $uzakUyari = 0;
 
 list($st, $len) = head_status($GLOBALS['BCC_MAIL_LOGO_URL']);
@@ -167,8 +151,6 @@ if ($st2 === 0) {
     check('D) web sitesi 200', $st2 === 200, 'HTTP ' . $st2);
 }
 
-// Adreslerin BICIMI her kosulda denetlenir — bu, aga bagli DEGIL ve asil
-// korunmak istenen sey (maile localhost ya da bos bir adres gitmesin).
 check('D) logo URL https ve mutlak', preg_match('#^https://[a-z0-9.\-]+/#i', $GLOBALS['BCC_MAIL_LOGO_URL']) === 1,
     $GLOBALS['BCC_MAIL_LOGO_URL']);
 check('D) site URL https ve mutlak', preg_match('#^https://[a-z0-9.\-]+#i', $GLOBALS['BCC_MAIL_SITE_URL']) === 1,

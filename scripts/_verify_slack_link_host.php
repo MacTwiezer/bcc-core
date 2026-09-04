@@ -1,19 +1,4 @@
 <?php
-// Slack mesajlarindaki "goruntule" linkinin ISTEMCININ Host basligindan
-// uretilmedigini dogrular.
-//
-// BULUNAN GERCEK KUSUR: bcc_slack_app_url() scheme + $_SERVER['HTTP_HOST'] ile
-// kendi hesabini yapiyor, config/app.php'deki $APP_BASE_URL'i hic sormuyordu.
-// Host basligini ISTEMCI gonderir; bir editor kayit eklerken
-// "Host: kotu.example" yollayip Slack kanalina o adrese giden bir link
-// bastirabilirdi. Kanaldaki herkes (ekip disindakiler dahil) o linki
-// uygulamanin kendi linki sanardi. Ayrica Host'ta "|" ya da ">" varsa Slack'in
-// <url|metin> sozdizimi bozulurdu.
-//
-// Duzeltme: bcc_slack_app_url() artik bcc_app_base_url()'e devrediyor —
-// parola sifirlama / e-posta dogrulama linkleriyle AYNI kaynak.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_slack_link_host.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -34,16 +19,14 @@ function check($ad, $kosul, $ek = '')
 
 define('SAHTE', 'kotu.example');
 
-// ---------------------------------------------------------------------------
 echo "A) Yapilandirma gercekten bir taban adres veriyor\n";
-// ---------------------------------------------------------------------------
+
 $taban = bcc_app_base_url();
 check('A) bcc_app_base_url() bos donmuyor', $taban !== '', var_export($taban, true));
 check('A) http(s) ile basliyor', preg_match('#^https?://#', $taban) === 1, $taban);
 
-// ---------------------------------------------------------------------------
 echo "\nB) SAHTE Host basligi altinda link ZEHIRLENMIYOR\n";
-// ---------------------------------------------------------------------------
+
 $yedek = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : null;
 
 $_SERVER['HTTP_HOST'] = SAHTE;
@@ -52,13 +35,11 @@ check('B) ⭐ link sahte Host icermiyor', strpos($link, SAHTE) === false, $link)
 check('B) link yapilandirilmis tabandan uretildi',
     strpos($link, $taban . '/interface.php') === 0, $link);
 
-// Slack sozdizimini bozacak karakterler: <url|metin> ayraclari.
 $_SERVER['HTTP_HOST'] = 'a|b>c.example';
 $link2 = bcc_slack_app_url('/grid.php?table_id=3');
 check('B) Host icindeki "|" ve ">" linke sizmiyor',
     strpos($link2, '|') === false && strpos($link2, '>') === false, $link2);
 
-// Bos/eksik Host da patlatmamali.
 unset($_SERVER['HTTP_HOST']);
 $link3 = bcc_slack_app_url('/grid.php?table_id=4');
 check('B) Host hic yokken de gecerli link uretiliyor',
@@ -66,9 +47,8 @@ check('B) Host hic yokken de gecerli link uretiliyor',
 
 if ($yedek === null) { unset($_SERVER['HTTP_HOST']); } else { $_SERVER['HTTP_HOST'] = $yedek; }
 
-// ---------------------------------------------------------------------------
 echo "\nC) Kaynak: hicbir bildirim yolu KENDI host hesabini yapmiyor\n";
-// ---------------------------------------------------------------------------
+
 $kod = '';
 foreach (token_get_all(file_get_contents(__DIR__ . '/../src/slack.php')) as $t) {
     if (is_array($t) && ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT)) { continue; }
@@ -80,9 +60,8 @@ check('C) bcc_slack_app_url tek adres kaynagi olarak duruyor',
     substr_count($kod, 'bcc_slack_app_url(') >= 5,
     'gecis sayisi: ' . substr_count($kod, 'bcc_slack_app_url('));
 
-// ---------------------------------------------------------------------------
 echo "\nD) CANLI: Apache sahte Host basligini kabul ediyor (vektor gercekti)\n";
-// ---------------------------------------------------------------------------
+
 $ch = curl_init('http://localhost/login.php');
 curl_setopt_array($ch, array(
     CURLOPT_RETURNTRANSFER => true,

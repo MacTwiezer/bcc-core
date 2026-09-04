@@ -56,6 +56,27 @@ BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
 4. **mysqli** — PDO yok, `bcc_query` / `bcc_fetch_all` / `bcc_fetch_one` / `bcc_fetch_column` / `bcc_execute` / `bcc_last_insert_id` / `bcc_begin_transaction` / `bcc_commit` / `bcc_rollback`
 5. **Kod tekrarı yok** — aynı şey iki yerde yazılmaz, ortak fonksiyon/partial'a alınır
 6. **Özelliğini yazmadığım şeyi ekleme** — belirtilmemiş butonlar sadece görünüm olarak durur
+7. **Dış kütüphane YOK** — tüm istemci kodu Vanilla JS, tüm stil mevcut CSS
+   mimarisine eklenerek yazılır. Tek üçüncü parti bağımlılık PHPMailer'dır
+   (sunucu tarafı, composer ile). Bir jQuery/framework/CSS kütüphanesi
+   eklenmez.
+8. **`base_id` / `table_id` / `view_id` girdilerinde `intval()` zorunlu** —
+   prepared statement'a ek olarak, id'ler her zaman tamsayıya çevrilir.
+9. **Aç/kapa panellerde ortak desen:** `<details>` + dışarıya tıklayınca
+   kapanma. Yeni bir açılır panel bu deseni kullanır, kendi mekanizmasını
+   icat etmez.
+10. **JS'siz çalışma sınırı (çözülmüş tasarım kararı).** Kural şu şekilde
+    yerleşti: **veri katmanı** (filtre / sıralama / gruplama / `hidden_fields`
+    / `row_height`) URL'de kalır ve JS olmadan da çalışır; **salt görsel kabuk**
+    (popover, dropdown, sürükle-bırak, `localStorage` tema tercihi) JS'e bağlı
+    olabilir. Proje genelinde bu ayrım tutarlı uygulanmış durumda.
+    *(Bu madde `docs/YAPILACAKLAR-UI.md` kaldırılırken oradan taşındı — o dosya
+    boşaldığı için 2026-09-04'te silindi. ⚠️ Bölüm 5'teki iki eski kayıt o
+    dosyaya "madde açıldı" diyor: `views.created_by` migration'ı ve `audit_log`
+    index'i. Silmeden önce İKİSİ DE ölçülerek kontrol edildi ve ikisi de
+    yapılmış: `views.created_by` kolonu var; `idx_audit_log_entity` var ve
+    `base.open` sorgusunda GERÇEKTEN kullanılıyor — EXPLAIN 14.669 satır yerine
+    305 satır tarıyor. Yani o dosyayla birlikte kaybolan bir iş yok.)*
 
 **Güvenlik değişmezleri:**
 - Tüm çıktı `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`
@@ -67,7 +88,7 @@ BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
 - SQL'e gömülen tablo/kolon adları whitelist'ten (prepared statement ile bağlanamazlar)
 - `json_encode(..., JSON_UNESCAPED_UNICODE)` — Türkçe için
 
-**Sır yönetimi (kalıcı kural, 2026-08-06'dan itibaren):** Hiçbir gizli/hassas bilgi (SMTP/mail şifreleri, DB şifreleri, API anahtarları, token'lar, kimlik bilgileri, kişisel veri) koda YAZILMAZ ve git'e GİRMEZ — her zaman `.gitignore`'lu bir `*.local.php` dosyasında tutulur (örnek: `config/database.local.php`, `config/mail.local.php`, `config/mail_record_send.local.php`), yanında şifresiz bir `.example` şablonu bulunur. Her commit'ten önce `git status` + `git diff --cached` ile sır sızıntısı kontrol edilir. Yanlışlıkla commit'lenmiş bir sır fark edilirse dosyayı silmek YETMEZ (git geçmişinde kalır) — ayrıca ele alınması gerekir.
+**Sır yönetimi (kalıcı kural, 2026-08-06'dan itibaren):** Hiçbir gizli/hassas bilgi (SMTP/mail şifreleri, DB şifreleri, API anahtarları, token'lar, kimlik bilgileri, kişisel veri) koda YAZILMAZ ve git'e GİRMEZ — her zaman `.gitignore`'lu bir `*.local.php` dosyasında tutulur (örnek: `config/database.local.php`, `config/mail.local.php`, `config/mail_record_send.local.php`). ⚠️ **`.example` şablonları ARTIK YOK** — bu cümle eskiden "yanında şifresiz bir `.example` şablonu bulunur" diyordu ama o dosyalar kaldırıldı (2026-09-04'te doğrulandı: depoda sıfır `.example`); içerikleri `docs/CANLIYA-ALMA.md`'ye taşındı ve dört yerel dosyanın dördü de orada tam şablon hâlinde anlatılıyor. `.gitignore` deseni de artık `config/*.local.php` (ad ad değil). Her commit'ten önce `git status` + `git diff --cached` ile sır sızıntısı kontrol edilir. Yanlışlıkla commit'lenmiş bir sır fark edilirse dosyayı silmek YETMEZ (git geçmişinde kalır) — ayrıca ele alınması gerekir.
 
 **Admin/rol karışıklığı (kalıcı uyarı, 2026-08-06'dan itibaren):** `users.is_admin` (platform Admin paneline erişim bayrağı) ile `team_members.role='owner'` (takım/rol sistemi) birbirinden TAMAMEN FARKLI kavramlardır, karıştırılmamalıdır. `is_admin=1` kişi Admin panelinde "Admin" rozeti görür, bu onun takım rolüyle ilgisi yoktur.
 
@@ -602,15 +623,16 @@ Geri alma: `git checkout .` (son commit'e döner)
 
 Uzun sohbetlerde her mesaj tüm geçmişi taşır. Bu yüzden **her özellik için yeni sohbet**:
 
-1. Yeni sohbet aç, `docs/PROJE-DURUM.md` ve `docs/YAPILACAKLAR-UI.md` dosyalarını **ekle** (ataç ikonu)
+1. Yeni sohbet aç, `docs/PROJE-DURUM.md` dosyasını **ekle** (ataç ikonu)
 2. "Şimdi şu maddeyi yapacağız, Claude Code için brifing hazırla" de
-3. Özellik bitince Claude Code'a dokümanları güncellettir:
+3. Özellik bitince Claude Code'a dokümanı güncellettir:
    ```
-   [Özellik] tamamlandı ve test edildi. İki dokümanı güncelle:
-   1) docs/YAPILACAKLAR-UI.md — ilgili bölümü tamamen sil, kalan maddeleri yeniden numaralandır.
-   2) docs/PROJE-DURUM.md — "Biten İşler"e bir satır ekle, "Kalan İşler" tablosundan sil.
+   [Özellik] tamamlandı ve test edildi. docs/PROJE-DURUM.md'yi güncelle:
+   "Biten İşler"e bir satır ekle, "Kalan İşler"den ilgili maddeyi sil.
    Başka hiçbir şeye dokunma.
    ```
+   *(Eskiden burada ikinci bir dosya — `docs/YAPILACAKLAR-UI.md` — vardı;
+   2026-09-04'te boşaldığı için silindi, kuralları §3'e taşındı.)*
 4. Commit'le, sohbeti kapat
 
 **Sohbet içinde tasarruf:**

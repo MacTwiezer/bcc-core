@@ -1,23 +1,4 @@
 <?php
-// XLSX disa aktarimlarinin hucre degerlerini BOZMADIGINI dogrular.
-//
-// BULUNAN GERCEK KUSUR: uc disa aktarma uc noktasi her hucreyi
-// bcc_csv_injection_guard()'dan geciriyordu. O fonksiyon CSV icin dogru bir
-// savunmadir: "=", "+", "-", "@" ile baslayan bir degerin basina tek tirnak
-// koyar ve Excel CSV'yi ACARKEN o tirnagi "bu metin" isareti olarak YUTAR.
-//
-// Ama bu uc nokta CSV degil XLSX uretiyor ve src/xlsx_writer.php TUM hucreleri
-// t="inlineStr" (satir ici metin) olarak yaziyor. XLSX'te satir ici metin
-// hucresi ZATEN formul olarak yorumlanmaz (formul icin ayri bir <f> ogesi
-// gerekir), yani korunacak bir acik YOKTU. Buna karsilik XLSX'te "bastaki tek
-// tirnak" diye bir kural da yok: tirnak duz bir karakter olarak KALIYOR.
-//
-// Sonuc olculdu: telefon "+90 555 111 22 33" -> "'+90 555 111 22 33",
-// bakiye -1250.75 -> "'-1250.75". Yani mumkun olmayan bir saldiriya karsi
-// gercek veri bozuluyordu. Bu uygulamada "phone" bir alan TIPI, yani "+" ile
-// baslayan deger istisna degil kural.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_xlsx_cell_integrity.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -42,9 +23,8 @@ function check($ad, $kosul, $ek = '')
     else        { $kaldi++; echo "  [HATA] $ad" . ($ek !== '' ? "  -> $ek" : '') . "\n"; }
 }
 
-// ---------------------------------------------------------------------------
 echo "A) Yazicinin sozlesmesi\n";
-// ---------------------------------------------------------------------------
+
 $writerSrc = '';
 foreach (token_get_all(file_get_contents(__DIR__ . '/../src/xlsx_writer.php')) as $t) {
     if (is_array($t) && ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT)) { continue; }
@@ -55,10 +35,8 @@ check('A) tum hucreler inlineStr olarak yaziliyor',
 check('A) formul ogesi (<f>) HIC uretilmiyor (enjeksiyon yolu yok)',
     strpos($writerSrc, '<f>') === false);
 
-// ---------------------------------------------------------------------------
 echo "\nB) Disa aktarma uc noktalari hucreyi ONISLEMDEN gecirmiyor\n";
-// ---------------------------------------------------------------------------
-// Yorumlari soyarak ara: aciklama yorumlari yanlis alarm vermesin.
+
 $suclular = array();
 foreach (array('view_export_xlsx.php', 'team_members_export_xlsx.php', 'note_view_export_xlsx.php') as $dosya) {
     $kod = '';
@@ -71,9 +49,8 @@ foreach (array('view_export_xlsx.php', 'team_members_export_xlsx.php', 'note_vie
 check('B) hicbir XLSX uc noktasi bcc_csv_injection_guard cagirmiyor',
     empty($suclular), implode(', ', $suclular));
 
-// ---------------------------------------------------------------------------
 echo "\nC) CANLI: gercek disa aktarmada degerler BOZULMUYOR\n";
-// ---------------------------------------------------------------------------
+
 $BASE = 'http://localhost';
 $COOKIE = tempnam(sys_get_temp_dir(), 'bccxc');
 
@@ -120,7 +97,6 @@ bcc_execute('INSERT INTO tables_meta (base_id, name, position) VALUES (:b,:n,0)'
     array(':b' => $baseId, ':n' => 'Hucreler'));
 $tableId = (int) bcc_last_insert_id();
 
-// Dort risk karakterinin DORDU de gercekci birer deger olarak test edilir.
 $alanlar = array(
     array('Ad', 'single_line_text', 'Ahmet'),
     array('Telefon', 'phone', '+90 555 111 22 33'),

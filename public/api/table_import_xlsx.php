@@ -9,9 +9,7 @@ api_require_csrf();
 
 const BCC_XLSX_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const BCC_XLSX_IMPORT_MAX_ROWS = 5000;
-// ACILMIS icerik siniri. Yukaridaki 10 MB SIKISTIRILMIS boyuttur; .xlsx bir zip
-// oldugu icin cok yuksek oranlar mumkun (olculdu: 298 KB'lik gecerli bir dosya
-// 300 MB aciliyor ve istegi bellek tukenmesiyle olduruyordu).
+
 const BCC_XLSX_IMPORT_MAX_UNCOMPRESSED = 60 * 1024 * 1024;
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;

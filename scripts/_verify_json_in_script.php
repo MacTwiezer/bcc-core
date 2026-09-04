@@ -1,21 +1,4 @@
 <?php
-// <script> BLOKLARINA gomulen JSON'un HTML ayristiricisini bozmadigini dogrular.
-//
-// BULUNAN GERCEK KUSUR: sayfalar kullanici verisini bir <script> blogunun
-// icine dogrudan json_encode(..., JSON_UNESCAPED_UNICODE) ciktisiyla
-// gomuyordu. Bu XSS'e acik DEGIL — "/" varsayilan olarak kacirildigi icin
-// cikti hicbir zaman "</script>" uretemez. Ama "<" kacirilmadigi icin veri
-// "<!--<script>" tasiyorsa tarayicinin HTML ayristiricisi "script data double
-// escaped" durumuna giriyor ve script etiketinden SONRAKI TUM SAYFAYI yutuyor.
-//
-// Tarayiciyla olculdu: adi "<!--<script>" olan bir kullanici demo ekibine
-// eklendiginde grid.php'nin script blogundan sonraki hicbir sey render
-// edilmedi. Ad kayit formundan geliyor, yani bir kullanici kendi adini
-// degistirip onu goren HERKESIN sayfasini kirabiliyordu.
-//
-// Duzeltme: bcc_json_for_script() (src/bootstrap.php) — JSON_HEX_TAG ekler.
-//
-// Calistirma: C:\php73\php.exe scripts\_verify_json_in_script.php
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -40,9 +23,8 @@ function check($ad, $kosul, $ek = '')
     else        { $kaldi++; echo "  [HATA] $ad" . ($ek !== '' ? "  -> $ek" : '') . "\n"; }
 }
 
-// ---------------------------------------------------------------------------
 echo "A) Yardimci fonksiyonun kendisi\n";
-// ---------------------------------------------------------------------------
+
 check('A) bcc_json_for_script() tanimli', function_exists('bcc_json_for_script'));
 
 $kotu = bcc_json_for_script(PROBE_NAME);
@@ -50,7 +32,6 @@ check('A) "<" kacirildi (\\u003C)', strpos($kotu, '\u003C') !== false, $kotu);
 check('A) ham "<" cikmiyor', strpos($kotu, '<') === false, $kotu);
 check('A) ham ">" cikmiyor', strpos($kotu, '>') === false, $kotu);
 
-// JS tarafinda deger AYNI kalmali — kacis yalnizca HTML ayristiricisi icin.
 check('A) JSON cozuldugunde deger DEGISMIYOR', json_decode($kotu, true) === PROBE_NAME,
     var_export(json_decode($kotu, true), true));
 
@@ -58,11 +39,8 @@ $turkce = bcc_json_for_script('Şükrü Öz — çalışma');
 check('A) Turkce karakterler kacirilmiyor (JSON_UNESCAPED_UNICODE korundu)',
     strpos($turkce, 'Şükrü') !== false, $turkce);
 
-// ---------------------------------------------------------------------------
 echo "\nB) Kaynak taramasi: <script> icine DUZ json_encode kalmadi\n";
-// ---------------------------------------------------------------------------
-// Yorumlari soyarak ara: bu dosyanin ve baskalarinin ACIKLAMA yorumlarinda
-// gecen ornek kod yanlis alarm vermesin.
+
 $kalanlar = array();
 foreach (array_merge(
     glob(__DIR__ . '/../public/*.php'),
@@ -81,7 +59,6 @@ foreach (array_merge(
 check('B) HTML basan hicbir dosyada "echo json_encode(" yok', empty($kalanlar),
     implode(', ', $kalanlar));
 
-// API uc noktalari BU KURALIN DISINDA: ciktilari application/json, HTML degil.
 $apiSayisi = 0;
 foreach (glob(__DIR__ . '/../public/api/*.php') as $dosya) {
     if (strpos(file_get_contents($dosya), 'json_encode(') !== false) { $apiSayisi++; }
@@ -89,9 +66,8 @@ foreach (glob(__DIR__ . '/../public/api/*.php') as $dosya) {
 check('B) API uc noktalari hala duz json_encode kullaniyor (dogru, HTML degiller)',
     $apiSayisi > 0, 'bulunan: ' . $apiSayisi);
 
-// ---------------------------------------------------------------------------
 echo "\nC) CANLI: bozuk adli kullanici sayfayi yutmuyor\n";
-// ---------------------------------------------------------------------------
+
 $BASE = 'http://localhost';
 $COOKIE = tempnam(sys_get_temp_dir(), 'bccjs');
 
@@ -135,7 +111,6 @@ if (!$tableId) {
     exit(2);
 }
 
-// Adi BOZUK olan atilir bir uye. Temizlik kurulumdan ONCE kapanisa baglanir.
 $cleanup = function () use ($COOKIE) {
     bcc_execute('DELETE FROM users WHERE email = :e', array(':e' => PROBE_EMAIL));
     @unlink($COOKIE);
@@ -163,7 +138,7 @@ check('C) bozuk ad sayfada HAM haliyle GECMIYOR',
     strpos($g['body'], PROBE_NAME) === false);
 check('C) bozuk ad KACIRILMIS haliyle var (veri gercekten sayfaya gitti)',
     strpos($g['body'], '\u003C!--') !== false);
-// Asil olcut: script blogundan SONRAKI kapanis etiketleri yerinde mi.
+
 check('C) sayfa </html> ile bitiyor (script sonrasi yutulmadi)',
     strpos($g['body'], '</html>') !== false);
 check('C) script SONRASINDAKI modal markup i hala basiliyor',

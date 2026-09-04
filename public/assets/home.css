@@ -2293,10 +2293,15 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     inset: 0;
     z-index: 60;
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 1rem 1rem calc(1rem + 10vh);
+    overflow-y: auto;
     background: rgba(0, 0, 0, 0.42);
+}
+
+.home-modal-backdrop > .home-modal {
+    margin-top: auto;
+    margin-bottom: auto;
 }
 .home-modal-backdrop[hidden] { display: none; }
 .home-modal {

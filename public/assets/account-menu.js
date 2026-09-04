@@ -78,6 +78,47 @@
             trashOverlay.hidden = true;
         }
 
+        function insertRestoredCard(data) {
+            if (!data || !data.card_html || !data.team_id) {
+                return;
+            }
+
+            var grid = null;
+            var kardes = document.querySelector(
+                '.home-base-grid .home-base-card[data-team-id="' + data.team_id + '"]'
+            );
+
+            if (kardes) {
+                grid = kardes.parentElement;
+            } else {
+                var gridler = Array.prototype.filter.call(
+                    document.querySelectorAll('.home-base-grid'),
+                    function (g) { return g.id !== 'home-base-grid-lead'; }
+                );
+                if (gridler.length === 1) {
+                    grid = gridler[0];
+                }
+            }
+
+            if (!grid || grid.querySelector('.home-base-card[data-base-id="' + (data.base_id || '') + '"]')) {
+                return;
+            }
+
+            var kap = document.createElement('div');
+            kap.innerHTML = data.card_html;
+            var kart = kap.firstElementChild;
+            if (!kart) {
+                return;
+            }
+
+            var olustur = grid.querySelector('.home-base-create');
+            if (olustur) {
+                grid.insertBefore(kart, olustur);
+            } else {
+                grid.appendChild(kart);
+            }
+        }
+
         function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam) {
             Array.prototype.forEach.call(listEl.querySelectorAll('.bcc-trash-item'), function (el) {
                 el.remove();
@@ -132,6 +173,7 @@
                                 if (!listEl.querySelector('.bcc-trash-item')) {
                                     emptyEl.hidden = false;
                                 }
+                                insertRestoredCard(data);
                             } else {
                                 restoreBtn.disabled = false;
                                 window.alert((data && data.error) || 'Geri yüklenemedi.');

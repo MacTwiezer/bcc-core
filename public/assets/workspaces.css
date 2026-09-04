@@ -518,23 +518,29 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
     gap: 1.15rem;
-    align-items: start;
 }
-.sp-page .wsx-body-main {
-    display: flex;
-    flex-direction: column;
-    gap: 1.15rem;
+
+.sp-page .wsx-body-main,
+.sp-page .wsx-body-side {
+    display: contents;
+}
+
+.sp-page .wsx-body-main > .settings-card,
+.sp-page .wsx-body-side > .settings-card {
     min-width: 0;
 }
 
-.sp-page .wsx-body-side {
-    display: flex;
-    flex-direction: column;
-    gap: 1.15rem;
-    min-width: 0;
-}
+.sp-page .wsx-body-main > .settings-card:nth-child(1) { grid-column: 1; grid-row: 1; }
+.sp-page .wsx-body-main > .settings-card:nth-child(2) { grid-column: 1; grid-row: 2; }
+.sp-page .wsx-body-side > .settings-card { grid-column: 2; grid-row: 1; }
+
 @media (max-width: 1280px) {
     .sp-page .wsx-body { grid-template-columns: minmax(0, 1fr); }
+    .sp-page .wsx-body-main > .settings-card,
+    .sp-page .wsx-body-side > .settings-card {
+        grid-column: 1;
+        grid-row: auto;
+    }
 }
 .sp-page .wsx-statbar {
     display: grid;

@@ -390,62 +390,6 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                     <aside class="wsx-body-side">
 
                         <div class="settings-card wsx-side-card">
-                            <h3 class="wsx-side-title">Kullanım &amp; Limitler</h3>
-
-                            <?php
-                            $limits = $GLOBALS['BCC_WORKSPACE_SOFT_LIMITS'];
-                            $meters = array(
-                                array(
-                                    'label' => 'Kayıt',
-                                    'used' => $wsUsage['record_count'],
-                                    'max' => $limits['records'],
-                                    'text' => number_format($wsUsage['record_count'], 0, ',', '.') . ' / ' . number_format($limits['records'], 0, ',', '.'),
-                                ),
-                                array(
-                                    'label' => 'Depolama',
-                                    'used' => $wsUsage['storage_bytes'],
-                                    'max' => $limits['storage_bytes'],
-                                    'text' => bcc_format_bytes($wsUsage['storage_bytes']) . ' / ' . bcc_format_bytes($limits['storage_bytes']),
-                                ),
-                                array(
-                                    'label' => 'Base',
-                                    'used' => $wsUsage['base_count'],
-                                    'max' => $limits['bases'],
-                                    'text' => $wsUsage['base_count'] . ' / ' . $limits['bases'],
-                                ),
-                            );
-                            foreach ($meters as $m):
-                                $pct = $m['max'] > 0 ? min(100, round($m['used'] / $m['max'] * 100)) : 0;
-                                $tone = $pct >= 90 ? ' is-danger' : ($pct >= 75 ? ' is-warn' : '');
-                            ?>
-                                <div class="wsx-meter">
-                                    <div class="wsx-meter-head">
-                                        <span class="wsx-meter-label"><?php echo htmlspecialchars($m['label'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                        <span class="wsx-meter-value"><?php echo htmlspecialchars($m['text'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                    </div>
-                                    <div class="wsx-meter-track" role="img" aria-label="<?php echo htmlspecialchars($m['label'] . ': ' . $pct . '%', ENT_QUOTES, 'UTF-8'); ?>">
-                                        <span class="wsx-meter-fill<?php echo $tone; ?>" style="width: <?php echo (int) $pct; ?>%;"></span>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-
-                            <div class="wsx-integration">
-                                <span class="wsx-integration-dot<?php echo $wsUsage['slack_webhook_count'] > 0 ? ' is-on' : ''; ?>"></span>
-                                <span class="wsx-integration-text">
-                                    Slack entegrasyonu:
-                                    <strong><?php echo $wsUsage['slack_webhook_count'] > 0 ? 'aktif' : 'kapalı'; ?></strong>
-                                    <?php if ($wsUsage['slack_webhook_count'] > 0): ?>
-                                        <span class="sp-muted">(<?php echo (int) $wsUsage['slack_webhook_count']; ?> webhook)</span>
-                                    <?php endif; ?>
-                                </span>
-                            </div>
-
-                            <p class="wsx-limit-note">
-                                Eşikler kapasite göstergesidir; sistem tarafından <strong>zorlanmaz</strong>.
-                            </p>
-                        </div>
-
-                        <div class="settings-card wsx-side-card">
                             <h3 class="wsx-side-title">Son Hareketler</h3>
 
                             <?php if (empty($wsActivity)): ?>

@@ -16,9 +16,25 @@ $GLOBALS['BCC_MAIL_ICONS'] = array(
     'map'   => array('cid' => 'bcc-icon-map',   'file' => 'icon-map.png',   'alt' => 'Adres'),
 );
 
+$GLOBALS['BCC_MAIL_LOGO_CID'] = 'bcc-logo';
+
 function bcc_mail_icons_dir()
 {
     return __DIR__ . '/../public/assets/mail';
+}
+
+function bcc_mail_logo_path()
+{
+    return __DIR__ . '/../public/assets/logo.png';
+}
+
+function bcc_mail_logo_src()
+{
+    if (is_file(bcc_mail_logo_path())) {
+        return 'cid:' . $GLOBALS['BCC_MAIL_LOGO_CID'];
+    }
+
+    return $GLOBALS['BCC_MAIL_LOGO_URL'];
 }
 
 define('BCC_MAIL_FONT', "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif");
@@ -68,7 +84,7 @@ HTML;
 
 function bcc_mail_html_shell($heading, $introHtml, $ctaText = null, $ctaUrl = null, $noteHtml = null, $badgeText = null, $fallbackUrl = null)
 {
-    $logo = htmlspecialchars($GLOBALS['BCC_MAIL_LOGO_URL'], ENT_QUOTES, 'UTF-8');
+    $logo = htmlspecialchars(bcc_mail_logo_src(), ENT_QUOTES, 'UTF-8');
 
     $brandName = htmlspecialchars(bcc_brand_name(), ENT_QUOTES, 'UTF-8');
     $site = htmlspecialchars($GLOBALS['BCC_MAIL_SITE_URL'], ENT_QUOTES, 'UTF-8');

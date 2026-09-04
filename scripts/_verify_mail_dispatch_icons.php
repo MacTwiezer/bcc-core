@@ -179,12 +179,12 @@ if ($built) {
         $count = substr_count($mime, '<' . $icon['cid'] . '>');
         check('B) ' . $key . ' MIME icinde TEK Content-ID olarak gomulu', $count === 1, $count . ' kez');
     }
-    check('B) MIME 4 adet image/png parcasi tasiyor',
-        substr_count($mime, 'image/png') === 4,
+    check('B) MIME 5 adet image/png parcasi tasiyor (4 ikon + logo)',
+        substr_count($mime, 'image/png') === 5,
         substr_count($mime, 'image/png') . ' adet');
-    check('B) ikonlar disari HTTP istegi ACMIYOR (footer tarafinda http src yok)',
-        preg_match('/<img[^>]+src="https?:/i', $html) === 1,
-        'beklenen: sadece logo');
+    check('B) mail disari HIC HTTP istegi ACMIYOR (logo dahil hepsi gomulu)',
+        preg_match('/<img[^>]+src="https?:/i', $html) === 0,
+        'beklenen: sifir uzak resim');
 }
 
 $plainMail = new PHPMailer\PHPMailer\PHPMailer(true);
@@ -334,6 +334,7 @@ if (!is_dir(dirname($previewPath))) {
 }
 
 $preview = $html;
+$preview = str_replace('cid:' . $GLOBALS['BCC_MAIL_LOGO_CID'], '../../public/assets/logo.png', $preview);
 foreach ($GLOBALS['BCC_MAIL_ICONS'] as $icon) {
     $preview = str_replace('cid:' . $icon['cid'], '../../public/assets/mail/' . $icon['file'], $preview);
 }

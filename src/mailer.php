@@ -70,6 +70,14 @@ function bcc_should_send_verification_mail($expiresAt, $cooldown, $now = null, $
 
 function bcc_mail_attach_footer_icons($mail, $bodyHtml)
 {
+    $logoCid = isset($GLOBALS['BCC_MAIL_LOGO_CID']) ? $GLOBALS['BCC_MAIL_LOGO_CID'] : null;
+    if ($logoCid !== null && strpos($bodyHtml, 'cid:' . $logoCid) !== false) {
+        $logoPath = bcc_mail_logo_path();
+        if (is_file($logoPath)) {
+            $mail->addEmbeddedImage($logoPath, $logoCid, 'logo.png', 'base64', 'image/png');
+        }
+    }
+
     if (empty($GLOBALS['BCC_MAIL_ICONS'])) {
         return;
     }

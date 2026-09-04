@@ -86,7 +86,7 @@ check('B) konu sade (uzun tire / gereksiz onek yok)',
 
 echo "\n--- C) Sablon icerigi ---\n";
 $mustContain = array(
-    'logo (kurumsal alan adindan)' => 'https://bcciletisim.com.tr/assets/images/logo.png',
+    'logo GOMULU (cid, dis istek yok)' => 'src="cid:bcc-logo"',
     'web sitesi linki'             => 'href="https://bcciletisim.com.tr"',
     'WhatsApp linki'               => 'href="https://wa.me/902162100707"',
     'telefon 1'                    => '0(216) 210 07 07',
@@ -182,8 +182,14 @@ if ($isLocal) {
 
 $previewPath = __DIR__ . '/../storage/mail/_onizleme_dogrulama.html';
 if (!is_dir(dirname($previewPath))) { mkdir(dirname($previewPath), 0775, true); }
-file_put_contents($previewPath, $html);
-echo "\nHTML onizleme: " . realpath($previewPath) . "\n";
+
+$preview = $html;
+$preview = str_replace('cid:' . $GLOBALS['BCC_MAIL_LOGO_CID'], '../../public/assets/logo.png', $preview);
+foreach ($GLOBALS['BCC_MAIL_ICONS'] as $icon) {
+    $preview = str_replace('cid:' . $icon['cid'], '../../public/assets/mail/' . $icon['file'], $preview);
+}
+file_put_contents($previewPath, $preview);
+echo "\nHTML onizleme (cid -> yerel yol): " . realpath($previewPath) . "\n";
 
 if (isset($argv[1]) && $argv[1] !== '') {
     $to = $argv[1];

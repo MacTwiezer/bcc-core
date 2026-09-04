@@ -16,8 +16,15 @@ config/database.local.php
 config/mail.local.php
 config/mail_record_send.local.php
 # Makineye/sunucuya özel uygulama ayarları: e-posta bağlantılarının taban URL'i
-# ($APP_BASE_URL) VE demo hesaplarının ortak şifresi ($BCC_DEMO_PASSWORD, bkz.
-# config/app.php'deki güvenlik notu). SIR İÇERİR — asla commit edilmez.
+# ($APP_BASE_URL) VE demo hesaplarının ortak şifresi ($BCC_DEMO_PASSWORD).
+# SIR İÇERİR — asla commit edilmez.
+#
+# $BCC_DEMO_PASSWORD neden burada: bu depo açık ve o hesaplar veritabanında
+# GERÇEKTEN var/aktif. Şifreyi kaynağa yazmak, demo giriş butonları kapalı olsa
+# bile (hesaplar normal giriş formundan da denenebilir) çalışan bir kimlik
+# bilgisini yayınlamak olurdu. Kural bir teste bağlı: _verify_demo_roles.php
+# "demo şifresi izlenen HİÇBİR kaynak dosyasında literal olarak geçmiyor"
+# kontrolünü tüm izlenen dosyalarda çalıştırır.
 # Nasıl doldurulacağı: docs/CANLIYA-ALMA.md (eski .example şablonu oraya taşındı).
 config/app.local.php
 

@@ -573,7 +573,7 @@ C:/php73/php.exe scripts/_verify_phase4_sort_search.php → 8/8
 C:/php73/php.exe scripts/_verify_phase4_filter.php      → 20/20
 ```
 
-Tam paket (2026-09-04 itibarıyla **62 `_verify_*` betiği**, hepsi geçiyor):
+Tam paket (2026-09-04 itibarıyla **63 `_verify_*` betiği**, hepsi geçiyor):
 ```
 for /f %f in ('dir /b scripts\_verify_*.php') do C:\php73\php.exe scripts\%f
 ```

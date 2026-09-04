@@ -38,10 +38,16 @@ XAMPP MySQL çalışırken, proje klasöründe şemayı içe aktarın:
 C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root bcc_core < schema.sql
 ```
 
-Bu, 15 tablo oluşturur (hepsi InnoDB + utf8mb4): `teams`, `users`, `team_members`,
-`bases`, `user_starred_bases`, `tables_meta`, `fields`, `records`, `cell_values`,
-`attachments`, `views`, `user_favorite_views`, `slack_webhooks`,
-`slack_routing_rules`, `audit_log`.
+Bu, **21 tablo** oluşturur (hepsi InnoDB + utf8mb4): `teams`, `users`,
+`team_members`, `bases`, `user_starred_bases`, `tables_meta`, `fields`,
+`records`, `cell_values`, `attachments`, `comments`, `views`,
+`user_favorite_views`, `record_view_log`, `slack_webhooks`,
+`slack_routing_rules`, `slack_watched_fields`, `audit_log`,
+`user_read_notifications`, `login_attempts`, `password_reset_attempts`.
+
+`schema.sql` **otoriter kaynaktır** — ayrı bir `migrations/` klasörü YOKTUR
+(eski migration dosyaları, içerikleri şemaya işlendikten sonra tek tek
+kaldırıldı). Şu an canlı veritabanındaki tablo kümesiyle birebir aynıdır.
 
 Farklı bir MySQL/MariaDB kurulumu (başka kullanıcı/şifre/port) kullanıyorsanız
 `config/database.php`'yi DEĞİŞTİRMEYİN — yanına `config/database.local.php`
@@ -68,8 +74,8 @@ testini gösterir. Sorun giderme (ör. "sonsuz yükleniyor" hatası) için
 
 ## Test betikleri
 
-Büyük bir değişiklikten sonra çalıştırılır (her biri kendi test verisini kurup
-sonunda temizler, kalıcı iz bırakmaz):
+Büyük bir değişiklikten sonra çalıştırılır. Her biri kendi test verisini kurup
+sonunda temizler; koşu sonrası kullanıcı/ekip/base/kayıt sayıları değişmemelidir.
 
 ```
 C:\php73\php.exe scripts\test_isolation.php            → KVKK ekip izolasyonu
@@ -77,19 +83,29 @@ C:\php73\php.exe scripts\_verify_phase4_sort_search.php → Sıralama + arama
 C:\php73\php.exe scripts\_verify_phase4_filter.php      → Filtreleme
 ```
 
+Tam paket (**63** `_verify_*` betiği) ve beklenen sonuçlar:
+`docs/PROJE-DURUM.md` §7.
+
+> Bilinen iki kasıtlı istisna: `_verify_mail_verification.php` ve
+> `_verify_mail_dispatch_icons.php` `storage/mail/_onizleme_*.html` bırakır —
+> sabit adlı, her koşuda üzerine yazılır (birikmez), mailin gerçekten nasıl
+> göründüğünü gözle kontrol etmek içindir.
+
 ## Klasör yapısı
 
 ```
 bcc-core/
   config/database.php      mysqli bağlantısı + yardımcılar (bcc_query, bcc_fetch_*, ...)
-  src/                     ortak PHP mantığı — bootstrap, auth, schema, audit,
-                           csrf, slack, validation, xlsx_writer, error_handler,
-                           api_bootstrap, partials/ (paylaşılan HTML parçaları)
+  src/                     ortak PHP mantığı — bootstrap, api_bootstrap, auth,
+                           csrf, schema, audit, slack, validation, errors,
+                           error_handler, mailer, mail_template, xlsx_reader,
+                           xlsx_writer, note_view_report, share_modal_payload,
+                           demo_accounts, partials/ (paylaşılan HTML parçaları)
   public/                  Apache DocumentRoot
     *.php                  login/register/dashboard/grid/interface/account/...
     admin/                 platform admin paneli (kullanıcı/ekip yönetimi)
     api/                   AJAX uçnoktaları (hücre kaydetme, kayıt/görünüm
-                           yönetimi, dosya eki, CSV içe/dışa aktarma, ...)
+                           yönetimi, dosya eki, XLSX içe/dışa aktarma, ...)
     assets/                CSS/JS/statik dosyalar
   scripts/                 CLI araçları (create_admin, regresyon test betikleri)
   docs/
@@ -104,6 +120,11 @@ bcc-core/
 Faz 0-7 (çekirdek: kimlik/roller, tablo/alan yönetimi, Grid + AJAX hücre
 düzenleme, filtre/sıralama/gruplama, Duyuru arayüzü, zengin metin, Slack
 entegrasyonu) tamamlandı — artı yol haritasında hiç olmayan onlarca özellik
-(Trash, koyu/açık tema, sürükle-bırak sıralama, CSV içe/dışa aktarma, bildirim
-paneli, hesap yönetimi, favicon...). **Ayrıntılı ve güncel ilerleme takibi
-için:** `docs/PROJE-DURUM.md` → "Biten İşler" / "Kalan İşler" bölümlerine bakın.
+(Trash, koyu/açık tema, sürükle-bırak sıralama, XLSX içe/dışa aktarma, Kanban
+görünümü, yorumlar, bildirim paneli, hesap yönetimi, favicon...). **Ayrıntılı ve
+güncel ilerleme takibi için:** `docs/PROJE-DURUM.md` → "Biten İşler" / "Kalan
+İşler" bölümlerine bakın.
+
+> **Kaldırılan özellikler** (README'de eskiden vardı, artık YOK): CSV içe/dışa
+> aktarma ve herkese açık Form görünümü. İkisi de kod tabanından tamamen
+> çıkarıldı; ayrıntı `docs/PROJE-DURUM.md` §10'da.

@@ -548,6 +548,36 @@ Tam paket **62/62**, canlı site ayakta (`login.php` 200, `dashboard.php` 302, `
 
 ---
 
+### 2026-09-04 turu — `vendor/`, kök belgeler ve kapanış
+
+Denetim döngüsünün son turu. Bu turdan sonra depoda **satır satır okunmamış kod dosyası kalmadı**.
+
+#### `vendor/phpmailer/phpmailer` — paket temiz, ama kullanımında bir kusur vardı
+- **Paket kurcalanmamış (kesin kanıt).** `installed.json`'daki kaynak commit SHA'sının (`1bc1716…`) resmi GitHub zipball'ı indirilip açıldı ve kurulu paketle karşılaştırıldı: **72/72 dosya, sıfır fark**. `PHPMailer.php`, `SMTP.php`, `POP3.php`, `OAuth.php`, `get_oauth_token.php` md5'leri birebir. `composer.lock` ↔ `installed.json` referansları eşleşiyor. `composer audit`: güvenlik açığı bildirimi yok.
+- **Güvenlik ayarları doğru:** TLS doğrulaması zayıflatılmamış (`SMTPOptions`/`verify_peer=false` gibi klasik kısayol **yok**), `SMTPDebug=0`, `SMTPAutoTLS` açık. `vendor/` web'den erişilemiyor (üç yoldan da 404). `get_oauth_token.php` erişilemez ve uygulama OAuth'u hiç kullanmıyor.
+- **SMTP gönderimi bir web isteğini 300 saniye kilitleyebiliyordu (`299d3d5`).** Mail gönderimi **senkron**: kullanıcı kayıt olurken (`register.php`) ya da parola sıfırlama isterken (`forgot-password.php`) SMTP sunucusu yanıt vermezse istek o kadar bekler. Hiçbir zaman aşımı ayarlanmamıştı → PHPMailer'ın varsayılanı (300 sn) geçerliydi. Kayıt akışında mail **DB yazmasından sonra** geldiği için sonuç: hesap oluşmuş, kullanıcı hata sayfası görüyor. Aynı disiplin `src/slack.php`'de zaten vardı (CONNECTTIMEOUT 3 / TIMEOUT 5, "çağrı senkron" gerekçesiyle) — mail tarafında atlanmıştı.
+  - ⚠️ **İLK DÜZELTMEM EKSİKTİ, kendi testim yakaladı.** Yalnızca `$mail->Timeout` ayarlamak **yetmiyor**. PHPMailer'ın kaynağında iki ayrı sınır var: `PHPMailer::$Timeout` yalnızca **bağlanma** ve `stream_set_timeout` için (SMTP.php:1348, PHPMailer.php:2340/2405); veriyi bekleyen asıl çağrı `stream_select($..., $this->Timelimit)` (SMTP.php:1360, varsayılan 300) ve **`Timelimit` PHPMailer üzerinden hiç açılmamış**. Yerel, sessiz dinleyen bir sokete karşı ölçüldü (OS bağlantıyı kabul eder, SMTP karşılaması 220 hiç gelmez): `Timeout=3` + varsayılan `Timelimit` → **tam 300,0 saniye** asılı; ikisi birlikte 3 → **3,0 saniye**. `bcc_apply_smtp_timeout()` ikisini birden ayarlıyor, `BCC_SMTP_TIMEOUT = 15` (Office 365'e TLS gönderimi pratikte 1-5 sn; `max_execution_time = 30`'un **altında** kaldığı için PHPMailer kendi istisnasını fırlatabiliyor, PHP süreci ortadan öldürmüyor).
+  - ⚠️ **Testin kendisinde de hata yaptım.** "Yalnızca Timeout yetersiz" durumunu her koşuda alt süreçte ölçmeyi denedim; Windows'ta `proc_terminate()` işi bitirmeyince `proc_close()` **bloke oldu** — test 3+ dakika sürdü ve arkada asılı bir `php.exe` bıraktı. O bölüm çıkarıldı (ölçüm belgede/commit'te kayıtlı, regresyonu zaten B bölümü yakalıyor). Test artık **3 saniye**, iz bırakmıyor.
+  - Test: `scripts/_verify_smtp_timeout.php` (14/14). `Timelimit` ataması kaldırılınca B bölümü **300** değeriyle düşüyor (kanıtlandı).
+- **Bilgi:** paket 57 dil dosyası taşıyor (252 KB), uygulama yalnızca varsayılanı kullanıyor. Vendor içeriğine dokunulmaz (composer geri getirir).
+
+#### Kök dizindeki altı dosya (`9681492`)
+- **`schema.sql` — kusur yok, iki ayrı ölçümle.** *(a)* Kolon düzeyinde canlı veritabanıyla **birebir örtüşüyor** (21 tablonun hepsinde, eksik/fazla kolon yok). *(b)* **Sıfırdan içe aktarılabiliyor**: atılır bir şemaya (`bcc_schema_probe`) uygulandı → 24 ifade, **0 hata**, 21/21 tablo, 40/40 yabancı anahtar; sonra şema silindi. **Canlı veritabanına hiç dokunulmadı** (işlem öncesi/sonrası sayımlar aynı).
+- **`.gitignore`** — `config/app.local.php` açıklaması *"bkz. `config/app.php`'deki güvenlik notu"* diyordu; **o not artık yok** (`dc9a03a` yorum temizliğinde kaldırıldı). Gerekçe doğrudan yazıldı ve kuralın bir **teste** bağlı olduğu eklendi (`_verify_demo_roles.php` şifreyi tüm izlenen dosyalarda arıyor).
+- **`CLAUDE.md`** — iki bayat iddia: *(1)* *"düz `php` XAMPP'in 8.2 CLI'ıdır"* **yanlış** — `php -v` bugün **7.3.33** dönüyor (PATH'te `C:/php73` önce). Kural (tam yol yaz) doğru ama gerekçesi yanlıştı; ikisinin de kurulu olduğu ve PATH sırasının değişebileceği yazıldı. *(2)* *"kalıcı iz bırakmaz"* tam doğru değil — iki mail betiği `storage/mail/_onizleme_*.html` bırakır (kasıtlı, sabit adlı, üzerine yazılır); istisna belgelendi. DB fonksiyon listesi kontrol edildi: dokuzu da doğru.
+- **`README.md`** — dört bayat iddia: *"15 tablo oluşturur"* → **gerçek 21** (altı tablo eksikti); *"CSV içe/dışa aktarma"* **iki yerde** ama CSV kaldırılmış → XLSX olarak düzeltildi + "Kaldırılan özellikler" notu; `src/` dosya listesi yedi dosya eksikti; test betikleri notu düzeltildi. **"TY / GULF / ATP" kontrol edildi ve doğru çıktı** (#1/#2/#3 gerçekten var).
+- `composer.json`/`composer.lock` aynı gün `e705bdb`'de denetlenmişti (PHP platform sabiti).
+
+#### Kapanış (`16e8f96`)
+- **Depo artık %100 yorumsuz.** Bu denetim turlarında yazdığım 11 test betiği + 3 kaynak dosya da temizlendi (122.223 → 97.522 bayt, token imzası 14/14 korundu). Silinen yorumların gerekçesi kaybolmadı: her testin hangi kusuru kilitlediği commit mesajlarında ve bu belgenin tur bölümlerinde ölçülmüş sayılarıyla duruyor (silmeden önce 10 betiğin de belgede karşılığı olduğu tek tek doğrulandı).
+- **`docs/YAPILACAKLAR-UI.md` kaldırıldı.** Dosyada **açık iş yoktu** (0 madde). Silmeden önce iki şey yapıldı: *(1)* başka hiçbir yerde yazılı olmayan dört kural §3'e taşındı (dış kütüphane yok / `intval()` zorunluluğu / `<details>` deseni / JS'siz çalışma sınırı); *(2)* Bölüm 5'teki iki eski kayıt o dosyaya "madde açıldı" diyordu — **ikisi de ölçülerek kontrol edildi ve ikisi de yapılmış**: `views.created_by` kolonu var; `idx_audit_log_entity` var ve `base.open` sorgusunda gerçekten kullanılıyor (EXPLAIN: 14.669 satır yerine **305**). Yani dosyayla birlikte kaybolan iş yok. Üç **aktif** atıf düzeltildi; tarihsel kayıtlardaki atıflara dokunulmadı.
+- §3'te bir bayat iddia daha: *"yanında şifresiz bir `.example` şablonu bulunur"* — depoda **sıfır** `.example` var (ölçüldü), içerikleri `docs/CANLIYA-ALMA.md`'ye taşınmış.
+
+#### Turun doğrulaması
+Tam paket **63/63** + `test_isolation` 6/6. Dokuz ana sayfa doğru yanıt veriyor (genel 200, korumalı 302). **Apache hata günlüğüne bugün hiçbir şey düşmedi** (son kayıt 03 Eylül 18:05 — o da `error_handler` düzeltmesini kanıtlamak için bilerek tetiklenen bellek/fatal testleri).
+
+---
+
 ## 6. Kalan İşler
 
 **"Kaydı gönder" tamamlandı** (mail backend + arayüz + gerçek gönderim, Bölüm 5 sekiz/dokuz/onuncu adımlar) — şu anda bilinen bir kalan iş yok. Bilinçli kapsam dışı bırakılan: gönderim geçmişi loglama (istenirse ayrı bir iş).

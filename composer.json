@@ -1,5 +1,14 @@
 {
+    "name": "bcc/opsflow",
+    "description": "OpsFlow - BCC Iletisim ic operasyon platformu (kapali kaynak).",
+    "license": "proprietary",
     "require": {
+        "php": ">=7.3",
         "phpmailer/phpmailer": "^7.1"
+    },
+    "config": {
+        "platform": {
+            "php": "7.3.33"
+        }
     }
 }

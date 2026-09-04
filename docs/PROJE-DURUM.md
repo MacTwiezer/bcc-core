@@ -447,7 +447,7 @@ scripts/                   create_admin, test_isolation, _isolation_case,
     - **Arama büyüteçleri hiçbir temada yanındaki yazıyla aynı renkte değildi (`739f2e1`).** Dört ikon SVG'sinde `stroke="#8a8a8e"` sabitti; etiket ise `var(--bcc-text-muted)` kullanıyor (açık `#6b6b70`, koyu `#9a9aa0`). Sekiz stroke `currentColor`'a çevrildi, `home.css`'e dört kabı kapsayan tek kural eklendi. Bildirim zilinin rengi bilerek dokunulmadı: o bir parametre ve `grid.php` koyu şeridi için farklı değer geçiyor.
     - **YANILDIĞIM BİR NOKTA — düzeltildi:** partial'ların bir kısmı beklediği değişkenleri `isset` ile korurken bir kısmı korumuyor; bunu tutarsızlık sandım. Dosyaları karşılaştırınca kural **tutarlı** çıktı: **opsiyonel** değişkenler varsayılan alır, **zorunlu** olanlar almaz — böylece eksik kalırsa PHP bildirimi sunucu günlüğüne düşer (`display_errors=0`, `log_errors` açık). `home_shell_top.php`'nin kendi notu bunu zaten anlatıyordu: yalnızca `array()` varsayılanı bırakmak hatayı **susturmuş** ve liste sessizce boş kalmıştı. `isset` eklemek düzeltme değil bozma olurdu; **hiçbir şey değiştirilmedi**.
   - **`src/partials/` yorum temizliği (`07d2401`) — çıktı kanıtlandı.** Yorum oranı %40 → %0 (75.760 → 41.379 bayt, −%45,4). **Ayrı bir araç gerekti:** `scripts/` dosyaları saf PHP'ydi; partial'larda `T_INLINE_HTML` tarayıcıya giden çıktıdır ve aynı aracı çalıştırınca 16 dosyanın 11'i "kod değişti" uyarısı verdi. Yeni araç HTML metnine yalnızca HTML yorumu için dokunuyor, PHP tarafında genel boşluk toparlaması yapmıyor, içi boşalan `<?php ?>` bloklarını peşindeki tek satır sonuyla birlikte siliyor (PHP zaten o satır sonunu yutar). **HTML yorumları da kaldırıldı — ayrı bir bulgu:** PHP yorumlarından farklı olarak bunlar **tarayıcıya gidiyordu**; `dashboard.php` kaynağında dört tanesi vardı ve içerikleri iç bilgiydi ("Trash işlev yapmaz (özelliği yazılmamış)" — üstelik artık doğru değil, çöp kutusu aynı dosyada çalışıyor; `YAPILACAKLAR-UI.md` / `api/trash_list.php` gibi iç dosya adları; "Adım 3d" gibi iç aşama adları). **Doğrulama token imzasıyla yetinmedi:** altı sayfanın HTML çıktısı önce/sonra çekilip karşılaştırıldı (canlı veriler maskelenerek) — yedi sayfanın altısı birebir aynı, `grid.php` yalnızca boşlukta farklı (kendi satırındaki bir HTML yorumu silinince `<div>` bir önceki girintiye kaydı), boşluk normalize edilince o da birebir aynı.
-  - **AÇIK MADDE (kullanıcı kararı bekliyor):** veritabanında birikmiş **4.878 tamamen öksüz `audit_log` satırı** ve **5 öksüz base** (#308 RoleTest Base, #320/321/322 Demo B/C/D Base, #616 Export Test) hâlâ duruyor. Bunlar gerçek veri; silinmeleri kullanıcının kararına bırakıldı.
+  - **AÇIK MADDE — ÇÖZÜLDÜ (2026-09-04, aşağıdaki `storage/` + veri temizliği turu).** Öksüz `audit_log` satırları ve 5 öksüz base kullanıcı onayıyla silindi; ölçüt de bu arada düzeltildi (bkz. o tur).
 
 ### 2026-09-04 turu — `src/` denetimi (18 dosya, ~9.400 satır)
 
@@ -465,7 +465,7 @@ Yöntem `scripts/` ve `src/partials/` turlarıyla aynı: dosyalar **satır satı
 - **İNCELENİP DOKUNULMAYANLAR (gerekçeli).** `bcc_sanitize_rich_text()`'in whitelist'i (DOMDocument ile ağaç yeniden inşası, `<a>` yalnızca `http/https`, `<span>` yalnızca sabit `font-size` listesi, `script`/`style` içeriğiyle atılıyor) altın örneklerle sınandı ve **sağlam**; `bcc_reorder_sibling()` / `bcc_ids_to_names()` dinamik tablo-kolon adlarını sabit whitelist'ten alıyor ve uyuşmazlıkta istisna fırlatıyor; `bcc_prepare_positional()` tekrarlanan adlandırılmış parametreyi **her geçiş için ayrı** bind ediyor (`bcc_get_or_create_default_view()` bunu kullanıyor, doğru); Slack webhook URL'i `slack_settings.php`'de her yerde maskeli (`••••••••` + son 4) ve audit detayına asla yazılmıyor; `bcc_find_field/record/attachment` üçlüsü `bases.deleted_at`'e bakmıyor (çöp kutusundaki bir base'in kaydına doğrudan id ile erişilebiliyor) — **ekip içi** bir tutarlılık boşluğu, çapraz kiracı sızıntısı değil ve geri yükleme akışlarını bozma riski taşıdığı için **değiştirilmedi**, madde olarak not edildi.
 - **`src/` yorum temizliği (`f365961`) — canlı çıktı kanıtlandı.** 18 dosyada yorum oranı **%49,5 → %0** (447.822 → 218.128 bayt). 17 saf PHP dosyası token bazında temizlendi; kabul ölçütü yorum ve boşluk dışındaki tüm token'ların **birebir** aynı kalması (17/17). **`src/schema.php` ayrı ele alındı:** satır içi HTML içeriyor (render fonksiyonları), yani oradaki boşluk tarayıcıya giden çıktının kendisi — genel araç dosyayı haklı olarak **reddetti**. Özel araç iki ölçütü birden doğruluyor: PHP kod imzası birebir aynı **ve** HTML çıktısı = orijinal eksi yorumlar. Dosyadaki **2 HTML yorumu** (`<!-- ... -->`) gerçekten tarayıcıya gidiyordu (canlı sayfada doğrulandı) ve iç tasarım notu taşıdıkları için kaldırıldı — `src/partials/` turunda aynısı yapılmıştı. **Canlı kanıt:** 13 farklı alan tipi içeren atılır bir tablo üzerinde `grid.php`'nin tam çıktısı temizlik öncesi ve sonrası kaydedilip karşılaştırıldı; koşuya özel değerler (id'ler, view id, base rengi) normalize edildikten sonra kalan **tek fark kaldırılan iki yorum** — sayfa bunun dışında bayt bayt aynı. `_verify_reorder_atomicity.php`'deki bir kontrol "sözleşme **yorumda** yazılı mı" diye bakıyordu; yorumlar gidince davranışı değil silinmiş bir metni ölçtüğü için kaldırıldı (sözleşme üç davranış kontrolüyle korunmaya devam ediyor: fonksiyon kendi transaction'ını açmıyor, iki UPDATE içinde, dört çağıranın dördü de transaction ile sarıyor).
 - **Doğrulama (tam paket, önce/sonra ölçümlü):** 61 `_verify_*` betiğinin tamamı çalıştırıldı, **başarısız yok**. Koşu sonrası dokuz ölçütün sekizi değişmedi (kullanıcı 36, ekip 10, base 12, kayıt 746, aktif webhook 4, **`slack.notify_sent` 2412 → 2412 yani sıfır mesaj**, `@bcc-test.local` kullanıcısı 0, `ZZ *` ekibi 0); `audit_log` +5 — bu beşi demo hesaplarıyla (`owner@bcc.local` vb., demo ekip #77) yapılan gerçek eylemlerin izi, `bcc_test_purge_own_audit()` bilerek yalnızca aktörü NULL olan satırları siliyor.
-- **AÇIK MADDE (kullanıcı kararı bekliyor, önceki turdan devam):** birikmiş **4.878 tamamen öksüz `audit_log` satırı** ve **5 öksüz base** (#308, #320/321/322, #616) hâlâ duruyor. Ayrıca bu turda: `bcc_csv_injection_guard()` (`src/csv.php`) artık **sıfır çağırana** sahip — CSV dışa aktarımı kalmadığı için; silinip silinmeyeceği kullanıcı kararı.
+- **AÇIK MADDE — ÜÇÜ DE ÇÖZÜLDÜ (2026-09-04).** Öksüz `audit_log` satırları ve 5 öksüz base silindi, `bcc_csv_injection_guard()` (ve tüm `src/csv.php`) kaldırıldı — hepsi aşağıdaki `storage/` + veri temizliği turunda.
 
 ---
 
@@ -480,6 +480,50 @@ Küçük ama temel klasör: `app.php`, `database.php`, `mail.php` izleniyor; `ap
 - **`config/` yorum temizliği (`dc9a03a`).** Yalnızca `app.php`'de yorum vardı (%66,1): 3.851 → 1.011 bayt (−%73,7), kod imzası birebir korundu. `database.php` ve `mail.php` zaten yorumsuzdu; üç `.local.php` dosyasına **hiç dokunulmadı**. ⚠️ **Kaldırılan bir yorum güvenlik guardrail'iydi:** *"`$BCC_DEMO_PASSWORD` burada BİLEREK TANIMSIZ — bu depo açıktır, şifreyi buraya yazma."* Kuralın kendisi yoruma bağlı **değil**: `_verify_demo_roles.php` "demo şifresi izlenen HİÇBİR kaynak dosyasında literal olarak geçmiyor" kontrolünü 232 dosya üzerinde çalıştırıyor (73/73) ve `.gitignore` notu `app.local.php`'nin sır içerdiğini yazıyor. Yine de `scripts/` turundan sonra **ikinci kez** "kaldırılan bir yorumun tek başına değeri vardı" durumu — kullanıcıya bildirildi.
 - **Kurulum belgesinde boşluk YOK (kontrol edildi).** Bölüm 5'teki eski bir kayıt `config/mail_record_send.local.php.example` şablonunun commit edildiğini söylüyor; o dosya (ve diğer `.example`'lar) sonradan silindi. Kayıp yok: `docs/CANLIYA-ALMA.md` **dört yerel dosyanın dördünü de** yer tutucu değerlerle tam şablon hâlinde anlatıyor (`app.local.php` 2, `database.local.php` 3, `mail.local.php` 4, `mail_record_send.local.php` 3 kez geçiyor). `.gitignore` notu da oraya yönlendiriyor.
 - **Doğrulama:** tam paket **62/62** yeşil (bu turda eklenen `_verify_app_base_url.php` ile 62'ye çıktı), canlı site ayakta (`login.php` 200, `diag.php` 302).
+
+---
+
+### 2026-09-04 turu — `storage/` + ölü kod + veri temizliği
+
+`storage/` git'te izlenmiyor (0 izlenen dosya), yani orada denetlenecek **kod** yoktu — yapılan iş temizlikti. Aynı turda depo genelinde ölü kod tarandı ve bekleyen üç veri maddesi kullanıcı onayıyla kapatıldı.
+
+#### Ölü kod (`670836a`) — ikisi de sıfır çağırana sahip, tarama ile doğrulandı
+- **`src/csv.php` SİLİNDİ** + `bootstrap.php` require'ı kaldırıldı. Dosyada tek bir fonksiyon vardı (`bcc_csv_injection_guard`) ve CSV dışa aktarma özelliği kaldırıldığından beri çağıranı yoktu; `e7776f0`'da XLSX uç noktalarından da sökülmüştü. O turdan beri tek referans, "hiçbir yer bunu çağırmıyor" diye **doğrulayan** testti — o test hâlâ geçiyor (fonksiyonun var olmasını değil, çağrılmamasını kontrol ediyor).
+- **`bcc_delete_attachment_files_by_record()` (TEKİL)** kaldırıldı. Çoğul kardeşi (`..._by_records()`) iki uç noktadan kullanılıyor; tekil olanın sıfır çağıranı vardı. `by_field`/`by_table` kardeşleri duruyor.
+- Ayrıca tarandı: `public/assets/` altında **referanssız dosya yok** (56 dosyanın hepsi en az bir yerden yükleniyor), izlenmeyen/çöp dosya yok.
+
+#### `storage/` temizliği (`670836a`) — 13 dosya, 97 KB
+- **`storage/backups/` (5 SQL + klasör):** Ağustos'taki migration'lardan önce alınmış anlık görüntüler. O migration'ların **dosyaları bile silinmiş** (`85f948d`, `3f8c6b3`, `f10a694`… hepsi "schema.sql zaten kapsıyor") ve `schema.sql` sonuçlarını içeriyor. Artık koruyucu değil **tehlikeliydi**: `records_pre_soft_delete` 17 satır tutuyordu, o anki tablo 746 satırdı — biri geri yüklese 729 kaydı yok ederdi. Kişisel veri içermiyordu (0 e-posta).
+- **`storage/mail/` (8 dosya):** 4 log-modu mail dökümü (Ağustos; `MAIL_MODE` artık `'smtp'`), 2 `SMTP_ERROR` günlüğü (Ağustos, sorun çözülmüş), 2 `_onizleme_*.html` (testlerin her koşuda yeniden ürettiği sabit adlı önizlemeler — silindiler, ilk koşuda geri geldiler). Dosyalar **4 gerçek e-posta adresini düz metin** tutuyordu ve **hiçbir saklama/temizlik mekanizması yok** (tarandı: `storage/mail`'e yazan tek yer `src/mailer.php`, silen yer **yok**). SMTP şifresi sızmamıştı. Silinen dosyaların envanteri (ad+boyut+md5) kayıt altına alındı.
+- İki klasör de kod tarafından otomatik oluşturuluyor (`bcc_attachment_storage_dir_ensured`, `bcc_mail_storage_dir`) — boş kalmaları sorun değil.
+- `storage/` web'den erişilemiyor (DocumentRoot `public/`; iki yoldan da 404 ölçüldü).
+
+#### Test dış etkene takılıyordu (`670836a`) — aynı sınıf üçüncü kez
+`_verify_mail_verification.php` D bölümü `bcciletisim.com.tr`'ye bağlanıp "200 değilse KALDI" diyordu. **Aynı gün önce 25/25 geçti, sonra 23/25 kaldı — kodda hiçbir şey değişmeden.** Ölçüldü: DNS çözülüyor (94.73.151.142), `http://` 301 dönüyor, `https://` TLS el sıkışmasında düşüyor (`curl (35) schannel: failed to receive handshake`). `629803c` ve `529c886`'daki dersin aynısı: **bir test, denetlediği kodun kontrolü dışındaki bir şeye takılıp KALMAMALI.** Artık `HTTP 0` (bağlantı kurulamadı) **uyarı**, gerçek 404/500 hâlâ **KALDI**; ayrıca ağa bağlı **olmayan** iki biçim kontrolü eklendi (adres https ve mutlak mı). Kanıtlandı: adres kasten 404 verecek şekilde değiştirilince test yine kalıyor (24/26), geri alınınca 25/25.
+
+#### Veri temizliği (kullanıcı onayıyla, commit YOK — veritabanı işlemi)
+**⚠️ ÖNCEKİ TURLARDAKİ ÖLÇÜTÜM YANLIŞTI ve silmeden önce düzeltildi.** İki turda "4.878 tamamen öksüz `audit_log` satırı" diye raporlanmıştı. `user_id IS NULL` yalnızca "kullanıcı silindi" demek **değil** — giriş yapılmadan yapılan işlemler de baştan NULL yazılıyor. O kümenin içinde şunlar vardı:
+
+```
+user.register                 {"email":"<proje-sahibinin-adresi>"}
+user.password_reset_completed user#2
+slack.routing_rule_create     {"value":"Trendyol"}
+```
+
+Silmeden önce üç ölçüm yapıldı: *(a)* satırın işaret ettiği varlık hâlâ yaşıyor mu, *(b)* `details` içinde yaşayan bir kayda referans var mı, *(c)* hangi okuyucu bu satırları görüyor.
+- **Sonuç:** 5.035 satırlık tam-NULL kümenin **19'u** hâlâ var olan kullanıcılara ait hesap yaşam döngüsü kayıtlarıydı (`user.register`, `user.email_verified`, `user.password_reset_*` — proje sahibinin kendi izleri dahil). **Bunlar KORUNDU.** Kalan 5.016 satırın hedefi ya silinmiş (1.345) ya hiç yok (3.671) ve `details` üzerinden yaşayan hiçbir kayda işaret etmiyorlardı (**0 satır**).
+- **Görünürlük:** `audit_log`'un tüm okuyucuları `team_id` ya da `user_id` üzerinden süzüyor, dolayısıyla silinen satırlar hiçbir ekranda görünmüyordu. Silme sonrası görünür satır sayısı değişmedi (13.166) ve ekip dağılımı aynı kaldı.
+- **İKİNCİ HATA — ilk yedek eksikti, fark edildi.** Yedek sorgusunda `AND NOT (entity_type = 'user' AND entity_id IN (...))` yazılmıştı; `entity_type` NULL olan satırlarda `NOT(NULL)` = NULL olduğu için **3.223 satır sessizce eleniyordu** (yedek 1.793 satır çıktı, 5.016 beklenirken). SQL'in üç değerli mantığı. Korunacak id listesi açıkça hesaplanıp yedek yeniden alındı.
+- **Silinenler:** `audit_log` 19.665 → 14.649 (**−5.016**); `bases` 12 → 7 (**−5**), cascade ile `tables_meta` −7, `fields` −15, `records` −538, `cell_values` −622 — hepsi yedekteki sayılarla birebir eşleşti.
+- **Silinen base'ler:** `#308 RoleTest Base` (çöpteydi, 0 kayıt), `#320/321/322 Demo B/C/D Base` (1'er kayıt), `#616 Export Test` (535 kayıt). #616'nın içeriği tamamen sentetikti (`Satir 0…519`, `Kisi 01`, `Dept 0`, `Dar 0`) — `71f7fd6`'da belgelenen "testler GERÇEK TY ekibinde öksüz base bırakıyordu" kusurunun kalıntısı. Hiçbir teste bağımlılık yok: testler kendi `Export Test` base'ini kendi ekiplerinde kuruyor, `_verify_base_permissions.php` yalnızca **dizgeyi** ikon kategorisi için kullanıyor (saf fonksiyon, DB'ye dokunmuyor).
+- **Doğrulama:** öksüz base/tablo/kayıt/hücre/alan/yıldız sayısı **hepsi 0**; `created_by IS NULL` base kalmadı; 7 gerçek base yerinde; korunan 19 satırın 19'u duruyor.
+- **Güvenlik ağı:** ikisinin de tam yedeği `INSERT` ifadeleri hâlinde alındı (oturum klasöründe, depoya girmedi): `audit_silinen_*.sql` (950 KB, 5.016 satır) ve `base_silinen_*.sql` (223 KB; base + tablo + alan + kayıt + hücre, geri yükleme sırası notuyla).
+
+#### ⚠️ YENİ AÇIK MADDE — depo dışı ama sonucu burayı ilgilendiriyor
+**`bcciletisim.com.tr` adresine HTTPS ile ulaşılamıyor** (TLS el sıkışması düşüyor; `http://` 301 dönüyor, DNS çözülüyor). Giden e-postalardaki logo (`BCC_MAIL_LOGO_URL`) o adresten çekiliyor — sürerse **alıcılarda kırık görünür**. Sunucu tarafında bakılması gerekiyor.
+
+#### Doğrulama (tur geneli)
+Tam paket **62/62**, canlı site ayakta (`login.php` 200, `dashboard.php` 302, `grid.php` 302), çalışma ağacı temiz.
 
 ---
 
@@ -529,7 +573,7 @@ C:/php73/php.exe scripts/_verify_phase4_sort_search.php → 8/8
 C:/php73/php.exe scripts/_verify_phase4_filter.php      → 20/20
 ```
 
-Tam paket (2026-09-04 itibarıyla **61 `_verify_*` betiği**, hepsi geçiyor):
+Tam paket (2026-09-04 itibarıyla **62 `_verify_*` betiği**, hepsi geçiyor):
 ```
 for /f %f in ('dir /b scripts\_verify_*.php') do C:\php73\php.exe scripts\%f
 ```

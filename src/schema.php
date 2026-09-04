@@ -1070,17 +1070,6 @@ function bcc_attachment_storage_path($storedName)
     return bcc_attachment_storage_dir() . '/' . $storedName;
 }
 
-function bcc_delete_attachment_files_by_record($recordId)
-{
-    $rows = bcc_fetch_all('SELECT stored_name FROM attachments WHERE record_id = :id', array('id' => $recordId));
-    foreach ($rows as $row) {
-        $path = bcc_attachment_storage_path($row['stored_name']);
-        if (is_file($path)) {
-            unlink($path);
-        }
-    }
-}
-
 function bcc_delete_attachment_files_by_records(array $recordIds)
 {
     $ids = array_values(array_unique(array_filter(array_map('intval', $recordIds))));

@@ -746,6 +746,41 @@ Temizlik: `DELETE FROM users WHERE email LIKE '%@bcc-test.local'`
 
 ## 9. Devir/Deploy Notları
 
+### ⚠️ ÖNCE BUNU OKU — `main` ile çalışma dalının ORTAK ATASI YOK (2026-09-07)
+
+Canlıya çıkış öncesi merge denenirken bulundu. `git merge-base origin/main
+chore/audit-refactor` **boş dönüyor** — iki geçmiş tamamen ilişkisiz.
+
+Ölçülen durum:
+
+| Dal | Durum |
+|---|---|
+| `origin/main` (GitHub) | 10 Ağustos'ta kalmış; çalışma dalından **293 dosya / ~31.000 satır geride** |
+| `chore/audit-refactor` | Tüm iş burada, GitHub'a push edilmiş |
+| yerel `main` (`a9a9269`) | Dalın gerçek atası — `origin/main` (`0ae5a7f`) ile **aynı tarih ve aynı commit mesajı ama FARKLI commit objesi** |
+
+Yani depo geçmişte bir noktada yeniden oluşturulmuş ya da zorla üzerine
+yazılmış. Aynı mesajı taşıdıkları için `git log` bakışında iki `main` **aynı
+görünüyor**; fark yalnızca hash'te ve `merge-base`'in boş dönmesinde.
+
+**Sonuç:** yerel `main`'e merge sorunsuz (hızlı ileri sarma, 130 commit) ama
+`git push origin main` **reddedilir**; geçirmek `--force` ister ve o da
+GitHub'daki mevcut `main` geçmişini siler.
+
+**2026-09-07 KARARI — canlıya çıkışa iki saat kala alındı:** `main`'e
+DOKUNULMADI, canlı doğrudan çalışma dalından alınıyor:
+```
+git clone -b chore/audit-refactor https://github.com/MacTwiezer/bcc-core.git
+```
+Güncelleme: `git pull origin chore/audit-refactor`.
+
+**Merge kararı ertelendi.** Yapılacaksa iki gerçek seçenek var, ikisi de
+sakin kafayla değerlendirilmeli: (a) `main`'i çalışma dalıyla değiştirmek
+(`push --force`, GitHub geçmişi gider), (b) `--allow-unrelated-histories`
+ile birleştirmek (293 dosyada çakışma çözmek demektir). Üçüncü seçenek
+mevcut düzeni sürdürmektir — dal zaten tek gerçek kaynak.
+
+
 **~~`src/bootstrap.php`'deki session cookie ayarı elle `true` yapılmalı~~ — ARTIK GEREKMİYOR.**
 `secure` bayrağı istekten ölçülüyor: `$_SERVER['HTTPS']`, `X-Forwarded-Proto`
 (ters vekil arkası) veya port 443. Localhost'ta `false`, canlıda otomatik

@@ -38,14 +38,25 @@ Aylık kiralanan sunucu (DigitalOcean, Hetzner, Turhost, Natro vb.).
 | Bileşen | Sürüm / not |
 |---|---|
 | PHP | **7.3 veya üstü** (geliştirme 7.3.33 ile yapıldı) |
-| PHP eklentileri | `mysqli`, `mbstring`, `zip` (Excel dışa aktarma), `openssl` (SMTP) |
+| PHP eklentileri | `mysqli`, `mbstring`, `zip` (Excel içe/dışa aktarma), `fileinfo` (**dosya eki yükleme**), `openssl` (SMTP) |
 | Veritabanı | MySQL 5.7+ / MariaDB 10.4+, **utf8mb4 / utf8mb4_unicode_ci** |
-| Web sunucusu | Apache (`.htaccess` kullanılıyor) veya Nginx |
+| Web sunucusu | Apache veya Nginx — **`.htaccess` YOK**, koruma tamamen DocumentRoot ayarına bağlı |
 | Disk | Kod ~50 MB + dosya ekleri (kullanıma göre büyür) |
 
 **Kritik:** Web sunucusunun kök dizini (DocumentRoot) **`public/`** olmalıdır.
 `src/`, `config/`, `storage/`, `scripts/` web'den erişilebilir olmamalıdır —
 aksi hâlde yapılandırma dosyaları ve yüklenen belgeler dışarı açılır.
+
+> ⚠️ Projede **hiç `.htaccess` dosyası yok** (doğrulandı). Yani yanlış bir
+> DocumentRoot ayarını yakalayacak ikinci bir savunma katmanı **yoktur** —
+> kök `public/` yerine proje köküne ayarlanırsa `config/*.local.php`
+> dosyaları (SMTP şifresi dahil) tarayıcıdan okunabilir hâle gelir.
+> Kurulumdan sonra §8 kontrol listesindeki 404/403 testini mutlaka yapın.
+
+**`fileinfo` eklentisi neden kritik:** dosya eki yüklerken içeriğin uzantıyla
+uyuştuğu `finfo_open()` ile doğrulanır (`attachment_upload.php`). Eklenti yoksa
+doğrulama başarısız olur ve **hiçbir dosya eki yüklenemez** — hata mesajı
+"Dosya içeriği uzantısıyla uyuşmuyor" olur, ki gerçek sebebi gizler.
 
 ---
 
@@ -157,12 +168,31 @@ chmod -R 755 storage/
 ```ini
 display_errors = Off
 log_errors = On
-upload_max_filesize = 20M     ; dosya eki boyutuna göre
-post_max_size = 25M
+upload_max_filesize = 45M     ; uygulama sınırlarının ÜSTÜNDE olmalı
+post_max_size = 50M           ; upload_max_filesize'dan büyük (multipart payı)
+memory_limit = 512M           ; Excel içe aktarma ayrıştırması için
 ```
 
 Uygulama `display_errors`'ı kendi de kapatıyor (`src/error_handler.php`) ama
 sunucu tarafında da kapalı olmalı.
+
+**Bu değerler uygulamanın kendi sınırlarına göre seçildi** — `php.ini` daha
+düşük olursa uygulama sınırına ulaşılamadan PHP dosyayı reddeder:
+
+| İşlem | Uygulama sınırı | Tanımlandığı yer |
+|---|---|---|
+| Dosya eki yükleme | 20 MB | `attachment_upload.php` → `BCC_ATTACHMENT_MAX_BYTES` |
+| Excel içe aktarma | 40 MB / 5.000 satır | `table_import_xlsx.php` → `BCC_XLSX_IMPORT_MAX_*` |
+
+`post_max_size` daima `upload_max_filesize`'dan büyük olmalı: gövde dosyanın
+kendisinden biraz büyüktür (form alanları + multipart sınırları).
+
+⚠️ **Satır sınırı ölçülerek seçilmiştir, keyfî değildir.** İçe aktarma hücre
+başına tek `INSERT` atıyor (0,58 ms/sorgu ölçüldü): 5.000 satır × 10 sütun =
+50.000 sorgu ≈ **29 saniye**. Sınırı yükseltmek önce toplu `INSERT`'e geçmeyi
+gerektirir — teknik `cells_bulk_update.php`'de zaten var.
+Not: `.xlsx` ~20 kat sıkışır, yani 40 MB'lık bir dosya ~1 milyon satıra denk
+gelir; pratikte **bağlayıcı sınır MB değil, satır sayısıdır.**
 
 ### 3.6 HTTPS
 
@@ -220,10 +250,12 @@ oluşturur. Roller: `owner` / `editor` / `commenter` / `viewer`
 `config/mail.local.php` → `$MAIL_MODE = 'smtp';` **ve**
 `config/mail_record_send.local.php` → sunucu/hesap bilgileri.
 
-`$MAIL_MODE` varsayılanı `'log'`; bu modda SMTP bilgileri dolu olsa bile
-mail **gönderilmez**, `storage/mail/` altına dosya yazılır ve hata verilmez
-(`src/mailer.php:175`). Kurulumdan sonra gerçekten bir kayıt açıp mailin
-geldiğini doğrulayın.
+`$MAIL_MODE` hiçbir yerde **tanımlı gelmez** — `config/mail.php` bu değişkeni
+hiç set etmez. Tanımsızken (ya da `'smtp'`/`'native'` dışında herhangi bir
+değerdeyken) SMTP bilgileri dolu olsa bile mail **gönderilmez**,
+`storage/mail/` altına dosya yazılır ve hata verilmez. Yani
+`config/mail.local.php` oluşturulmazsa mail sessizce çalışmaz.
+Kurulumdan sonra gerçekten bir kayıt açıp mailin geldiğini doğrulayın.
 
 Maillerin spam'e düşmemesi için **DNS kayıtları gerekir** — bunlar kodla
 yapılamaz, alan adı yöneticisinin işidir:
@@ -255,9 +287,12 @@ Yedeklerin **başka bir makinede** de kopyası olmalı.
 - [ ] `https://adres/login.php` açılıyor ve HTTPS kilidi var
 - [ ] Kayıt ol → doğrulama maili geliyor, bağlantı **canlı adrese** gidiyor (localhost değil)
 - [ ] Giriş yapılıyor, tablo açılıyor, satır eklenip düzenlenebiliyor
-- [ ] Dosya eki yükleniyor ve indiriliyor (`storage/` izinleri doğru)
+- [ ] Dosya eki yükleniyor ve indiriliyor (`storage/` izinleri + `fileinfo` eklentisi doğru)
 - [ ] Excel dışa aktarma çalışıyor (`zip` eklentisi var)
-- [ ] `https://adres/../config/database.local.php` **404/403 veriyor** (DocumentRoot doğru)
+- [ ] Excel **içe** aktarma çalışıyor (birkaç satırlık deneme dosyasıyla)
+- [ ] `https://adres/config/database.local.php` **404/403 veriyor** (DocumentRoot doğru)
+      — `.htaccess` yok, tek koruma bu; mutlaka test edin
+- [ ] `https://adres/src/schema.php` ve `https://adres/scripts/` de **404/403** veriyor
 - [ ] Yanlış adresle `https://adres/grid.php?table_id=999999` → markalı "Tablo bulunamadı" sayfası, 404
 - [ ] 6 kez yanlış şifreyle giriş denendi → "Çok fazla başarısız giriş
       denemesi" uyarısı çıkıyor (`login_attempts` tablosu çalışıyor demektir)

@@ -648,12 +648,38 @@ C:/php73/php.exe scripts/_verify_phase4_sort_search.php → 8/8
 C:/php73/php.exe scripts/_verify_phase4_filter.php      → 20/20
 ```
 
-Tam paket (2026-09-04 itibarıyla **63 `_verify_*` betiği**, hepsi geçiyor):
+Tam paket (2026-09-07 itibarıyla **64 `_verify_*` betiği**, hepsi geçiyor):
 ```
 for /f %f in ('dir /b scripts\_verify_*.php') do C:\php73\php.exe scripts\%f
 ```
 Her betik kendi test verisini kurup temizler; koşu sonrası kullanıcı/ekip/base/
 kayıt sayıları ve `slack.notify_sent` **değişmemelidir** (kirlilik ölçütü).
+
+**⚠️ SEKİZ BETİK DEMO HESAPLARINA BAĞLIDIR — tam yeşil tur için önce seed
+gerekir.** 2026-09-07 canlıya çıkış öncesi turunda ilk koşuda 2 betik kırmızı
+düştü, 6 betik de erken durdu; **hepsinin kök sebebi aynıydı**: veritabanında
+`@bcc.local` hesabı yoktu. Bu bir kod hatası DEĞİL. Özellikle yanıltıcı olan
+`_verify_login_throttle`'ın 3 hatasıydı — testin kendisi doğru şifreyle giriş
+yapamadığı için E (başarılı giriş hata geçmişini siler) ve F (CSRF jetonu
+yenilenir) bölümleri zincirleme düştü; fren mekanizmasının kendisi sağlamdı.
+
+Etkilenen sekiz betik: `_verify_demo_roles` · `_verify_login_throttle` ·
+`_verify_rbac` · `_verify_global_search` · `_verify_api_error_format` ·
+`_verify_json_in_script` · `_verify_notification_roles` ·
+`_verify_slack_integration`. Doğru sıra:
+```
+C:\php73\php.exe scripts\seed_demo_users.php
+   … tam turu koştur …
+C:\php73\php.exe scripts\seed_demo_users.php --remove
+```
+`--remove` gerçekten temiz geri alıyor: 2026-09-07 turunda users 6→6,
+teams 4→4, bases 6→6, tables_meta 4→4, records 166→166 ve **audit_log
+14764→14764** (tek satır bile artmadı) ölçüldü.
+
+**Son tam yeşil tur — 2026-09-07 (canlıya çıkış öncesi): 64/64.**
+Öne çıkanlar: `_verify_rbac` 139/139 (yetki matrisinin tamamı), `_verify_demo_roles`
+73/73 — içindeki sır taraması demo şifresinin izlenen 232 kaynak dosyanın
+hiçbirinde literal geçmediğini doğruladı.
 
 ⚠️ **Bölüm 5'teki eski tur kayıtlarında adı geçen üç betik ARTIK YOK** — o turlarda
 vardılar, sonradan özellikleriyle birlikte silindiler: `_verify_view_form.php` ve

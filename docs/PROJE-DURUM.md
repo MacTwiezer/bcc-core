@@ -580,6 +580,30 @@ Tam paket **63/63** + `test_isolation` 6/6. Dokuz ana sayfa doğru yanıt veriyo
 
 ## 6. Kalan İşler
 
+**Demo giriş sistemi — canlıya çıktıktan SONRA temizlenecek (2026-09-07 kararı).**
+Kullanıcı "işe yaramıyorsa silelim" dedi; canlıya çıkışa üç saat kala
+dokunulmadı çünkü kazanç sıfır, risk gerçek. **Neden canlıda zaten görünmez
+(üç katman birden kapalı):** `config/app.php`'de `$BCC_DEMO_LOGIN = false`
+(sunucuya inen varsayılan), `$BCC_DEMO_PASSWORD` yalnızca `config/app.local.php`'de
+ve o dosya `.gitignore`'da — yani sunucuda tanımsız kalır, `bcc_demo_accounts()`
+boş dizi döner ve düğme bloğu hiç basılmaz; ayrıca canlı veritabanında
+`@bcc.local` hesabı olmayacak (bu makinede de **0** tane var, ölçüldü).
+**Silinecek olan (yalnızca arayüz):** `public/assets/demo-login.js` (44 satır,
+tek referansı `login.php:112`) + `public/login.php`'deki `bcc_demo_login_enabled()`
+bloğu (84-107 ve 111-113) + `scripts/_verify_demo_roles.php`'nin **F bölümü**
+(satır 186-201; "login.php demo bloğunu `bcc_demo_login_enabled()` ile sarıyor"
+kontrolü blok silinince KIRILIR). ⚠️ **`src/demo_accounts.php` ve
+`scripts/seed_demo_users.php` KALMALI** — bunlar giriş kolaylığı değil **test
+altyapısı**: `bcc_demo_accounts()` owner/editor/commenter/viewer dört rolünü
+hazır sunduğu için **altı** regresyon betiği kullanıyor
+(`_verify_demo_roles`, `_verify_rbac`, `_verify_account_deactivate`,
+`_verify_notification_roles`, `_verify_api_error_format`, `_verify_login_throttle`).
+Silinirse RBAC test tabanı çöker. **Bağlı bulgu:** `_verify_demo_roles.php` şu an
+**kırmızı** (10 test kaldı / 16 kontrol) — kod hatası değil, demo hesapları
+veritabanında olmadığı için; yeşil tur isteniyorsa önce
+`scripts/seed_demo_users.php` çalıştırılmalı.
+
+
 **"Kaydı gönder" tamamlandı** (mail backend + arayüz + gerçek gönderim, Bölüm 5 sekiz/dokuz/onuncu adımlar) — şu anda bilinen bir kalan iş yok. Bilinçli kapsam dışı bırakılan: gönderim geçmişi loglama (istenirse ayrı bir iş).
 
 **Alan tipi çalışmasının TAMAMI bitti — Grup B1, B2, C1, C2 ve A tamamlandı; bu başlıkta bilinen bir kalan iş YOK.** Created/Last modified time-by (Grup B1+B2, Bölüm 5 yirmi birinci/yirmi ikinci adımlar), Currency/Percent/Rating (Grup C1, yirmi üçüncü adım), Autonumber (Grup C2, yirmi dördüncü adım) ve URL/E-posta/Telefon (Grup A, yirmi beşinci adım) TAMAMLANDI. Toplam **on bir** yeni alan tipi eklendi (B1: 2, B2: 2, C1: 3, C2: 1, A: 3); `$GLOBALS['BCC_FIELD_TYPES']` artık 10 yerine **21** tip içeriyor. **DDL bilançosu:** yalnızca İKİ grup gerçek DDL gerektirdi — B2 (`migrations/013`, `records.updated_by`) ve C2 (`migrations/014`, `fields.autonumber_next`); B1, C1 ve A hiç şema değişikliği gerektirmedi (mevcut `value_*` kolonları paylaşıldı, fark yalnızca `fields.options` JSON'u ve/veya görüntüleme katmanı). **Yeni tip eklerken atlanmaması gereken ALTI yer** (dört ayrı turda dördü de en az bir kez unutuldu, hepsi bug oldu): `BCC_FIELD_TYPES` · `BCC_FIELD_VALUE_COLUMN` · `BCC_FILTER_OPERATORS` + `filter_condition_sql()`'in `$isTextLike`/sayısal dalı · **`BCC_GROUP_DIR_LABELS`** (C1/C2'de unutuldu, Grup A turunda notice bug'ı olarak yakalanıp düzeltildi) · **`theme.css`'te `--field-icon`** (C1'de unutuldu, rozet boş kutu çiziliyordu; Grup A turunda düzeltildi) · **`BCC_DUPLICATE_SUFFIX_FIELD_TYPES`** — çoğaltmada birincil alana " copy" eki eklenen tiplerin whitelist'i. ⚠️ Bu **whitelist**, yani yeni bir tip buraya yazılmazsa ek ALMAZ; bu kasıtlı olarak güvenli taraf, ama yeni bir SERBEST METİN tipi eklenirse elle eklenmesi gerekir. Karar eskiden tip değil KOLON bazlıydı (`$primaryColumn === 'value_text'`) ve `value_text`'i yedi tip paylaştığı için biçim sözleşmesi olan dört tipi bozuyordu (bkz. yirmi altıncı adım). Her grubun kendi canlı doğrulama betiği var (sayılar 2026-09-04 turunda yeniden ölçüldü): `scripts/_verify_group_c1.php` (56/56), `_verify_group_c2.php` (67/67), `_verify_group_a.php` (81/81), `_verify_duplicate_suffix.php` (27/27), `_verify_view_kanban.php` (66/66), `_verify_reorder_atomicity.php` (51/51). ⚠️ `_verify_view_form.php` **artık yok** — form görünümü `migrations/023` ile tamamen kaldırıldığında betik de silinmişti, bu satırda referansı kalmıştı.

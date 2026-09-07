@@ -7,10 +7,10 @@ api_require_post();
 api_require_login();
 api_require_csrf();
 
-const BCC_XLSX_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+const BCC_XLSX_IMPORT_MAX_BYTES = 40 * 1024 * 1024;
 const BCC_XLSX_IMPORT_MAX_ROWS = 5000;
 
-const BCC_XLSX_IMPORT_MAX_UNCOMPRESSED = 60 * 1024 * 1024;
+const BCC_XLSX_IMPORT_MAX_UNCOMPRESSED = 100 * 1024 * 1024;
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
 
@@ -29,7 +29,7 @@ if ($upload['error'] !== UPLOAD_ERR_OK) {
 }
 
 if ($upload['size'] <= 0 || $upload['size'] > BCC_XLSX_IMPORT_MAX_BYTES) {
-    json_fail(422, 'Dosya boyutu 10MB\'ı aşamaz.');
+    json_fail(422, 'Dosya boyutu ' . (int) (BCC_XLSX_IMPORT_MAX_BYTES / 1048576) . 'MB\'ı aşamaz.');
 }
 
 $ext = strtolower(pathinfo((string) $upload['name'], PATHINFO_EXTENSION));

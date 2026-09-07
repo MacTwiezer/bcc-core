@@ -675,7 +675,7 @@ $gridUser = current_user();
                     </span>
                     <span class="gs-import-badges">
                         <span class="gs-import-badge">.xlsx</span>
-                        <span class="gs-import-badge gs-import-badge-muted">en fazla 10MB</span>
+                        <span class="gs-import-badge gs-import-badge-muted">en fazla 40MB</span>
                     </span>
                     <input type="file" class="gs-import-file-input" id="gs-table-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                 </label>

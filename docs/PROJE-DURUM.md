@@ -2,6 +2,11 @@
 
 > Bu dosya, yeni bir sohbete başlarken bağlam olarak yapıştırılır.
 > Her özellik bittiğinde güncellenir ve commit'lenir.
+>
+> **2026-09-08'den itibaren günlük notlar `docs/gunluk/YYYY-AA-GG.md`'de.**
+> Canlı sonrası her değişiklik önce o günün dosyasına detaylı yazılır (istek →
+> kök neden → değişen dosyalar → test); buraya yalnızca tek satırlık özet gelir.
+> Kural: `docs/gunluk/README.md`.
 
 ---
 

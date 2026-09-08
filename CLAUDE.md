@@ -10,6 +10,11 @@ başlamadan önce oku.
 Veri modelinin gerekçesi: `docs/GEREKSINIMLER.md` (dondurulmuş orijinal
 istekler). Canlıya alma adımları: `docs/CANLIYA-ALMA.md`.
 
+**Günlük çalışma notları: `docs/gunluk/YYYY-AA-GG.md`** (2026-09-08'den beri).
+Canlı sonrası yapılan her değişiklik o günün dosyasına yazılır — istek/rapor,
+kök neden, **değişen dosyaların tam listesi**, test. Kural ve şablon:
+`docs/gunluk/README.md`. Oturuma başlarken son iki-üç günün dosyasını oku.
+
 > `docs/YAPILACAKLAR-UI.md` **kaldırıldı** (2026-09-04): içindeki 15 işin hepsi
 > bitmişti ve dosya boş kalmıştı. Hâlâ geçerli olan kurallar
 > `docs/PROJE-DURUM.md` §3'e taşındı. Açık iş takibi artık tek yerde: o

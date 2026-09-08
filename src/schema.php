@@ -1255,10 +1255,28 @@ function cell_display_text($fieldType, $cellRow, $usersById = array(), $options 
                 return '';
             }
             $userId = (int) $cellRow['value_number'];
-            return isset($usersById[$userId]) ? $usersById[$userId] : '';
+
+            return isset($usersById[$userId]) ? $usersById[$userId] : bcc_actor_name_by_id($userId);
         default:
             return '';
     }
+}
+
+function bcc_actor_name_by_id($userId)
+{
+    static $cache = array();
+
+    $userId = (int) $userId;
+    if ($userId <= 0) {
+        return '';
+    }
+
+    if (!array_key_exists($userId, $cache)) {
+        $row = bcc_fetch_one('SELECT full_name FROM users WHERE id = :id LIMIT 1', array('id' => $userId));
+        $cache[$userId] = ($row !== false && $row !== null) ? (string) $row['full_name'] : '';
+    }
+
+    return $cache[$userId];
 }
 
 function bcc_user_choices_from_map($usersById)

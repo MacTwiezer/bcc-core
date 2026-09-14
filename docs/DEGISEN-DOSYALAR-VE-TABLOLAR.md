@@ -149,7 +149,7 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | Dosya | Ne |
 |---|---|
 | `docs/gunluk/2026-09-14.md` | **YENİ** — günün notu |
-| `docs/PROJE-DURUM.md` | §5 "Biten İşler"e 08-14 Eylül turunun özeti |
+| `docs/PROJE-DURUM.md` | §5 "Biten İşler"e 08-14 Eylül turunun özeti — 08-09 Eylül işleri + 14 Eylül'ün beş arayüz işi (Tab, uyarı metni, kanban pingi, base silme temizliği, çöp kutusu düzeni); kapanan kanban maddesi çıkarıldı, yeni açık madde eklendi |
 | `docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` | Bu dosya — kapsam satırı, §1 özeti ve bu bölüm |
 
 ### 3b.4 Commit'ler

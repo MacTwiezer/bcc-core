@@ -582,7 +582,7 @@ Denetim döngüsünün son turu. Bu turdan sonra depoda **satır satır okunmam�
 Tam paket **63/63** + `test_isolation` 6/6. Dokuz ana sayfa doğru yanıt veriyor (genel 200, korumalı 302). **Apache hata günlüğüne bugün hiçbir şey düşmedi** (son kayıt 03 Eylül 18:05 — o da `error_handler` düzeltmesini kanıtlamak için bilerek tetiklenen bellek/fatal testleri).
 
 
-### 2026-09-08 → 2026-09-14 turu — canlı sonrası düzeltmeler
+### 2026-09-08 → 2026-09-14 turu — canlı sonrası düzeltmeler ve arayüz iyileştirmeleri
 
 Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 `docs/gunluk/2026-09-09.md`, `docs/gunluk/2026-09-14.md`. Dosya bazlı envanter:
@@ -616,11 +616,41 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   (23 → 33 kontrol).
 - **"Oluşturan" sütunu boş görünüyordu (`2d8dd65`).** Oluşturan kullanıcı o
   tablonun ekibinde değilse ad çözülemiyordu; yeni `bcc_actor_name_by_id()`.
+- **Gridde Tab ile hücre gezinmesi (`7447bac`).** Seçili hücrede `Tab` sağa,
+  `Shift+Tab` sola; satır sonunda alt/üst satıra sarmalıyor, tablonun iki
+  ucunda yerinde kalıyor. Hücre düzenleme modundayken Tab'a dokunulmuyor
+  (`keyboardBelongsToGrid()` guard'ının altında). Gridden klavyeyle çıkmak için
+  önce `Escape`. Test: `_verify_grid_tab_nav.php` 18/18 + tarayıcı ölçümü.
+- **Uyarı kutularında metin kayması (`da7568d`).** Onay mesajı bir form
+  etiketi sınıfı (`.home-modal-label`) kullanıyordu; `<p>`'nin miras aldığı
+  `margin-top` sıfırlanmadığı için metin aşağı kayıp düğmelere yapışıyordu
+  (üst 31px / alt 5px). Yeni `.home-modal-message`; `bcc_confirm()` bütün onay
+  kutularını ürettiği için hepsi düzeldi. `.home-modal-label`'a dokunulmadı
+  (13 gerçek form etiketi). Test: `_verify_modal_message_style.php` 13/13.
+- **Kanban'a Slack ayrılma pingi (`f1f0149`).** `grid-slack-flush.js` artık
+  `kanban.php`'de de yüklü; kanban'dan çıkınca özet beklemeden gidiyor. Kanban
+  `bcc_post` kullandığı için sarmalanan `window.fetch`'in devreye girdiği
+  tarayıcıda ayrıca ölçüldü. Test: `_verify_slack_integration.php` A+B 22/22.
+- **Base silince sayfada iz kalıyordu (`a003544`).** Kartın kendisi zaten
+  siliniyordu; grup sayacı ("N base"), boşalan grup başlığı ve Yıldızlılar
+  satırı güncellenmiyordu. Ayrıca çöp kutusundan geri yüklenen kartta "Sil"
+  hiç çalışmıyordu (dinleyici tek tek bağlıydı, kart sonradan enjekte
+  ediliyor) — dinleyici delegasyona çevrildi. Test:
+  `_verify_home_base_delete.php` 21/21 + iki düzen tarayıcıda ölçüldü.
+- **Çöp kutusunda "Base'ler" bölümü sıkışıyordu (`cfcb35d`).** İki listenin
+  ayrı kaydırma kutusu vardı, kısa olan iki satırlık yarığa sıkışıyordu. Tek
+  kaydırma (`.bcc-trash-body`) + yapışkan bölüm başlıkları. Test:
+  `_verify_trash_modal_layout.php` 23/23.
 
-**Bu turdan kalan iki açık madde:** kanban görünümünde ayrılma pingi yok
-(`grid-slack-flush.js` yalnızca `grid.php`'de yüklü) ve hücre bildirimi
-yalnızca **tek tabloda** yapılandırılmış (`slack_watched_fields` → tablo 2992).
-Gerekçeleri `docs/gunluk/2026-09-14.md` "Açık maddeler"de.
+**Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
+"Açık maddeler"de):
+- Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış
+  (`slack_watched_fields` → tablo 2992).
+- Çöp kutusundan geri yüklenen kartta **yıldız** ve **`data-nav-href`**
+  ("Tabloya git", "Duyuru") düğmeleri çalışmıyor — silme düğmesindeki aynı
+  "tek tek bağlama" deseni (`home.js:14`).
+
+~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 
 ---
 

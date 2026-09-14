@@ -90,6 +90,19 @@
             return cells[col];
         }
 
+        function wrapCell(row, step) {
+            var rows = visibleRows();
+            var nextRow = row + step;
+            if (nextRow < 0 || nextRow >= rows.length) {
+                return null;
+            }
+            var cells = rowCells(rows[nextRow]);
+            if (!cells.length) {
+                return null;
+            }
+            return step > 0 ? cells[0] : cells[cells.length - 1];
+        }
+
         var painted = [];
         var SEL_CLASSES = ['is-paste-range', 'is-paste-anchor', 'is-sel-t', 'is-sel-r', 'is-sel-b', 'is-sel-l'];
 
@@ -324,6 +337,27 @@
                 anchorTd = rowCells(rows[0])[0];
                 focusTd = lastCells[lastCells.length - 1];
                 paintSelection();
+                return;
+            }
+
+            if (e.key === 'Tab' && anchorTd) {
+                var from = cellCoords(focusTd || anchorTd);
+                if (!from) {
+                    return;
+                }
+                e.preventDefault();
+                var step = e.shiftKey ? -1 : 1;
+                var target = cellAt(from.row, from.col + step);
+                if (!target) {
+                    target = wrapCell(from.row, step);
+                }
+                if (!target) {
+                    return;
+                }
+                anchorTd = target;
+                focusTd = null;
+                paintSelection();
+                reveal(target);
                 return;
             }
 

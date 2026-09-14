@@ -653,6 +653,16 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   `_verify_avatar_flow.php` 62/62 (gerçek HTTP, 3 kullanıcı/2 ekip) + ayrı test
   kullanıcısıyla tarayıcıda uçtan uca + `test_isolation` 6/6. Deploy notu:
   `docs/CANLIYA-ALMA.md` §3.4.
+- **Profil fotoğrafı her yerde + yeni sekmede boş daire (2026-09-14).** Ölçüldü:
+  resim ayrı istekle geldiği için yeni sekmede ilk karede çizilmiyor, düğme o an
+  baş harfli varsayılan avatarla aynı mavi düz daire görünüyordu. Kişinin kendi
+  avatarı artık HTML'ye `data:` URI olarak gömülü (`decoding="sync"`, 48KB
+  eşik), sayfa açılışında avatar için sıfır istek. Fotoğraf on bir yere bağlandı
+  (grid Oluşturan/Son değiştiren/kullanıcı hücreleri, hücre düzenleme, paylaşım
+  penceresi, katılımcı önizlemesi, ekip üyeleri, çalışma alanı, bildirimler,
+  yorumlar, çöp kutusu, admin paneli); her yerde bakan kişinin görme yetkisi
+  kontrol ediliyor, göremiyorsa baş harf. Test: `_verify_avatar_everywhere.php`
+  46/46 + tarayıcıda görsel kontrol + 21 betiklik regresyon.
 
 **Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
 "Açık maddeler"de):
@@ -661,10 +671,6 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 - Çöp kutusundan geri yüklenen kartta **yıldız** ve **`data-nav-href`**
   ("Tabloya git", "Duyuru") düğmeleri çalışmıyor — silme düğmesindeki aynı
   "tek tek bağlama" deseni (`home.js:14`).
-- Profil fotoğrafı yalnızca kişinin **kendi** ekranlarında görünüyor; başka
-  kullanıcıların baş harfle gösterildiği yerler (ekip üyeleri, paylaşım
-  penceresi, bildirimler, çöp kutusu satırları, "Oluşturan" sütunu) hâlâ baş
-  harf. `api/avatar.php` buna hazır (`bcc_avatar_url($userId)`).
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 

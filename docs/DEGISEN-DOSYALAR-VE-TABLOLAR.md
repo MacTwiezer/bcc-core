@@ -7,7 +7,7 @@ cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
-profil fotoğrafı, 08-09 Eylül kodunun commit edilmesi).
+profil fotoğrafı ve her yere bağlanması, 08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -17,7 +17,7 @@ profil fotoğrafı, 08-09 Eylül kodunun commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **20 dosya** (11 değiştirildi, 9 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
+| **2026-09-14** | **39 dosya** (29 değiştirildi, 10 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
 
 ---
 
@@ -119,8 +119,9 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 Günün altı kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
 metin kayması**, **kanban'a ayrılma pingi**, **base silince sayfada kalan
-izlerin temizlenmesi**, **çöp kutusundaki "Base'ler" bölümünün sıkışması** ve
-**profil fotoğrafı yükleme**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+izlerin temizlenmesi**, **çöp kutusundaki "Base'ler" bölümünün sıkışması**,
+**profil fotoğrafı yükleme** ve **fotoğrafın her yere bağlanması + yeni sekmede
+boş daire sorunu**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
 edilmesi) **hiçbir dosyayı değiştirmedi**.
 
 ### 3b.1 Değiştirilen — 11 dosya
@@ -153,6 +154,21 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | `scripts/_verify_home_base_delete.php` | 21 kontrol. A) delegasyon ve `preventDefault`, B) sayaç/boş grup/yıldızlı satır temizliği + oluşturma karosu koruması, C) vazgeçme ve hata yolları, D) JS in dayandığı sunucu işaretlemesi hâlâ yerinde mi (sınıf adı değişirse özellik sessizce bozulmak yerine test düşer) |
 | `scripts/_verify_modal_message_style.php` | 13 kontrol. A) margin sıfırlaması + punto + satır aralığı + renk, B) `.home-modal-label`'ın bozulmadığı (altı form onu kullanıyor), C) üç uyarı paragrafının yeni sınıfa geçtiği, D) `.home-modal-form` kullanan altı dosyada `<p class="home-modal-label">` kalmadığı — aynı hata bir daha sessizce girmesin |
 
+### 3b.2a §9 — profil fotoğrafı her yerde (23 dosya değişti, 1 yeni)
+
+Günlük §9'da tam tablo var; özet:
+
+| Katman | Dosyalar |
+|---|---|
+| Sunucu yardımcıları | `src/auth.php` — gömülü avatar (`bcc_avatar_data_uri`, 48KB eşik), `bcc_avatar_url_for_viewer`, `bcc_avatar_inner_for`, istek başına önbellekler |
+| Sunucuda basılan | `src/schema.php` (grid kullanıcı/Oluşturan hücresi), `src/partials/collab_popover_form.php`, `src/partials/notifications_panel.php`, `public/admin/index.php`, `public/team_members.php`, `public/workspaces.php` |
+| JSON uçları | `src/audit.php` (bildirim sorgusuna `actor_id`), `src/share_modal_payload.php`, `public/api/cell_update.php`, `public/api/comment_{list,add,update}.php`, `public/api/trash_list.php`, `public/api/trash_records_list.php`, `public/api/avatar_upload.php` (`inline`) |
+| JS çiziciler | `public/assets/grid.js`, `share-modal.js`, `account-menu.js`, `grid-row-detail.js`, `account-avatar.js` |
+| CSS | `public/assets/home.css` — `.bcc-avatar-img` nötr zemin |
+| Test | `scripts/_verify_avatar_everywhere.php` **(YENİ, 46)**, `scripts/_verify_avatar_flow.php` (62 → 65) |
+
+**Veritabanı:** şema değişmedi; tek değişen sorgu salt-okunur (bildirimlere `u.id AS actor_id`).
+
 ### 3b.3 Belgeler — 4 dosya
 
 | Dosya | Ne |
@@ -177,6 +193,7 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | `a003544` | Base silince sayfada kalan izler (4 dosya) |
 | `cfcb35d` | Çöp kutusu "Base'ler" düzeni (5 dosya) |
 | `aa5530f` | Profil fotoğrafı (11 dosya: kod, test, `CANLIYA-ALMA.md`) — notları ayrı commit |
+| `37044e9` | Fotoğraf her yerde + kendi avatarın HTML'ye gömülü (24 dosya) — notları ayrı commit |
 
 `git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları

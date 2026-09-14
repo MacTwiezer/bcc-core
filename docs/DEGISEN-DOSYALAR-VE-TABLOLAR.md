@@ -8,7 +8,8 @@ cevabı.
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
 profil fotoğrafı ve her yere bağlanması, geri yüklenen kart düğmeleri ve grup
-sayacı, 08-09 Eylül kodunun commit edilmesi).
+sayacı, "Kullanıcı" alanında ayrılan üyenin adı, 08-09 Eylül kodunun commit
+edilmesi).
 
 ---
 
@@ -18,7 +19,7 @@ sayacı, 08-09 Eylül kodunun commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **40 dosya** (29 değiştirildi, 11 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
+| **2026-09-14** | **41 dosya** (29 değiştirildi, 12 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
 
 ---
 
@@ -193,6 +194,15 @@ Günlük §9'da tam tablo var; özet:
 
 **Veritabanı:** değişmedi.
 
+### 3b.2d §13 — "Kullanıcı" alanında ayrılan / pasif üyenin adı (1 dosya değişti, 1 yeni)
+
+| Dosya | Ne |
+|---|---|
+| `src/schema.php` | `cell_display_text()` `user` dalı: ekibin aktif üye haritasında olmayan kimlik için `bcc_actor_name_by_id()` yedeği — "Oluşturan"daki (`2d8dd65`) düzeltmenin aynısı. Yazma tarafı (`normalize_cell_value` üyelik doğrulaması) değişmedi (+8/-1) |
+| `scripts/_verify_user_field_former_member.php` | **YENİ**, 20 kontrol |
+
+**Veritabanı:** değişmedi. §13b (Slack ayarı) salt-okunur sorgu, kod değişikliği yok.
+
 ### 3b.3 Belgeler — 4 dosya
 
 | Dosya | Ne |
@@ -220,6 +230,7 @@ Günlük §9'da tam tablo var; özet:
 | `37044e9` | Fotoğraf her yerde + kendi avatarın HTML'ye gömülü (24 dosya) — notları ayrı commit |
 | `3a9b861` | Geri yüklenen kartta yıldız ve "Aç" düğmeleri (3 dosya) — notları ayrı commit |
 | `4bb57a0` | Geri yüklemede grup sayacı + kartın doğru ekibe düşmesi (6 dosya) — notları ayrı commit |
+| `6740ed4` | "Kullanıcı" alanında ayrılan / pasif üyenin adı (2 dosya) — notları ayrı commit |
 
 `git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları

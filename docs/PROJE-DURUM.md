@@ -678,11 +678,24 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   gizleniyor, gruplu ızgarada `data-team-grid`, hedef seçimi dört adımlı
   (yer yoksa sayfa yenileniyor). Test: dört senaryo gerçek uygulamada önce/sonra,
   `_verify_home_card_actions.php` 35/35, `_verify_home_base_delete.php` 22/22.
+- **"Kullanıcı" alanında ayrılan / pasif üyenin adı (2026-09-14).** Karar (a):
+  ekipten çıkarılan ya da pasifleştirilen üyenin adı artık boş değil, görünüyor
+  ("Oluşturan"daki `bcc_actor_name_by_id()` yedeği). Yazma tarafı değişmedi;
+  bütün yazma yolları üyelik doğruladığı ve ekipler arası kopyalama olmadığı
+  için ekip dışına ad sızmıyor (tarandı). Test: `_verify_user_field_former_member.php`
+  20/20.
 
 **Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
 "Açık maddeler"de):
-- Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış
-  (`slack_watched_fields` → tablo 2992).
+- Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış — hata değil: her tablonun
+  Owner'ı "Alanları yönet → Slack bildirimleri"nden açabilir; GULF ve ATP
+  ekiplerinde önce webhook eklenmeli (günlük §13b).
+- **Davet aday listesi ekip sahibine TÜM aktif kullanıcıların ad + e-postasını
+  gönderiyor** (`BCC_SHARE_CANDIDATES`; grid/interface/workspaces). Önceden de
+  böyleydi, belgelerde karar olarak geçmiyor — KVKK açısından değerlendirilmeli
+  (günlük §13, açık madde G).
+- **Canlıya çıkarken:** `records.slack_notified_at` için iki zorunlu SQL adımı ve
+  `storage/avatars` izinleri (`docs/CANLIYA-ALMA.md`).
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 

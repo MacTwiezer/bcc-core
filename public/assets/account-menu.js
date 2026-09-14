@@ -117,6 +117,11 @@
             } else {
                 grid.appendChild(kart);
             }
+
+            /* Kart sayfa yuklendikten SONRA eklendi: home.js'in "..." menusunu
+               baglayabilmesi icin haber veriliyor. Yildiz, "Tabloya git" ve "Sil"
+               zaten belge seviyesinde dinleniyor, onlar icin gerekmiyor. */
+            document.dispatchEvent(new CustomEvent('bcc:base-card-inserted', { detail: { card: kart } }));
         }
 
         function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam) {

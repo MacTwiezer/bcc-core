@@ -13,103 +13,113 @@
         var starredList = document.getElementById('home-starred-list');
 
 
-        Array.prototype.forEach.call(document.querySelectorAll('.home-base-star-btn'), function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
+        /* 2026-09-14 — Yildiz ve data-nav-href dinleyicileri dugmelere TEK TEK
+           baglaniyordu. Cop kutusundan geri yuklenen kart sonradan enjekte
+           edildigi icin (account-menu.js insertRestoredCard) ona hic
+           baglanmiyordu; kart bir <a> oldugu icin tiklama karta dusup kullaniciyi
+           base'e goturuyordu (olculdu: yildiz istegi yok, adres #git-<id>).
+           Dinleyiciler belge seviyesinde; <a> gezinmesi preventDefault ile
+           iptal ediliyor. */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.home-base-star-btn') : null;
+            if (!btn) {
+                return;
+            }
+            e.preventDefault();
+            handleStarClick(btn);
+        });
 
-                var card = btn.closest('.home-base-card');
-                if (!card || btn.disabled) {
+        function handleStarClick(btn) {
+            var card = btn.closest('.home-base-card');
+            if (!card || btn.disabled) {
+                return;
+            }
+
+            var baseId = card.getAttribute('data-base-id');
+            btn.disabled = true;
+
+            fetch('/api/star_base.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ base_id: baseId, csrf_token: CSRF_TOKEN }).toString(),
+            }).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                btn.disabled = false;
+
+                if (!data || !data.ok) {
                     return;
                 }
 
-                var baseId = card.getAttribute('data-base-id');
-                btn.disabled = true;
+                btn.setAttribute('aria-pressed', data.starred ? 'true' : 'false');
+                card.classList.toggle('is-starred', data.starred);
 
-                fetch('/api/star_base.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ base_id: baseId, csrf_token: CSRF_TOKEN }).toString(),
-                }).then(function (res) {
-                    return res.json();
-                }).then(function (data) {
-                    btn.disabled = false;
+                if (!starredList) {
+                    return;
+                }
 
-                    if (!data || !data.ok) {
+                var existingItem = starredList.querySelector('[data-starred-base-id="' + baseId + '"]');
+
+                if (data.starred && !existingItem) {
+                    var nameEl = card.querySelector('.home-base-name');
+                    var name = nameEl ? nameEl.textContent : '';
+
+                    var item = document.createElement('a');
+                    item.className = 'home-sidenav-item home-starred-item';
+                    item.href = card.getAttribute('href');
+                    item.setAttribute('data-starred-base-id', baseId);
+
+                    var dot = document.createElement('span');
+                    dot.className = 'home-starred-item-dot';
+                    item.appendChild(dot);
+
+                    var nameSpan = document.createElement('span');
+                    nameSpan.className = 'home-starred-item-name';
+                    nameSpan.textContent = name;
+                    item.appendChild(nameSpan);
+
+                    var teamId = card.getAttribute('data-team-id');
+                    var group = teamId
+                        ? starredList.querySelector('.home-starred-group[data-starred-team-id="' + teamId + '"]')
+                        : null;
+
+                    if (!group && teamId) {
+                        var wsEl = card.querySelector('.home-base-workspace');
+
+                        group = document.createElement('div');
+                        group.className = 'home-starred-group';
+                        group.setAttribute('data-starred-team-id', teamId);
+
+                        var teamLabel = document.createElement('div');
+                        teamLabel.className = 'home-starred-team';
+                        teamLabel.textContent = wsEl ? wsEl.textContent.trim() : '';
+                        teamLabel.title = teamLabel.textContent;
+                        group.appendChild(teamLabel);
+
+                        starredList.appendChild(group);
+                    }
+
+                    (group || starredList).appendChild(item);
+                } else if (!data.starred && existingItem) {
+                    var oldGroup = existingItem.closest('.home-starred-group');
+                    existingItem.remove();
+                    if (oldGroup && !oldGroup.querySelector('.home-starred-item')) {
+                        oldGroup.remove();
+                    }
+                }
+
+                if (!data.starred && window.location.pathname.indexOf('/starred.php') !== -1) {
+                    if (document.querySelectorAll('.home-base-grid .home-base-card').length <= 1) {
+                        window.location.reload();
                         return;
                     }
-
-                    btn.setAttribute('aria-pressed', data.starred ? 'true' : 'false');
-                    card.classList.toggle('is-starred', data.starred);
-
-                    if (!starredList) {
-                        return;
-                    }
-
-                    var existingItem = starredList.querySelector('[data-starred-base-id="' + baseId + '"]');
-
-                    if (data.starred && !existingItem) {
-                        var nameEl = card.querySelector('.home-base-name');
-                        var name = nameEl ? nameEl.textContent : '';
-
-                        var item = document.createElement('a');
-                        item.className = 'home-sidenav-item home-starred-item';
-                        item.href = card.getAttribute('href');
-                        item.setAttribute('data-starred-base-id', baseId);
-
-                        var dot = document.createElement('span');
-                        dot.className = 'home-starred-item-dot';
-                        item.appendChild(dot);
-
-                        var nameSpan = document.createElement('span');
-                        nameSpan.className = 'home-starred-item-name';
-                        nameSpan.textContent = name;
-                        item.appendChild(nameSpan);
-
-                        var teamId = card.getAttribute('data-team-id');
-                        var group = teamId
-                            ? starredList.querySelector('.home-starred-group[data-starred-team-id="' + teamId + '"]')
-                            : null;
-
-                        if (!group && teamId) {
-                            var wsEl = card.querySelector('.home-base-workspace');
-
-                            group = document.createElement('div');
-                            group.className = 'home-starred-group';
-                            group.setAttribute('data-starred-team-id', teamId);
-
-                            var teamLabel = document.createElement('div');
-                            teamLabel.className = 'home-starred-team';
-                            teamLabel.textContent = wsEl ? wsEl.textContent.trim() : '';
-                            teamLabel.title = teamLabel.textContent;
-                            group.appendChild(teamLabel);
-
-                            starredList.appendChild(group);
-                        }
-
-                        (group || starredList).appendChild(item);
-                    } else if (!data.starred && existingItem) {
-                        var oldGroup = existingItem.closest('.home-starred-group');
-                        existingItem.remove();
-                        if (oldGroup && !oldGroup.querySelector('.home-starred-item')) {
-                            oldGroup.remove();
-                        }
-                    }
-
-                    if (!data.starred && window.location.pathname.indexOf('/starred.php') !== -1) {
-                        if (document.querySelectorAll('.home-base-grid .home-base-card').length <= 1) {
-                            window.location.reload();
-                            return;
-                        }
-                        card.remove();
-                    }
-                }).catch(function () {
-                    btn.disabled = false;
-                });
+                    card.remove();
+                }
+            }).catch(function () {
+                btn.disabled = false;
             });
-        });
+        }
 
-        var moreMenus = Array.prototype.slice.call(document.querySelectorAll('.home-base-more-menu'));
         var menuEntries = [];
 
         function positionPanelBelow(panel, anchorEl) {
@@ -128,7 +138,18 @@
             panel.style.right = 'auto';
         }
 
-        moreMenus.forEach(function (menu) {
+        /* "..." menusu: <details>'in "toggle" olayi kabarciklanmadigi icin belge
+           seviyesine tasinamiyor; her menu bu fonksiyonla tek tek baglaniyor.
+           Sonradan eklenen kart (cop kutusundan geri yukleme) "bcc:base-card-inserted"
+           olayiyla ayni fonksiyondan geciyor. Iki kez baglanmasin diye isaretleniyor. */
+        function wireMoreMenu(menu) {
+            if (menu.hasAttribute('data-menu-wired')) {
+                return;
+            }
+            menu.setAttribute('data-menu-wired', '1');
+
+            var ilkYeniGiris = menuEntries.length;
+
             var summary = menu.querySelector(':scope > summary');
             var panel = menu.querySelector(':scope > .home-base-more-panel');
             var subMenu = panel ? panel.querySelector(':scope > .home-base-more-submenu') : null;
@@ -198,10 +219,8 @@
                     window.addEventListener('scroll', repositionSubPanel, true);
                 });
             }
-        });
 
-        if (menuEntries.length) {
-            menuEntries.forEach(function (entry) {
+            menuEntries.slice(ilkYeniGiris).forEach(function (entry) {
                 window.bcc_bindDismissable(entry.menu, {
                     isClickOutside: function (target) {
                         return !entry.menu.contains(target) && !(entry.panel && entry.panel.contains(target));
@@ -210,12 +229,26 @@
             });
         }
 
-        document.querySelectorAll('[data-nav-href]').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                window.location.href = btn.getAttribute('data-nav-href');
-            });
+        Array.prototype.forEach.call(document.querySelectorAll('.home-base-more-menu'), wireMoreMenu);
+
+        document.addEventListener('bcc:base-card-inserted', function (e) {
+            var card = e.detail && e.detail.card;
+            if (!card || !card.querySelectorAll) {
+                return;
+            }
+            Array.prototype.forEach.call(card.querySelectorAll('.home-base-more-menu'), wireMoreMenu);
+        });
+
+        /* "Tabloya git" ve "Ac > Duyuru". Belge seviyesinde: acik menunun paneli
+           document.body'ye tasiniyor ve geri yuklenen kart sonradan ekleniyor —
+           ikisinde de dugmeye dogrudan baglanan dinleyici calismazdi. */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('[data-nav-href]') : null;
+            if (!btn) {
+                return;
+            }
+            e.preventDefault();
+            window.location.href = btn.getAttribute('data-nav-href');
         });
 
         /* Kart silindikten sonra sayfada ondan geriye kalanlari da temizler:

@@ -670,13 +670,19 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   seviyesine taşındı, "…" menüsü `wireMoreMenu()` + `bcc:base-card-inserted`
   olayıyla bağlanıyor. Test: `_verify_home_card_actions.php` 26/26 + gerçek
   uygulamada geri yükle → yıldızla (DB'ye yazıldı) → menü aç.
+- **Geri yüklemede grup sayacı + kartın doğru yere düşmesi (2026-09-14).**
+  Ölçüldü, dört hata: sayaç bayat kalıyordu; son base'i silinen grup geri
+  yüklemede başlıksız kalıyordu; iki ekipli düzende kart başka ekibin altına
+  düşüyordu; hiç base'i olmayan sayfada kart hiç görünmüyordu. Ortak
+  `grubuEsitle()` (silme + geri yükleme), boşalan grup kaldırılmıyor
+  gizleniyor, gruplu ızgarada `data-team-grid`, hedef seçimi dört adımlı
+  (yer yoksa sayfa yenileniyor). Test: dört senaryo gerçek uygulamada önce/sonra,
+  `_verify_home_card_actions.php` 35/35, `_verify_home_base_delete.php` 22/22.
 
 **Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
 "Açık maddeler"de):
 - Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış
   (`slack_watched_fields` → tablo 2992).
-- Geri yüklemede grup sayacı ("N base") güncellenmiyor — silme için çözülen
-  sorunun tersi (günlük 2026-09-14 §11, açık madde F).
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 

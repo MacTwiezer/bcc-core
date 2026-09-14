@@ -7,8 +7,8 @@ cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
-profil fotoğrafı ve her yere bağlanması, geri yüklenen kart düğmeleri, 08-09 Eylül
-kodunun commit edilmesi).
+profil fotoğrafı ve her yere bağlanması, geri yüklenen kart düğmeleri ve grup
+sayacı, 08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -180,6 +180,19 @@ Günlük §9'da tam tablo var; özet:
 
 **Veritabanı:** değişmedi.
 
+### 3b.2c §12 — geri yüklemede grup sayacı ve kartın doğru yere düşmesi (6 dosya değişti)
+
+| Dosya | Ne |
+|---|---|
+| `public/assets/account-menu.js` | `insertRestoredCard()` hedef seçimi: aynı ekipten kart → ekibin kendi ızgarası (`data-team-grid`) → ekip kimliği taşımayan tek ana ızgara → yoksa base listesi olan sayfada yenile. Eskiden "sayfadaki tek ızgara" kuralı kartı başka ekibin altına koyabiliyordu. Yıldızlılar sayfasına yıldızsız kart eklenmiyor (+38/-7) |
+| `public/assets/home.js` | Ortak `grubuEsitle(grid)` — sayaç, başlık, ızgara görünürlüğü; silme ve geri yükleme ikisi de çağırıyor. Boşalan grup kaldırılmıyor, gizleniyor (+23/-16) |
+| `public/assets/home.css` | `.home-base-grid[hidden], .home-section-head[hidden] { display: none; }` (+8) |
+| `src/schema.php` | `bcc_render_home_base_grid_block(..., $teamGridId)` — gruplu düzende `data-team-grid` (+6/-3) |
+| `scripts/_verify_home_card_actions.php` | D2 bölümü (+9 kontrol, 26 → 35) |
+| `scripts/_verify_home_base_delete.php` | B bölümü yeni davranışa göre (21 → 22) |
+
+**Veritabanı:** değişmedi.
+
 ### 3b.3 Belgeler — 4 dosya
 
 | Dosya | Ne |
@@ -206,6 +219,7 @@ Günlük §9'da tam tablo var; özet:
 | `aa5530f` | Profil fotoğrafı (11 dosya: kod, test, `CANLIYA-ALMA.md`) — notları ayrı commit |
 | `37044e9` | Fotoğraf her yerde + kendi avatarın HTML'ye gömülü (24 dosya) — notları ayrı commit |
 | `3a9b861` | Geri yüklenen kartta yıldız ve "Aç" düğmeleri (3 dosya) — notları ayrı commit |
+| `4bb57a0` | Geri yüklemede grup sayacı + kartın doğru ekibe düşmesi (6 dosya) — notları ayrı commit |
 
 `git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları

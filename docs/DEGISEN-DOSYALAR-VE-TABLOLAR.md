@@ -164,30 +164,44 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları
 göstermez). Gerçek webhook URL'i hiçbir dosyaya sızmadı.
 
-### 3b.5 Veritabanı — 2026-09-14'te HİÇBİR DEĞİŞİKLİK YOK
+### 3b.5 Veritabanı — 2026-09-14 OTURUMUNDAN hiçbir değişiklik YOK
 
-Ne DDL ne veri. Günün bütün sorguları `SELECT`: `audit_log`, `records`,
-`cell_values`, `slack_webhooks`, `slack_watched_fields`.
+Ne DDL ne veri. Oturumun bütün sorguları `SELECT`: `audit_log`, `records`,
+`cell_values`, `slack_webhooks`, `slack_watched_fields`, `bases`, `teams`,
+`user_starred_bases`, `team_members`.
+
+Veritabanı o gün yine de iki kez değişti — ikisi de **kullanıcının kendi
+uygulama kullanımından**, oturumun yaptığı bir şey değil:
+
+| Saat | Değişen | Ne oldu |
+|---|---|---|
+| 08:55, 08:56 | `records.slack_notified_at`, `audit_log` | Grid açıkken uygulamanın kendi Slack boşaltma akışı iki özet gönderdi (`slack.notify_sent`) |
+| 09:33:44 | `bases.deleted_at`, `audit_log` | Kullanıcı base **1595 "DENEME"**'yi sildi (`base.delete`). Silinmemiş base 5 → 4 |
+
+İkincisi §6'nın teşhisinde işe yaradı: sunucu tarafının çalıştığını (satır
+yazılmış) gösterip sorunu **istemciye** daralttı.
 
 ⚠️ `bcc_slack_flush_table()` teşhis sırasında **bilerek çağrılmadı** — o
 fonksiyon `records.slack_notified_at` damgası yazar, yani ölçüm aracı değil;
 onun yerine alt katmandaki `bcc_slack_pending_records()` okundu.
 
-⚠️ 08:55 ve 08:56'da `records.slack_notified_at` gerçekten yazıldı ve
-`audit_log`'a iki `slack.notify_sent` satırı düştü — **bunu teşhis yapmadı**,
-kullanıcı gridde çalışırken uygulamanın kendi boşaltma akışı yazdı. Teşhisin
-kanıtı zaten budur.
+⚠️ Regresyon paketi de veri bırakmadı: kirlilik ölçütleri koşu öncesi =
+sonrası (`users=6 teams=4 records=162 aktif_webhook=4 notify_sent=2421`).
+`bases` sayacındaki 5 → 4 düşüşün sebebi betikler değil, yukarıdaki 09:33:44
+silmesidir (`deleted_by` = kullanıcının kendi hesabı).
 
-Tab işinin testi de veritabanına dokunmuyor: `_verify_grid_tab_nav.php` saf
-kaynak taraması, tarayıcı ölçümü ise statik bir HTML fikstürü üzerinde yapıldı
-(oturum açılmadı).
+Tarayıcı testlerinin hiçbiri veritabanına bağlanmıyor: üçü de statik HTML
+fikstürü üzerinde çalıştı, oturum açılmadı. Base silme testinde `fetch`
+sahteyle değiştirildiği için **hiçbir istek sunucuya gitmedi**; kart
+işaretlemesi `bcc_render_home_base_card()` ile üretildi, o da salt-okunur.
 
 ---
 
 ## 4. Veritabanı
 
-Aşağıdaki her şey **2026-09-08 ve 2026-09-09**'dan. **2026-09-14'te
-veritabanına hiçbir şey yazılmadı** — bkz. §3b.5.
+Aşağıdaki her şey **2026-09-08 ve 2026-09-09**'dan. **2026-09-14 oturumu
+veritabanına hiçbir şey yazmadı**; o gün olan iki değişiklik kullanıcının
+kendi uygulama kullanımından — bkz. §3b.5.
 
 ### 4.1 Yapısal değişiklik — `records` tablosu (2026-09-08)
 

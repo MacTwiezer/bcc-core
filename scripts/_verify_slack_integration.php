@@ -85,6 +85,19 @@ foreach (array('public/api/record_add.php', 'public/grid.php') as $f) {
 check('bekleyen ozetler grid sayfa yuklemesinde bosaltiliyor',
     strpos(file_get_contents($root . '/public/grid.php'), 'bcc_slack_flush_table(') !== false);
 
+/* Hucre yazan HER sayfa ayrilma pingini de yuklemeli. Sunucu tarafi bosaltma
+   (yukaridaki bcc_slack_flush_table) yalnizca SONRAKI sayfa yuklemesinde
+   calisir; "kullanici cikti, ozeti simdi gonder" tetikleyicisi
+   grid-slack-flush.js'te. kanban.js de cell_update.php cagirdigi icin kanban
+   bu betik olmadan o tetikleyiciden mahrum kalir (2026-09-14). */
+foreach (array('public/grid.php', 'public/kanban.php') as $f) {
+    check(basename($f) . ' ayrilma pingi betigini (grid-slack-flush.js) yukluyor',
+        strpos(file_get_contents($root . '/' . $f), "bcc_asset_url('grid-slack-flush.js')") !== false, $f);
+}
+
+check('kanban hucre yazmayi cell_update.php ile yapiyor (ping o yolu dinliyor)',
+    strpos(file_get_contents($root . '/public/assets/kanban.js'), '/api/cell_update.php') !== false);
+
 check('table_fields.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/table_fields.php'), 'bcc_create_field(') !== false);
 check('api/field_create.php alan olusturmayi bcc_create_field() ile yapiyor',

@@ -260,4 +260,5 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
 </script>
 <script src="<?php echo bcc_asset_url('grid-column-drag.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('kanban.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('grid-slack-flush.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

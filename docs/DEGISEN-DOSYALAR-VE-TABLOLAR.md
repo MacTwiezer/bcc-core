@@ -6,7 +6,7 @@ sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
 cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
-kayması, 08-09 Eylül kodunun commit edilmesi).
+kayması, kanban ayrılma pingi, 08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -16,7 +16,7 @@ kayması, 08-09 Eylül kodunun commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **6 dosya** (4 değiştirildi, 2 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
+| **2026-09-14** | **8 dosya** (6 değiştirildi, 2 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
 
 ---
 
@@ -116,11 +116,11 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 ## 3b. Kod dosyaları — 2026-09-14
 
-Günün iki kod işi: gridde **Tab ile hücre gezinmesi** ve **uyarı kutularındaki
-metin kayması**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+Günün üç kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
+metin kayması** ve **kanban'a ayrılma pingi**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
 edilmesi) **hiçbir dosyayı değiştirmedi**.
 
-### 3b.1 Değiştirilen — 4 dosya
+### 3b.1 Değiştirilen — 6 dosya
 
 | Dosya | Satır | Ne değişti |
 |---|---|---|
@@ -128,6 +128,8 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | `public/assets/home.css` | +7 | **YENİ** `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor |
 | `public/assets/confirm-modal.js` | 1 satır | `:43` — uyarı paragrafı `home-modal-label` → `home-modal-message`. `<p>`'nin tarayıcıdan miras aldığı `margin-top: 1em` sıfırlanmadığı için metin kutunun içinde aşağı kayıp düğmelere yapışıyordu |
 | `public/grid.php` | 2 satır | `:1688` tablo silme özeti, `:1709` yapıştırma onayı özeti — aynı sınıf değişikliği |
+| `public/kanban.php` | +1 | `:263` — `grid-slack-flush.js` etiketi. Sunucu tarafı boşaltma (`:73`) yalnızca SONRAKI sayfa yüklemesinde çalışıyordu; "çıkınca hemen gönder" tetikleyicisi kanban'da yoktu. Kanban `bcc_post` kullandığı için sarmalanan `window.fetch`'in devreye girdiği ayrıca tarayıcıda ölçüldü |
+| `scripts/_verify_slack_integration.php` | +13 | İki sayfanın da ayrılma pingini yüklediği (döngüyle — üçüncü sayfa eklenirse aynı yerden bakılır) ve kanban'ın hücre yazma yolunun `cell_update.php` olduğu. A+B 19 → 22 |
 
 ### 3b.2 Yeni — 2 dosya
 

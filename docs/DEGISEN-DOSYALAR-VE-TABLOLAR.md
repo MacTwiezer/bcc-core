@@ -1,11 +1,12 @@
 # Değişen Dosyalar ve Veritabanı Tabloları
 
-**Kapsam:** 2026-09-08 ve 2026-09-09 oturumları (canlıya alma sonrası).
-Günlük anlatı `docs/gunluk/2026-09-08.md` ve `docs/gunluk/2026-09-09.md`
-dosyalarında; **bu dosya yalnızca envanter** — "neye dokunuldu" sorusunun
-tek bakışta cevabı.
+**Kapsam:** 2026-09-08, 2026-09-09 ve 2026-09-14 oturumları (canlıya alma
+sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
+**bu dosya yalnızca envanter** — "neye dokunuldu" sorusunun tek bakışta
+cevabı.
 
-Son güncelleme: 2026-09-09 (ikinci tur — Slack ayrılma pingi düzeltmesi).
+Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi + 08-09 Eylül kodunun
+commit edilmesi).
 
 ---
 
@@ -15,6 +16,7 @@ Son güncelleme: 2026-09-09 (ikinci tur — Slack ayrılma pingi düzeltmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
+| **2026-09-14** | **2 dosya** (1 değiştirildi, 1 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
 
 ---
 
@@ -109,9 +111,73 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 | `docs/gunluk/2026-09-09.md` | O günün notu |
 | `docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` | Bu dosya |
 
+
+---
+
+## 3b. Kod dosyaları — 2026-09-14
+
+Günün tek kod işi gridde **Tab ile hücre gezinmesi**. Diğer iki iş (Slack
+teşhisi ve 08-09 Eylül kodunun commit edilmesi) **hiçbir dosyayı
+değiştirmedi**.
+
+### 3b.1 Değiştirilen — 1 dosya
+
+| Dosya | Satır | Ne değişti |
+|---|---|---|
+| `public/assets/grid-cell-select.js` | +34 | Yeni `wrapCell(row, step)` yardımcısı (`cellAt`'in hemen altına); `keydown` dinleyicisinde `ARROWS` bloğunun **ÖNÜNE** `Tab` dalı. `Tab` bir sağa, `Shift+Tab` bir sola; satır sonunda alt satırın ilk, satır başında üst satırın son hücresine sarmalıyor; tablonun iki ucunda **yerinde kalıyor**. Dal `keyboardBelongsToGrid()` guard'ının ALTINDA, yani hücre düzenleme modundayken Tab'a dokunulmuyor |
+
+### 3b.2 Yeni — 1 dosya
+
+| Dosya | Ne |
+|---|---|
+| `scripts/_verify_grid_tab_nav.php` | 18 kontrol. A) Tab dalı + `preventDefault` + `shiftKey` yönü + sarmalama, B) guard sırası ve `Escape` çıkış yolu, C) ok tuşları / `Ctrl+A` bozulmadı, D) `grid.php` betiği gerçekten basıyor. JS yorumlarını ayıklayarak tarıyor (09-09'da dört kez düşülen tuzak) |
+
+### 3b.3 Belgeler — 3 dosya
+
+| Dosya | Ne |
+|---|---|
+| `docs/gunluk/2026-09-14.md` | **YENİ** — günün notu |
+| `docs/PROJE-DURUM.md` | §5 "Biten İşler"e 08-14 Eylül turunun özeti |
+| `docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` | Bu dosya — kapsam satırı, §1 özeti ve bu bölüm |
+
+### 3b.4 Commit'ler
+
+| Commit | Kapsam |
+|---|---|
+| `26f0d44` | Slack toplu bildirim sistemi (16 dosya) — **08-09 Eylül'de yazıldı**, bugün commit'lendi |
+| `23d27d5` | Toplu silme → çöp kutusu (3 dosya) — aynı şekilde |
+| `cbcae46` | Hata sayfası hizalaması (3 dosya) — aynı şekilde |
+| `7982efe` | Günlük notlar + envanter + PROJE-DURUM (5 dosya) |
+| `7447bac` | **Bugün yazılan tek kod:** Tab gezinmesi (3 dosya) |
+
+`git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
+ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları
+göstermez). Gerçek webhook URL'i hiçbir dosyaya sızmadı.
+
+### 3b.5 Veritabanı — 2026-09-14'te HİÇBİR DEĞİŞİKLİK YOK
+
+Ne DDL ne veri. Günün bütün sorguları `SELECT`: `audit_log`, `records`,
+`cell_values`, `slack_webhooks`, `slack_watched_fields`.
+
+⚠️ `bcc_slack_flush_table()` teşhis sırasında **bilerek çağrılmadı** — o
+fonksiyon `records.slack_notified_at` damgası yazar, yani ölçüm aracı değil;
+onun yerine alt katmandaki `bcc_slack_pending_records()` okundu.
+
+⚠️ 08:55 ve 08:56'da `records.slack_notified_at` gerçekten yazıldı ve
+`audit_log`'a iki `slack.notify_sent` satırı düştü — **bunu teşhis yapmadı**,
+kullanıcı gridde çalışırken uygulamanın kendi boşaltma akışı yazdı. Teşhisin
+kanıtı zaten budur.
+
+Tab işinin testi de veritabanına dokunmuyor: `_verify_grid_tab_nav.php` saf
+kaynak taraması, tarayıcı ölçümü ise statik bir HTML fikstürü üzerinde yapıldı
+(oturum açılmadı).
+
 ---
 
 ## 4. Veritabanı
+
+Aşağıdaki her şey **2026-09-08 ve 2026-09-09**'dan. **2026-09-14'te
+veritabanına hiçbir şey yazılmadı** — bkz. §3b.5.
 
 ### 4.1 Yapısal değişiklik — `records` tablosu (2026-09-08)
 

@@ -95,6 +95,8 @@ BCC şirketi için iç araç. Geliştiren: Yiğit Aslantaş.
 
 **Sır yönetimi (kalıcı kural, 2026-08-06'dan itibaren):** Hiçbir gizli/hassas bilgi (SMTP/mail şifreleri, DB şifreleri, API anahtarları, token'lar, kimlik bilgileri, kişisel veri) koda YAZILMAZ ve git'e GİRMEZ — her zaman `.gitignore`'lu bir `*.local.php` dosyasında tutulur (örnek: `config/database.local.php`, `config/mail.local.php`, `config/mail_record_send.local.php`). ⚠️ **`.example` şablonları ARTIK YOK** — bu cümle eskiden "yanında şifresiz bir `.example` şablonu bulunur" diyordu ama o dosyalar kaldırıldı (2026-09-04'te doğrulandı: depoda sıfır `.example`); içerikleri `docs/CANLIYA-ALMA.md`'ye taşındı ve dört yerel dosyanın dördü de orada tam şablon hâlinde anlatılıyor. `.gitignore` deseni de artık `config/*.local.php` (ad ad değil). Her commit'ten önce `git status` + `git diff --cached` ile sır sızıntısı kontrol edilir. Yanlışlıkla commit'lenmiş bir sır fark edilirse dosyayı silmek YETMEZ (git geçmişinde kalır) — ayrıca ele alınması gerekir.
 
+**Davet aday listesi herkesi gösterir (bilinçli karar, 2026-09-14):** Ekip sahibinin grid, arayüz ve çalışma alanları sayfalarına paylaşım penceresinin otomatik tamamlaması için sistemdeki **tüm aktif kullanıcıların ad + e-postası** gönderilir (`BCC_SHARE_CANDIDATES`; `grid.php:35`, `interface.php:87`, `workspaces.php:99`) ve sayfa kaynağında görünür. Kullanıcı kararı: *"herkes zaten aynı şirketten, sorun yok"* — bu bir KVKK bulgusu olarak **yeniden raporlanmaz**. ⚠️ Varsayım: platformun bütün kullanıcıları tek şirketin çalışanları. Dışarıdan (müşteri/tedarikçi/başka firma) kullanıcı eklenirse karar yeniden ele alınmalı. Gerekçe ve ölçüm: `docs/gunluk/2026-09-14.md` §13, açık madde G.
+
 **Admin/rol karışıklığı (kalıcı uyarı, 2026-08-06'dan itibaren):** `users.is_admin` (platform Admin paneline erişim bayrağı) ile `team_members.role='owner'` (takım/rol sistemi) birbirinden TAMAMEN FARKLI kavramlardır, karıştırılmamalıdır. `is_admin=1` kişi Admin panelinde "Admin" rozeti görür, bu onun takım rolüyle ilgisi yoktur.
 
 ---
@@ -690,10 +692,6 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 - Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış — hata değil: her tablonun
   Owner'ı "Alanları yönet → Slack bildirimleri"nden açabilir; GULF ve ATP
   ekiplerinde önce webhook eklenmeli (günlük §13b).
-- **Davet aday listesi ekip sahibine TÜM aktif kullanıcıların ad + e-postasını
-  gönderiyor** (`BCC_SHARE_CANDIDATES`; grid/interface/workspaces). Önceden de
-  böyleydi, belgelerde karar olarak geçmiyor — KVKK açısından değerlendirilmeli
-  (günlük §13, açık madde G).
 - **Canlıya çıkarken:** `records.slack_notified_at` için iki zorunlu SQL adımı ve
   `storage/avatars` izinleri (`docs/CANLIYA-ALMA.md`).
 

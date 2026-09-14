@@ -121,6 +121,37 @@ try {
     check('B) hata sayfasi mesaji htmlspecialchars ile basiliyor',
         substr_count(file_get_contents("$root/src/partials/error_page.php"), 'htmlspecialchars') >= 3);
 
+    /* --- Hizalama (2026-09-09) ---------------------------------------------
+       Sayfa YALNIZCA theme.css + login.css yukluyor. Onceden aciklama metnine
+       class="hint" veriliyordu; o sinif style.css'te tanimli, yani bu sayfada
+       HIC UYGULANMIYORDU. Hizalama da satir ici style'larla yapiliyordu.
+       Asagidakiler geri dusmeyi engelliyor. */
+    $errSrc = file_get_contents("$root/src/partials/error_page.php");
+    $loginCss = file_get_contents("$root/public/assets/login.css");
+
+    check('B) hata sayfasinda satir ici style KALMADI',
+        strpos($errSrc, 'style="') === false);
+    check('B) yuklenmeyen style.css sinifina (hint) guvenilmiyor',
+        strpos($errSrc, 'class="hint"') === false);
+
+    foreach (array('.error-body', '.error-title', '.error-message', '.error-action', '.error-code') as $kural) {
+        check("B) login.css {$kural} kuralini tasiyor",
+            strpos($loginCss, $kural) !== false);
+    }
+
+    /* Buton tam genislik degil: .login-submit width:100% tasiyor, hata
+       sayfasinda tek baglanti oldugu icin bu geri aliniyor. */
+    check('B) hata sayfasi butonu tam genislikten cikarilmis',
+        preg_match('/\.error-action\s*\{[^}]*width:\s*auto/s', $loginCss) === 1);
+
+    $x404 = req('/grid.php?table_id=999999', $cookie);
+    check('B) uretilen 404 sayfasi error-* siniflarini kullaniyor',
+        strpos($x404['body'], 'error-message') !== false
+        && strpos($x404['body'], 'error-action') !== false
+        && strpos($x404['body'], 'error-code') !== false);
+    check('B) uretilen 404 sayfasinda satir ici style yok',
+        strpos($x404['body'], 'style="') === false);
+
     echo "\n=== C) Viewport meta ===\n";
     $missing = array();
     foreach (array_merge(glob("$root/public/*.php"), glob("$root/src/partials/*.php")) as $f) {

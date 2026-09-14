@@ -290,3 +290,49 @@
 .login-submit-link:hover {
     text-decoration: none;
 }
+/* --------------------------------------------------------------------------
+   Hata sayfasi (404 / 403 / 500) — src/partials/error_page.php
+   2026-09-09.
+
+   Sayfa giris kartini paylasiyor ama icerigi farkli: form yok, tek bir eylem
+   var. Hizalama once satir ici style'larla yapiliyordu (text-align, margin-top,
+   display:inline-block) ve bosluklar birbirini tutmuyordu. Ayrica aciklama
+   metnine class="hint" veriliyordu — o sinif style.css'te tanimli, bu sayfa
+   ise yalnizca theme.css + login.css yukluyor, yani HIC UYGULANMIYORDU.
+   Kurallar buraya tasindi.
+   -------------------------------------------------------------------------- */
+.error-body {
+    text-align: center;
+    padding-bottom: 2.25rem;
+}
+
+/* Baslik ile aciklama arasi, giris formundaki 1.5rem'e gore daralttildi:
+   burada aralarinda alan yok, ikisi tek bir blok gibi okunmali. */
+.error-title {
+    margin-bottom: 0.6rem;
+}
+
+.error-message {
+    max-width: 34ch;
+    margin: 0 auto;
+    color: var(--bcc-text-muted);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+/* .login-submit width:100% tasiyor (form butonu olarak dogru). Burada tek bir
+   baglanti var; tam genislik karta gore agir duruyordu. */
+.error-action {
+    display: inline-block;
+    width: auto;
+    min-width: 13rem;
+    margin-top: 1.75rem;
+    text-decoration: none;
+    text-align: center;
+}
+
+.error-code {
+    margin: 1rem 0 0;
+    font-size: 0.85rem;
+    color: var(--bcc-text-muted);
+}

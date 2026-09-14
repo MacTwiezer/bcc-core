@@ -218,46 +218,102 @@
             });
         });
 
-        document.querySelectorAll('[data-base-delete]').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
+        /* Kart silindikten sonra sayfada ondan geriye kalanlari da temizler:
+           grup basligindaki "N base" sayaci sunucudan basiliyor, kendiliginden
+           guncellenmiyordu; grubun son base'i silinince de bos bir baslik geride
+           kaliyordu. Ikisi de "silinmedi, yenilemem lazim" izlenimi veriyordu. */
+        function baseKartiniTemizle(card) {
+            var grid = card.parentElement;
+            card.remove();
 
-                window.bcc_confirm({
-                    title: 'Base\'i sil',
-                    message: 'Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.',
-                }).then(function (onaylandi) {
-                    if (!onaylandi) {
-                        return;
-                    }
+            if (!grid || !grid.classList.contains('home-base-grid')) {
+                return;
+            }
 
-                    var card = btn.closest('.home-base-card');
-                    var baseId = btn.getAttribute('data-base-delete');
-                    btn.disabled = true;
+            var kalan = grid.querySelectorAll('.home-base-card:not(.home-base-create)').length;
+            var head = grid.previousElementSibling;
 
-                    fetch('/api/base_delete.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ csrf_token: CSRF_TOKEN, base_id: baseId }).toString(),
-                    }).then(function (res) {
-                        return res.json().catch(function () { return { ok: false }; });
-                    }).then(function (data) {
-                        if (data && data.ok) {
-                            if (card) {
-                                card.remove();
-                            }
+            if (!head || !head.classList.contains('home-section-head')) {
+                return;
+            }
 
-                            if (typeof window.bcc_searchRemoveItem === 'function') {
-                                window.bcc_searchRemoveItem(baseId);
-                            }
-                        } else {
-                            btn.disabled = false;
-                            window.alert((data && data.error) || 'Silinemedi.');
+            if (kalan === 0) {
+                head.remove();
+
+                /* Gruplanmamis duzende "Yeni Base Olustur" karosu AYNI izgaranin
+                   icinde (bcc_render_home_base_grid_block). Izgarayi kosulsuz
+                   silmek son base ile birlikte olusturma karosunu da goturur. */
+                if (!grid.querySelector('.home-base-card')) {
+                    grid.remove();
+                }
+                return;
+            }
+
+            var meta = head.querySelector('.home-section-meta');
+            if (meta) {
+                meta.textContent = kalan + ' base';
+            }
+        }
+
+        /* Dinleyici dogrudan dugmede degil belgede: cop kutusundan geri yuklenen
+           kart DOM'a sonradan enjekte ediliyor (account-menu.js:108) ve o kartin
+           dugmesine dogrudan baglanan bir dinleyici hic takilmiyordu. */
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('[data-base-delete]') : null;
+            if (!btn || btn.disabled) {
+                return;
+            }
+
+            /* Kart bir <a>; varsayilan eylemi (base'e gitmek) iptal ediliyor.
+               Olay belgeye kadar zaten cikti, stopPropagation gereksiz. */
+            e.preventDefault();
+
+            window.bcc_confirm({
+                title: 'Base\'i sil',
+                message: 'Bu base\'i silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.',
+            }).then(function (onaylandi) {
+                if (!onaylandi) {
+                    return;
+                }
+
+                var card = btn.closest('.home-base-card');
+                var baseId = btn.getAttribute('data-base-delete');
+                btn.disabled = true;
+
+                fetch('/api/base_delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ csrf_token: CSRF_TOKEN, base_id: baseId }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () { return { ok: false }; });
+                }).then(function (data) {
+                    if (data && data.ok) {
+                        if (card) {
+                            baseKartiniTemizle(card);
                         }
-                    }).catch(function () {
+
+                        /* Sol paneldeki "Yildizlilar" satiri da sunucudan
+                           basiliyor; silinen base orada kaliyordu. Grup
+                           basligindan baska bir sey kalmadiysa grup da gider. */
+                        var yildizli = document.querySelector('[data-starred-base-id="' + baseId + '"]');
+                        if (yildizli) {
+                            var grup = yildizli.closest('.home-starred-group');
+                            yildizli.remove();
+                            if (grup && !grup.querySelector('[data-starred-base-id]')) {
+                                grup.remove();
+                            }
+                        }
+
+                        if (typeof window.bcc_searchRemoveItem === 'function') {
+                            window.bcc_searchRemoveItem(baseId);
+                        }
+                    } else {
                         btn.disabled = false;
-                        window.alert('Silinemedi (bağlantı hatası).');
-                    });
+                        window.alert((data && data.error) || 'Silinemedi.');
+                    }
+                }).catch(function () {
+                    btn.disabled = false;
+                    window.alert('Silinemedi (bağlantı hatası).');
                 });
             });
         });

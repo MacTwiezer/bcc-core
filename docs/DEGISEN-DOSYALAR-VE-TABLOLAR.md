@@ -6,7 +6,8 @@ sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
 cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
-kayması, kanban ayrılma pingi, 08-09 Eylül kodunun commit edilmesi).
+kayması, kanban ayrılma pingi, base silme temizliği, 08-09 Eylül kodunun
+commit edilmesi).
 
 ---
 
@@ -16,7 +17,7 @@ kayması, kanban ayrılma pingi, 08-09 Eylül kodunun commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **8 dosya** (6 değiştirildi, 2 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
+| **2026-09-14** | **10 dosya** (7 değiştirildi, 3 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
 
 ---
 
@@ -116,11 +117,12 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 ## 3b. Kod dosyaları — 2026-09-14
 
-Günün üç kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
-metin kayması** ve **kanban'a ayrılma pingi**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+Günün dört kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
+metin kayması**, **kanban'a ayrılma pingi** ve **base silince sayfada kalan
+izlerin temizlenmesi**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
 edilmesi) **hiçbir dosyayı değiştirmedi**.
 
-### 3b.1 Değiştirilen — 6 dosya
+### 3b.1 Değiştirilen — 7 dosya
 
 | Dosya | Satır | Ne değişti |
 |---|---|---|
@@ -130,12 +132,14 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | `public/grid.php` | 2 satır | `:1688` tablo silme özeti, `:1709` yapıştırma onayı özeti — aynı sınıf değişikliği |
 | `public/kanban.php` | +1 | `:263` — `grid-slack-flush.js` etiketi. Sunucu tarafı boşaltma (`:73`) yalnızca SONRAKI sayfa yüklemesinde çalışıyordu; "çıkınca hemen gönder" tetikleyicisi kanban'da yoktu. Kanban `bcc_post` kullandığı için sarmalanan `window.fetch`'in devreye girdiği ayrıca tarayıcıda ölçüldü |
 | `scripts/_verify_slack_integration.php` | +13 | İki sayfanın da ayrılma pingini yüklediği (döngüyle — üçüncü sayfa eklenirse aynı yerden bakılır) ve kanban'ın hücre yazma yolunun `cell_update.php` olduğu. A+B 19 → 22 |
+| `public/assets/home.js` | +55 / -12 | Base silme dinleyicisi **delegasyona** çevrildi — geri yüklenen kart `innerHTML` ile enjekte edildiği için (`account-menu.js:108`) oradaki "Sil" hiç çalışmıyordu. Yeni `baseKartiniTemizle()`: grup başlığındaki "N base" sayacı, boşalan grup başlığı+ızgarası ve sol paneldeki yıldızlı satırı. Izgara yalnızca içinde hiç kart kalmadıysa siliniyor — gruplanmamış düzende "Yeni Base Oluştur" karosu aynı ızgarada (`schema.php:3386`) |
 
-### 3b.2 Yeni — 2 dosya
+### 3b.2 Yeni — 3 dosya
 
 | Dosya | Ne |
 |---|---|
 | `scripts/_verify_grid_tab_nav.php` | 18 kontrol. A) Tab dalı + `preventDefault` + `shiftKey` yönü + sarmalama, B) guard sırası ve `Escape` çıkış yolu, C) ok tuşları / `Ctrl+A` bozulmadı, D) `grid.php` betiği gerçekten basıyor. JS yorumlarını ayıklayarak tarıyor (09-09'da dört kez düşülen tuzak) |
+| `scripts/_verify_home_base_delete.php` | 21 kontrol. A) delegasyon ve `preventDefault`, B) sayaç/boş grup/yıldızlı satır temizliği + oluşturma karosu koruması, C) vazgeçme ve hata yolları, D) JS in dayandığı sunucu işaretlemesi hâlâ yerinde mi (sınıf adı değişirse özellik sessizce bozulmak yerine test düşer) |
 | `scripts/_verify_modal_message_style.php` | 13 kontrol. A) margin sıfırlaması + punto + satır aralığı + renk, B) `.home-modal-label`'ın bozulmadığı (altı form onu kullanıyor), C) üç uyarı paragrafının yeni sınıfa geçtiği, D) `.home-modal-form` kullanan altı dosyada `<p class="home-modal-label">` kalmadığı — aynı hata bir daha sessizce girmesin |
 
 ### 3b.3 Belgeler — 3 dosya

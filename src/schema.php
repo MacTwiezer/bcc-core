@@ -3336,7 +3336,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             </div>
             <?php
 
-            bcc_render_home_base_grid_block($byTeam[$tid], $starredBaseIds, $teamNamesById, $roleByTeamId, false, false, $tableCounts, true);
+            bcc_render_home_base_grid_block($byTeam[$tid], $starredBaseIds, $teamNamesById, $roleByTeamId, false, false, $tableCounts, true, $tid);
         }
 
         return;
@@ -3363,10 +3363,13 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
     bcc_render_home_base_grid_block($bases, $starredBaseIds, $teamNamesById, $roleByTeamId, $canCreateBase, $bento, $tableCounts, false);
 }
 
-function bcc_render_home_base_grid_block($bases, $starredBaseIds, $teamNamesById, $roleByTeamId, $canCreateBase, $bento, $tableCounts, $hideRole)
+/* $teamGridId: gruplu duzende izgaranin ait oldugu ekip. Cop kutusundan geri
+   yuklenen kart bununla KENDI ekibinin izgarasini buluyor; yoksa baska ekibin
+   altina dusuyordu (2026-09-14, olculdu). */
+function bcc_render_home_base_grid_block($bases, $starredBaseIds, $teamNamesById, $roleByTeamId, $canCreateBase, $bento, $tableCounts, $hideRole, $teamGridId = null)
 {
     ?>
-    <div class="home-base-grid<?php echo $bento ? ' home-base-grid--bento' : ''; ?>">
+    <div class="home-base-grid<?php echo $bento ? ' home-base-grid--bento' : ''; ?>"<?php echo $teamGridId !== null ? ' data-team-grid="' . (int) $teamGridId . '"' : ''; ?>>
         <div class="home-list-header" aria-hidden="true">
             <div class="home-list-header-icon"></div>
             <div class="home-list-header-info">

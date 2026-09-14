@@ -72,17 +72,23 @@ echo "\n--- B) Silme sonrasi sayfada iz birakmiyor ---\n";
 
 check('temizleme yardimcisi tanimli', strpos($js, 'function baseKartiniTemizle(') !== false);
 
-$pos = strpos($js, 'function baseKartiniTemizle(');
+/* 2026-09-14 (§12): sayac/baslik mantigi baseKartiniTemizle'den ortak
+   grubuEsitle(grid) fonksiyonuna tasindi — geri yukleme de ayni fonksiyonu
+   kullaniyor. Bosalan grup artik KALDIRILMIYOR, GIZLENIYOR: geri yuklenen kart
+   ayni yere donebilsin. */
+$pos = strpos($js, 'function grubuEsitle(grid)');
 $govde = $pos === false ? '' : substr($js, $pos, 900);
 
+check('silme ortak grubuEsitle() fonksiyonunu cagiriyor',
+    (bool) preg_match('/function baseKartiniTemizle\(card\)\s*\{[^}]*card\.remove\(\);\s*grubuEsitle\(grid\);/s', $js));
 check('grup basligindaki sayac guncelleniyor',
     strpos($govde, "meta.textContent = kalan + ' base'") !== false);
 check('sayimda "Yeni Base Olustur" karosu sayilmiyor',
     strpos($govde, '.home-base-card:not(.home-base-create)') !== false);
-check('grubun son base i silinince baslik ve izgara da kaldiriliyor',
-    strpos($govde, 'head.remove()') !== false && strpos($govde, 'grid.remove()') !== false);
-check('izgara KOSULSUZ silinmiyor — "Yeni Base Olustur" karosu ayni izgarada olabilir',
-    strpos($govde, "if (!grid.querySelector('.home-base-card'))") !== false, trim($govde));
+check('grubun son base i silinince baslik GIZLENIYOR (kaldirilmiyor — geri yukleme ayni yere donsun)',
+    strpos($govde, 'head.hidden = kalan === 0') !== false && strpos($govde, 'head.remove()') === false);
+check('izgara yalnizca icinde HIC kart kalmadiysa gizleniyor — "Yeni Base Olustur" karosu ayni izgarada olabilir',
+    strpos($govde, "grid.hidden = !grid.querySelector('.home-base-card')") !== false && strpos($govde, 'grid.remove()') === false, trim($govde));
 check('baslik yoksa (basliksiz izgara) sessizce cikiliyor',
     strpos($govde, "head.classList.contains('home-section-head')") !== false);
 

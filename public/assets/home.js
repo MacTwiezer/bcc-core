@@ -237,6 +237,7 @@
                 return;
             }
             Array.prototype.forEach.call(card.querySelectorAll('.home-base-more-menu'), wireMoreMenu);
+            grubuEsitle(card.parentElement);
         });
 
         /* "Tabloya git" ve "Ac > Duyuru". Belge seviyesinde: acik menunun paneli
@@ -255,37 +256,43 @@
            grup basligindaki "N base" sayaci sunucudan basiliyor, kendiliginden
            guncellenmiyordu; grubun son base'i silinince de bos bir baslik geride
            kaliyordu. Ikisi de "silinmedi, yenilemem lazim" izlenimi veriyordu. */
-        function baseKartiniTemizle(card) {
-            var grid = card.parentElement;
-            card.remove();
+        /* Bir izgaranin grup basligini ve "N base" sayacini icerige gore esitler.
+           Silmede de geri yuklemede de ayni fonksiyon: ikisi ayri yazilinca biri
+           unutuluyordu (geri yukleme sayaci hic guncellemiyordu, olculdu).
 
+           Bosalan grup KALDIRILMIYOR, GIZLENIYOR (hidden): cop kutusundan geri
+           yuklenen kart ayni izgaraya donebilsin. Kaldirilsaydi geri yukleme
+           ekibin izgarasini bulamayip karti baska ekibin altina koyuyordu. */
+        function grubuEsitle(grid) {
             if (!grid || !grid.classList.contains('home-base-grid')) {
                 return;
             }
 
             var kalan = grid.querySelectorAll('.home-base-card:not(.home-base-create)').length;
             var head = grid.previousElementSibling;
+            var baslikVar = head && head.classList.contains('home-section-head');
 
-            if (!head || !head.classList.contains('home-section-head')) {
+            /* Gruplanmamis duzende "Yeni Base Olustur" karosu AYNI izgaranin
+               icinde (bcc_render_home_base_grid_block): izgara yalnizca icinde hic
+               kart kalmadiysa gizlenir. */
+            grid.hidden = !grid.querySelector('.home-base-card');
+
+            if (!baslikVar) {
                 return;
             }
 
-            if (kalan === 0) {
-                head.remove();
-
-                /* Gruplanmamis duzende "Yeni Base Olustur" karosu AYNI izgaranin
-                   icinde (bcc_render_home_base_grid_block). Izgarayi kosulsuz
-                   silmek son base ile birlikte olusturma karosunu da goturur. */
-                if (!grid.querySelector('.home-base-card')) {
-                    grid.remove();
-                }
-                return;
-            }
+            head.hidden = kalan === 0;
 
             var meta = head.querySelector('.home-section-meta');
             if (meta) {
                 meta.textContent = kalan + ' base';
             }
+        }
+
+        function baseKartiniTemizle(card) {
+            var grid = card.parentElement;
+            card.remove();
+            grubuEsitle(grid);
         }
 
         /* Dinleyici dogrudan dugmede degil belgede: cop kutusundan geri yuklenen

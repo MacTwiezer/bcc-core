@@ -2656,3 +2656,11 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     padding: 0;
     overflow: hidden;
 }
+
+/* Bosalan grup silinmiyor, gizleniyor (home.js grubuEsitle): cop kutusundan
+   geri yuklenen kart ayni yere donebilsin. Izgara ve baslik kendi display
+   degerlerini tasidigi icin tarayicinin [hidden] kurali tek basina yetmez. */
+.home-base-grid[hidden],
+.home-section-head[hidden] {
+    display: none;
+}

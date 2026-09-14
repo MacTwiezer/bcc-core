@@ -116,10 +116,38 @@ check('olay dinleyicisi kartin menulerini wireMoreMenu\'dan geciriyor',
 echo "\n--- D) Geri yukleme olayi yayinliyor ---\n";
 
 $insPos = strpos($menuJs, 'function insertRestoredCard(data)');
-$insBlok = $insPos === false ? '' : substr($menuJs, $insPos, 1800);
+$insBlok = $insPos === false ? '' : substr($menuJs, $insPos, 6000);
 check('insertRestoredCard duruyor', $insPos !== false);
 check('kart eklendikten SONRA bcc:base-card-inserted yayinlaniyor',
     preg_match("/grid\.appendChild\(kart\);.*?dispatchEvent\(new CustomEvent\('bcc:base-card-inserted', \{ detail: \{ card: kart \} \}\)\)/s", $insBlok) === 1);
+
+echo "\n--- D2) Geri yuklemede grup sayaci ve kartin DOGRU yere dusmesi (§12) ---\n";
+
+$css = (string) file_get_contents($root . '/public/assets/home.css');
+
+check('ortak sayac fonksiyonu var (grubuEsitle)', strpos($home, 'function grubuEsitle(grid)') !== false);
+check('geri yuklenen kart olayi sayaci esitliyor',
+    (bool) preg_match("/bcc:base-card-inserted.*?grubuEsitle\(card\.parentElement\)/s", $home));
+check('bosalan grup gizleniyor, kaldirilmiyor (baslik)', strpos($home, 'head.hidden = kalan === 0') !== false);
+check('gizli izgara/baslik CSS ile gercekten gizleniyor (kendi display degerleri [hidden]\'i ezer)',
+    (bool) preg_match('/\.home-base-grid\[hidden\],\s*\.home-section-head\[hidden\]\s*\{\s*display:\s*none;/', $css));
+
+check('sunucu gruplu duzende izgaraya ekip kimligi basiyor (data-team-grid)',
+    strpos($schema, 'data-team-grid="') !== false && strpos($schema, '$tableCounts, true, $tid);') !== false);
+
+$p1 = strpos($insBlok, "'.home-base-grid .home-base-card[data-team-id=\"'");
+$p2 = strpos($insBlok, "'.home-base-grid[data-team-grid=\"'");
+$p3 = strpos($insBlok, "!g.hasAttribute('data-team-grid')");
+check('hedef sirasi: 1) ayni ekipten kart, 2) ekibin kendi izgarasi, 3) ekip kimligi TASIMAYAN ana izgara',
+    $p1 !== false && $p2 !== false && $p3 !== false && $p1 < $p2 && $p2 < $p3,
+    var_export(array($p1, $p2, $p3), true));
+check('3. adim baska ekibin izgarasini SECEMEZ (eski "tek izgara" dususu kalkti)',
+    $p3 !== false);
+check('yer bulunamazsa YALNIZCA base listesi olan sayfada yenileniyor',
+    strpos($insBlok, "if (document.querySelector('.home-empty, .home-base-grid'))") !== false
+    && strpos($insBlok, 'window.location.reload()') !== false);
+check('Yildizlilar sayfasina yildizsiz kart eklenmiyor',
+    strpos($insBlok, "indexOf('/starred.php') !== -1 && !kart.classList.contains('is-starred')") !== false);
 
 echo "\n--- E) Silme (§6) bozulmadi ---\n";
 

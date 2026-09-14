@@ -83,6 +83,27 @@
                 return;
             }
 
+            var kap = document.createElement('div');
+            kap.innerHTML = data.card_html;
+            var kart = kap.firstElementChild;
+            if (!kart) {
+                return;
+            }
+
+            /* Yildizlilar sayfasi yalnizca yildizli base'leri listeler; geri
+               yukleme yildizi degistirmez, yildizsiz kart oraya eklenmez. */
+            if (window.location.pathname.indexOf('/starred.php') !== -1 && !kart.classList.contains('is-starred')) {
+                return;
+            }
+
+            /* Kartin gidecegi izgara — sirasiyla (2026-09-14):
+                 1) ayni ekipten bir kartin izgarasi;
+                 2) ekibin KENDI izgarasi (data-team-grid) — son base'i silinmis
+                    grup kaldirilmiyor, gizleniyor, yani hala burada;
+                 3) ekip kimligi TASIMAYAN tek ana izgara (gruplanmamis duzen).
+               Eskiden 3. adim "sayfadaki tek izgara" diyordu: gruplu duzende bir
+               ekibin grubu kaybolunca kart BASKA ekibin altina dusuyordu
+               (olculdu). */
             var grid = null;
             var kardes = document.querySelector(
                 '.home-base-grid .home-base-card[data-team-id="' + data.team_id + '"]'
@@ -90,24 +111,34 @@
 
             if (kardes) {
                 grid = kardes.parentElement;
-            } else {
+            }
+            if (!grid) {
+                grid = document.querySelector('.home-base-grid[data-team-grid="' + data.team_id + '"]');
+            }
+            if (!grid) {
                 var gridler = Array.prototype.filter.call(
                     document.querySelectorAll('.home-base-grid'),
-                    function (g) { return g.id !== 'home-base-grid-lead'; }
+                    function (g) { return g.id !== 'home-base-grid-lead' && !g.hasAttribute('data-team-grid'); }
                 );
                 if (gridler.length === 1) {
                     grid = gridler[0];
                 }
             }
 
-            if (!grid || grid.querySelector('.home-base-card[data-base-id="' + (data.base_id || '') + '"]')) {
+            if (!grid) {
+                /* Base listesi olan bir sayfadayiz ama kartin yeri yok: sayfa
+                   "henuz base yok" durumunda acilmis ya da bu ekibin grubu hic
+                   cizilmemis. Grup basligini (rol rozeti, Katilimcilar
+                   baglantisi) istemcide taklit etmek yerine sunucu cizsin.
+                   Base listesi olmayan sayfalarda (grid, arayuz) hicbir sey
+                   yapilmaz — orada gosterilecek kart yok. */
+                if (document.querySelector('.home-empty, .home-base-grid')) {
+                    window.location.reload();
+                }
                 return;
             }
 
-            var kap = document.createElement('div');
-            kap.innerHTML = data.card_html;
-            var kart = kap.firstElementChild;
-            if (!kart) {
+            if (grid.querySelector('.home-base-card[data-base-id="' + (data.base_id || '') + '"]')) {
                 return;
             }
 

@@ -58,6 +58,7 @@
                 var img = document.createElement('img');
                 img.className = 'bcc-avatar-img';
                 img.alt = '';
+                img.decoding = 'sync';
                 img.src = url;
                 f.el.textContent = '';
                 f.el.appendChild(img);
@@ -161,7 +162,8 @@
                 if (!data || !data.ok || !data.url) {
                     throw new Error((data && data.error) || 'Fotoğraf yüklenemedi.');
                 }
-                showImage(data.url);
+                /* Gomulu kopya varsa o: yeni bir istek beklenmeden ayni karede gorunur. */
+                showImage(data.inline || data.url);
                 setStatus('Profil fotoğrafı güncellendi.', false);
             }).catch(function (err) {
                 setStatus((err && err.message) || 'Fotoğraf yüklenemedi.', true);

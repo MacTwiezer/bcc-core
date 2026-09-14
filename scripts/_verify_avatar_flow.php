@@ -293,6 +293,10 @@ $r = yukle($A['jar'], $csrfA, $jpegExif, 'tatil.jpg', 'image/jpeg');
 check('yukleme 200 ve ok', $r['code'] === 200 && !empty($r['json']['ok']), $r['code'] . ' ' . substr($r['body'], 0, 100));
 $url1 = isset($r['json']['url']) ? $r['json']['url'] : '';
 check('adres kullanici id ve surum tasiyor', strpos($url1, '/api/avatar.php?user_id=' . $A['id'] . '&v=') === 0, $url1);
+$inline1 = isset($r['json']['inline']) ? (string) $r['json']['inline'] : '';
+check('yanit gomulu kopyayi da donuyor (arayuz yeni istek beklemeden gosterir)', strpos($inline1, 'data:image/jpeg;base64,') === 0, substr($inline1, 0, 40));
+check('gomulu kopya = diskteki ayiklanmis dosya (GPS\'li ham hali DEGIL)',
+    $inline1 !== '' && base64_decode(substr($inline1, strlen('data:image/jpeg;base64,'))) === file_get_contents($dosyaA));
 check('dosya diskte', diskte_var($dosyaA));
 
 $kayitli = diskte_var($dosyaA) ? file_get_contents($dosyaA) : '';
@@ -356,15 +360,20 @@ check('C silme istegi yalnizca KENDI fotografini hedefliyor — A\'ninki duruyor
 
 echo "\nF) Sayfalarda gorunme\n";
 
+/* 2026-09-14 (ikinci tur): kisinin KENDI avatari artik adresle degil HTML'nin
+   icine gomulu (data: URI) geliyor — yeni sekmede once bos daire gorunmesin
+   diye. Ayrintili dogrulama: scripts/_verify_avatar_everywhere.php. */
 $r = istek($A['jar'], $BASE . '/account.php');
-$imgSay = substr_count($r['body'], '<img class="bcc-avatar-img" src="/api/avatar.php?user_id=' . $A['id'] . '&amp;v=');
-check('hesap sayfasi: hem buyuk yuz hem ust cubuk resmi basiyor (2)', $imgSay === 2, (string) $imgSay);
+$imgSay = substr_count($r['body'], '<img class="bcc-avatar-img" src="data:image/png;base64,');
+check('hesap sayfasi: hem buyuk yuz hem ust cubuk gomulu resim basiyor (2)', $imgSay === 2, (string) $imgSay);
+$gomulu = preg_match('/src="data:image\/png;base64,([^"]+)"/', $r['body'], $gm) ? base64_decode($gm[1]) : '';
+check('gomulu baytlar diskteki (ayiklanmis) dosyayla birebir ayni', $gomulu !== '' && $gomulu === file_get_contents($dosyaA));
 check('"Kaldir" dugmesi gorunur', (bool) preg_match('/data-avatar-remove>Kald/', $r['body']));
 check('ust cubuk dugmesinin erisilebilir adi var', strpos($r['body'], 'aria-label="Hesap menüsü"') !== false);
 check('avatar JS yuklu', strpos($r['body'], 'account-avatar.js') !== false);
 
 $r = istek($A['jar'], $BASE . '/dashboard.php');
-check('ana sayfa ust cubugu da resmi basiyor', strpos($r['body'], 'src="/api/avatar.php?user_id=' . $A['id'] . '&amp;v=') !== false);
+check('ana sayfa ust cubugu da gomulu resmi basiyor', strpos($r['body'], 'src="data:image/png;base64,') !== false);
 
 $r = istek($kisiler['B']['jar'], $BASE . '/account.php');
 check('fotografi olmayan B: bas harf, <img> yok, "Kaldir" gizli',

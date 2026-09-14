@@ -112,7 +112,16 @@
 
             var avatar = document.createElement('div');
             avatar.className = 'ws-collab-avatar gs-share-avatar';
-            avatar.textContent = member.initial;
+            if (member.avatar) {
+                var avatarImg = document.createElement('img');
+                avatarImg.className = 'bcc-avatar-img';
+                avatarImg.alt = '';
+                avatarImg.loading = 'lazy';
+                avatarImg.src = member.avatar;
+                avatar.appendChild(avatarImg);
+            } else {
+                avatar.textContent = member.initial;
+            }
             row.appendChild(avatar);
 
             var info = document.createElement('div');

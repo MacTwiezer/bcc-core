@@ -32,6 +32,7 @@ foreach ($rows as $row) {
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
         'author_name' => $row['full_name'],
+        'author_avatar' => $row['user_id'] !== null ? bcc_avatar_url_for_viewer($row['user_id']) : null,
         'is_own' => $row['user_id'] !== null && (int) $row['user_id'] === $currentUserId,
     );
 }

@@ -2645,6 +2645,11 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
+    /* Resim inene kadar gorunen zemin. Kutunun kendi rengi bas harfli
+       varsayilan avatarla ayni mavi; resim yuklenirken o mavi goruldugunde
+       "once harf, sonra fotograf" gibi algilaniyordu (2026-09-14, olculdu).
+       Notr gri bir yer tutucu olarak okunuyor. */
+    background: var(--bcc-surface-sunken);
 }
 /* Dugmenin tarayici varsayilani dolgusu resmi kucultup ortada kiyi birakirdi. */
 [data-avatar-self] {

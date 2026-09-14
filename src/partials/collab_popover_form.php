@@ -10,7 +10,7 @@
         <button type="button" class="collab-popover-people" data-share-modal-open>
         <div class="collab-popover-avatars">
                         <?php foreach ($shareCollaboratorPreview as $c): ?>
-                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($c['initial'], ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="ws-collab-avatar collab-popover-avatar" title="<?php echo htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo bcc_avatar_inner_for($c['id'], $c['name']); ?></div>
             <?php endforeach; ?>
         </div>
                 <span class="collab-popover-people-label" data-share-people-label>

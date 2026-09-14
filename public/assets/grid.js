@@ -164,7 +164,7 @@
         });
     }
 
-    function renderUserCell(view, display) {
+    function renderUserCell(view, display, avatarUrl) {
         view.textContent = '';
         view.classList.toggle('cell-user-view', display !== '');
 
@@ -175,7 +175,15 @@
         var avatar = document.createElement('span');
         avatar.className = 'ws-collab-avatar cell-user-avatar';
         avatar.setAttribute('aria-hidden', 'true');
-        avatar.textContent = display.charAt(0).toLocaleUpperCase('tr');
+        if (avatarUrl) {
+            var avatarImg = document.createElement('img');
+            avatarImg.className = 'bcc-avatar-img';
+            avatarImg.alt = '';
+            avatarImg.src = avatarUrl;
+            avatar.appendChild(avatarImg);
+        } else {
+            avatar.textContent = display.charAt(0).toLocaleUpperCase('tr');
+        }
 
         var name = document.createElement('span');
         name.className = 'cell-user-name';
@@ -198,7 +206,7 @@
             } else if (td.getAttribute('data-field-type') === 'rating') {
                 updateRatingStars(view, parseInt(data.raw, 10) || 0);
             } else if (td.getAttribute('data-field-type') === 'user') {
-                renderUserCell(view, data.display);
+                renderUserCell(view, data.display, data.display_avatar || null);
             } else {
                 view.textContent = data.display;
             }

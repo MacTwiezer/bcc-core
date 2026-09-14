@@ -371,7 +371,16 @@
 
             var avatar = document.createElement('div');
             avatar.className = 'ws-collab-avatar grid-detail-comment-avatar';
-            avatar.textContent = authorName.charAt(0).toUpperCase();
+            if (c.author_avatar) {
+                var avatarImg = document.createElement('img');
+                avatarImg.className = 'bcc-avatar-img';
+                avatarImg.alt = '';
+                avatarImg.loading = 'lazy';
+                avatarImg.src = c.author_avatar;
+                avatar.appendChild(avatarImg);
+            } else {
+                avatar.textContent = authorName.charAt(0).toUpperCase();
+            }
             item.appendChild(avatar);
 
             var main = document.createElement('div');

@@ -133,7 +133,16 @@
 
                 var avatar = document.createElement('div');
                 avatar.className = 'bcc-trash-item-avatar';
-                avatar.textContent = item.actor_initial;
+                if (item.actor_avatar) {
+                    var avatarImg = document.createElement('img');
+                    avatarImg.className = 'bcc-avatar-img';
+                    avatarImg.alt = '';
+                    avatarImg.loading = 'lazy';
+                    avatarImg.src = item.actor_avatar;
+                    avatar.appendChild(avatarImg);
+                } else {
+                    avatar.textContent = item.actor_initial;
+                }
                 row.appendChild(avatar);
 
                 var body = document.createElement('div');

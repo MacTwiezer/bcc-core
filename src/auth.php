@@ -73,30 +73,124 @@ function bcc_avatar_path($userId)
     return bcc_avatar_storage_dir() . '/u' . (int) $userId;
 }
 
-function bcc_avatar_url($userId)
+/* Istek basina onbellek: grid'in "Olusturan" sutununda ayni kullanici yuzlerce
+   satirda geciyor, her birinde diske stat atilmasin. $refresh yalnizca ayni
+   istek icinde dosyayi yazan/silen uclar icin. */
+function bcc_avatar_url($userId, $refresh = false)
 {
+    static $memo = array();
+
+    $userId = (int) $userId;
+    if (!$refresh && array_key_exists($userId, $memo)) {
+        return $memo[$userId];
+    }
+
     $path = bcc_avatar_path($userId);
     clearstatcache(true, $path);
     $mtime = @filemtime($path);
-    if ($mtime === false) {
-        return null;
-    }
 
     /* Adres surum tasiyor ve sunucu uzun onbellek veriyor; ayni saniyede iki
        yukleme ayni mtime'i uretebildigi icin boyut da surume katiliyor. */
-    return '/api/avatar.php?user_id=' . (int) $userId . '&v=' . $mtime . '-' . (int) @filesize($path);
+    $memo[$userId] = ($mtime === false)
+        ? null
+        : '/api/avatar.php?user_id=' . $userId . '&v=' . $mtime . '-' . (int) @filesize($path);
+
+    return $memo[$userId];
 }
 
-/* Avatar kutusunun ICI: fotograf varsa <img>, yoksa bas harf. Cagiran kutuya
-   erisilebilir ad (aria-label) vermekten sorumlu; resim yalnizca suslemedir. */
+/* Bir baskasinin fotografi icin adres — ama YALNIZCA bakan kisi onu gorebiliyorsa.
+   Aksi halde null doner ve cagiran bas harf basar. Kontrolsuz basilsaydi
+   ekip disindan biri (ornegin ekipten cikarilmis bir "Olusturan") icin tarayici
+   404 alip bos bir kutu gosterirdi. */
+function bcc_avatar_url_for_viewer($userId)
+{
+    $userId = (int) $userId;
+    if ($userId <= 0 || !bcc_can_view_user_avatar($userId)) {
+        return null;
+    }
+
+    return bcc_avatar_url($userId);
+}
+
+/* 2026-09-14 — "yeni sekmede once bos daire, sonra resim" sorunu. Olculdu: resim
+   ayri bir istekle geldigi icin ilk karede cizilmiyor, dugme o an bas harfli
+   varsayilan avatarla AYNI renkte dup duz bir daire olarak gorunuyordu. Kisinin
+   KENDI avatari her sayfanin ust cubugunda oldugu icin baytlari HTML'nin icine
+   gomuluyor: ayri istek yok, resim ilk karede orada. Buyuk dosyalar (uca
+   dogrudan yuklenmis) sayfayi sisirmesin diye esik var; esigin ustunde adres
+   kullanilir. */
+const BCC_AVATAR_INLINE_MAX_BYTES = 48 * 1024;
+
+function bcc_avatar_data_uri($userId)
+{
+    static $memo = array();
+
+    $userId = (int) $userId;
+    if (array_key_exists($userId, $memo)) {
+        return $memo[$userId];
+    }
+
+    $memo[$userId] = null;
+    if (bcc_avatar_url($userId) === null) {
+        return null;
+    }
+
+    $path = bcc_avatar_path($userId);
+    $size = (int) @filesize($path);
+    if ($size <= 0 || $size > BCC_AVATAR_INLINE_MAX_BYTES) {
+        return null;
+    }
+
+    $bytes = @file_get_contents($path);
+    if ($bytes === false || $bytes === '') {
+        return null;
+    }
+
+    /* Tur uzantidan degil icerikten; yalnizca iki izinli tur gomulebilir. */
+    $info = @getimagesizefromstring($bytes);
+    if (!$info || ((int) $info[2] !== IMAGETYPE_JPEG && (int) $info[2] !== IMAGETYPE_PNG)) {
+        return null;
+    }
+
+    $mime = ((int) $info[2] === IMAGETYPE_PNG) ? 'image/png' : 'image/jpeg';
+    $memo[$userId] = 'data:' . $mime . ';base64,' . base64_encode($bytes);
+
+    return $memo[$userId];
+}
+
+function bcc_avatar_img_tag($src)
+{
+    return '<img class="bcc-avatar-img" src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" alt="" decoding="sync">';
+}
+
+/* Kisinin KENDI avatar kutusunun ici: fotograf varsa gomulu <img>, yoksa bas
+   harf. Cagiran kutuya erisilebilir ad (aria-label) vermekten sorumlu. */
 function bcc_avatar_inner_html($user)
 {
-    $url = bcc_avatar_url($user['id']);
-    if ($url !== null) {
-        return '<img class="bcc-avatar-img" src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt="">';
+    $src = bcc_avatar_data_uri($user['id']);
+    if ($src === null) {
+        $src = bcc_avatar_url($user['id']);
+    }
+
+    if ($src !== null) {
+        return bcc_avatar_img_tag($src);
     }
 
     return htmlspecialchars(bcc_user_initial($user), ENT_QUOTES, 'UTF-8');
+}
+
+/* BASKA bir kullanicinin avatar kutusunun ici (ekip listeleri, bildirimler,
+   hucreler). Gomulmuyor: bir listede onlarca kisi olabilir, sayfa sisersin.
+   Adres surumlu ve uzun onbellekli; yuklenene kadar kutu mavi degil notr
+   (bkz. home.css .bcc-avatar-img). */
+function bcc_avatar_inner_for($userId, $name)
+{
+    $url = bcc_avatar_url_for_viewer($userId);
+    if ($url !== null) {
+        return '<img class="bcc-avatar-img" src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt="" loading="lazy">';
+    }
+
+    return htmlspecialchars(bcc_name_initial($name), ENT_QUOTES, 'UTF-8');
 }
 
 /* KVKK ekip izolasyonu: bir kullanicinin fotografini yalnizca kendisi, onunla
@@ -104,6 +198,8 @@ function bcc_avatar_inner_html($user)
    current_user_team_ids() platform adminine zaten butun ekipleri veriyor. */
 function bcc_can_view_user_avatar($targetUserId)
 {
+    static $memo = array();
+
     $me = current_user();
     if ($me === null) {
         return false;
@@ -114,12 +210,17 @@ function bcc_can_view_user_avatar($targetUserId)
         return true;
     }
 
-    $teamIds = array_map('intval', current_user_team_ids());
-    if (!$teamIds) {
-        return false;
+    $key = (int) $me['id'] . ':' . $targetUserId;
+    if (array_key_exists($key, $memo)) {
+        return $memo[$key];
     }
 
-    return (bool) bcc_fetch_column(
+    $teamIds = array_map('intval', current_user_team_ids());
+    if (!$teamIds) {
+        return $memo[$key] = false;
+    }
+
+    return $memo[$key] = (bool) bcc_fetch_column(
         'SELECT 1 FROM team_members WHERE user_id = :uid AND team_id IN (' . implode(',', $teamIds) . ') LIMIT 1',
         array('uid' => $targetUserId)
     );

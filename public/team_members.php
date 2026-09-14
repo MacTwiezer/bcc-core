@@ -187,7 +187,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </td>
                                 <?php endif; ?>
                                 <td class="tm-cell-member">
-                                    <div class="ws-collab-avatar"><?php echo htmlspecialchars(bcc_user_initial($m), ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="ws-collab-avatar"><?php echo bcc_avatar_inner_for($m['id'], $m['full_name']); ?></div>
                                     <div class="ws-collab-info">
                                         <div class="ws-collab-name"><?php echo htmlspecialchars($m['full_name'], ENT_QUOTES, 'UTF-8'); ?><?php echo $isSelf ? ' (siz)' : ''; ?></div>
                                         <div class="ws-collab-email"><?php echo htmlspecialchars($m['email'], ENT_QUOTES, 'UTF-8'); ?></div>

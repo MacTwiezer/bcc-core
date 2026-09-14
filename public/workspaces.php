@@ -335,7 +335,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                             <div class="wsx-collab-grid" id="wsx-collab-grid">
                                 <?php foreach ($collaborators as $c): ?>
                                     <div class="wsx-member">
-                                        <span class="sp-avatar"><?php echo htmlspecialchars(bcc_user_initial($c), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="sp-avatar"><?php echo bcc_avatar_inner_for($c['id'], $c['full_name']); ?></span>
                                         <div class="wsx-member-info">
                                             <div class="wsx-member-name"><?php echo htmlspecialchars($c['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                             <div class="wsx-member-mail"><?php echo htmlspecialchars($c['email'], ENT_QUOTES, 'UTF-8'); ?></div>

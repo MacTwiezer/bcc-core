@@ -34,6 +34,7 @@ if (!empty($teamIds)) {
             'name' => $row['name'],
             'message' => $message,
             'relative_date' => bcc_home_relative_date($row['deleted_at']),
+            'actor_avatar' => $row['deleted_by'] !== null ? bcc_avatar_url_for_viewer($row['deleted_by']) : null,
             'actor_initial' => $row['deleted_by_name'] !== null ? mb_strtoupper(mb_substr($row['deleted_by_name'], 0, 1, 'UTF-8'), 'UTF-8') : '?',
             'can_restore' => isset($roleByTeamId[(int) $row['team_id']]) && $roleByTeamId[(int) $row['team_id']] === 'owner',
         );

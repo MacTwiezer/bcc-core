@@ -103,4 +103,8 @@ try {
 } catch (Throwable $e) {
 }
 
-echo json_encode(array('ok' => true, 'url' => bcc_avatar_url($user['id'])), JSON_UNESCAPED_UNICODE);
+/* Ayni istek icinde dosya yeni yazildi: onbellekteki eski sonuc kullanilmasin.
+   'inline' arayuzun resmi YENI bir istek beklemeden hemen gostermesi icin. */
+$url = bcc_avatar_url($user['id'], true);
+
+echo json_encode(array('ok' => true, 'url' => $url, 'inline' => bcc_avatar_data_uri($user['id'])), JSON_UNESCAPED_UNICODE);

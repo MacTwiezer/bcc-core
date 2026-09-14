@@ -62,7 +62,7 @@ foreach ($notifications as $n) {
                         data-notif-id="<?php echo (int) $n['id']; ?>"
                         data-notif-text="<?php echo htmlspecialchars(mb_strtolower($message, 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
                     >
-                        <div class="home-notif-avatar"><?php echo htmlspecialchars($initial, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="home-notif-avatar"><?php echo ($n['actor_id'] !== null && $n['actor_name'] !== null && $n['actor_name'] !== '') ? bcc_avatar_inner_for($n['actor_id'], $n['actor_name']) : htmlspecialchars($initial, ENT_QUOTES, 'UTF-8'); ?></div>
                         <div class="home-notif-body">
                             <div class="home-notif-message"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
                                                         <div class="home-notif-time"><?php echo htmlspecialchars(bcc_notification_time_text($n['created_at']), ENT_QUOTES, 'UTF-8'); ?></div>

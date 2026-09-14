@@ -83,6 +83,14 @@ if ($field['field_type'] === 'long_text') {
     $response['display'] = bcc_rich_text_grid_html($response['display']);
 }
 
+/* Kullanici alani istemcide yeniden ciziliyor (grid.js renderUserCell): fotograf
+   adresi yalnizca bakan kisi o kullaniciyi gorebiliyorsa gonderilir. */
+if ($field['field_type'] === 'user') {
+    $response['display_avatar'] = ($cellRow['value_number'] !== null && $cellRow['value_number'] !== '')
+        ? bcc_avatar_url_for_viewer($cellRow['value_number'])
+        : null;
+}
+
 if (is_select_field_type($field['field_type'])) {
     $choices = select_choices_from_options($field['options']);
     $choiceColorMap = bcc_build_choice_color_map($choices, select_choice_colors_from_options($field['options']));

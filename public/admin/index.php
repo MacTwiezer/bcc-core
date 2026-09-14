@@ -121,7 +121,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                 <ul class="admin-online-list">
                     <?php foreach ($bccOnlineUsers as $bccOu): ?>
                         <li class="admin-online-item">
-                            <div class="admin-avatar"><?php echo htmlspecialchars(bcc_user_initial($bccOu), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="admin-avatar"><?php echo bcc_avatar_inner_for($bccOu['id'], $bccOu['full_name']); ?></div>
                             <div>
                                 <div class="admin-user-name"><?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <div class="admin-user-email"><?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -169,7 +169,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                         </td>
                         <td>
                             <div class="admin-user-cell">
-                                <div class="admin-avatar"><?php echo htmlspecialchars(bcc_user_initial($u), ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="admin-avatar"><?php echo bcc_avatar_inner_for($uid, $u['full_name']); ?></div>
                                 <div>
                                     <div class="admin-user-name"><?php echo htmlspecialchars($u['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                     <div class="admin-user-email"><?php echo htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -285,7 +285,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                                     </td>
                                     <td>
                                         <div class="admin-user-cell">
-                                            <div class="admin-avatar"><?php echo htmlspecialchars(bcc_user_initial($m), ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div class="admin-avatar"><?php echo bcc_avatar_inner_for($muid, $m['full_name']); ?></div>
                                             <div>
                                                 <div class="admin-user-name"><?php echo htmlspecialchars($m['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                                                 <div class="admin-user-email"><?php echo htmlspecialchars($m['email'], ENT_QUOTES, 'UTF-8'); ?></div>

@@ -52,6 +52,7 @@ echo json_encode(array(
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
         'author_name' => $user['full_name'],
+        'author_avatar' => bcc_avatar_url($user['id']),
         'is_own' => true,
     ),
 ), JSON_UNESCAPED_UNICODE);

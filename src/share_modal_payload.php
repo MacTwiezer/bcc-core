@@ -28,6 +28,7 @@ function bcc_share_modal_payload($teamId, $myRole)
             'name' => $m['full_name'],
             'email' => $m['email'],
             'initial' => bcc_user_initial($m),
+            'avatar' => bcc_avatar_url_for_viewer($m['id']),
             'role' => $m['role'],
             'role_label' => $GLOBALS['BCC_ROLE_LABELS'][$m['role']],
             'is_self' => $isSelf,

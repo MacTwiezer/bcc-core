@@ -124,7 +124,7 @@ function bcc_fetch_notifications($limit = 30)
         return array();
     }
 
-    $sql = "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at, u.full_name AS actor_name
+    $sql = "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at, u.full_name AS actor_name, u.id AS actor_id
             FROM audit_log al
             LEFT JOIN users u ON u.id = al.user_id
             WHERE {$scope['sql']}

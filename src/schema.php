@@ -1525,7 +1525,7 @@ function bcc_render_grid_data_row($record, $rowNum, $visibleFields, $cellsByReco
                     <?php echo bcc_render_linkified_cell($f['field_type'], $displayText); ?>
                 <?php elseif (bcc_is_user_value_field_type($f['field_type'])): ?>
                     <?php   ?>
-                    <?php echo bcc_render_user_cell($displayText); ?>
+                    <?php echo bcc_render_user_cell($displayText, $cellRow !== null ? $cellRow['value_number'] : null); ?>
                 <?php else: ?>
                     <div class="cell-view"><?php echo htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
@@ -1625,7 +1625,10 @@ function bcc_cell_link_href($fieldType, $text)
     return null;
 }
 
-function bcc_render_user_cell($displayText)
+/* "Olusturan", "Son degistiren" ve kullanici alani. Kimlik value_number'da
+   (bcc_cell_row_for_field). Fotograf yalnizca bakan kisi onu gorebiliyorsa
+   basilir — ekipten cikarilmis bir olusturucu icin bas harf kalir. */
+function bcc_render_user_cell($displayText, $userId = null)
 {
     if ($displayText === '') {
         return '<div class="cell-view"></div>';
@@ -1633,7 +1636,7 @@ function bcc_render_user_cell($displayText)
 
     return '<div class="cell-view cell-user-view">'
         . '<span class="ws-collab-avatar cell-user-avatar" aria-hidden="true">'
-        . htmlspecialchars(bcc_name_initial($displayText), ENT_QUOTES, 'UTF-8')
+        . ($userId !== null ? bcc_avatar_inner_for($userId, $displayText) : htmlspecialchars(bcc_name_initial($displayText), ENT_QUOTES, 'UTF-8'))
         . '</span><span class="cell-user-name">'
         . htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8')
         . '</span></div>';

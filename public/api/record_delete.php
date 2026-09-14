@@ -19,30 +19,44 @@ try {
         json_fail(422, 'Silinecek kayıt seçilmedi.');
     }
 
+    /* 2026-09-09 — TOPLU silme artik KALICI DEGIL, cop kutusuna tasiyor.
+       Onceden bu uc nokta "DELETE FROM records" yapiyordu; satir cekmecesinden
+       tek kayit silme ise (record_soft_delete.php) cop kutusuna tasiyordu.
+       Ayni islemin iki farkli sonucu olmasi hem kullanici icin sasirticiydi
+       hem de Slack'in "silindi" bildirimini toplu yolda calistiramiyordu:
+       bildirim, silinen satirin deleted_at ile durmasina dayaniyor.
+
+       DIKKAT — dosya temizligi BILEREK cagrilmiyor: kayit geri yuklenebilir
+       oldugu icin eklerinin de diskte durmasi gerekiyor. Ekleri silme isi cop
+       kutusunun 7 gunluk sureli temizligine ait
+       (trash_records_list.php -> bcc_delete_attachment_files_by_records). */
     $placeholders = implode(',', array_fill(0, count($recordIds), '?'));
     $params = array_merge(array($table['id']), $recordIds);
     $existing = bcc_fetch_all(
-        "SELECT id FROM records WHERE table_id = ? AND id IN ($placeholders)",
+        "SELECT id FROM records WHERE table_id = ? AND deleted_at IS NULL AND id IN ($placeholders)",
         $params
     );
     $validIds = array_map(function ($row) { return (int) $row['id']; }, $existing);
 
     if (empty($validIds)) {
-        json_fail(422, 'Bu kayıtlar bu tabloya ait değil.');
+        json_fail(422, 'Bu kayıtlar bu tabloya ait değil ya da zaten silinmiş.');
     }
 
     bcc_begin_transaction();
 
-    bcc_delete_attachment_files_by_records($validIds);
-
     foreach ($validIds as $id) {
-        log_audit('record.delete', 'record', $id, array('table_id' => $table['id']), $table['team_id']);
+        log_audit('record.delete_soft', 'record', $id, array('table_id' => $table['id'], 'toplu' => true), $table['team_id']);
     }
 
-    $deletePlaceholders = implode(',', array_fill(0, count($validIds), '?'));
+    $user = current_user();
+
+    /* updated_at = updated_at: silme bir "icerik degisikligi" degil, "Son
+       degisiklik zamani" alani kaymasin (record_soft_delete.php ile ayni). */
+    $softPlaceholders = implode(',', array_fill(0, count($validIds), '?'));
     bcc_execute(
-        "DELETE FROM records WHERE table_id = ? AND id IN ($deletePlaceholders)",
-        array_merge(array($table['id']), $validIds)
+        "UPDATE records SET deleted_at = NOW(), deleted_by = ?, updated_at = updated_at
+          WHERE table_id = ? AND deleted_at IS NULL AND id IN ($softPlaceholders)",
+        array_merge(array((int) $user['id'], $table['id']), $validIds)
     );
 
     bcc_commit();

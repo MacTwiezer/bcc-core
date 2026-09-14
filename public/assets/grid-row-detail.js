@@ -667,8 +667,8 @@
                 }
 
                 var confirmMsg = selectedRows.length === 1
-                    ? 'Seçili 1 kaydı silmek istediğinize emin misiniz?'
-                    : 'Seçili ' + selectedRows.length + ' kaydı silmek istediğinize emin misiniz?';
+                    ? 'Seçili 1 kaydı silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.'
+                    : 'Seçili ' + selectedRows.length + ' kaydı silmek istediğinize emin misiniz? Çöp kutusundan geri yükleyebilirsiniz.';
                 window.bcc_confirm({
                     title: 'Kayıtları sil',
                     message: confirmMsg,

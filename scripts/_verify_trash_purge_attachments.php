@@ -77,7 +77,6 @@ check('B) cagri DELETE ten ONCE geliyor (sonra olsaydi okuyacak satir kalmazdi)'
 
 echo "\n--- C) Aile regresyonu: TUM silme yollari temizliyor ---\n";
 foreach (array(
-    'public/api/record_delete.php' => 'bcc_delete_attachment_files_by_records(',
     'public/api/table_delete.php' => 'bcc_delete_attachment_files_by_table(',
     'public/base_tables.php' => 'bcc_delete_attachment_files_by_table(',
     'public/api/table_clear_data.php' => 'bcc_delete_attachment_files_by_table(',
@@ -87,6 +86,19 @@ foreach (array(
     check('C) ' . basename($file) . ' -> ' . rtrim($needle, '('),
         strpos(strip_php_comments(file_get_contents($root . '/' . $file)), $needle) !== false, $file);
 }
+
+/* 2026-09-09 — record_delete.php (kutucukla toplu silme) artik KALICI
+   silmiyor, cop kutusuna tasiyor. Bu yuzden listeden CIKARILDI: kayit geri
+   yuklenebilir oldugu icin eklerinin diskte DURMASI gerekiyor. Ekleri silme
+   isi cop kutusunun sureli temizligine ait (trash_records_list.php).
+   Asagidaki kontrol geri donusu engelliyor. */
+$recDelSrc = strip_php_comments(file_get_contents($root . '/public/api/record_delete.php'));
+
+check('C) toplu silme KALICI silmiyor (cop kutusuna tasiyor)',
+    strpos($recDelSrc, 'DELETE FROM records') === false
+    && strpos($recDelSrc, 'deleted_at = NOW()') !== false);
+check('C) toplu silme ek dosyalarina DOKUNMUYOR (geri yukleme icin sart)',
+    strpos($recDelSrc, 'bcc_delete_attachment_files_by_records(') === false);
 
 $dir = bcc_attachment_storage_dir();
 $wipe = function () {

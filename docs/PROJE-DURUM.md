@@ -641,6 +641,18 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   ayrı kaydırma kutusu vardı, kısa olan iki satırlık yarığa sıkışıyordu. Tek
   kaydırma (`.bcc-trash-body`) + yapışkan bölüm başlıkları. Test:
   `_verify_trash_modal_layout.php` 23/23.
+- **Profil fotoğrafı yükleme (2026-09-14).** Hesap sayfasında büyük yüze
+  tıklayıp fotoğraf yüklenir; sağ üstteki hesap düğmesinde de görünür,
+  "Kaldır" ile baş harfe döner. **GD kurulu değil** (`;extension=gd2`), bu
+  yüzden tarayıcı resmi tuvalde 256×256 JPEG'e kırpıp yeniden kodluyor (EXIF/GPS
+  silinir); sunucu istemciye güvenmeden türü içerikten ölçüyor, JPEG/PNG meta
+  verisini saf PHP ile kendisi de ayıklıyor ve yeniden doğruluyor. Dosya
+  `storage/avatars/u<id>` (web kökü dışı), **şema değişikliği yok**. Sunum
+  `api/avatar.php` üzerinden **ekip izolasyonlu**: kendisi / ortak ekip /
+  platform admini; yetkisiz ile "yok" aynı 404. Test:
+  `_verify_avatar_flow.php` 62/62 (gerçek HTTP, 3 kullanıcı/2 ekip) + ayrı test
+  kullanıcısıyla tarayıcıda uçtan uca + `test_isolation` 6/6. Deploy notu:
+  `docs/CANLIYA-ALMA.md` §3.4.
 
 **Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
 "Açık maddeler"de):
@@ -649,6 +661,10 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 - Çöp kutusundan geri yüklenen kartta **yıldız** ve **`data-nav-href`**
   ("Tabloya git", "Duyuru") düğmeleri çalışmıyor — silme düğmesindeki aynı
   "tek tek bağlama" deseni (`home.js:14`).
+- Profil fotoğrafı yalnızca kişinin **kendi** ekranlarında görünüyor; başka
+  kullanıcıların baş harfle gösterildiği yerler (ekip üyeleri, paylaşım
+  penceresi, bildirimler, çöp kutusu satırları, "Oluşturan" sütunu) hâlâ baş
+  harf. `api/avatar.php` buna hazır (`bcc_avatar_url($userId)`).
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 

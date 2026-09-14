@@ -7,7 +7,7 @@ cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
-08-09 Eylül kodunun commit edilmesi).
+profil fotoğrafı, 08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -17,7 +17,7 @@ kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **12 dosya** (8 değiştirildi, 4 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
+| **2026-09-14** | **20 dosya** (11 değiştirildi, 9 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
 
 ---
 
@@ -117,40 +117,50 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 ## 3b. Kod dosyaları — 2026-09-14
 
-Günün beş kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
+Günün altı kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
 metin kayması**, **kanban'a ayrılma pingi**, **base silince sayfada kalan
-izlerin temizlenmesi** ve **çöp kutusundaki "Base'ler" bölümünün sıkışması**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+izlerin temizlenmesi**, **çöp kutusundaki "Base'ler" bölümünün sıkışması** ve
+**profil fotoğrafı yükleme**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
 edilmesi) **hiçbir dosyayı değiştirmedi**.
 
-### 3b.1 Değiştirilen — 8 dosya
+### 3b.1 Değiştirilen — 11 dosya
 
 | Dosya | Satır | Ne değişti |
 |---|---|---|
 | `public/assets/grid-cell-select.js` | +34 | Yeni `wrapCell(row, step)` yardımcısı (`cellAt`'in hemen altına); `keydown` dinleyicisinde `ARROWS` bloğunun **ÖNÜNE** `Tab` dalı. `Tab` bir sağa, `Shift+Tab` bir sola; satır sonunda alt satırın ilk, satır başında üst satırın son hücresine sarmalıyor; tablonun iki ucunda **yerinde kalıyor**. Dal `keyboardBelongsToGrid()` guard'ının ALTINDA, yani hücre düzenleme modundayken Tab'a dokunulmuyor |
-| `public/assets/home.css` | +25 / -2 | **İki ayrı iş.** **(1) §4 — uyarı metni:** yeni `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor. **(2) §7 — çöp kutusu düzeni:** yeni `.bcc-trash-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), kaydırma artık orada. `.bcc-trash-list`'ten `overflow-y` **kaldırıldı**: iki ayrı kaydırma kutusu, kayıt sayısı base sayısından fazlayken "Base'ler" bölümünü iki satırlık bir yarığa sıkıştırıyordu. Bölüm başlıkları yapışkan (zemin + `z-index` şart; üst boşluk `margin` değil `padding`). Modal `max-height` 0.70 → 0.82 |
+| `public/assets/home.css` | +41 / -2 | **Üç ayrı iş.** **(1) §4 — uyarı metni:** yeni `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor. **(2) §7 — çöp kutusu düzeni:** yeni `.bcc-trash-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), kaydırma artık orada. `.bcc-trash-list`'ten `overflow-y` **kaldırıldı**: iki ayrı kaydırma kutusu, kayıt sayısı base sayısından fazlayken "Base'ler" bölümünü iki satırlık bir yarığa sıkıştırıyordu. Bölüm başlıkları yapışkan (zemin + `z-index` şart; üst boşluk `margin` değil `padding`). Modal `max-height` 0.70 → 0.82 **(3) §8 — profil fotoğrafı:** `.bcc-avatar-img` ve `[data-avatar-self]` dolgu sıfırlama; bu dosya üç kabukta da (ana sayfa, grid, arayüz) yüklü olduğu için buraya |
 | `public/assets/confirm-modal.js` | 1 satır | `:43` — uyarı paragrafı `home-modal-label` → `home-modal-message`. `<p>`'nin tarayıcıdan miras aldığı `margin-top: 1em` sıfırlanmadığı için metin kutunun içinde aşağı kayıp düğmelere yapışıyordu |
 | `public/grid.php` | 2 satır | `:1688` tablo silme özeti, `:1709` yapıştırma onayı özeti — aynı sınıf değişikliği |
 | `public/kanban.php` | +1 | `:263` — `grid-slack-flush.js` etiketi. Sunucu tarafı boşaltma (`:73`) yalnızca SONRAKI sayfa yüklemesinde çalışıyordu; "çıkınca hemen gönder" tetikleyicisi kanban'da yoktu. Kanban `bcc_post` kullandığı için sarmalanan `window.fetch`'in devreye girdiği ayrıca tarayıcıda ölçüldü |
 | `scripts/_verify_slack_integration.php` | +13 | İki sayfanın da ayrılma pingini yüklediği (döngüyle — üçüncü sayfa eklenirse aynı yerden bakılır) ve kanban'ın hücre yazma yolunun `cell_update.php` olduğu. A+B 19 → 22 |
 | `public/assets/home.js` | +55 / -12 | Base silme dinleyicisi **delegasyona** çevrildi — geri yüklenen kart `innerHTML` ile enjekte edildiği için (`account-menu.js:108`) oradaki "Sil" hiç çalışmıyordu. Yeni `baseKartiniTemizle()`: grup başlığındaki "N base" sayacı, boşalan grup başlığı+ızgarası ve sol paneldeki yıldızlı satırı. Izgara yalnızca içinde hiç kart kalmadıysa siliniyor — gruplanmamış düzende "Yeni Base Oluştur" karosu aynı ızgarada (`schema.php:3386`) |
-| `src/partials/account_menu.php` | +4 / -2 | Çöp kutusundaki iki bölüm tek bir `.bcc-trash-body` sarmalayıcısına alındı. JS kancaları (`data-trash-list`, `data-trash-record-list`) aynen duruyor — `account-menu.js` sarmalayıcıyı hiç aramıyor, değişen yalnızca düzen |
+| `src/partials/account_menu.php` | +5 / -3 | **İki ayrı iş.** §7 — çöp kutusundaki iki bölüm tek bir `.bcc-trash-body` sarmalayıcısına alındı; JS kancaları (`data-trash-list`, `data-trash-record-list`) aynen duruyor. §8 — hesap düğmesi `bcc_avatar_inner_html()` ile fotoğrafı basıyor; `data-avatar-self`, `data-initial`, `aria-label="Hesap menüsü"` (resim `alt=""` olduğu için düğmenin adı kaybolmasın) |
+| `src/auth.php` | +186 | Profil fotoğrafı yardımcıları: `bcc_avatar_storage_dir/path/url()`, `bcc_avatar_inner_html()`, `bcc_can_view_user_avatar()` (kendisi / ortak ekip / platform admini), saf PHP `bcc_avatar_strip_jpeg()` (APP0/APP2/APP14 tutulur, diğer APPn ve COM atılır) ve `bcc_avatar_strip_png()` (metin/EXIF/zaman/animasyon parçaları atılır, bilinmeyen kritik parça → red). GD kurulu olmadığı için |
+| `public/account.php` | +13 / -1 | Büyük avatar düğmeye dönüştü (tıklayınca dosya seçici), her zaman görünür kamera rozeti, gizli dosya girdisi, "Kaldır", durum satırı, `account-avatar.js` etiketi |
+| `public/assets/account.css` | +87 | Fotoğraf düzenleme arayüzü: üzerine gelince kararma, kamera rozeti, meşgul durumu, "Kaldır" bağlantısı, durum/hata satırı |
 
-### 3b.2 Yeni — 4 dosya
+### 3b.2 Yeni — 9 dosya
 
 | Dosya | Ne |
 |---|---|
 | `scripts/_verify_grid_tab_nav.php` | 18 kontrol. A) Tab dalı + `preventDefault` + `shiftKey` yönü + sarmalama, B) guard sırası ve `Escape` çıkış yolu, C) ok tuşları / `Ctrl+A` bozulmadı, D) `grid.php` betiği gerçekten basıyor. JS yorumlarını ayıklayarak tarıyor (09-09'da dört kez düşülen tuzak) |
+| `public/api/avatar_upload.php` | Yükleme. Türü içerikten ölçer (`finfo_buffer`), yalnızca PNG/JPEG; meta veriyi ayıklar, `getimagesizefromstring` ile yeniden doğrular; 2MB ve 16-4096px sınırı; geçici dosya + `rename` ile atomik yazar |
+| `public/api/avatar_delete.php` | Kişinin **kendi** fotoğrafını siler; fotoğraf yoksa da 200 |
+| `public/api/avatar.php` | Sunum. `require_login` + ekip izolasyonu; yetkisiz ile "yok" aynı 404. Tür diskten yeniden ölçülür; `nosniff`, `CSP: default-src 'none'; sandbox`, `Cache-Control: private` |
+| `public/assets/account-avatar.js` | Tuvalde ortadan kare kırpma + 256px JPEG (EXIF'i de siler), yükleme, büyük yüz ve üst çubuk düğmesini yenilemeden güncelleme, onaylı kaldırma |
+| `scripts/_verify_avatar_flow.php` | 62 kontrol, gerçek HTTP. Kimlik/CSRF, 7 red yolu, JPEG EXIF/GPS + PNG metin ayıklama, sunum başlıkları, **ekip izolasyonu** (aynı ekip 200 / başka ekip 404), sayfalarda görünme, kaldırma, denetim kaydı, kirlilik. Test JPEG'i headless tarayıcıda `canvas.toDataURL` ile üretilip gömüldü |
 | `scripts/_verify_trash_modal_layout.php` | 23 kontrol. A) iki listenin de tek kaydırma kutusunun içinde olduğu, B) listelerde `overflow` kalmadığı (asıl kusur), C) yapışkan başlığın zemini/`z-index`/`padding`'i, D) modalin flex düzeni ve `--bcc-vh`, E) `account-menu.js`'in kancalarının bozulmadığı |
 | `scripts/_verify_home_base_delete.php` | 21 kontrol. A) delegasyon ve `preventDefault`, B) sayaç/boş grup/yıldızlı satır temizliği + oluşturma karosu koruması, C) vazgeçme ve hata yolları, D) JS in dayandığı sunucu işaretlemesi hâlâ yerinde mi (sınıf adı değişirse özellik sessizce bozulmak yerine test düşer) |
 | `scripts/_verify_modal_message_style.php` | 13 kontrol. A) margin sıfırlaması + punto + satır aralığı + renk, B) `.home-modal-label`'ın bozulmadığı (altı form onu kullanıyor), C) üç uyarı paragrafının yeni sınıfa geçtiği, D) `.home-modal-form` kullanan altı dosyada `<p class="home-modal-label">` kalmadığı — aynı hata bir daha sessizce girmesin |
 
-### 3b.3 Belgeler — 3 dosya
+### 3b.3 Belgeler — 4 dosya
 
 | Dosya | Ne |
 |---|---|
 | `docs/gunluk/2026-09-14.md` | **YENİ** — günün notu |
 | `docs/PROJE-DURUM.md` | §5 "Biten İşler"e 08-14 Eylül turunun özeti — 08-09 Eylül işleri + 14 Eylül'ün beş arayüz işi (Tab, uyarı metni, kanban pingi, base silme temizliği, çöp kutusu düzeni); kapanan kanban maddesi çıkarıldı, yeni açık madde eklendi |
 | `docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` | Bu dosya — kapsam satırı, §1 özeti ve bu bölüm |
+| `docs/CANLIYA-ALMA.md` | §3.4 — `storage/avatars` izinleri, fotoğrafların yalnızca bu klasörde durduğu (storage yedeğine dahil edilmeli), "şema değişikliği yok" notu; §7 kontrol listesine profil fotoğrafı maddesi |
 
 ### 3b.4 Commit'ler
 
@@ -160,17 +170,37 @@ edilmesi) **hiçbir dosyayı değiştirmedi**.
 | `23d27d5` | Toplu silme → çöp kutusu (3 dosya) — aynı şekilde |
 | `cbcae46` | Hata sayfası hizalaması (3 dosya) — aynı şekilde |
 | `7982efe` | Günlük notlar + envanter + PROJE-DURUM (5 dosya) |
-| `7447bac` | **Bugün yazılan tek kod:** Tab gezinmesi (3 dosya) |
+| `7447bac` | Tab gezinmesi (3 dosya) |
+| `6cabb20`, `07ecf25`, `a116493` | Belge güncellemeleri (günlük, envanter, PROJE-DURUM) |
+| `da7568d` | Uyarı kutularında metin kayması (6 dosya) |
+| `f1f0149` | Kanban'a ayrılma pingi (4 dosya) |
+| `a003544` | Base silince sayfada kalan izler (4 dosya) |
+| `cfcb35d` | Çöp kutusu "Base'ler" düzeni (5 dosya) |
+| `aa5530f` | Profil fotoğrafı (11 dosya: kod, test, `CANLIYA-ALMA.md`) — notları ayrı commit |
 
 `git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları
 göstermez). Gerçek webhook URL'i hiçbir dosyaya sızmadı.
 
-### 3b.5 Veritabanı — 2026-09-14 OTURUMUNDAN hiçbir değişiklik YOK
+### 3b.5 Veritabanı — 2026-09-14: şema DEĞİŞMEDİ, kalıcı veri bırakılmadı
 
-Ne DDL ne veri. Oturumun bütün sorguları `SELECT`: `audit_log`, `records`,
+**DDL yok.** Teşhis sorguları `SELECT`: `audit_log`, `records`,
 `cell_values`, `slack_webhooks`, `slack_watched_fields`, `bases`, `teams`,
 `user_starred_bases`, `team_members`.
+
+**Profil fotoğrafı için de kolon eklenmedi:** fotoğraf `storage/avatars/u<id>`
+dosyasında durur, varlığı = fotoğrafın varlığı. Özelliğin veritabanına kalıcı
+yazdığı tek şey `audit_log` satırlarıdır (`user.avatar_updated` /
+`user.avatar_removed`).
+
+**Testlerin yazıp sildiği** (kalıcı iz yok):
+
+| Test | Geçici olarak yazılan | Temizlik |
+|---|---|---|
+| `_verify_avatar_flow.php` | 3 kullanıcı, 2 ekip, 3 üyelik, giriş denemeleri, denetim satırları, fotoğraf dosyaları | Betik siliyor ve sayıların öncesiyle aynı olduğunu **kendisi doğruluyor** |
+| Tarayıcı testi | 1 kullanıcı (id 7370), 1 ekip (id 2303), üyelik, giriş/denetim satırları, fotoğraf dosyası | Elle silindi; önce id ile e-postanın eşleştiği doğrulandı. Sonrası: kullanıcı 0, ekip 0, klasör yok |
+
+Gün sonu: `users=6 teams=4 bases=4 records=162 notify_sent=2421`.
 
 Veritabanı o gün yine de iki kez değişti — ikisi de **kullanıcının kendi
 uygulama kullanımından**, oturumun yaptığı bir şey değil:

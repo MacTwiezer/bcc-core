@@ -663,14 +663,20 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
   yorumlar, çöp kutusu, admin paneli); her yerde bakan kişinin görme yetkisi
   kontrol ediliyor, göremiyorsa baş harf. Test: `_verify_avatar_everywhere.php`
   46/46 + tarayıcıda görsel kontrol + 21 betiklik regresyon.
+- **Geri yüklenen kartta yıldız ve "Aç" (2026-09-14).** Çöp kutusundan geri
+  yüklenen kart sonradan eklendiği için düğmelerine dinleyici bağlanmıyordu;
+  kart bir `<a>` olduğundan tıklama karta düşüp yanlış sayfaya gidiyordu
+  (yıldız → base, Duyuru → base; ölçüldü). Yıldız ve `data-nav-href` belge
+  seviyesine taşındı, "…" menüsü `wireMoreMenu()` + `bcc:base-card-inserted`
+  olayıyla bağlanıyor. Test: `_verify_home_card_actions.php` 26/26 + gerçek
+  uygulamada geri yükle → yıldızla (DB'ye yazıldı) → menü aç.
 
 **Bu turdan kalan açık maddeler** (gerekçeleri `docs/gunluk/2026-09-14.md`
 "Açık maddeler"de):
 - Hücre bildirimi yalnızca **tek tabloda** yapılandırılmış
   (`slack_watched_fields` → tablo 2992).
-- Çöp kutusundan geri yüklenen kartta **yıldız** ve **`data-nav-href`**
-  ("Tabloya git", "Duyuru") düğmeleri çalışmıyor — silme düğmesindeki aynı
-  "tek tek bağlama" deseni (`home.js:14`).
+- Geri yüklemede grup sayacı ("N base") güncellenmiyor — silme için çözülen
+  sorunun tersi (günlük 2026-09-14 §11, açık madde F).
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 

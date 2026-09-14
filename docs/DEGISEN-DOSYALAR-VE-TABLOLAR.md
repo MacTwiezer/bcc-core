@@ -7,7 +7,8 @@ cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
-profil fotoğrafı ve her yere bağlanması, 08-09 Eylül kodunun commit edilmesi).
+profil fotoğrafı ve her yere bağlanması, geri yüklenen kart düğmeleri, 08-09 Eylül
+kodunun commit edilmesi).
 
 ---
 
@@ -17,7 +18,7 @@ profil fotoğrafı ve her yere bağlanması, 08-09 Eylül kodunun commit edilmes
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **39 dosya** (29 değiştirildi, 10 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
+| **2026-09-14** | **40 dosya** (29 değiştirildi, 11 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
 
 ---
 
@@ -169,6 +170,16 @@ Günlük §9'da tam tablo var; özet:
 
 **Veritabanı:** şema değişmedi; tek değişen sorgu salt-okunur (bildirimlere `u.id AS actor_id`).
 
+### 3b.2b §11 — geri yüklenen kartta yıldız ve "Aç" (2 dosya değişti, 1 yeni)
+
+| Dosya | Ne |
+|---|---|
+| `public/assets/home.js` | Yıldız ve `data-nav-href` dinleyicileri belge seviyesinde (`handleStarClick`); "…" menüsü `wireMoreMenu()` ile tekrar çağrılabilir ve `data-menu-wired` ile çift bağlamaya karşı korumalı; `bcc:base-card-inserted` dinleyicisi. Eskiden sonradan eklenen kartta tıklama karta düşüp kullanıcıyı yanlış sayfaya götürüyordu (yıldız → base, Duyuru → base). `git diff -w` +47/-14 |
+| `public/assets/account-menu.js` | `insertRestoredCard()` kartı ekledikten sonra `bcc:base-card-inserted` yayınlıyor (+5) |
+| `scripts/_verify_home_card_actions.php` | **YENİ**, 26 kontrol |
+
+**Veritabanı:** değişmedi.
+
 ### 3b.3 Belgeler — 4 dosya
 
 | Dosya | Ne |
@@ -194,6 +205,7 @@ Günlük §9'da tam tablo var; özet:
 | `cfcb35d` | Çöp kutusu "Base'ler" düzeni (5 dosya) |
 | `aa5530f` | Profil fotoğrafı (11 dosya: kod, test, `CANLIYA-ALMA.md`) — notları ayrı commit |
 | `37044e9` | Fotoğraf her yerde + kendi avatarın HTML'ye gömülü (24 dosya) — notları ayrı commit |
+| `3a9b861` | Geri yüklenen kartta yıldız ve "Aç" düğmeleri (3 dosya) — notları ayrı commit |
 
 `git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`
 ve sır taraması yapıldı (takip edilmeyen dosyalar ayrıca — `git diff` onları

@@ -1251,7 +1251,14 @@ function cell_display_text($fieldType, $cellRow, $usersById = array(), $options 
                 return '';
             }
             $userId = (int) $cellRow['value_number'];
-            return isset($usersById[$userId]) ? $usersById[$userId] : '';
+
+            /* 2026-09-14 — kullanici karari (a): ekipten cikarilmis ya da
+               pasiflestirilmis bir uyenin adi da gosterilir. $usersById yalnizca
+               ekibin AKTIF uyelerini tasiyor; eskiden bu hucre bos kaliyordu.
+               "Olusturan"daki ayni duzeltmeyle (2d8dd65) ayni yedek.
+               Yazma tarafindaki uyelik dogrulamasi (normalize_cell_value) degismedi:
+               ekipte olmayan biri bu alana YENIDEN secilemez. */
+            return isset($usersById[$userId]) ? $usersById[$userId] : bcc_actor_name_by_id($userId);
 
         case 'created_time':
         case 'last_modified_time':

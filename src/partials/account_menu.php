@@ -75,13 +75,15 @@ $p = $accountMenuPrefix;
             </button>
         </div>
         <p class="bcc-trash-desc">Takımlarınızda silinen base'ler ve kayıtlar burada listelenir (kayıtlar 7 gün sonra kalıcı silinir).</p>
-        <h3 class="bcc-trash-section-title">Base'ler</h3>
-        <div class="bcc-trash-list" data-trash-list>
-            <div class="bcc-trash-empty" data-trash-empty hidden>Çöp kutusu boş.</div>
-        </div>
-        <h3 class="bcc-trash-section-title">Kayıtlar</h3>
-        <div class="bcc-trash-list" data-trash-record-list>
-            <div class="bcc-trash-empty" data-trash-record-empty hidden>Çöp kutusu boş.</div>
+        <div class="bcc-trash-body">
+            <h3 class="bcc-trash-section-title">Base'ler</h3>
+            <div class="bcc-trash-list" data-trash-list>
+                <div class="bcc-trash-empty" data-trash-empty hidden>Çöp kutusu boş.</div>
+            </div>
+            <h3 class="bcc-trash-section-title">Kayıtlar</h3>
+            <div class="bcc-trash-list" data-trash-record-list>
+                <div class="bcc-trash-empty" data-trash-record-empty hidden>Çöp kutusu boş.</div>
+            </div>
         </div>
     </div>
 </div>

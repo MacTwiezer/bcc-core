@@ -6,8 +6,8 @@ sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
 cevabı.
 
 Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
-kayması, kanban ayrılma pingi, base silme temizliği, 08-09 Eylül kodunun
-commit edilmesi).
+kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
+08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -17,7 +17,7 @@ commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **10 dosya** (7 değiştirildi, 3 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
+| **2026-09-14** | **12 dosya** (8 değiştirildi, 4 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
 
 ---
 
@@ -117,28 +117,30 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 ## 3b. Kod dosyaları — 2026-09-14
 
-Günün dört kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
-metin kayması**, **kanban'a ayrılma pingi** ve **base silince sayfada kalan
-izlerin temizlenmesi**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+Günün beş kod işi: gridde **Tab ile hücre gezinmesi**, **uyarı kutularındaki
+metin kayması**, **kanban'a ayrılma pingi**, **base silince sayfada kalan
+izlerin temizlenmesi** ve **çöp kutusundaki "Base'ler" bölümünün sıkışması**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
 edilmesi) **hiçbir dosyayı değiştirmedi**.
 
-### 3b.1 Değiştirilen — 7 dosya
+### 3b.1 Değiştirilen — 8 dosya
 
 | Dosya | Satır | Ne değişti |
 |---|---|---|
 | `public/assets/grid-cell-select.js` | +34 | Yeni `wrapCell(row, step)` yardımcısı (`cellAt`'in hemen altına); `keydown` dinleyicisinde `ARROWS` bloğunun **ÖNÜNE** `Tab` dalı. `Tab` bir sağa, `Shift+Tab` bir sola; satır sonunda alt satırın ilk, satır başında üst satırın son hücresine sarmalıyor; tablonun iki ucunda **yerinde kalıyor**. Dal `keyboardBelongsToGrid()` guard'ının ALTINDA, yani hücre düzenleme modundayken Tab'a dokunulmuyor |
-| `public/assets/home.css` | +7 | **YENİ** `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor |
+| `public/assets/home.css` | +25 / -2 | **İki ayrı iş.** **(1) §4 — uyarı metni:** yeni `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor. **(2) §7 — çöp kutusu düzeni:** yeni `.bcc-trash-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), kaydırma artık orada. `.bcc-trash-list`'ten `overflow-y` **kaldırıldı**: iki ayrı kaydırma kutusu, kayıt sayısı base sayısından fazlayken "Base'ler" bölümünü iki satırlık bir yarığa sıkıştırıyordu. Bölüm başlıkları yapışkan (zemin + `z-index` şart; üst boşluk `margin` değil `padding`). Modal `max-height` 0.70 → 0.82 |
 | `public/assets/confirm-modal.js` | 1 satır | `:43` — uyarı paragrafı `home-modal-label` → `home-modal-message`. `<p>`'nin tarayıcıdan miras aldığı `margin-top: 1em` sıfırlanmadığı için metin kutunun içinde aşağı kayıp düğmelere yapışıyordu |
 | `public/grid.php` | 2 satır | `:1688` tablo silme özeti, `:1709` yapıştırma onayı özeti — aynı sınıf değişikliği |
 | `public/kanban.php` | +1 | `:263` — `grid-slack-flush.js` etiketi. Sunucu tarafı boşaltma (`:73`) yalnızca SONRAKI sayfa yüklemesinde çalışıyordu; "çıkınca hemen gönder" tetikleyicisi kanban'da yoktu. Kanban `bcc_post` kullandığı için sarmalanan `window.fetch`'in devreye girdiği ayrıca tarayıcıda ölçüldü |
 | `scripts/_verify_slack_integration.php` | +13 | İki sayfanın da ayrılma pingini yüklediği (döngüyle — üçüncü sayfa eklenirse aynı yerden bakılır) ve kanban'ın hücre yazma yolunun `cell_update.php` olduğu. A+B 19 → 22 |
 | `public/assets/home.js` | +55 / -12 | Base silme dinleyicisi **delegasyona** çevrildi — geri yüklenen kart `innerHTML` ile enjekte edildiği için (`account-menu.js:108`) oradaki "Sil" hiç çalışmıyordu. Yeni `baseKartiniTemizle()`: grup başlığındaki "N base" sayacı, boşalan grup başlığı+ızgarası ve sol paneldeki yıldızlı satırı. Izgara yalnızca içinde hiç kart kalmadıysa siliniyor — gruplanmamış düzende "Yeni Base Oluştur" karosu aynı ızgarada (`schema.php:3386`) |
+| `src/partials/account_menu.php` | +4 / -2 | Çöp kutusundaki iki bölüm tek bir `.bcc-trash-body` sarmalayıcısına alındı. JS kancaları (`data-trash-list`, `data-trash-record-list`) aynen duruyor — `account-menu.js` sarmalayıcıyı hiç aramıyor, değişen yalnızca düzen |
 
-### 3b.2 Yeni — 3 dosya
+### 3b.2 Yeni — 4 dosya
 
 | Dosya | Ne |
 |---|---|
 | `scripts/_verify_grid_tab_nav.php` | 18 kontrol. A) Tab dalı + `preventDefault` + `shiftKey` yönü + sarmalama, B) guard sırası ve `Escape` çıkış yolu, C) ok tuşları / `Ctrl+A` bozulmadı, D) `grid.php` betiği gerçekten basıyor. JS yorumlarını ayıklayarak tarıyor (09-09'da dört kez düşülen tuzak) |
+| `scripts/_verify_trash_modal_layout.php` | 23 kontrol. A) iki listenin de tek kaydırma kutusunun içinde olduğu, B) listelerde `overflow` kalmadığı (asıl kusur), C) yapışkan başlığın zemini/`z-index`/`padding`'i, D) modalin flex düzeni ve `--bcc-vh`, E) `account-menu.js`'in kancalarının bozulmadığı |
 | `scripts/_verify_home_base_delete.php` | 21 kontrol. A) delegasyon ve `preventDefault`, B) sayaç/boş grup/yıldızlı satır temizliği + oluşturma karosu koruması, C) vazgeçme ve hata yolları, D) JS in dayandığı sunucu işaretlemesi hâlâ yerinde mi (sınıf adı değişirse özellik sessizce bozulmak yerine test düşer) |
 | `scripts/_verify_modal_message_style.php` | 13 kontrol. A) margin sıfırlaması + punto + satır aralığı + renk, B) `.home-modal-label`'ın bozulmadığı (altı form onu kullanıyor), C) üç uyarı paragrafının yeni sınıfa geçtiği, D) `.home-modal-form` kullanan altı dosyada `<p class="home-modal-label">` kalmadığı — aynı hata bir daha sessizce girmesin |
 

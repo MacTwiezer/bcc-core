@@ -182,12 +182,17 @@ kullanıcılar hesaplarını etkinleştiremez.
 ### 3.4 Dosya izinleri
 
 ```bash
-mkdir -p storage/attachments storage/mail storage/backups
+mkdir -p storage/attachments storage/avatars storage/mail storage/backups
 chown -R www-data:www-data storage/       # Apache hangi kullanıcı ile çalışıyorsa
 chmod -R 755 storage/
 ```
 
 `storage/` **yazılabilir** olmalı ve **web kökü dışında** kalmalı.
+
+`storage/avatars/` profil fotoğraflarını tutar (2026-09-14). İlk yüklemede
+kendiliğinden açılır, ama yukarıdaki `chown` onu da kapsamalı. Fotoğraflar
+veritabanında değil **yalnızca bu klasörde** durur (dosya adı `u<kullanıcı id>`),
+yani storage yedeği (§6) onları da içermeli. **Şema değişikliği yok.**
 
 ### 3.5 PHP ayarları
 
@@ -316,6 +321,7 @@ Yedeklerin **başka bir makinede** de kopyası olmalı.
 - [ ] Kayıt ol → doğrulama maili geliyor, bağlantı **canlı adrese** gidiyor (localhost değil)
 - [ ] Giriş yapılıyor, tablo açılıyor, satır eklenip düzenlenebiliyor
 - [ ] Dosya eki yükleniyor ve indiriliyor (`storage/` izinleri + `fileinfo` eklentisi doğru)
+- [ ] Hesap sayfasından profil fotoğrafı yükleniyor, sağ üstte görünüyor, "Kaldır" çalışıyor
 - [ ] Excel dışa aktarma çalışıyor (`zip` eklentisi var)
 - [ ] Excel **içe** aktarma çalışıyor (birkaç satırlık deneme dosyasıyla)
 - [ ] `https://adres/config/database.local.php` **404/403 veriyor** (DocumentRoot doğru)

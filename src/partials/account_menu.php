@@ -4,7 +4,7 @@ $accountMenuInitial = bcc_user_initial($accountMenuUser);
 $p = $accountMenuPrefix;
 ?>
 <div class="<?php echo $p; ?>-account">
-    <button type="button" class="<?php echo $p; ?>-avatar" id="<?php echo $p; ?>-account-toggle" data-account-toggle><?php echo htmlspecialchars($accountMenuInitial, ENT_QUOTES, 'UTF-8'); ?></button>
+    <button type="button" class="<?php echo $p; ?>-avatar" id="<?php echo $p; ?>-account-toggle" data-account-toggle data-avatar-self data-initial="<?php echo htmlspecialchars($accountMenuInitial, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Hesap menüsü"><?php echo bcc_avatar_inner_html($accountMenuUser); ?></button>
     <div class="<?php echo $p; ?>-account-menu" id="<?php echo $p; ?>-account-menu" data-account-menu>
         <div data-account-page="main">
             <div class="<?php echo $p; ?>-account-info">

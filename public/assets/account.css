@@ -463,3 +463,89 @@
     background: var(--bcc-surface-hover);
 }
 .sp-page .ac-link:hover .ac-link-arrow { opacity: 1; }
+/* Profil fotografi duzenleme (2026-09-14). Buyuk yuzun kendisi bir dugme:
+   tiklayinca dosya secici acilir. Kamera rozeti her zaman gorunur, cunku
+   dokunmatik ekranda "ustune gelince belirir" diye bir durum yok. */
+.sp-page .ac-avatar {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+.sp-page .ac-avatar-btn {
+    position: relative;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    overflow: visible;
+}
+.sp-page .ac-avatar-face {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sp-page .ac-avatar-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+.sp-page .ac-avatar-btn:hover::after,
+.sp-page .ac-avatar-btn:focus-visible::after {
+    opacity: 1;
+}
+.sp-page .ac-avatar-btn:focus-visible {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 3px;
+}
+.sp-page .ac-avatar-cam {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    z-index: 1;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    border: 1px solid var(--bcc-border-strong);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.sp-page .ac-avatar.is-busy .ac-avatar-btn {
+    cursor: progress;
+    opacity: 0.6;
+}
+.sp-page .ac-avatar-remove {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.76rem;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+.sp-page .ac-avatar-remove:hover {
+    color: var(--bcc-danger);
+    text-decoration: underline;
+}
+.sp-page .ac-avatar-status {
+    margin: 0.45rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bcc-text-muted);
+}
+.sp-page .ac-avatar-status.is-error {
+    color: var(--bcc-danger);
+}

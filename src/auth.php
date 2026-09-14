@@ -59,6 +59,192 @@ function bcc_name_initial($name)
     return mb_strtoupper(mb_substr((string) $name, 0, 1, 'UTF-8'), 'UTF-8');
 }
 
+/* Profil fotografi (2026-09-14). Veritabaninda kolon YOK: dosya kullanici id'si
+   ile adlandiriliyor, varligi = fotografin varligi. Boylece deploy'da DDL
+   gerekmiyor. Dosya web kokunun DISINDA durur, yalnizca api/avatar.php yetki
+   kontrolunden gecirerek sunar. */
+function bcc_avatar_storage_dir()
+{
+    return __DIR__ . '/../storage/avatars';
+}
+
+function bcc_avatar_path($userId)
+{
+    return bcc_avatar_storage_dir() . '/u' . (int) $userId;
+}
+
+function bcc_avatar_url($userId)
+{
+    $path = bcc_avatar_path($userId);
+    clearstatcache(true, $path);
+    $mtime = @filemtime($path);
+    if ($mtime === false) {
+        return null;
+    }
+
+    /* Adres surum tasiyor ve sunucu uzun onbellek veriyor; ayni saniyede iki
+       yukleme ayni mtime'i uretebildigi icin boyut da surume katiliyor. */
+    return '/api/avatar.php?user_id=' . (int) $userId . '&v=' . $mtime . '-' . (int) @filesize($path);
+}
+
+/* Avatar kutusunun ICI: fotograf varsa <img>, yoksa bas harf. Cagiran kutuya
+   erisilebilir ad (aria-label) vermekten sorumlu; resim yalnizca suslemedir. */
+function bcc_avatar_inner_html($user)
+{
+    $url = bcc_avatar_url($user['id']);
+    if ($url !== null) {
+        return '<img class="bcc-avatar-img" src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt="">';
+    }
+
+    return htmlspecialchars(bcc_user_initial($user), ENT_QUOTES, 'UTF-8');
+}
+
+/* KVKK ekip izolasyonu: bir kullanicinin fotografini yalnizca kendisi, onunla
+   en az bir ekibi paylasan biri ya da platform admini gorebilir.
+   current_user_team_ids() platform adminine zaten butun ekipleri veriyor. */
+function bcc_can_view_user_avatar($targetUserId)
+{
+    $me = current_user();
+    if ($me === null) {
+        return false;
+    }
+
+    $targetUserId = (int) $targetUserId;
+    if ((int) $me['id'] === $targetUserId || is_platform_admin()) {
+        return true;
+    }
+
+    $teamIds = array_map('intval', current_user_team_ids());
+    if (!$teamIds) {
+        return false;
+    }
+
+    return (bool) bcc_fetch_column(
+        'SELECT 1 FROM team_members WHERE user_id = :uid AND team_id IN (' . implode(',', $teamIds) . ') LIMIT 1',
+        array('uid' => $targetUserId)
+    );
+}
+
+/* GD kurulu olmadigi icin (php.ini'de ;extension=gd2) resim sunucuda yeniden
+   kodlanamiyor. Arayuz resmi tarayicida zaten 256px JPEG'e ceviriyor, bu da
+   meta veriyi siler; ama uca dogrudan istek atan biri icin meta veri burada da
+   ayiklaniyor. EXIF, cekildigi yerin GPS koordinatlarini tasiyabilir ve
+   fotograf ekip arkadaslarina gosteriliyor. */
+function bcc_avatar_strip_jpeg($bytes)
+{
+    $len = strlen($bytes);
+    if ($len < 4 || substr($bytes, 0, 2) !== "\xFF\xD8") {
+        return null;
+    }
+
+    /* Tutulan APP segmentleri: APP0 (JFIF), APP2 (ICC renk profili), APP14
+       (Adobe — CMYK resimlerde renk donusumunu belirler, atilirsa renkler
+       bozulur). Geri kalan APPn (EXIF/XMP/IPTC ...) ve COM atilir. */
+    $keepApp = array(0xE0 => true, 0xE2 => true, 0xEE => true);
+
+    $out = "\xFF\xD8";
+    $i = 2;
+
+    while ($i < $len) {
+        if (ord($bytes[$i]) !== 0xFF) {
+            return null;
+        }
+
+        while ($i < $len && ord($bytes[$i]) === 0xFF) {
+            $i++;
+        }
+        if ($i >= $len) {
+            return null;
+        }
+
+        $marker = ord($bytes[$i]);
+        $i++;
+
+        if ($marker === 0xD9) {
+            return $out . "\xFF\xD9";
+        }
+
+        if (($marker >= 0xD0 && $marker <= 0xD7) || $marker === 0x01) {
+            $out .= "\xFF" . chr($marker);
+            continue;
+        }
+
+        if ($i + 2 > $len) {
+            return null;
+        }
+        $segLen = (ord($bytes[$i]) << 8) | ord($bytes[$i + 1]);
+        if ($segLen < 2 || $i + $segLen > $len) {
+            return null;
+        }
+
+        $segment = substr($bytes, $i, $segLen);
+        $i += $segLen;
+
+        if ($marker === 0xDA) {
+            /* SOS: ardindan sikistirilmis veri gelir, EOI dahil oldugu gibi. */
+            return $out . "\xFF\xDA" . $segment . substr($bytes, $i);
+        }
+
+        $isApp = ($marker >= 0xE0 && $marker <= 0xEF);
+        if (($isApp && !isset($keepApp[$marker])) || $marker === 0xFE) {
+            continue;
+        }
+
+        $out .= "\xFF" . chr($marker) . $segment;
+    }
+
+    return null;
+}
+
+function bcc_avatar_strip_png($bytes)
+{
+    $sig = "\x89PNG\r\n\x1A\n";
+    $len = strlen($bytes);
+    if ($len < 8 || substr($bytes, 0, 8) !== $sig) {
+        return null;
+    }
+
+    /* Goruntu icin gerekenler. Metin (tEXt/zTXt/iTXt), EXIF (eXIf), zaman
+       (tIME) ve animasyon (acTL/fcTL/fdAT) parcalari atilir — animasyon
+       atilinca APNG ilk karesiyle duragan PNG'ye doner. */
+    $keep = array(
+        'IHDR' => true, 'PLTE' => true, 'IDAT' => true, 'IEND' => true,
+        'tRNS' => true, 'cHRM' => true, 'gAMA' => true, 'iCCP' => true,
+        'sBIT' => true, 'sRGB' => true, 'bKGD' => true, 'pHYs' => true,
+    );
+
+    $out = $sig;
+    $i = 8;
+    $sawEnd = false;
+
+    while ($i + 12 <= $len) {
+        $chunkLen = unpack('N', substr($bytes, $i, 4));
+        $chunkLen = $chunkLen[1];
+        $type = substr($bytes, $i + 4, 4);
+
+        if (!preg_match('/^[A-Za-z]{4}$/', $type) || $i + 12 + $chunkLen > $len) {
+            return null;
+        }
+
+        $whole = substr($bytes, $i, 12 + $chunkLen);
+        $i += 12 + $chunkLen;
+
+        $critical = ctype_upper($type[0]);
+        if (isset($keep[$type])) {
+            $out .= $whole;
+        } elseif ($critical) {
+            return null;
+        }
+
+        if ($type === 'IEND') {
+            $sawEnd = true;
+            break;
+        }
+    }
+
+    return $sawEnd ? $out : null;
+}
+
 function is_platform_admin()
 {
     $user = current_user();

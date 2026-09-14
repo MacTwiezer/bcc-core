@@ -581,6 +581,47 @@ Denetim döngüsünün son turu. Bu turdan sonra depoda **satır satır okunmam�
 #### Turun doğrulaması
 Tam paket **63/63** + `test_isolation` 6/6. Dokuz ana sayfa doğru yanıt veriyor (genel 200, korumalı 302). **Apache hata günlüğüne bugün hiçbir şey düşmedi** (son kayıt 03 Eylül 18:05 — o da `error_handler` düzeltmesini kanıtlamak için bilerek tetiklenen bellek/fatal testleri).
 
+
+### 2026-09-08 → 2026-09-14 turu — canlı sonrası düzeltmeler
+
+Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
+`docs/gunluk/2026-09-09.md`, `docs/gunluk/2026-09-14.md`. Dosya bazlı envanter:
+`docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md`. Aşağısı yalnızca özet.
+
+- **Slack hücre bildirimleri toplu özete geçti (`26f0d44`).** Her hücre
+  değişikliğine ayrı mesaj yerine kayıt bazında tek özet; gönderim üç
+  tetikleyiciden biriyle: 180 sn boşta kalma, gridden ayrılma (`pagehide` →
+  bekleme 0, `visibilitychange` → 30 sn) ya da sayfa yüklemesi. Yeni uç nokta
+  `public/api/slack_flush.php` + `public/assets/grid-slack-flush.js`;
+  istemciden gelen bekleme ipucu sunucuda `0..180` aralığına **sınırlanıyor**
+  (istemci beklemeyi uzatamaz). Toplu işler (xlsx içe aktarma, tablo çoğaltma,
+  toplu yapıştırma) dokundukları satırları damgalayarak mesaj yağmurunu
+  engelliyor. Yeni kayıt ancak **izlenen alanlarından biri gerçekten doluysa**
+  duyuruluyor. Mesaj Block Kit; alan değeri 200, başlık 120 karakterle sınırlı
+  (önceden sınır yoktu — 20.004 karakterlik tek hücre kanala olduğu gibi
+  düşüyordu). **DDL:** `records.slack_notified_at` — canlıya alırken
+  `ALTER TABLE` + damgalama `UPDATE`'i **ZORUNLU**, atlanırsa uç noktalar 500
+  döner (`docs/CANLIYA-ALMA.md` §3.2.1). Test:
+  `scripts/_verify_slack_batch.php` (103 test) + `_verify_slack_integration.php`
+  A+B 19/19. **Üretimde doğrulandı:** 2026-09-14 08:55 ve 08:56'da gerçek
+  `slack.notify_sent` (günlük 2026-09-14 §1).
+- **Kutucukla toplu silme artık kalıcı silmiyor (`23d27d5`).** `deleted_at`
+  yazılıyor, yani çöp kutusundan geri yüklenebilir (tek satır silmede zaten
+  böyleydi). Ek dosyalarına bilerek dokunulmuyor — onları çöp kutusunun süreli
+  temizliği siler. Test: `scripts/_verify_trash_purge_attachments.php`.
+- **Hata sayfası (404/403/500) hizalaması (`cbcae46`).** Açıklama metni
+  yüklenmeyen `style.css`'teki `.hint` sınıfına güveniyordu, yani kural hiç
+  uygulanmıyordu. Biçimlendirme `login.css`'e taşındı (`.error-*`), satır içi
+  `style` yamaları kaldırıldı. Test: `scripts/_verify_error_pages.php`
+  (23 → 33 kontrol).
+- **"Oluşturan" sütunu boş görünüyordu (`2d8dd65`).** Oluşturan kullanıcı o
+  tablonun ekibinde değilse ad çözülemiyordu; yeni `bcc_actor_name_by_id()`.
+
+**Bu turdan kalan iki açık madde:** kanban görünümünde ayrılma pingi yok
+(`grid-slack-flush.js` yalnızca `grid.php`'de yüklü) ve hücre bildirimi
+yalnızca **tek tabloda** yapılandırılmış (`slack_watched_fields` → tablo 2992).
+Gerekçeleri `docs/gunluk/2026-09-14.md` "Açık maddeler"de.
+
 ---
 
 ## 6. Kalan İşler

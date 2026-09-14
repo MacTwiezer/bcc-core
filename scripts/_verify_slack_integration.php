@@ -57,9 +57,13 @@ $root = __DIR__ . '/..';
 
 $coverage = array(
 
-    array('public/api/record_add.php', 'bcc_notify_slack_new_record(', 'satir ekleme (AJAX)'),
-    array('public/grid.php', 'bcc_notify_slack_new_record(', 'satir ekleme (JS-siz form)'),
-    array('public/api/record_duplicate.php', 'bcc_notify_slack_new_record(', 'satir cogaltma'),
+    /* 2026-09-08 — KAYIT olaylari artik ANINDA gonderilmiyor: yeni kayit ve
+       hucre degisiklikleri records.slack_notified_at damgasi uzerinden TEK
+       mesajda birlestiriliyor (src/slack.php, bcc_slack_flush_table). Bu yuzden
+       asagidaki kayit satirlari "aninda bildirim" DEGIL, "bosaltma akisina
+       bagli mi" diye kontrol ediliyor. TABLO ve ALAN olaylari degismedi. */
+    array('public/api/record_duplicate.php', 'bcc_slack_flush_table(', 'satir cogaltma (toplu akis)'),
+    array('public/api/cell_update.php', 'bcc_slack_flush_table(', 'hucre degisikligi (toplu akis)'),
     array('public/base_tables.php', 'bcc_notify_slack_new_table(', 'TABLO olusturma'),
     array('src/schema.php', 'bcc_notify_slack_new_field(', 'ALAN olusturma (ortak yol)'),
 );
@@ -68,6 +72,18 @@ foreach ($coverage as $c) {
     check($c[2] . ' -> ' . rtrim($c[1], '('),
         strpos(file_get_contents($root . '/' . $c[0]), $c[1]) !== false, $c[0]);
 }
+
+/* Kayit ekleyen iki yol (AJAX + JS-siz form) bilerek HICBIR bildirim cagirmaz:
+   kayit bos olusturulup alanlari hemen sonra doldurulduguundan aninda gonderim
+   "(basliksiz kayit)" mesaji uretiyordu. Damga NULL kaldigi surece kayit
+   "duyurulmamis" sayilir ve bosaltma sirasinda alanlariyla TEK mesaj olur. */
+foreach (array('public/api/record_add.php', 'public/grid.php') as $f) {
+    check(basename($f) . ' kayit eklerken ANINDA bildirim gondermiyor',
+        strpos(file_get_contents($root . '/' . $f), 'bcc_notify_slack_new_record(') === false, $f);
+}
+
+check('bekleyen ozetler grid sayfa yuklemesinde bosaltiliyor',
+    strpos(file_get_contents($root . '/public/grid.php'), 'bcc_slack_flush_table(') !== false);
 
 check('table_fields.php alan olusturmayi bcc_create_field() ile yapiyor',
     strpos(file_get_contents($root . '/public/table_fields.php'), 'bcc_create_field(') !== false);

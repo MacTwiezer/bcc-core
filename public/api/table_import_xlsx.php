@@ -125,6 +125,14 @@ if (empty($rows)) {
 
 $user = current_user();
 $imported = 0;
+
+/* 2026-09-08 — Excel ice aktarma HICBIR ZAMAN Slack bildirimi gondermedi ve
+   gondermemeli: tek islemde yuzlerce satir gelebiliyor. Yeni kayit-bazli toplu
+   bildirim damgasiz (slack_notified_at IS NULL) her satiri "duyurulmamis"
+   saydigi icin, ice aktarilan satirlar burada toplanip commit'ten hemen once
+   damgalanir. Damgalanmazlarsa 500 satirlik bir dosya kanala 500 mesaj
+   dusururdu. */
+$bccImportedRecordIds = array();
 $skippedCells = 0;
 $skippedRows = 0;
 
@@ -197,6 +205,7 @@ try {
             array(':tid' => $table['id'], ':pos' => $nextPos, ':uid' => $user['id'])
         );
         $recordId = (int) bcc_last_insert_id();
+        $bccImportedRecordIds[] = $recordId;
         $nextPos++;
 
         bcc_assign_autonumbers($table['id'], $recordId);
@@ -219,6 +228,10 @@ try {
         'skipped_rows' => $skippedRows,
         'unmatched_columns' => $unmatchedColumns,
     ), $table['team_id']);
+
+    if (!empty($bccImportedRecordIds)) {
+        bcc_slack_mark_records_notified($bccImportedRecordIds);
+    }
 
     bcc_commit();
 } catch (Throwable $e) {

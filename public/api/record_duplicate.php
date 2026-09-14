@@ -118,7 +118,8 @@ try {
 
     bcc_commit();
 
-    bcc_notify_slack_new_record($tableId, $newRecordId, $user['full_name']);
+    /* 2026-09-08: kopyalanan kayit da toplu bildirim akisina girer (damga NULL). */
+bcc_slack_flush_table((int) $tableId);
 } catch (Throwable $e) {
     bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');

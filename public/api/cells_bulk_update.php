@@ -200,6 +200,7 @@ function bcc_paste_flush($column, &$buffer)
 }
 
 $created = 0;
+$bccCreatedRecordIds = array();
 
 try {
     bcc_begin_transaction();
@@ -218,6 +219,14 @@ try {
             $newRecordId = (int) bcc_last_insert_id();
             $nextPos++;
             $created++;
+
+            /* 2026-09-08: Yapistirmayla OLUSAN satirlar da "duyuruldu"
+               sayilacak (asagida damgalanir) — yoksa her biri ayrica "yeni
+               kayit" mesaji uretirdi; oysa yapistirmanin tek ozet mesaji zaten
+               gidiyor. $touchedRecords'a EKLENMIYOR: o dizi
+               bcc_touch_record_modified() calistiriyor ve yeni satirin
+               updated_by'sini doldurup "Son degistiren" anlamini bozardi. */
+            $bccCreatedRecordIds[] = $newRecordId;
 
             bcc_assign_autonumbers($table['id'], $newRecordId);
 
@@ -295,6 +304,21 @@ if (!empty($bccWatchedIds)) {
         );
     }
 }
+
+/* 2026-09-08: Toplu yapistirma ZATEN tek ozet mesaj gonderiyor (yukarida) —
+   davranisi degistirilmedi. Ama yeni kayit-bazli toplu bildirim, ayni satirlari
+   bir de tek tek duyurmaya calisirdi; yapistirmanin dokundugu her kayit burada
+   "duyuruldu" damgasini alarak bu tekrari engelliyor. Damga, yapistirmanin
+   YALNIZCA izlenen alanlara dokunup dokunmadigindan bagimsiz basilir: satir
+   ozeti gonderildiyse de gonderilmediyse de o degisiklikler artik gecmistir. */
+$bccNotifiedIds = array_merge(array_keys($touchedRecords), $bccCreatedRecordIds);
+
+if (!empty($bccNotifiedIds)) {
+    bcc_slack_mark_records_notified($bccNotifiedIds);
+}
+
+/* Ayni tabloda bekleyen (vakti gelmis) diger kayitlar bosaltilir. */
+bcc_slack_flush_table((int) $table['id']);
 
 echo json_encode(array(
     'ok' => true,

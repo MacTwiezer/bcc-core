@@ -42,6 +42,13 @@ $attachmentsByRecord = array();
 $usersById = array();
 
 if ($tableId) {
+    /* Slack toplu bildirimi (2026-09-08): "vakti gelmis" kayit ozetleri burada da
+       bosaltilir. Tarayici pingi tek basina guvenilmez (sekme cokebilir, kullanici
+       internetini kesebilir); sayfa yuklemesi, projedeki 7 gunluk cop temizligiyle
+       ayni "ziyaret aninda kontrol" deseninin bu ozellikteki karsiligi. Beklemede
+       bir sey yoksa maliyeti tek indeksli sorgu. */
+    bcc_slack_flush_table((int) $tableId);
+
     $fields = bcc_fetch_all(
         'SELECT id, name, field_type, options, position FROM fields WHERE table_id = :table_id ORDER BY position, id',
         array('table_id' => $tableId)

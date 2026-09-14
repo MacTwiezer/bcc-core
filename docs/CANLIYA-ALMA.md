@@ -84,7 +84,35 @@ Sonra **ikisinden birini** yap — ikisini birden değil:
   tamamını üretir (doğrulandı: 21 tablo, 147 kolon, 76 index, 40 yabancı
   anahtar — canlı veritabanıyla farksız).
 - **Mevcut veriyi taşıyorsan:** canlı veritabanının `mysqldump` yedeğini
-  yükle. Ayrı bir yükseltme adımı YOK; şema zaten güncel gelir.
+  yükle. Sonra aşağıdaki **yükseltme adımını** uygula.
+
+#### 3.2.1 ZORUNLU yükseltme — `records.slack_notified_at` (2026-09-09)
+
+Slack toplu bildirimi yeni bir kolon getirdi. **2026-09-07'de kurulmuş canlı
+veritabanında bu kolon YOK.** Kodu deploy etmeden ÖNCE, sırayla:
+
+```sql
+ALTER TABLE records ADD COLUMN slack_notified_at DATETIME NULL DEFAULT NULL;
+UPDATE records SET slack_notified_at = NOW(), updated_at = updated_at;
+```
+
+**Birinci satır atlanırsa** yalnızca Slack bildirimi bozulmaz — şu uç noktalar
+`Unknown column` ile **500 döner**: toplu satır ekleme (`record_add.php`),
+Excel içe aktarma (`table_import_xlsx.php`), tablo kopyalama (`src/schema.php`)
+ve toplu yapıştırma (`cells_bulk_update.php` — bu sonuncusu yapıştırma
+commit'lendikten SONRA patlar). Grid de açılmaz.
+
+**İkinci satır atlanırsa** mevcut tüm kayıtlar "hiç duyurulmamış" sayılır ve
+grid ilk açıldığında kanala **yüzlerce mesaj** düşer. İkinci satırdaki
+`updated_at = updated_at`, "Son değişiklik zamanı" alanının bildirim saatine
+kaymasını önler — atlanamaz.
+
+Doğrulama:
+
+```sql
+SELECT COUNT(*) AS damgasiz FROM records WHERE slack_notified_at IS NULL;
+-- 0 dönmeli
+```
 
 ### 3.3 Yapılandırma dosyalarını oluştur
 

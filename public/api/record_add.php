@@ -92,11 +92,34 @@ try {
         log_audit('record.create_bulk', 'table', $table['id'], array('table_id' => $table['id'], 'count' => $count, 'record_ids' => $newRecordIds, 'after_record_id' => $afterRecordId ?: null), $table['team_id']);
     }
 
+    /* 2026-09-08 / duzeltme 2026-09-09 — TOPLU satir ekleme.
+       "20 bos satir ekle" komutu kanala 20 ayri "yeni duyuru" mesaji
+       dusurmemeli. Eskiden bu, satirlari olusturur olusturmaz damgalayarak
+       cozuluyordu; ama damgalanan satir sonradan doldurulunca 📢 "yeni duyuru"
+       yerine ✏️ "guncellendi" basligi aliyordu.
+
+       Artik olcu bosaltmanin kendisinde: izlenen alan tanimliysa bos kayit
+       zaten duyurulmuyor (bcc_slack_pending_records), dolayisiyla damgalamaya
+       gerek yok — satirlar damgasiz kalir ve ILK ICERIK girildiginde 📢
+       olarak duyurulur.
+
+       Izlenen alan HIC tanimli degilse o olcu devreye girmez; ozellik salt
+       "yeni kayit" duyurusu olarak calistigi icin toplu eklenen satirlar yine
+       damgalanir, yoksa eski mesaj yagmuru geri gelirdi.
+
+       Tek satir ekleme her iki durumda da damgasiz kalir. */
+    if ($count > 1 && !bcc_slack_watched_field_ids($table['id'])) {
+        bcc_slack_mark_records_notified($newRecordIds);
+    }
+
     bcc_commit();
 
-    if ($count === 1) {
-        bcc_notify_slack_new_record($table['id'], $newRecordId, $user['full_name']);
-    }
+    /* 2026-09-08: "yeni kayit" mesaji da ANINDA gitmez. Kayit bos olusturulup
+       alanlari hemen sonra dolduruldugu icin aninda gonderim hem "(basliksiz
+       kayit)" basligi uretiyor hem de arkasindan hucre mesajlari geliyordu.
+       Damga (records.slack_notified_at) NULL kaldigi surece kayit
+       "duyurulmamis" sayilir; bosaltma sirasinda alanlariyla birlikte TEK
+       mesaj olarak gider. */
 } catch (Throwable $e) {
     bcc_rollback();
     json_fail(500, 'Veritabanı hatası.');

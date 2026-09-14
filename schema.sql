@@ -259,6 +259,14 @@ CREATE TABLE IF NOT EXISTS records (
     -- AYNI ilke: ON DELETE SET NULL, düzenleyen kullanıcının hesabı silinirse
     -- kayıt bozulmaz. updated_at ile AYNI 3 yazma noktasında elle set edilir.
     updated_by  INT UNSIGNED NULL,
+    -- Slack toplu bildirim (2026-09-08): bir kayda arka arkaya yapilan hucre
+    -- degisiklikleri TEK mesajda birlestirilir. NULL = kayit Slack'e hic
+    -- duyurulmadi (mesaj "yeni kayit" basligiyla gider); dolu = en son ne zaman
+    -- duyuruldugu. Hangi alanlarin degistigi cell_values.updated_at ile bu
+    -- damganin karsilastirilmasindan cikarilir, ayri bir kuyruk tablosu YOK.
+    -- Damga yazilirken updated_at = updated_at yapilir, yoksa ON UPDATE
+    -- CURRENT_TIMESTAMP "Son degisiklik zamani" alanini bozardi.
+    slack_notified_at DATETIME NULL DEFAULT NULL,
     -- Trash özelliği (bases.deleted_at/deleted_by ile AYNI desen, bkz.
     -- migrations/012_records_soft_delete.sql) — NULL = aktif/silinmemiş.
     deleted_at  DATETIME NULL,

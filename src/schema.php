@@ -1,6 +1,13 @@
 <?php
 
 require_once __DIR__ . '/auth.php';
+/* schema.php Slack bildirimlerini dogrudan cagiriyor (yeni alan, tablo
+   kopyalama). slack.php bagimsiz bir modul — hicbir sey require etmiyor — bu
+   yuzden burada yuklemek dongu yaratmaz. Onceden yuklenmesi CAGIRANA
+   birakilmisti: bootstrap.php yukluyordu ama schema.php'yi tek basina
+   yukleyen 27 test betigi yuklemiyordu ve tablo kopyalama onlarda
+   "Call to undefined function" ile patliyordu. */
+require_once __DIR__ . '/slack.php';
 
 $GLOBALS['BCC_FIELD_TYPES'] = array(
     'single_line_text' => 'Tek satır metin',
@@ -2811,6 +2818,24 @@ function bcc_duplicate_table($tableId, $newName, $withRecords, $userId)
                     );
                     $attachmentCount++;
                 }
+            }
+
+            /* 2026-09-08 / duzeltme 2026-09-09 — Tablo kopyalama TEK bir
+               "yeni tablo" mesaji gonderir (bcc_notify_slack_new_table);
+               kopyalanan satirlar ayrica duyurulmaz. Kayit-bazli toplu bildirim
+               damgasiz satirlari "duyurulmamis" saydigi icin kopyalar burada
+               damgalanir — yoksa 158 satirlik bir tablonun kopyasi kanala
+               158 mesaj dusururdu.
+
+               DAMGA HUCRELERDEN SONRA YAZILIR. Onceden satirlar olusturulur
+               olusturulmaz damgalaniyordu; hucreler ise sonraki dongude
+               ekleniyor ve her biri cell_values.updated_at = NOW() aliyor.
+               Kopyalama bir saniye siniri gecince (158 satirlik tabloda
+               kesin) her satir "damgadan SONRA degismis" gorunuyor ve
+               bosaltma onlari yeniden bekleyen sayiyordu: engellenmek istenen
+               yagmur, bu sefer "Duzenlenen" basligiyla yine olusuyordu. */
+            if ($recordMap) {
+                bcc_slack_mark_records_notified(array_values($recordMap));
             }
         }
 

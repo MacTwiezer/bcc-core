@@ -44,21 +44,9 @@ try {
     $column = $result['column'];
     $value = $result['value'];
 
-    $bccSlackWatched = in_array((int) $fieldId, bcc_slack_watched_field_ids($field['table_id']), true);
-    $bccSlackOldDisplay = null;
-
-    if ($bccSlackWatched) {
-        $oldCellRow = bcc_fetch_one(
-            'SELECT value_text, value_number, value_date, value_json FROM cell_values WHERE record_id = :record_id AND field_id = :field_id LIMIT 1',
-            array(':record_id' => $recordId, ':field_id' => $fieldId)
-        );
-        $bccSlackOldDisplay = cell_display_text(
-            $field['field_type'],
-            $oldCellRow !== false ? $oldCellRow : null,
-            $usersById,
-            $field['options']
-        );
-    }
+    /* 2026-09-08: Eski degeri okuyan sorgu KALDIRILDI. Mesaj artik "eski -> yeni"
+       degil, kaydin GUNCEL degerlerini listeliyor (bkz. src/slack.php toplu
+       bildirim blogu), yani eski gosterimi hesaplamanin bir alicisi kalmadi. */
 
     bcc_begin_transaction();
     $sql = "INSERT INTO cell_values (record_id, field_id, {$column}) VALUES (:record_id, :field_id, :value)
@@ -83,20 +71,13 @@ $response = array(
     'raw' => cell_raw_value($field['field_type'], $cellRow),
 );
 
-if ($bccSlackWatched && $bccSlackOldDisplay !== $response['display']) {
-    $bccSlackUser = current_user();
-
-    bcc_notify_slack_cell_change(
-        (int) $field['table_id'],
-        $recordId,
-
-        $field['field_type'],
-        $field['name'],
-        $bccSlackOldDisplay,
-        $response['display'],
-        isset($bccSlackUser['full_name']) ? $bccSlackUser['full_name'] : null
-    );
-}
+/* 2026-09-08: Bu hucre icin ANINDA mesaj ATILMAZ. Degisiklik zaten
+   cell_values.updated_at + records.updated_at damgalarina yazildi; kaydin
+   ozeti, uzerinde belirli bir sure islem yapilmayinca TEK mesaj olarak gider
+   (src/slack.php, bcc_slack_flush_table). Burada yalnizca "vakti gelmis"
+   kayitlar bosaltilir — ayni tabloda calisan onceki bir duzenleme oturumu
+   boylece bir sonraki yazmada kanala dusmus olur. */
+bcc_slack_flush_table((int) $field['table_id']);
 
 if ($field['field_type'] === 'long_text') {
     $response['display'] = bcc_rich_text_grid_html($response['display']);

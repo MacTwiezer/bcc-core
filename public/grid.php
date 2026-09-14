@@ -94,10 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw $e;
         }
 
-        bcc_notify_slack_new_record($table['id'], $newId, $user['full_name']);
+        /* 2026-09-08: aninda gonderim yok — bkz. record_add.php'deki not. */
         $success = 'Kayıt eklendi.';
     }
 }
+
+/* Slack toplu bildirimi (2026-09-08): "vakti gelmis" kayit ozetleri burada da
+   bosaltilir. Tarayici pingi tek basina guvenilmez (sekme cokebilir, kullanici
+   internetini kesebilir); sayfa yuklemesi, projedeki 7 gunluk cop temizligiyle
+   ayni "ziyaret aninda kontrol" deseninin bu ozellikteki karsiligi. Beklemede
+   bir sey yoksa maliyeti tek indeksli sorgu. */
+bcc_slack_flush_table((int) $table['id']);
 
 $fields = bcc_fetch_all('SELECT id, name, field_type, options, position, is_required FROM fields WHERE table_id = :table_id ORDER BY position, id', array(':table_id' => $table['id']));
 
@@ -1748,6 +1755,8 @@ $gridUser = current_user();
 <script src="<?php echo bcc_asset_url('grid-cell-select.js'); ?>" defer></script>
 <?php if ($canEdit): ?>
 <script src="<?php echo bcc_asset_url('grid-paste.js'); ?>" defer></script>
+<!-- Slack toplu bildirimi: sayfadan ayrilirken/bosta kalinca bosaltma pingi -->
+<script src="<?php echo bcc_asset_url('grid-slack-flush.js'); ?>" defer></script>
 <?php endif; ?>
 <script src="<?php echo bcc_asset_url('grid-copy.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-export-png.js'); ?>" defer></script>

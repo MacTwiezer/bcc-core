@@ -64,6 +64,14 @@ foreach ($kanbanConfig['kanban_card_fields'] as $fid) {
 $columns = array();
 $recordCount = 0;
 
+/* Slack toplu bildirimi (2026-09-08 / duzeltme 2026-09-09): kanban da
+   kanban.js uzerinden cell_update.php cagiriyor, yani bu sayfada da bekleyen
+   ozet olusabiliyor — grid/arayuzle ayni "ziyaret aninda kontrol" tetiklemesi
+   burada da var. KOSULSUZ: onceden asagidaki if blogunun ICINDE duruyordu,
+   dolayisiyla gruplama sutunu secilmemis bir kanban gorunumu bosaltmayi hic
+   tetiklemiyordu. */
+bcc_slack_flush_table((int) $table['id']);
+
 if ($columnField !== null) {
     $choices = select_choices_from_options($columnField['options']);
     $choiceColorMap = bcc_build_choice_color_map($choices, select_choice_colors_from_options($columnField['options']));

@@ -40,7 +40,7 @@
             + '</button>'
             + '</div>'
             + '<div class="home-modal-form">'
-            + '<p class="home-modal-label" data-confirm-message></p>'
+            + '<p class="home-modal-message" data-confirm-message></p>'
             + '<div class="home-modal-actions">'
             + '<button type="button" class="home-modal-btn" data-confirm-cancel></button>'
             + '<button type="button" class="home-modal-btn home-modal-btn-primary" data-confirm-ok></button>'

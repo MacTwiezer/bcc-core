@@ -2361,6 +2361,13 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 }
 
 .home-modal-optional { font-weight: 400; }
+
+.home-modal-message {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--bcc-text);
+}
 .home-modal-input {
     width: 100%;
     box-sizing: border-box;

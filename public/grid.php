@@ -1685,7 +1685,7 @@ $gridUser = current_user();
             </button>
         </div>
         <div class="home-modal-form">
-            <p class="home-modal-label" id="gs-table-delete-summary"></p>
+            <p class="home-modal-message" id="gs-table-delete-summary"></p>
             <p class="home-modal-error" id="gs-table-delete-error" hidden></p>
             <div class="home-modal-actions">
                 <button type="button" class="home-modal-btn" id="gs-table-delete-cancel">Vazgeç</button>
@@ -1706,7 +1706,7 @@ $gridUser = current_user();
         </div>
 
         <div class="home-modal-form">
-            <p class="home-modal-label" id="gs-paste-summary"></p>
+            <p class="home-modal-message" id="gs-paste-summary"></p>
 
             <p class="home-modal-error" id="gs-paste-error" hidden></p>
 

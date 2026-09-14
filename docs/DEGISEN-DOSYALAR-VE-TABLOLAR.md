@@ -5,8 +5,8 @@ sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
 **bu dosya yalnızca envanter** — "neye dokunuldu" sorusunun tek bakışta
 cevabı.
 
-Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi + 08-09 Eylül kodunun
-commit edilmesi).
+Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
+kayması, 08-09 Eylül kodunun commit edilmesi).
 
 ---
 
@@ -16,7 +16,7 @@ commit edilmesi).
 |---|---|---|
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
-| **2026-09-14** | **2 dosya** (1 değiştirildi, 1 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
+| **2026-09-14** | **6 dosya** (4 değiştirildi, 2 yeni) + 3 belge | **Hiçbir değişiklik yok** — yalnızca `SELECT` |
 
 ---
 
@@ -116,21 +116,25 @@ bildirimden **boşaltma başına TEK bildirime** geçti
 
 ## 3b. Kod dosyaları — 2026-09-14
 
-Günün tek kod işi gridde **Tab ile hücre gezinmesi**. Diğer iki iş (Slack
-teşhisi ve 08-09 Eylül kodunun commit edilmesi) **hiçbir dosyayı
-değiştirmedi**.
+Günün iki kod işi: gridde **Tab ile hücre gezinmesi** ve **uyarı kutularındaki
+metin kayması**. Diğer iki iş (Slack teşhisi ve 08-09 Eylül kodunun commit
+edilmesi) **hiçbir dosyayı değiştirmedi**.
 
-### 3b.1 Değiştirilen — 1 dosya
+### 3b.1 Değiştirilen — 4 dosya
 
 | Dosya | Satır | Ne değişti |
 |---|---|---|
 | `public/assets/grid-cell-select.js` | +34 | Yeni `wrapCell(row, step)` yardımcısı (`cellAt`'in hemen altına); `keydown` dinleyicisinde `ARROWS` bloğunun **ÖNÜNE** `Tab` dalı. `Tab` bir sağa, `Shift+Tab` bir sola; satır sonunda alt satırın ilk, satır başında üst satırın son hücresine sarmalıyor; tablonun iki ucunda **yerinde kalıyor**. Dal `keyboardBelongsToGrid()` guard'ının ALTINDA, yani hücre düzenleme modundayken Tab'a dokunulmuyor |
+| `public/assets/home.css` | +7 | **YENİ** `.home-modal-message` kuralı (`:2365`), `.home-modal-optional`'ın hemen altında. `.home-modal-label`'a **dokunulmadı** — 13 gerçek form etiketi onu kullanıyor |
+| `public/assets/confirm-modal.js` | 1 satır | `:43` — uyarı paragrafı `home-modal-label` → `home-modal-message`. `<p>`'nin tarayıcıdan miras aldığı `margin-top: 1em` sıfırlanmadığı için metin kutunun içinde aşağı kayıp düğmelere yapışıyordu |
+| `public/grid.php` | 2 satır | `:1688` tablo silme özeti, `:1709` yapıştırma onayı özeti — aynı sınıf değişikliği |
 
-### 3b.2 Yeni — 1 dosya
+### 3b.2 Yeni — 2 dosya
 
 | Dosya | Ne |
 |---|---|
 | `scripts/_verify_grid_tab_nav.php` | 18 kontrol. A) Tab dalı + `preventDefault` + `shiftKey` yönü + sarmalama, B) guard sırası ve `Escape` çıkış yolu, C) ok tuşları / `Ctrl+A` bozulmadı, D) `grid.php` betiği gerçekten basıyor. JS yorumlarını ayıklayarak tarıyor (09-09'da dört kez düşülen tuzak) |
+| `scripts/_verify_modal_message_style.php` | 13 kontrol. A) margin sıfırlaması + punto + satır aralığı + renk, B) `.home-modal-label`'ın bozulmadığı (altı form onu kullanıyor), C) üç uyarı paragrafının yeni sınıfa geçtiği, D) `.home-modal-form` kullanan altı dosyada `<p class="home-modal-label">` kalmadığı — aynı hata bir daha sessizce girmesin |
 
 ### 3b.3 Belgeler — 3 dosya
 

@@ -127,10 +127,6 @@ if (!empty($shareExistingIds)) {
         </div>
 
         <div class="if-nav-scroll">
-            <div class="if-nav-list-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M2.5 5.5A1.5 1.5 0 014 4h3.4l1.4 1.7H16A1.5 1.5 0 0117.5 7v7.5A1.5 1.5 0 0116 16H4a1.5 1.5 0 01-1.5-1.5v-9z" stroke="#5a4a00" stroke-width="1.4" stroke-linejoin="round"/></svg>
-            </div>
-
             <p class="if-nav-group-label">Tablolar</p>
 
             <div class="if-nav-list">

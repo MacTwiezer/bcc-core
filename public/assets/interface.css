@@ -70,12 +70,6 @@ body.if-page a { text-decoration: none; color: inherit; }
 }
 
 .if-nav-back:hover { background: rgba(255, 255, 255, 0.3); }
-.if-nav-list-icon {
-    display: none;
-    justify-content: center;
-    padding: 0.5rem 0;
-    margin-bottom: 0.5rem;
-}
 .if-nav-list {
     display: flex;
     flex-direction: column;
@@ -172,7 +166,6 @@ body.if-page a { text-decoration: none; color: inherit; }
     display: none;
 }
 .if-nav.is-collapsed .if-nav-back { flex: none; padding: 0.5rem; }
-.if-nav.is-collapsed .if-nav-list-icon { display: flex; }
 .if-nav.is-collapsed .if-nav-bottom {
     align-self: stretch;
     align-items: center;

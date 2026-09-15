@@ -227,8 +227,11 @@ try {
     echo "\n--- E) Regresyon ---\n";
     check('E) daraltilmis hal kurallari duruyor',
         preg_match('#\.if-nav\.is-collapsed \{[^}]*width: 64px;#s', $ifCss) === 1);
-    check('E) daraltilmisken liste gizlenip klasor ikonu cikiyor',
-        strpos($ifCss, '.if-nav.is-collapsed .if-nav-list-icon { display: flex; }') !== false);
+    check('E) daraltilmisken tablo listesi gizleniyor',
+        preg_match('#\.if-nav\.is-collapsed \.if-nav-list\b[^{]*\{[^}]*display:\s*none#s', $ifCss) === 1);
+    check('E) daraltilmis haldeki islevsiz klasor ikonu KALDIRILDI (2026-09-15)',
+        strpos($ifCss, 'if-nav-list-icon') === false
+        && strpos((string) file_get_contents(__DIR__ . '/../public/interface.php'), 'if-nav-list-icon') === false);
     check('E) genislet (>>) yalnizca daraltilmisken gorunur',
         strpos($ifCss, '.if-nav-expand-btn { display: none; }') !== false
         && strpos($ifCss, '.if-nav.is-collapsed .if-nav-expand-btn { display: flex; order: 2; }') !== false);

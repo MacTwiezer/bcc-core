@@ -379,7 +379,7 @@ Günlük §14-§16. Commit: `6809264`.
 
 ### 3c.7 Üçüncü tur (aynı gün) — Excel hesaplanan alanlar, PNG/PDF kesilmesi, çalışma alanı kartları
 
-Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25).
+Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25), `67537c6` (§26).
 
 | Dosya | § | Ne değişti |
 |---|---|---|
@@ -391,6 +391,9 @@ Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc
 | `scripts/_verify_xlsx_export_computed_fields.php` | §18 | **YENİ**, 15 kontrol, gerçek HTTP indirme |
 | `public/assets/grid-freeze-columns.js` | §25 | Sütun dondurma tutamacının kırpılan ipucu balonu ve `data-tooltip-host` kaldırıldı |
 | `scripts/_verify_column_resize.php` | §25 | "Dondurma balonu KORUNDU" kontrolü "balon üretilmiyor"a (104) |
+| `src/schema.php` | §26 | `bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm)` — arama yalnızca birincil (kalın başlık) alanda |
+| `public/interface.php`, `public/api/interface_records.php`, `public/api/interface_search.php` | §26 | Yeni imzayla çağrı |
+| `scripts/_verify_interface_search_primary_only.php` | §26 | **YENİ**, 14 kontrol, gerçek HTTP |
 
 **Veritabanı:** şema değişmedi. Tarayıcı doğrulamaları için ayrı test
 kullanıcı/ekip/base/tablo kurulup silindi (`scratchpad/realfx.php`,

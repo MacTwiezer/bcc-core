@@ -758,6 +758,10 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   Base'ler kartı sağ kartın boyuna esnemiyor. Test:
   `_verify_workspaces_list_bands.php` 30/30 + gerçek sayfada 1/6/20 kişi,
   2/8 base ölçüldü.
+- **Arayüz araması yalnızca kalın başlıkta (`67537c6`).** Sol liste araması
+  başlığın yanında altındaki not satırında (ilk `long_text`) da arıyordu;
+  artık yalnızca birincil alan. Test: `_verify_interface_search_primary_only.php`
+  14/14 (gerçek HTTP; eski kodla 4/14).
 
 **Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
 kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası

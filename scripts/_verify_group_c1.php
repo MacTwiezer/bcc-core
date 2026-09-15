@@ -412,7 +412,8 @@ try {
     @unlink($tmpXlsx);
     check('EXPORT: currency formatli (€1.235) xlsx icinde', strpos($sheetXml, '€1.235') !== false || strpos($sheetXml, '€1.234') !== false, 'sheet1.xml uzunluk: ' . strlen($sheetXml));
     check('EXPORT: percent formatli (%45,0) xlsx icinde', strpos($sheetXml, '%45,0') !== false);
-    check('EXPORT: rating yildizla (★) xlsx icinde', strpos($sheetXml, '★') !== false);
+    check('EXPORT: rating yazi olarak ("7 üzerinden 5") xlsx icinde, yildiz YOK (2026-09-15)',
+        strpos($sheetXml, '7 üzerinden 5') !== false && strpos($sheetXml, '★') === false && strpos($sheetXml, '☆') === false);
 
     $slackSrc = file_get_contents(__DIR__ . '/../src/slack.php');
     check('SLACK: birincil alan sorgusu options seciyor',

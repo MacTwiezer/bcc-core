@@ -59,6 +59,9 @@ foreach ($records as $rec) {
         if ($f['field_type'] === 'long_text') {
             $displayText = strip_tags($displayText);
         }
+        if ($f['field_type'] === 'rating') {
+            $displayText = bcc_rating_out_of_text($cellRow, $f['options']);
+        }
         $row[] = $displayText;
     }
     $rows[] = $row;

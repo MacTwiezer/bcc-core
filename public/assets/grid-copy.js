@@ -32,6 +32,19 @@
                 return (box && box.checked) ? 'Evet' : '';
             }
 
+            if (type === 'rating') {
+                var ratingValue = parseInt(td.getAttribute('data-value'), 10) || 0;
+                var ratingMax = td.querySelectorAll('.rating-star').length;
+                try {
+                    var ratingOptions = JSON.parse(td.getAttribute('data-options') || '{}');
+                    if (ratingOptions && ratingOptions.max_rating) {
+                        ratingMax = parseInt(ratingOptions.max_rating, 10) || ratingMax;
+                    }
+                } catch (err) {
+                }
+                return ratingValue > 0 ? ratingMax + ' üzerinden ' + Math.min(ratingValue, ratingMax) : '';
+            }
+
             var view = td.querySelector('.cell-view');
             var text = view ? view.textContent : td.textContent;
             return String(text || '').replace(/\s+/g, ' ').trim();

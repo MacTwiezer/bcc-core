@@ -1565,7 +1565,7 @@ $gridUser = current_user();
 
             <label class="grid-send-toggle-row">
                 <span class="grid-send-toggle-switch">
-                    <input type="checkbox" id="grid-send-use-grid-layout">
+                    <input type="checkbox" id="grid-send-use-grid-layout" checked>
                     <span class="grid-send-toggle-track"></span>
                 </span>
                 Tablo düzenini kullan

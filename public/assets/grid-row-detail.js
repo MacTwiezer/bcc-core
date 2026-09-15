@@ -905,6 +905,12 @@
             if (checkbox) {
                 return checkbox.checked ? 'Evet' : 'Hayır';
             }
+            var ratingView = valueWrap.querySelector('.rating-view');
+            if (ratingView) {
+                var ratingTotal = ratingView.querySelectorAll('.rating-star').length;
+                var ratingFilled = ratingView.querySelectorAll('.rating-star-filled').length;
+                return ratingFilled ? ratingTotal + ' üzerinden ' + ratingFilled : '—';
+            }
             var attachmentChips = valueWrap.querySelectorAll('.attachment-chip');
             if (attachmentChips.length) {
                 return Array.prototype.map.call(attachmentChips, function (chip) {
@@ -1053,7 +1059,7 @@
                 sendMessageInput.value = "İşte '" + tableName + "' tablosundan bu kaydın son hali:";
             }
             if (sendUseGridLayoutToggle) {
-                sendUseGridLayoutToggle.checked = false;
+                sendUseGridLayoutToggle.checked = true;
             }
             if (sendCopySelfToggle) {
                 sendCopySelfToggle.checked = false;

@@ -1184,6 +1184,21 @@ function cell_raw_value($fieldType, $cellRow)
     }
 }
 
+function bcc_rating_out_of_text($cellRow, $options)
+{
+    if ($cellRow === null || $cellRow['value_number'] === null) {
+        return '';
+    }
+    if (is_string($options)) {
+        $decodedOptions = json_decode($options, true);
+        $options = is_array($decodedOptions) ? $decodedOptions : array();
+    }
+    $maxRating = (is_array($options) && isset($options['max_rating'])) ? (int) $options['max_rating'] : 5;
+    $val = max(0, min($maxRating, (int) round((float) $cellRow['value_number'])));
+
+    return $val > 0 ? $maxRating . ' üzerinden ' . $val : '';
+}
+
 function cell_display_text($fieldType, $cellRow, $usersById = array(), $options = null)
 {
     if ($cellRow === null) {

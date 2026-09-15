@@ -169,6 +169,13 @@
                 return '0';
             }
 
+            if (type === 'rating') {
+                var outOf = s.toLocaleLowerCase('tr').match(/^\d+\s+üzerinden\s+(\d+)$/);
+                if (outOf) {
+                    return outOf[1];
+                }
+            }
+
             if (type === 'number' || type === 'currency' || type === 'percent' || type === 'rating') {
                 var n = s.replace(/[%\s ₺$€£]/g, '');
                 var lastComma = n.lastIndexOf(',');

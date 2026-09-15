@@ -2092,6 +2092,58 @@ table.admin-table td.admin-actions-cell { width: 36px; text-align: right; }
 
 .admin-bulk-trigger-muted:hover { background: var(--bcc-surface-hover); }
 details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none; }
+.admin-bulk-bar .admin-menu-panel {
+    left: 0;
+    right: auto;
+}
+
+.home-modal.assign-team-modal { max-width: 480px; }
+.assign-team-picker {
+    border: 1px solid var(--bcc-border-strong);
+    border-radius: 8px;
+    background: var(--bcc-surface);
+    overflow: hidden;
+}
+.assign-team-picker:focus-within {
+    border-color: var(--bcc-accent);
+    box-shadow: 0 0 0 3px var(--bcc-accent-soft);
+}
+.assign-team-search {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.65rem;
+    border: 0;
+    border-bottom: 1px solid var(--bcc-border);
+    background: var(--bcc-surface-sunken);
+    color: var(--bcc-text);
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+.assign-team-search:focus { outline: none; }
+.assign-team-list {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.25rem;
+    border: 0;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    font-family: inherit;
+    font-size: 0.88rem;
+}
+.assign-team-list:focus { outline: none; }
+.assign-team-list option {
+    padding: 0.3rem 0.45rem;
+    border-radius: 6px;
+}
+.assign-team-list[hidden] { display: none; }
+.assign-team-empty {
+    margin: 0;
+    padding: 0.75rem 0.65rem;
+    color: var(--bcc-text-muted);
+    font-size: 0.82rem;
+}
 
 .choice-color-picker { margin-top: 0.5rem; }
 .choice-color-row {

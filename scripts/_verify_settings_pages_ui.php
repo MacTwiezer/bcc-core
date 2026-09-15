@@ -336,6 +336,29 @@ check('J) --bcc-role-owner uc tema blogunda da tanimli',
     substr_count($themeCss, '--bcc-role-owner:') === 3 && substr_count($themeCss, '--bcc-role-owner-soft:') === 3,
     substr_count($themeCss, '--bcc-role-owner:') . ' / ' . substr_count($themeCss, '--bcc-role-owner-soft:'));
 
+check('K) admin satir menusu (⋮) paneli sag hizali kaldi (satirin sag ucunda)',
+    preg_match('/\.admin-menu-panel \{[^}]*right: 0;/s', $homeCss) === 1);
+check('K) admin "Islemler" toplu menusu SOL hizali acilir (2026-09-15: sag hizaliyken sola tasip kenar cubugunun altina giriyordu)',
+    preg_match('/\.admin-bulk-bar \.admin-menu-panel \{[^}]*left: 0;[^}]*right: auto;/s', $homeCss) === 1);
+check('K) "Islemler" menusu hala .admin-bulk-bar icinde (secici ona dayaniyor)',
+    preg_match('#<div class="admin-bulk-bar">\s*<details class="admin-menu">#', (string) file_get_contents($root . '/public/admin/index.php')) === 1);
+
+$adminJs = (string) file_get_contents($root . '/public/assets/admin.js');
+$confirmJs = (string) file_get_contents($root . '/public/assets/confirm-modal.js');
+check('L) confirm-modal.js tek dugmeli uyari modu sunuyor (window.bcc_alert)',
+    strpos($confirmJs, 'window.bcc_alert = function (options)') !== false
+    && strpos($confirmJs, 'cancelBtn.hidden = !!options.alert;') !== false);
+check('L) bcc_confirm varsayilaninda Vazgec yine gorunur (alert yoksa hidden=false)',
+    strpos($confirmJs, 'cancelBtn.hidden = !!options.alert;') !== false);
+check('L) admin: secim yokken "Islemler" menusu ACILMIYOR, uyari cikiyor',
+    strpos($adminJs, "document.querySelectorAll('.admin-bulk-bar details.admin-menu > summary')") !== false
+    && strpos($adminJs, '!menu.open && isBulkForm(formId) && checkedCountFor(formId) === 0') !== false);
+check('L) admin: secim yokken toplu form (ekipten cikar dahil) onay yerine uyari -- capture + stopImmediatePropagation',
+    preg_match("/document\.addEventListener\('submit', function \(e\) \{.*?checkedCountFor\(form\.id\) === 0.*?e\.stopImmediatePropagation\(\);.*?warnNoSelection\(\);.*?\}, true\);/s", $adminJs) === 1);
+check('L) toplu form tespiti satir kutularinin form= baglantisina dayaniyor (tek satir cikar formlari etkilenmez)',
+    strpos($adminJs, "input.admin-row-checkbox[form=\"' + formId + '\"]") !== false);
+check('L) uyari metni "Lutfen ... seciniz"', strpos($adminJs, 'Lütfen önce listeden en az bir kullanıcı seçiniz.') !== false);
+
 $passed = count(array_filter($results));
 $total = count($results);
 echo "\n==== SONUC: {$passed}/{$total} ====\n";

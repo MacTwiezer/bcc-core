@@ -94,14 +94,30 @@
         messageEl.textContent = options.message || '';
         confirmBtn.textContent = options.confirmLabel || 'Evet, sil';
         cancelBtn.textContent = options.cancelLabel || 'Vazgeç';
+        cancelBtn.hidden = !!options.alert;
         confirmBtn.classList.toggle('home-modal-btn-danger', options.danger !== false);
         confirmBtn.classList.toggle('home-modal-btn-primary', options.danger === false);
 
         backdrop.hidden = false;
-        cancelBtn.focus();
+        (options.alert ? confirmBtn : cancelBtn).focus();
 
         return new Promise(function (resolve) {
             resolveFn = resolve;
+        });
+    };
+
+    window.bcc_alert = function (options) {
+        if (typeof options === 'string') {
+            options = { message: options };
+        }
+        options = options || {};
+
+        return window.bcc_confirm({
+            title: options.title || 'Uyarı',
+            message: options.message || '',
+            confirmLabel: options.okLabel || 'Tamam',
+            danger: false,
+            alert: true,
         });
     };
 

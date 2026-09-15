@@ -331,11 +331,13 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
 
                   ?>
             <a href="/admin/create_team.php" class="admin-add-link" data-create-team-btn>+ Yeni ekip oluştur</a>
-            <a href="/admin/assign_team.php" class="admin-add-link">Kullanıcıyı ekibe ata</a>
+            <a href="/admin/assign_team.php" class="admin-add-link" data-assign-team-btn>Kullanıcıyı ekibe ata</a>
         </div>
         </div>
 <?php ?>
 <?php require __DIR__ . '/../../src/partials/create_team_modal.php'; ?>
 <script src="<?php echo bcc_asset_url('create-team-modal.js'); ?>" defer></script>
+<?php require __DIR__ . '/../../src/partials/assign_team_modal.php'; ?>
+<script src="<?php echo bcc_asset_url('assign-team-modal.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('admin.js'); ?>"></script>
 <?php require __DIR__ . '/../../src/partials/home_shell_bottom.php'; ?>

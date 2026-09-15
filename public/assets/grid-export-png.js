@@ -115,6 +115,8 @@
                         windowWidth: Math.max(document.documentElement.clientWidth, width + 100),
                         windowHeight: Math.max(document.documentElement.clientHeight, height + 100),
                         onclone: function (clonedDoc) {
+                            clonedDoc.documentElement.style.setProperty('--bcc-zoom', '1');
+
                             var link = clonedDoc.querySelector('link[data-grid-export-css]');
                             if (link) {
                                 link.media = 'all';

@@ -246,6 +246,11 @@ try {
     check('B) grid-shell.css içinde ESKI .grid-add-row-plus print kurali kalmadi',
         strpos($shellCss, '.grid-add-row-plus,') === false);
 
+    check('B) PNG kopyasinda sayfa yakinlastirmasi 1e sabitleniyor (2026-09-15: kopya penceresi tablo kadar genis acildigi icin theme.css media kurali kopyayi 1.25+ yapiyor, olcu ile cizim ayrisip goruntu kesiliyordu)',
+        strpos($pngJs, "clonedDoc.documentElement.style.setProperty('--bcc-zoom', '1');") !== false);
+    check('B) theme.css zoom hala --bcc-zoom degiskeninden (sabitleme bu degiskene dayaniyor)',
+        preg_match('/zoom:\s*var\(--bcc-zoom\)/', (string) file_get_contents($assetsDir . '/theme.css')) === 1);
+
     check('B) grid-export-png.js satir uyari esigi 500',
         preg_match('/ROW_WARN_THRESHOLD = 500\b/', $pngJs) === 1);
     check('B) grid-export-png.js yukseklik esigi de var (scrollHeight)',

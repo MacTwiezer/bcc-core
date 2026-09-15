@@ -45,7 +45,6 @@ foreach ($visibleFields as $f) {
 
 $rows = array();
 foreach ($records as $rec) {
-    $cellsForRecord = isset($cellsByRecord[$rec['id']]) ? $cellsByRecord[$rec['id']] : array();
     $row = array();
     foreach ($visibleFields as $f) {
         if ($f['field_type'] === 'attachment') {
@@ -54,7 +53,7 @@ foreach ($records as $rec) {
             continue;
         }
 
-        $cellRow = isset($cellsForRecord[$f['id']]) ? $cellsForRecord[$f['id']] : null;
+        $cellRow = bcc_cell_row_for_field($f['field_type'], $rec, $cellsByRecord, $f['id']);
         $displayText = cell_display_text($f['field_type'], $cellRow, $usersById, $f['options']);
         if ($f['field_type'] === 'long_text') {
             $displayText = strip_tags($displayText);

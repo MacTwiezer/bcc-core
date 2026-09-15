@@ -697,6 +697,48 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 
 ~~Kanban görünümünde ayrılma pingi yok~~ — `f1f0149` ile kapandı.
 
+### 2026-09-15 turu — zengin metin, çoklu seçim, grid düzeni, kayıt detayı
+
+Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
+`docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` §3c. **Şema değişmedi, veri yazılmadı.**
+
+- **Uzun metinde alt alta satırlar kaydedince birleşiyordu (`ed3c0a9`).** Chromium Enter'da
+  yeni satırı `<div>` açıyor; `bcc_sanitize_rich_text` her bloğun `<br>`'ini
+  ARKASINA koyduğu için ikinci satır birinciye yapışıyordu (kayıt 112250'de
+  ölçüldü). `<br>` artık bloğun önünde, dolgu `<br>` atılıyor; saklanan biçim
+  aynı. ⚠️ Önceden birleşmiş kayıtlar kendiliğinden düzelmez. Test:
+  `_verify_rich_text_line_breaks.php` 23/23.
+- **Çoklu seçimde birden fazla seçenek seçilemiyordu (`3a0456d`).** Yerel `<select
+  multiple>` düz tıklamada seçimi değiştiriyor (Ctrl gerekiyordu). Tıklama
+  artık seç/bırak; grid ve satır detayı ikisi de. Test:
+  `_verify_grid_multiselect_toggle.php` 12/12.
+- **Grid hücre düzeni (`4161e64`, aşağıdaki üç madde de).** Çoklu seçim ve dosya eki alt alta, satır içerik kadar
+  uzuyor; sayı/onay kutusu/tarih/tekli/çoklu seçim/saat yatay ortalı; tüm
+  hücreler dikey ortalı; uzun metin linklerinde alt çizgi yok. Test:
+  `_verify_grid_cell_layout.php` 23/23, `_verify_richtext_link.php` 51/51.
+- **Sütun kenarına çift tıklama içeriğe sığdırıyor; "satır ekle" sabit.**
+  Başlık + yüklü tüm satırlar ölçülüp en genişe göre ayarlanıyor (daraltabilir
+  de, kaydediliyor). Boyutlandırma şeridi "satır ekle"nin üstünde bitiyor;
+  "satır ekle" yatay kaydırmada sıra sütununun yanında yapışık (hücrenin
+  `overflow: hidden`'ı sticky'yi hapsediyordu); Shift-Enter ipucu balonu
+  kaldırıldı. Test: `_verify_grid_column_autofit.php` 18/18,
+  `_verify_column_resize.php` 104/104.
+- **Kayıt detayında alan adları değerlerle hizasızdı** (kutulu alanlarda
+  −3…−4px, onay/salt okunur/yıldız/ekte +6…+10px). Sabit `padding-top` yerine
+  her satırda değerin ilk satırı ölçülüp etikete yazılıyor; içerik değişince
+  yeniden. Sonra ±0,6px. Test: `_verify_detail_label_alignment.php` 14/14.
+- **Küçük arayüz:** "Yeni Alan" penceresinde "Tip değiştir" düğmesi ve tam
+  genişlik kutular; "satır ekle" yazısı dikey ortalı.
+
+**Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
+kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası
+denenmedi; `_verify_slack_integration.php:284` "satır ekleme bildirimi
+TETİKLEDİ" kontrolü 2026-09-08 `26f0d44`'ten beri bayat (anlık yeni kayıt
+bildirimi kaldırıldı) — yalnızca demo hesaplarıyla çalışan bölümde olduğu için
+fark edilmedi, yeni tasarıma göre güncellenmeli (günlük 2026-09-15 §13).
+**Tam tur 2026-09-15:** 78 betik; demo seed'li 8 betikle birlikte tek düşen
+bu bayat kontrol.
+
 ---
 
 ## 6. Kalan İşler

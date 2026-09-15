@@ -1,11 +1,14 @@
 # Değişen Dosyalar ve Veritabanı Tabloları
 
-**Kapsam:** 2026-09-08, 2026-09-09 ve 2026-09-14 oturumları (canlıya alma
+**Kapsam:** 2026-09-08, 2026-09-09, 2026-09-14 ve 2026-09-15 oturumları (canlıya alma
 sonrası). Günlük anlatı `docs/gunluk/` altındaki aynı tarihli dosyalarda;
 **bu dosya yalnızca envanter** — "neye dokunuldu" sorusunun tek bakışta
 cevabı.
 
-Son güncelleme: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
+Son güncelleme: 2026-09-15 (zengin metinde satır sonu kaybı, çoklu seçim,
+grid hücre düzeni ve hizası, sütun genişliğini içeriğe sığdırma, sabit
+"satır ekle", kayıt detayında etiket hizası, "Yeni Alan" penceresi) — §3c.
+Önceki: 2026-09-14 (Tab ile hücre gezinmesi, uyarı kutularındaki metin
 kayması, kanban ayrılma pingi, base silme temizliği, çöp kutusu düzeni,
 profil fotoğrafı ve her yere bağlanması, geri yüklenen kart düğmeleri ve grup
 sayacı, "Kullanıcı" alanında ayrılan üyenin adı, 08-09 Eylül kodunun commit
@@ -20,6 +23,7 @@ edilmesi).
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
 | **2026-09-14** | **41 dosya** (29 değiştirildi, 12 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
+| **2026-09-15** | 16 dosya (11 değiştirildi, 5 yeni test) + 3 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok |
 
 ---
 
@@ -280,6 +284,81 @@ Tarayıcı testlerinin hiçbiri veritabanına bağlanmıyor: üçü de statik HT
 fikstürü üzerinde çalıştı, oturum açılmadı. Base silme testinde `fetch`
 sahteyle değiştirildiği için **hiçbir istek sunucuya gitmedi**; kart
 işaretlemesi `bcc_render_home_base_card()` ile üretildi, o da salt-okunur.
+
+---
+
+## 3c. Kod dosyaları — 2026-09-15
+
+Günün on iki maddesinin on biri kod değiştirdi (§1 yalnızca rapordu). Ayrıntı
+ve ölçümler: `docs/gunluk/2026-09-15.md`.
+
+### 3c.1 Değiştirilen — 11 dosya
+
+| Dosya | Günlük § | Ne değişti |
+|---|---|---|
+| `src/schema.php` | §4 | Zengin metin temizleyicisi: tarayıcının Enter'da açtığı `<div>`/`<p>` (ve yapıştırılan `li`, `ul`, `ol`, `h1-h6`, `blockquote`, `pre`) satırının `<br>`'i bloğun ÖNÜNE konuyor (eskiden arkasına — ikinci satır birinciye yapışıyordu); blok içi dolgu `<br>` atılıyor. Yeni `bcc_rich_text_ends_with_break()`, `bcc_rich_text_strip_trailing_break()`. Saklanan biçim aynı ("inline + `<br>`") |
+| `src/partials/field_type_wizard_fields.php` | §2 | "Seçilen tip · Tip değiştir" satırı: `·` silindi, sınıflar `field-type-chosen` / `field-type-change` |
+| `public/assets/theme.css` | §2 | "Tip değiştir" altı çizili metin bağlantısından çerçeveli küçük düğmeye |
+| `public/assets/style.css` | §3, §5, §7, §8, §9, §12 | **Altı ayrı iş.** §3 boş tablo "Yeni Alan" penceresinde kutular tam genişlik. §5 uzun metin linklerinde alt çizgi yok. §7 gridde çoklu seçim + dosya eki dikey liste, satır içerik kadar uzuyor; sayı/onay/tarih/tekli/çoklu/saat yatay ortalı. §8 veri satırı hücreleri dikey ortalı (`.cell-view` `height: auto`, hover zemini `td`'de). §9 sütun genişliği ölçüm modu (`is-col-measuring`). §12 detay etiketinin üst dolgusu `--grid-detail-label-offset`'ten |
+| `public/assets/grid.js` | §6 | Çoklu seçim liste kutusunda Ctrl'süz tıklama seç/bırak (`mousedown` + `preventDefault`) |
+| `public/assets/grid-column-resize.js` | §9 | Tutamaca çift tıklama → `autoFitColumn()`; şerit "satır ekle" satırının üstünde bitiyor; `--grid-rownum-w` |
+| `public/assets/grid-shell.css` | §9, §10, §11 | "satır ekle" yapışkan (`position: sticky`) + hücresi `overflow: visible`; düğme yazısı dikey ortalı; Shift-Enter ipucunun ölü kuralları silindi |
+| `public/grid.php` | §9, §11 | "satır ekle" satırından Shift-Enter ipucu balonu ve `data-tooltip-host` silindi |
+| `public/assets/grid-row-detail.js` | §12 | Kayıt detayında etiket, değerin ilk satırıyla hizalanıyor: `firstLineCenter()`, `alignDetailLabels()`, `MutationObserver` + `resize` |
+| `scripts/_verify_richtext_link.php` | §5 | D bölümü "altı çizili" kararından "alt çizgi yok"a |
+| `scripts/_verify_column_resize.php` | §9 | G maddesi: şerit yüksekliği add-row'un üstünde bitiyor |
+
+### 3c.2 Yeni — 5 test betiği
+
+| Dosya | § | Kontrol | Düzeltme geri alınınca |
+|---|---|---|---|
+| `scripts/_verify_rich_text_line_breaks.php` | §4 | 23 | 10/23 |
+| `scripts/_verify_grid_multiselect_toggle.php` | §6 | 12 | 5/12 |
+| `scripts/_verify_grid_cell_layout.php` | §7, §8 | 23 | 2/21 (§7 hâli) |
+| `scripts/_verify_grid_column_autofit.php` | §9, §10, §11 | 18 | 4/17 (§9 hâli) |
+| `scripts/_verify_detail_label_alignment.php` | §12 | 14 | 1/14 |
+
+### 3c.3 Belgeler
+
+| Dosya | Ne |
+|---|---|
+| `docs/gunluk/2026-09-15.md` | **YENİ** — günün notu (§1-§12) |
+| `docs/PROJE-DURUM.md` | §5 "Biten İşler"e 2026-09-15 turu |
+| `docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` | Bu bölüm, kapsam satırı, §1 özeti |
+
+### 3c.4 Commit'ler
+
+| Commit | Kapsam |
+|---|---|
+| `ed3c0a9` | Zengin metin satır sonu (2 dosya: `src/schema.php` + test) — §4 |
+| `3a0456d` | Çoklu seçim Ctrl'süz (2 dosya: `grid.js` + test) — §6 |
+| `4161e64` | Grid hücre düzeni, sütunu içeriğe sığdırma, sabit "satır ekle", detay etiket hizası, "Yeni Alan" penceresi (12 dosya) — §2-§3, §5, §7-§12. `style.css` / `grid-shell.css` bu işlerin hepsini birlikte taşıdığı için tek commit |
+| (bu commit) | Günlük + envanter + PROJE-DURUM |
+
+`git add .` kullanılmadı; her commit öncesi `git status` + `git diff --cached`;
+izlenen diff ve takip edilmeyen 6 dosya ayrıca sır taramasından geçti
+(webhook, token, parola, anahtar, kişisel e-posta — bulgu yok).
+
+### 3c.5 Veritabanı — 2026-09-15: şema DEĞİŞMEDİ, kalıcı veri bırakılmadı
+
+**DDL yok.** Oturumun kendi sorguları salt-okunur `SELECT`: tablo 7141 kayıt
+112250'nin uzun metin değeri (§4 teşhisi) ve kirlilik sayaçları.
+
+**Testlerin yazıp sildiği** (kalıcı iz yok): tam regresyon paketi (78 betik,
+her biri kendi fikstürünü kurup temizler) ve demo hesaplarına bağlı 8 betik
+için `seed_demo_users.php` → `--remove`. Dokuz tablo sayacı önce = sonra:
+`users=6 teams=4 team_members=2 bases=7 tables_meta=6 fields=47 records=170
+cell_values=694 audit_log=15245`, `notify_sent=2445`, `@bcc.local` hesap 0.
+
+⚠️ **Veri düzeltmesi YAPILMADI:** §4'ten önce birden fazla satırla
+kaydedilmiş uzun metinlerde satır sonu kayıt anında kaybolmuştu; kod
+düzeltmesi onları geri getirmez. Bilinen örnek kayıt 112250 (tablo 7141) —
+kullanıcının notu bir kez açıp link satırının önüne Enter basıp kaydetmesi
+gerekiyor.
+
+Tarayıcı testlerinin hepsi statik fikstürde (gerçek PHP render
+fonksiyonları + gerçek `public/assets` dosyaları, `bcc_post`/`fetch` sahte):
+oturum açılmadı, sunucuya istek gitmedi.
 
 ---
 

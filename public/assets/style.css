@@ -449,7 +449,7 @@ table.grid tbody tr.is-row-selected .grid-rownum { background: var(--bcc-accent-
 .grid-detail-field-inline .grid-detail-field-label {
     flex: 0 0 150px;
     margin-bottom: 0;
-    padding-top: 0.65rem;
+    padding-top: var(--grid-detail-label-offset, 0.65rem);
 }
 .grid-detail-field-inline .grid-detail-field-value {
     flex: 1;
@@ -957,6 +957,23 @@ body.is-col-resizing,
 body.is-col-resizing * {
     cursor: col-resize !important;
 }
+table.grid.is-col-measuring .is-col-measure,
+table.grid.is-col-measuring .is-col-measure * {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    -webkit-line-clamp: none !important;
+}
+table.grid.is-col-measuring .is-col-measure .cell-view {
+    align-items: flex-start !important;
+}
+table.grid.is-col-measuring .is-col-measure > .cell-view {
+    width: max-content !important;
+}
+table.grid.is-col-measuring:not(.row-h-short) td.is-col-measure:not([data-field-type="multiple_select"]):not([data-field-type="attachment"]) > .cell-view {
+    display: block !important;
+}
 table.grid.grid-has-col-widths {
     table-layout: fixed;
     min-width: 0;
@@ -1190,15 +1207,14 @@ td.editable.richtext-editing {
 .richtext-popover .richtext-editable a,
 .if-detail-field-value:not(.attachment-cell-view) a {
     color: var(--bcc-link);
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration: none;
     cursor: pointer;
 }
 .cell-view.rich-text-view a:hover,
 .richtext-popover .richtext-editable a:hover,
 .if-detail-field-value:not(.attachment-cell-view) a:hover {
     color: var(--bcc-link-hover);
-    text-decoration-thickness: 2px;
+    text-decoration: none;
 }
 
 .attachment-cell-view {
@@ -2098,6 +2114,63 @@ table.grid.row-h-short .cell-view.rich-text-view li + li::before {
 table.grid.grid-has-col-widths .cell-view.rich-text-view {
     max-width: none;
 }
+
+table.grid tbody tr[data-record-id] > td.grid-cell,
+table.grid tbody tr[data-record-id] > td.grid-rownum {
+    vertical-align: middle;
+}
+table.grid tbody tr[data-record-id] > td.grid-cell > .cell-view {
+    height: auto;
+}
+table.grid tbody tr[data-record-id] > td.grid-cell.editable:not(.editing):hover {
+    background-color: var(--bcc-surface-hover);
+}
+
+table.grid tbody td.grid-cell[data-field-type="number"],
+table.grid tbody td.grid-cell[data-field-type="checkbox"],
+table.grid tbody td.grid-cell[data-field-type="date"],
+table.grid tbody td.grid-cell[data-field-type="single_select"],
+table.grid tbody td.grid-cell[data-field-type="multiple_select"],
+table.grid tbody td.grid-cell[data-field-type="time"] {
+    text-align: center;
+}
+
+table.grid tbody td.grid-cell[data-field-type="multiple_select"] .cell-view,
+table.grid tbody td.grid-cell[data-field-type="attachment"] .cell-view {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    height: auto;
+    padding-block: 5px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: none;
+}
+table.grid tbody td.grid-cell[data-field-type="multiple_select"] .cell-view {
+    align-items: center;
+}
+table.grid tbody td.grid-cell[data-field-type="multiple_select"] .choice-chip {
+    margin: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+table.grid tbody td.grid-cell[data-field-type="attachment"] .cell-view {
+    align-items: flex-start;
+}
+table.grid tbody td.grid-cell[data-field-type="attachment"] .attachment-chip {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+table.grid tbody td.grid-cell[data-field-type="attachment"] .attachment-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    white-space: nowrap;
+}
 table.grid.wrap-headers thead th {
     white-space: normal;
 }
@@ -2708,6 +2781,18 @@ a.sort-btn:hover {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+}
+#gs-empty-fields-modal #new-field-details-step input[type="text"],
+#gs-empty-fields-modal #new-field-details-step textarea {
+    max-width: none;
+}
+#gs-empty-fields-modal #new-field-currency-row:not([hidden]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1rem;
+}
+#gs-empty-fields-modal #new-field-currency-row input {
+    max-width: none;
 }
 .gs-empty-fields-added,
 .gs-empty-fields-done-row {

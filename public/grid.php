@@ -1384,10 +1384,9 @@ $gridUser = current_user();
                             endforeach; ?>
                         <?php endif; ?>
                         <?php if ($canEdit): ?>
-                            <tr class="grid-add-row" data-grid-add-row data-tooltip-host>
+                            <tr class="grid-add-row" data-grid-add-row>
                                 <td class="grid-rownum grid-add-row-plus">+</td>
                                 <td colspan="<?php echo max(1, count($visibleFields)); ?>" class="grid-add-row-hint">
-                                    <span class="gs-kbd-tooltip gs-kbd-tooltip-light">Shift-Enter'a basarak herhangi bir yere yeni kayıt da ekleyebilirsiniz</span>
                                     <span class="grid-add-row-bulk" data-grid-add-bulk>
                                         <input type="number" min="1" max="500" step="1" value="10"
                                                class="grid-add-row-bulk-input" data-grid-add-bulk-count

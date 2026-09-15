@@ -198,13 +198,13 @@ try {
         $linkRule !== null && strpos($styleCss, '.richtext-editable a') !== false);
     check('D) link rengi token uzerinden (--bcc-link)',
         $linkRule !== null && strpos($linkRule, 'color: var(--bcc-link);') !== false);
-    check('D) alti cizili',
-        $linkRule !== null && strpos($linkRule, 'text-decoration: underline;') !== false);
+    check('D) alti cizili DEGIL (2026-09-15 karari)',
+        $linkRule !== null && strpos($linkRule, 'text-decoration: none;') !== false
+        && strpos($linkRule, 'underline') === false);
     check('D) cursor: pointer',
         $linkRule !== null && strpos($linkRule, 'cursor: pointer;') !== false);
-    check('D) hover da alti cizgi KAYBOLMUYOR, kalinlasiyor',
-        preg_match('/\.rich-text-view a:hover,[^{]*\{[^}]*text-decoration-thickness: 2px;/s', $styleCss) === 1
-        && preg_match('/\.rich-text-view a:hover,[^{]*\{[^}]*text-decoration: none;/s', $styleCss) === 0);
+    check('D) hover da alti cizgi CIKMIYOR (genel a:hover underline kuralini eziyor)',
+        preg_match('/\.rich-text-view a:hover,[^{]*\{[^}]*text-decoration: none;/s', $styleCss) === 1);
 
     check('D) cıplak "td a" secicisi YOK (chip/ikon <a> lari bozulmasin)',
         preg_match('/(^|[\s,])td a\s*[,{]/m', $styleCss) === 0);

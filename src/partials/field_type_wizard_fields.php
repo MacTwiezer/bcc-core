@@ -26,9 +26,9 @@ if (!isset($fieldWizardSubmitLabel)) {
 </div>
 
 <div id="new-field-details-step" hidden>
-    <p class="hint">
-        Seçilen tip: <strong id="new-field-type-chosen-label"></strong>
-        · <button type="button" class="link-btn" id="new-field-type-change">Tip değiştir</button>
+    <p class="hint field-type-chosen">
+        <span>Seçilen tip: <strong id="new-field-type-chosen-label"></strong></span>
+        <button type="button" class="link-btn field-type-change" id="new-field-type-change">Tip değiştir</button>
     </p>
     <label>Alan adı
         <input type="text" name="name" id="new-field-name-input">

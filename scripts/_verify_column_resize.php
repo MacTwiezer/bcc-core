@@ -468,8 +468,9 @@ try {
     check('G) katman olay gecirmiyor, serit geciriyor (hucreler tiklanabilir kaliyor)',
         preg_match('/\.grid-col-resize-layer \{[^}]*pointer-events: none;/s', $styleCss) === 1
         && preg_match('/\.grid-col-resize-handle \{[^}]*pointer-events: auto;/s', $styleCss) === 1);
-    check('G) serit yuksekligi TABLONUN yuksekliginden hesaplaniyor',
-        strpos($resizeJs, 'var height = table.offsetHeight;') !== false
+    check('G) serit yuksekligi tablodan, "satir ekle" satirinin USTUNDE bitiyor (2026-09-15)',
+        strpos($resizeJs, "var addRow = table.querySelector('tr.grid-add-row');") !== false
+        && strpos($resizeJs, 'var height = addRow ? addRow.offsetTop : table.offsetHeight;') !== false
         && strpos($resizeJs, "strip.style.height = height + 'px';") !== false);
     check('G) yerlesim tablo boyutu degisince kendiliginden tazeleniyor (ResizeObserver)',
         strpos($resizeJs, 'new window.ResizeObserver(layout).observe(table)') !== false);

@@ -207,7 +207,11 @@
         function layout() {
             var heads = headerCells();
             var top = table.offsetTop;
-            var height = table.offsetHeight;
+            var addRow = table.querySelector('tr.grid-add-row');
+            var height = addRow ? addRow.offsetTop : table.offsetHeight;
+            if (heads[0]) {
+                table.style.setProperty('--grid-rownum-w', heads[0].offsetWidth + 'px');
+            }
             var scrollLeft = wrap.scrollLeft;
             var frozenW = frozenGroupWidth(heads);
             var acc = table.offsetLeft;
@@ -262,10 +266,77 @@
             new window.ResizeObserver(layout).observe(table);
         }
 
+        function autoFitColumn(key) {
+            var heads = headerCells();
+            var index = -1;
+            for (var i = 0; i < heads.length; i++) {
+                if (heads[i].getAttribute('data-col-key') === key) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index < 0) {
+                return;
+            }
+
+            ensureFixedLayout();
+            var col = colFor(key);
+            if (!col) {
+                return;
+            }
+
+            var cells = [heads[index]];
+            Array.prototype.forEach.call(table.querySelectorAll('tbody tr[data-record-id]'), function (tr) {
+                if (tr.children[index]) {
+                    cells.push(tr.children[index]);
+                }
+            });
+
+            col.style.width = MIN_WIDTH + 'px';
+            syncTableWidth();
+            table.classList.add('is-col-measuring');
+            cells.forEach(function (cell) {
+                cell.classList.add('is-col-measure');
+            });
+
+            var widest = 0;
+            cells.forEach(function (cell) {
+                var right = 0;
+                Array.prototype.forEach.call(cell.children, function (child) {
+                    if (!child.offsetWidth) {
+                        return;
+                    }
+                    var marginRight = parseFloat(window.getComputedStyle(child).marginRight) || 0;
+                    right = Math.max(right, child.offsetLeft + child.offsetWidth + marginRight);
+                });
+                var cellStyle = window.getComputedStyle(cell);
+                right += (parseFloat(cellStyle.paddingRight) || 0) + (parseFloat(cellStyle.borderRightWidth) || 0);
+                widest = Math.max(widest, right);
+            });
+
+            cells.forEach(function (cell) {
+                cell.classList.remove('is-col-measure');
+            });
+            table.classList.remove('is-col-measuring');
+
+            col.style.width = clampWidth(Math.ceil(widest) + 2) + 'px';
+            syncTableWidth();
+            if (window.BCC_reapplyFreeze) {
+                window.BCC_reapplyFreeze();
+            }
+            layout();
+            persist();
+        }
+
         strips.forEach(function (strip) {
             if (!strip) {
                 return;
             }
+
+            strip.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                autoFitColumn(strip.getAttribute('data-col-key'));
+            });
 
             var key = strip.getAttribute('data-col-key');
             var startX = 0;

@@ -346,6 +346,93 @@
             });
         }
 
+        function firstLineCenter(root) {
+            var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+                acceptNode: function (node) {
+                    if (node.nodeType === 3) {
+                        return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                    }
+                    if (!node.getClientRects().length) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                },
+            });
+            var node;
+            while ((node = walker.nextNode())) {
+                if (node.nodeType === 3) {
+                    var range = document.createRange();
+                    range.selectNodeContents(node);
+                    var textRects = range.getClientRects();
+                    if (textRects.length && textRects[0].height) {
+                        return textRects[0].top + textRects[0].height / 2;
+                    }
+                    continue;
+                }
+                var tag = node.tagName;
+                var rect = node.getBoundingClientRect();
+                if (tag === 'TEXTAREA' || (tag === 'SELECT' && (node.multiple || node.size > 1))) {
+                    var cs = window.getComputedStyle(node);
+                    var padTop = parseFloat(cs.paddingTop) || 0;
+                    var lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
+                    if (tag === 'SELECT' && node.options.length) {
+                        lineHeight = (node.scrollHeight - padTop - (parseFloat(cs.paddingBottom) || 0)) / node.options.length;
+                    }
+                    return rect.top + (parseFloat(cs.borderTopWidth) || 0) + padTop + lineHeight / 2;
+                }
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'IMG' || tag === 'svg') {
+                    return rect.top + rect.height / 2;
+                }
+            }
+            return null;
+        }
+
+        function alignDetailLabels() {
+            var rows = Array.prototype.slice.call(fieldsContainer.querySelectorAll('.grid-detail-field-inline'));
+            rows.forEach(function (row) {
+                row.style.setProperty('--grid-detail-label-offset', '0px');
+            });
+            var offsets = rows.map(function (row) {
+                var label = row.querySelector('.grid-detail-field-label');
+                var value = row.querySelector('.grid-detail-field-value');
+                if (!label || !value) {
+                    return null;
+                }
+                var labelCenter = firstLineCenter(label);
+                var valueCenter = firstLineCenter(value);
+                if (labelCenter === null || valueCenter === null) {
+                    return null;
+                }
+                return Math.max(0, Math.round((valueCenter - labelCenter) * 2) / 2);
+            });
+            rows.forEach(function (row, i) {
+                if (offsets[i] === null) {
+                    row.style.removeProperty('--grid-detail-label-offset');
+                } else {
+                    row.style.setProperty('--grid-detail-label-offset', offsets[i] + 'px');
+                }
+            });
+        }
+
+        var alignPending = false;
+        function scheduleAlignDetailLabels() {
+            if (alignPending || overlay.hidden) {
+                return;
+            }
+            alignPending = true;
+            requestAnimationFrame(function () {
+                alignPending = false;
+                if (!overlay.hidden) {
+                    alignDetailLabels();
+                }
+            });
+        }
+
+        if (window.MutationObserver) {
+            new window.MutationObserver(scheduleAlignDetailLabels).observe(fieldsContainer, { childList: true, subtree: true });
+        }
+        window.addEventListener('resize', scheduleAlignDetailLabels);
+
         function updateNavState() {
             var rows = getAllDataRows();
             var idx = rows.indexOf(currentDetailRow);
@@ -574,6 +661,7 @@
             loadComments(tr.getAttribute('data-record-id'));
             overlay.hidden = false;
             fieldsContainer.querySelectorAll('.grid-detail-textarea').forEach(autoGrowTextarea);
+            alignDetailLabels();
         }
 
         function closeDetail() {

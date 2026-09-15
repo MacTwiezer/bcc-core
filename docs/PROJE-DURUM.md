@@ -739,6 +739,25 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   düzenini kullan" anahtarı her açılışta kapalıya sıfırlanıyordu, artık
   varsayılan açık. Test: `_verify_record_send_rating_text.php` 22/22,
   `_verify_group_c1.php` 56/56 (gerçek xlsx indirme).
+- **"Excel indir"de Oluşturan / Son değiştiren / iki zaman sütunu boştu (`70cbd2b`).**
+  Dışa aktarma hücreyi doğrudan `cell_values`'tan alıyordu; bu dört alan
+  kaydın kendi kolonlarından hesaplanır. Artık grid'le aynı çözücü
+  (`bcc_cell_row_for_field`). Test: `_verify_xlsx_export_computed_fields.php`
+  15/15 (gerçek HTTP; düzeltmeden önce 8/15).
+- **PNG / PDF indirme görüntüsü yarıda kesiliyordu (`fa1d35a`).** html2canvas sayfanın
+  kopyasını tablo kadar geniş bir pencerede kuruyor; `theme.css`'in pencere
+  genişliğine bağlı `--bcc-zoom` kuralları kopyayı büyütüp ölçü ile çizimi
+  ayırıyordu. Kopyada yakınlaştırma 1'e sabitlendi. Gerçek `grid.php`'de, ayrı
+  test verisiyle eski/yeni kod karşılaştırıldı: 1 / 1.1 / 1.25
+  yakınlaştırmada eskisi kesik, yenisi tam; 5 seçenekli çoklu seçim × 3
+  satırda görüntü en uzun hücreyle uzuyor. Test: `_verify_grid_export.php` 71/71.
+- **Çalışma alanları: Katılımcılar ve Base'ler kartları içeriği kadar (`119ffc2`).**
+  2026-09-04'teki ortak sabit bant yalnızca sol panel ve Son Hareketler'de
+  kaldı; katılımcı listesi kişi sayısıyla uzuyor (420px'ten sonra kayıyor),
+  sol sütun `display: contents` yerine bağımsız flex sütun olduğu için
+  Base'ler kartı sağ kartın boyuna esnemiyor. Test:
+  `_verify_workspaces_list_bands.php` 30/30 + gerçek sayfada 1/6/20 kişi,
+  2/8 base ölçüldü.
 
 **Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
 kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası
@@ -746,8 +765,11 @@ denenmedi; `_verify_slack_integration.php:284` "satır ekleme bildirimi
 TETİKLEDİ" kontrolü 2026-09-08 `26f0d44`'ten beri bayat (anlık yeni kayıt
 bildirimi kaldırıldı) — yalnızca demo hesaplarıyla çalışan bölümde olduğu için
 fark edilmedi, yeni tasarıma göre güncellenmeli (günlük 2026-09-15 §13).
-**Tam tur 2026-09-15:** 78 betik; demo seed'li 8 betikle birlikte tek düşen
-bu bayat kontrol.
+**Tam tur 2026-09-15 (son):** 80 betik; demo seed'li 8 betikle birlikte tek
+düşen bu bayat kontrol. Ayrıca açık: `public/interface.php` arayüz kart/detay
+alanları da hücreyi doğrudan `cell_values`'tan alıyor (Oluşturan / Son
+değiştiren muhtemelen boş, ölçülmedi); gridde sütun dondurma tutamacının ipucu
+balonu tablo kabının dışına açılıp kırpılıyor (günlük §23).
 
 ---
 

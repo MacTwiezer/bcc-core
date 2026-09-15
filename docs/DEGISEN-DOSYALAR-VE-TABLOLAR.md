@@ -23,7 +23,7 @@ edilmesi).
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
 | **2026-09-14** | **41 dosya** (29 değiştirildi, 12 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
-| **2026-09-15** | 21 dosya (15 değiştirildi, 6 yeni test) + 3 belge — §3c + §3c.6 | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok |
+| **2026-09-15** | 26 dosya (19 değiştirildi, 7 yeni test) + 3 belge — §3c, §3c.6, §3c.7 | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok |
 
 ---
 
@@ -376,6 +376,24 @@ Günlük §14-§16. Commit: `6809264`.
 | `scripts/_verify_record_send_rating_text.php` | §14-§16 | **YENİ**, 22 kontrol |
 
 **Veritabanı:** şema değişmedi; testler geçici veri yazıp sildi (sayaçlar önce = sonra).
+
+### 3c.7 Üçüncü tur (aynı gün) — Excel hesaplanan alanlar, PNG/PDF kesilmesi, çalışma alanı kartları
+
+Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22).
+
+| Dosya | § | Ne değişti |
+|---|---|---|
+| `public/api/view_export_xlsx.php` | §18 | Hücre `bcc_cell_row_for_field()` ile çözülüyor — Oluşturan, Son değiştiren, Oluşturulma / Son değişiklik zamanı artık boş değil |
+| `public/assets/grid-export-png.js` | §19, §20 | html2canvas kopyasında `--bcc-zoom: 1` (PNG ve PDF ikisi de `captureCanvas` kullanıyor) |
+| `public/assets/workspaces.css` | §21, §22 | Katılımcılar ızgarası `height: auto; max-height: var(--wsx-list-h)`; gövde `display: contents` yerine sol sütun flex, `align-items: start` |
+| `scripts/_verify_grid_export.php` | §19 | +2 kontrol (71) |
+| `scripts/_verify_workspaces_list_bands.php` | §21, §22 | E bölümü yeni karara göre, E2 + E3 (30) |
+| `scripts/_verify_xlsx_export_computed_fields.php` | §18 | **YENİ**, 15 kontrol, gerçek HTTP indirme |
+
+**Veritabanı:** şema değişmedi. Tarayıcı doğrulamaları için ayrı test
+kullanıcı/ekip/base/tablo kurulup silindi (`scratchpad/realfx.php`,
+`wsfx.php`, `wsfx2.php`); her birinden sonra sayaçlar önce = sonra, test
+kalıntısı 0.
 
 ---
 

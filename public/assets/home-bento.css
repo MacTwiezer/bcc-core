@@ -270,3 +270,15 @@ html.home-view-list .home-ws-members,
         flex-basis: 100%;
     }
 }
+
+.home-ws-face {
+    display: block;
+    flex: none;
+    margin-right: -0.35rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    border: 1px solid var(--bcc-border);
+    align-self: center;
+}
+.home-ws-face:not(.has-image) { display: none; }

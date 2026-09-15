@@ -3356,6 +3356,7 @@ function bcc_render_home_base_grid($bases, $starredBaseIds, $teamNamesById, $emp
             $groupRole = isset($roleByTeamId[$tid]) ? $roleByTeamId[$tid] : null;
             ?>
             <div class="home-section-head home-ws-head">
+                <?php echo bcc_team_face_html($tid, 'home-ws-face', ''); ?>
                 <h2 class="home-section-title"><?php echo htmlspecialchars($tname, ENT_QUOTES, 'UTF-8'); ?></h2>
                 <?php if ($groupRole !== null && isset($GLOBALS['BCC_ROLE_LABELS'][$groupRole])): ?>
                     <?php 

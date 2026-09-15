@@ -805,3 +805,74 @@
     color: var(--bcc-text-muted);
 }
 .sp-page .wsx-act-empty { margin: 0; }
+
+/* Calisma alani resmi: owner baslik kutusuna tiklayip yukler (team-image.js). */
+.sp-page .wsx-card-icon.has-image,
+.sp-page .wsx-head-icon.has-image { background: var(--bcc-surface); }
+.sp-page .wsx-team-image-btn {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+.sp-page .wsx-team-image-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 11px;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+.sp-page .wsx-team-image-btn:hover::after,
+.sp-page .wsx-team-image-btn:focus-visible::after { opacity: 1; }
+.sp-page .wsx-team-image-btn:focus-visible {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 3px;
+}
+.sp-page .wsx-team-image-cam {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bcc-surface);
+    color: var(--bcc-text);
+    border: 1px solid var(--bcc-border-strong);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.sp-page .wsx-head-id.is-busy .wsx-team-image-btn {
+    cursor: progress;
+    opacity: 0.6;
+}
+.sp-page .wsx-team-image-remove {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+.sp-page .wsx-team-image-remove[hidden] { display: none; }
+.sp-page .wsx-team-image-remove:hover {
+    color: var(--bcc-danger);
+    text-decoration: underline;
+}
+.sp-page .wsx-team-image-status {
+    margin: 0.25rem 0 0;
+    font-size: 0.78rem;
+    color: var(--bcc-text-muted);
+}
+.sp-page .wsx-team-image-status[hidden] { display: none; }
+.sp-page .wsx-team-image-status.is-error { color: var(--bcc-danger); }

@@ -38,6 +38,8 @@ if (!headers_sent()) {
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/image_upload.php';
+require_once __DIR__ . '/team_image.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/slack.php';

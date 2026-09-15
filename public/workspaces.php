@@ -168,9 +168,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     data-wsx-team-name="<?php echo htmlspecialchars(mb_strtolower($t['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
                                     <?php echo $isActive ? ' aria-current="page"' : ''; ?>
                                 >
-                                    <span class="wsx-card-icon">
-                                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
-                                    </span>
+                                    <?php echo bcc_team_face_html($tid, 'wsx-card-icon', '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>'); ?>
                                     <span class="wsx-card-body">
                                         <span class="wsx-card-name"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                                         <span class="wsx-card-meta">
@@ -202,16 +200,31 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 <div class="wsx-main">
                     <div class="settings-card">
                         <div class="wsx-head">
-                            <div class="wsx-head-id">
-                                <span class="wsx-head-icon">
-                                    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>
-                                </span>
+                            <?php $wsHeadFace = bcc_team_face_html($selectedTeamId, 'wsx-head-icon', '<svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8h15" stroke="currentColor" stroke-width="1.4"/></svg>'); ?>
+                            <div class="wsx-head-id"<?php echo $canManageMembers ? ' data-team-image-root data-team-id="' . (int) $selectedTeamId . '"' : ''; ?>>
+                                <?php if ($canManageMembers): ?>
+                                    <button type="button" class="wsx-team-image-btn" data-team-image-pick aria-label="Çalışma alanı resmini değiştir" title="Resim ekle / değiştir">
+                                        <?php echo $wsHeadFace; ?>
+                                        <span class="wsx-team-image-cam" aria-hidden="true">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                                        </span>
+                                    </button>
+                                    <input type="file" accept="image/png,image/jpeg,image/webp" data-team-image-input hidden>
+                                <?php else: ?>
+                                    <?php echo $wsHeadFace; ?>
+                                <?php endif; ?>
                                 <div>
                                     <h2 class="wsx-head-title"><?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?></h2>
                                     <div class="wsx-head-sub">
                                         <?php echo isset($baseCounts[$selectedTeamId]) ? (int) $baseCounts[$selectedTeamId] : 0; ?> base
                                         · <?php echo count($collaborators); ?> katılımcı
+                                        <?php if ($canManageMembers): ?>
+                                            <button type="button" class="wsx-team-image-remove" data-team-image-remove<?php echo bcc_team_image_url($selectedTeamId) !== null ? '' : ' hidden'; ?>>· Resmi kaldır</button>
+                                        <?php endif; ?>
                                     </div>
+                                    <?php if ($canManageMembers): ?>
+                                        <p class="wsx-team-image-status" data-team-image-status role="status" hidden></p>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="wsx-actions">
@@ -398,6 +411,8 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             require __DIR__ . '/../src/partials/share_modal.php';
             ?>
             <script src="<?php echo bcc_asset_url('workspaces.js'); ?>" defer></script>
+            <script src="<?php echo bcc_asset_url('image-square.js'); ?>" defer></script>
+            <script src="<?php echo bcc_asset_url('team-image.js'); ?>" defer></script>
         <?php endif; ?>
 
         <?php if ((int) $user['is_admin'] === 1): ?>

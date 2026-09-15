@@ -182,7 +182,7 @@ kullanıcılar hesaplarını etkinleştiremez.
 ### 3.4 Dosya izinleri
 
 ```bash
-mkdir -p storage/attachments storage/avatars storage/mail storage/backups
+mkdir -p storage/attachments storage/avatars storage/team_images storage/mail storage/backups
 chown -R www-data:www-data storage/       # Apache hangi kullanıcı ile çalışıyorsa
 chmod -R 755 storage/
 ```
@@ -193,6 +193,10 @@ chmod -R 755 storage/
 kendiliğinden açılır, ama yukarıdaki `chown` onu da kapsamalı. Fotoğraflar
 veritabanında değil **yalnızca bu klasörde** durur (dosya adı `u<kullanıcı id>`),
 yani storage yedeği (§6) onları da içermeli. **Şema değişikliği yok.**
+
+`storage/team_images/` çalışma alanı (ekip) resimlerini tutar (2026-09-15), aynı
+desen: dosya adı `t<ekip id>`, ilk yüklemede kendiliğinden açılır, yedeğe dahil
+olmalı. **Şema değişikliği yok.**
 
 ### 3.5 PHP ayarları
 

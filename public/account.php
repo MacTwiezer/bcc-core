@@ -392,6 +392,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 </div>
 <script src="<?php echo bcc_asset_url('account-page.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('image-square.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('account-avatar.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('password-toggle.js'); ?>" defer></script>
 <?php require __DIR__ . '/../src/partials/home_shell_bottom.php'; ?>

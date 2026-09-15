@@ -2737,3 +2737,30 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
 .home-section-head[hidden] {
     display: none;
 }
+
+/* Calisma alani resmi (2026-09-15, src/team_image.php). Kutu cagiranin kendi
+   sinifini tasiyor; resim varsa .has-image ile yedek ikon/nokta gizleniyor. */
+.bcc-team-face { position: relative; overflow: hidden; }
+.bcc-team-face-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--bcc-surface-sunken);
+}
+.bcc-team-face-img[hidden],
+.bcc-team-face.has-image .bcc-team-face-fallback { display: none; }
+.bcc-team-face-fallback { display: contents; }
+
+.home-sidenav-team-face {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.home-sidenav-team-face.has-image {
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px var(--bcc-border);
+}

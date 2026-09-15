@@ -1,13 +1,9 @@
 (function () {
     'use strict';
 
-    /* Sunucuda GD yok, resim orada kucultulemiyor. Kucultme burada: resim
-       ortadan kare kirpilip 256px JPEG olarak yeniden kodlaniyor. Yan etkisi
-       istenen bir sey: tuval yeniden kodlamasi EXIF'i (GPS konumu dahil) siler. */
-    var SIDE = 256;
-    var QUALITY = 0.9;
-    var ACCEPT = ['image/png', 'image/jpeg', 'image/webp'];
-    var MAX_INPUT_BYTES = 15 * 1024 * 1024;
+    /* Kare 256px JPEG'e cevirme ortak: image-square.js (bu dosyadan once yuklenir). */
+    var ACCEPT = window.BCC_IMAGE_ACCEPT;
+    var MAX_INPUT_BYTES = window.BCC_IMAGE_MAX_INPUT_BYTES;
 
     document.addEventListener('DOMContentLoaded', function () {
         var root = document.querySelector('[data-avatar-root]');
@@ -73,52 +69,6 @@
             removeBtn.hidden = true;
         }
 
-        function toSquareJpeg(file) {
-            return new Promise(function (resolve, reject) {
-                var url = URL.createObjectURL(file);
-                var img = new Image();
-
-                img.onload = function () {
-                    var w = img.naturalWidth;
-                    var h = img.naturalHeight;
-                    if (!w || !h) {
-                        URL.revokeObjectURL(url);
-                        reject(new Error('Resim okunamadı.'));
-                        return;
-                    }
-
-                    var side = Math.min(w, h);
-                    var canvas = document.createElement('canvas');
-                    canvas.width = SIDE;
-                    canvas.height = SIDE;
-
-                    var ctx = canvas.getContext('2d');
-                    /* JPEG saydamlik tasimaz: saydam PNG siyah zemine dusmesin. */
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, SIDE, SIDE);
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, SIDE, SIDE);
-
-                    URL.revokeObjectURL(url);
-
-                    canvas.toBlob(function (blob) {
-                        if (blob) {
-                            resolve(blob);
-                        } else {
-                            reject(new Error('Resim işlenemedi.'));
-                        }
-                    }, 'image/jpeg', QUALITY);
-                };
-
-                img.onerror = function () {
-                    URL.revokeObjectURL(url);
-                    reject(new Error('Bu dosya bir resim olarak açılamadı.'));
-                };
-
-                img.src = url;
-            });
-        }
-
         function readJson(res) {
             return res.json().catch(function () {
                 return { ok: false, error: 'Sunucu beklenmeyen bir yanıt döndürdü.' };
@@ -148,7 +98,7 @@
             setBusy(true);
             setStatus('Yükleniyor…', false);
 
-            toSquareJpeg(file).then(function (blob) {
+            window.BCC_toSquareJpeg(file).then(function (blob) {
                 var data = new FormData();
                 data.append('csrf_token', CSRF);
                 data.append('file', blob, 'avatar.jpg');

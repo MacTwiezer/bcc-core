@@ -155,7 +155,7 @@ if (!isset($starredBases) || !is_array($starredBases)) {
                             title="<?php echo htmlspecialchars($mt['name'], ENT_QUOTES, 'UTF-8'); ?>"
                             data-members-name="<?php echo htmlspecialchars(mb_strtolower($mt['name'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
                         >
-                            <span class="home-starred-item-dot"></span>
+                            <?php echo bcc_team_face_html($mt['id'], 'home-sidenav-team-face', '<span class="home-starred-item-dot"></span>'); ?>
                             <span class="home-starred-item-name"><?php echo htmlspecialchars($mt['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </a>
                     <?php endforeach; ?>

@@ -769,7 +769,8 @@ fark edilmedi, yeni tasarıma göre güncellenmeli (günlük 2026-09-15 §13).
 düşen bu bayat kontrol. Ayrıca açık: `public/interface.php` arayüz kart/detay
 alanları da hücreyi doğrudan `cell_values`'tan alıyor (Oluşturan / Son
 değiştiren muhtemelen boş, ölçülmedi); gridde sütun dondurma tutamacının ipucu
-balonu tablo kabının dışına açılıp kırpılıyor (günlük §23).
+balonu tablo kabının dışına açılıp kırpılıyordu (günlük §23) — kullanıcı kararıyla
+kaldırıldı (§25).
 
 ---
 

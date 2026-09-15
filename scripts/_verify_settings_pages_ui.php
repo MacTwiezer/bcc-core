@@ -359,6 +359,16 @@ check('L) toplu form tespiti satir kutularinin form= baglantisina dayaniyor (tek
     strpos($adminJs, "input.admin-row-checkbox[form=\"' + formId + '\"]") !== false);
 check('L) uyari metni "Lutfen ... seciniz"', strpos($adminJs, 'Lütfen önce listeden en az bir kullanıcı seçiniz.') !== false);
 
+check('M) "Su an cevrimici" listesi cok sutunlu izgara (alt alta tek sutun degil)',
+    preg_match('/\.admin-online-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(260px, 1fr\)\);/s', $homeCss) === 1);
+check('M) cevrimici listesi yukseklik sinirli, tasinca kendi icinde kayar',
+    preg_match('/\.admin-online-list \{[^}]*max-height: 13rem;[^}]*overflow-y: auto;/s', $homeCss) === 1);
+check('M) uzun ad/e-posta kisaltiliyor (ellipsis + min-width: 0)',
+    preg_match('/\.admin-online-info \{[^}]*min-width: 0;/s', $homeCss) === 1
+    && preg_match('/\.admin-online-info \.admin-user-email \{[^}]*text-overflow: ellipsis;/s', $homeCss) === 1);
+check('M) kisaltilan metnin tamami title ile gorulebiliyor',
+    strpos((string) file_get_contents($root . '/public/admin/index.php'), '<div class="admin-user-email" title="<?php echo htmlspecialchars($bccOu[\'email\']') !== false);
+
 $passed = count(array_filter($results));
 $total = count($results);
 echo "\n==== SONUC: {$passed}/{$total} ====\n";

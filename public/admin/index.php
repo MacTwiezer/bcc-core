@@ -122,9 +122,9 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                     <?php foreach ($bccOnlineUsers as $bccOu): ?>
                         <li class="admin-online-item">
                             <div class="admin-avatar"><?php echo bcc_avatar_inner_for($bccOu['id'], $bccOu['full_name']); ?></div>
-                            <div>
-                                <div class="admin-user-name"><?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="admin-user-email"><?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="admin-online-info">
+                                <div class="admin-user-name" title="<?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($bccOu['full_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="admin-user-email" title="<?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($bccOu['email'], ENT_QUOTES, 'UTF-8'); ?></div>
                             </div>
                             <?php
 

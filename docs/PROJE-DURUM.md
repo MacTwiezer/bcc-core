@@ -729,6 +729,16 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   yeniden. Sonra ±0,6px. Test: `_verify_detail_label_alignment.php` 14/14.
 - **Küçük arayüz:** "Yeni Alan" penceresinde "Tip değiştir" düğmesi ve tam
   genişlik kutular; "satır ekle" yazısı dikey ortalı.
+- **Değerlendirme puanı dışarıya yazı olarak gidiyor; mail tablo düzeninde (`6809264`).**
+  Yıldızların hepsi aynı `★` karakteri (dolu/boş yalnızca renk), renk
+  kaybolan her yerde puan okunmuyordu. "Kaydı gönder" maili / önizleme /
+  "Kaydı yazdır", "Görünümü kopyala" (Excel'e yapıştırma) ve "Excel indir"
+  artık `"10 üzerinden 4"` yazıyor; bu metin grid'e geri yapıştırılınca `4`
+  oluyor. Grid hücresi, kanban, arayüz ve Slack yıldız göstermeye devam
+  (`cell_display_text` değişmedi, yeni `bcc_rating_out_of_text()`). "Tablo
+  düzenini kullan" anahtarı her açılışta kapalıya sıfırlanıyordu, artık
+  varsayılan açık. Test: `_verify_record_send_rating_text.php` 22/22,
+  `_verify_group_c1.php` 56/56 (gerçek xlsx indirme).
 
 **Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
 kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası

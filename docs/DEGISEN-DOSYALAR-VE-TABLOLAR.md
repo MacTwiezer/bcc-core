@@ -23,7 +23,7 @@ edilmesi).
 | **2026-09-08** | 16 dosya (12 değiştirildi, 4 yeni) + 3 belge | `records` tablosuna **1 yeni kolon** |
 | **2026-09-09** | 11 dosya (hepsi değiştirildi) + 2 belge | Yapısal değişiklik **yok**; 3 tabloya **veri/ayar** yazıldı |
 | **2026-09-14** | **41 dosya** (29 değiştirildi, 12 yeni) + 4 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok. Profil fotoğrafı DB'de değil `storage/avatars/`'ta |
-| **2026-09-15** | 16 dosya (11 değiştirildi, 5 yeni test) + 3 belge | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok |
+| **2026-09-15** | 21 dosya (15 değiştirildi, 6 yeni test) + 3 belge — §3c + §3c.6 | **Şema değişmedi.** Testler geçici kayıt yazıp sildi; kalıcı iz yok |
 
 ---
 
@@ -359,6 +359,23 @@ gerekiyor.
 Tarayıcı testlerinin hepsi statik fikstürde (gerçek PHP render
 fonksiyonları + gerçek `public/assets` dosyaları, `bcc_post`/`fetch` sahte):
 oturum açılmadı, sunucuya istek gitmedi.
+
+### 3c.6 Commit sonrası (aynı gün) — değerlendirme puanı yazı olarak, mail tablo düzeninde
+
+Günlük §14-§16. Commit: `6809264`.
+
+| Dosya | § | Ne değişti |
+|---|---|---|
+| `public/assets/grid-row-detail.js` | §14, §15 | `fieldPrintText()` yıldız alanı → `"10 üzerinden 4"` (mail, "Kaydı gönder" önizlemesi, "Kaydı yazdır"); "Tablo düzenini kullan" anahtarı varsayılan AÇIK |
+| `public/grid.php` | §15 | `#grid-send-use-grid-layout` `checked` |
+| `public/assets/grid-copy.js` | §16 | "Görünümü kopyala": yıldız alanı `data-value` + `max_rating`'den yazı |
+| `public/assets/grid-paste.js` | §16 | `"10 üzerinden 4"` yapıştırılınca `4` |
+| `src/schema.php` | §16 | Yeni `bcc_rating_out_of_text()` (`cell_display_text` DEĞİŞMEDİ — grid/kanban/Slack yıldız) |
+| `public/api/view_export_xlsx.php` | §16 | "Excel indir"de yıldız alanı yazı |
+| `scripts/_verify_group_c1.php` | §16 | EXPORT kontrolü "★ xlsx içinde" → "7 üzerinden 5", yıldız yok |
+| `scripts/_verify_record_send_rating_text.php` | §14-§16 | **YENİ**, 22 kontrol |
+
+**Veritabanı:** şema değişmedi; testler geçici veri yazıp sildi (sayaçlar önce = sonra).
 
 ---
 

@@ -111,15 +111,28 @@ check('D) sol liste satirlari flex kabinda EZILMIYOR (taban kuralda flex: none)'
 check('D) 980px altindaki yatay serit override i DURUYOR (flex: 1 1 220px)',
     preg_match('#@media\s*\(max-width:\s*980px\)\s*\{.*?\.wsx-panel-list\s+\.wsx-card\s*\{[^}]*flex:\s*1\s+1\s+220px#s', $css) === 1);
 
-echo "\n--- E) BOS durumda da bant korunuyor ---\n";
-$emptyGrouped = preg_match(
-    '#\.sp-page\s+\.wsx-collab-empty,\s*\.sp-page\s+\.wsx-act-empty\s*\{([^}]*)\}#s',
-    $css,
-    $em
-);
-check('E) iki bos durum TEK kuralda', $emptyGrouped === 1);
+echo "\n--- E) BOS durumda da bant korunuyor (son hareketler) ---\n";
+$actEmptyBodies = rule_bodies($css, '.sp-page .wsx-act-empty');
+$actEmptyBody = $actEmptyBodies ? $actEmptyBodies[0] : '';
+check('E) son hareketler bos durumu kurali var', $actEmptyBody !== '');
 check('E) bos durumda min-height yine bant degiskeni',
-    $emptyGrouped === 1 && strpos($em[1], 'min-height: var(--wsx-list-h)') !== false);
+    strpos($actEmptyBody, 'min-height: var(--wsx-list-h)') !== false);
+
+echo "\n--- E2) Katilimcilar kisi sayisina gore uzuyor (2026-09-15 karari) ---\n";
+$collabBodies = rule_bodies($css, '.sp-page .wsx-collab-grid');
+$collabOwn = null;
+foreach ($collabBodies as $body) {
+    if (strpos($body, 'max-height') !== false) { $collabOwn = $body; }
+}
+check('E2) .wsx-collab-grid ortak bandi eziyor: height auto',
+    $collabOwn !== null && strpos($collabOwn, 'height: auto') !== false,
+    $collabOwn === null ? 'ozel kural yok' : trim(preg_replace('/\s+/', ' ', $collabOwn)));
+check('E2) ust sinir yine bant degiskeni (cok kisi olunca kendi icinde kayar)',
+    $collabOwn !== null && strpos($collabOwn, 'max-height: var(--wsx-list-h)') !== false);
+check('E2) ozel kural ortak bant kuralindan SONRA (yoksa ezemez)',
+    strpos($css, 'max-height: var(--wsx-list-h)') > strpos($css, 'height: var(--wsx-list-h)'));
+check('E2) "Eslesen katilimci yok" satiri bant yuksekligine zorlanmiyor',
+    preg_match('#\.wsx-collab-empty[^{]*\{[^}]*min-height#s', $css) === 0);
 
 echo "\n--- F) Dar ekranda sol liste banttan MUAF ---\n";
 
@@ -127,6 +140,20 @@ check('F) 980px altinda .wsx-panel-list height:auto',
     preg_match('#@media\s*\(max-width:\s*980px\)\s*\{.*?\.sp-page\s+\.wsx-panel-list\s*\{[^}]*height:\s*auto#s', $css) === 1);
 check('F) ayni yerde overflow da serbest birakilmis',
     preg_match('#@media\s*\(max-width:\s*980px\)\s*\{.*?\.sp-page\s+\.wsx-panel-list\s*\{[^}]*overflow:\s*visible#s', $css) === 1);
+
+echo "\n--- E3) Base'ler karti yandaki kartin boyuna uzamiyor (2026-09-15) ---\n";
+$bodyRules = rule_bodies($css, '.sp-page .wsx-body');
+$bodyRule = $bodyRules ? $bodyRules[0] : '';
+check('E3) govde izgarasi align-items: start (kartlar satiri doldurmak icin esnemesin)',
+    strpos($bodyRule, 'align-items: start') !== false, trim(preg_replace('/\s+/', ' ', $bodyRule)));
+$mainRules = rule_bodies($css, '.sp-page .wsx-body-main');
+$mainRule = $mainRules ? $mainRules[0] : '';
+check('E3) sol sutun kendi icinde dikey flex (Base\'ler + Katilimcilar ust uste, bagimsiz)',
+    strpos($mainRule, 'display: flex') !== false && strpos($mainRule, 'flex-direction: column') !== false);
+check('E3) display: contents kalmadi (kartlari yan kartla ayni satira baglayan eski duzen)',
+    strpos($css, 'display: contents') === false);
+check('E3) kartlara elle grid-row/grid-column atamasi kalmadi',
+    preg_match('/\.wsx-body-(main|side)\s*>\s*\.settings-card[^{]*\{[^}]*grid-(row|column)/s', $css) === 0);
 
 echo "\n--- G) CANLI: uc liste de sayfada basiliyor ---\n";
 

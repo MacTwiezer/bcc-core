@@ -700,7 +700,7 @@ Ayrıntı **günlük dosyalarında**: `docs/gunluk/2026-09-08.md`,
 ### 2026-09-15 turu — zengin metin, çoklu seçim, grid düzeni, kayıt detayı
 
 Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
-`docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` §3c. **Şema değişmedi, veri yazılmadı.**
+`docs/DEGISEN-DOSYALAR-VE-TABLOLAR.md` §3c. **Şema değişmedi, veri yazılmadı** (çalışma alanı resimleri yalnızca `storage/team_images` dosyası).
 
 - **Uzun metinde alt alta satırlar kaydedince birleşiyordu (`ed3c0a9`).** Chromium Enter'da
   yeni satırı `<div>` açıyor; `bcc_sanitize_rich_text` her bloğun `<br>`'ini
@@ -770,6 +770,28 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   `_verify_admin_assign_team_modal.php` 30/30, `_verify_settings_pages_ui.php`
   148/148. Arayüzde daraltılmış kenar çubuğundaki işlevsiz klasör ikonu
   kaldırıldı (`54105a9`).
+- **Alanları yönet: kalem ekranda pencere açıyor (`0d9d7d8`).** Düzenleme formu
+  tablonun altında çıktığı için "bir şey olmuyor" gibiydi; artık pencere: ad,
+  tip, seçenekler satır satır ekle/sil/renk (silinen satır renkleri kaydırmaz),
+  hata olunca pencere taslakla açık. Seçenekler sütunu yalnız seçim tiplerinde
+  değer / "—"; "Zorunlu" sütunu ve tip etiketi çerçevesi kaldırıldı. Test:
+  `_verify_group_c1.php` 64/64, `_verify_settings_pages_ui.php` (günlük §34–§36).
+- **Base tabloları (`571b11a`).** "+ Tablo Oluştur" "Tablolar" başlığının sağında,
+  ad + açıklama pencerede (alttaki kart kaldırıldı); kalem de sayfa
+  yenilenmeden "Tabloyu Düzenle" penceresi; bu sayfa ve Alanları yönet'te
+  "İşlemler" başlık yazısı kaldırıldı, sütun düğmeler kadar. `_verify_rbac`
+  İşlemler kontrolü §35'ten beri kalıyordu (demo verisiz koşunca çıkış 0
+  verdiği için fark edilmedi) — düzeltildi, 140/140. Test:
+  `_verify_settings_pages_ui.php` 177/177 (günlük §37–§39).
+- **Çalışma alanı resmi (`64206ff`). Şema değişikliği yok.** Profil fotoğrafı
+  deseni: `storage/team_images/t<ekip id>`; owner Çalışma Alanları
+  başlığındaki kutudan yükler/kaldırır, yalnız ekip üyeleri görür. Ana sayfa
+  grup başlığında, Çalışma Alanları listesinde/başlığında ve kenar çubuğu
+  ekip listesinde görünüyor. Yükleme doğrulaması/sunma `src/image_upload.php`,
+  kare JPEG `image-square.js` — profil fotoğrafıyla ortak. Canlıda
+  `storage/team_images` yazılabilir ve yedekte olmalı (CANLIYA-ALMA §3.4).
+  Test: `_verify_team_image.php` 53/53, `_verify_avatar_flow` 65,
+  `_verify_avatar_everywhere` 46 (günlük §40).
 
 **Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
 kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası

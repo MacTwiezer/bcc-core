@@ -1742,17 +1742,39 @@ function bcc_sanitize_rich_text_pass($html)
         return null;
     }
 
-    return trim(bcc_sanitize_rich_text_children($body, $allowedTags));
+    return trim(bcc_rich_text_strip_trailing_break(bcc_sanitize_rich_text_children($body, $allowedTags)));
 }
 
 function bcc_sanitize_rich_text_children($node, $allowedTags)
 {
+    $blockTags = array('div', 'p', 'li', 'ul', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre');
+
     $out = '';
     foreach (iterator_to_array($node->childNodes) as $child) {
+        if ($child->nodeType === XML_ELEMENT_NODE && in_array(strtolower($child->nodeName), $blockTags, true)) {
+            if (trim($out) !== '' && !bcc_rich_text_ends_with_break($out)) {
+                $out .= '<br>';
+            }
+            $inner = bcc_rich_text_strip_trailing_break(bcc_sanitize_rich_text_children($child, $allowedTags));
+            $out .= $inner . '<br>';
+            continue;
+        }
         $out .= bcc_sanitize_rich_text_node($child, $allowedTags);
     }
 
     return $out;
+}
+
+function bcc_rich_text_ends_with_break($html)
+{
+    return (bool) preg_match('#<br>(?:\s*</(?:strong|b|em|i|a|span)>)*\s*$#', $html);
+}
+
+function bcc_rich_text_strip_trailing_break($html)
+{
+    $out = preg_replace('#<br>((?:\s*</(?:strong|b|em|i|a|span)>)*)\s*$#', '$1', $html, 1);
+
+    return $out === null ? $html : $out;
 }
 
 function bcc_sanitize_rich_text_node($node, $allowedTags)
@@ -1772,11 +1794,6 @@ function bcc_sanitize_rich_text_node($node, $allowedTags)
     }
 
     $childrenHtml = bcc_sanitize_rich_text_children($node, $allowedTags);
-
-    if ($tag === 'div' || $tag === 'p') {
-
-        return $childrenHtml . '<br>';
-    }
 
     if (!isset($allowedTags[$tag])) {
         return $childrenHtml;

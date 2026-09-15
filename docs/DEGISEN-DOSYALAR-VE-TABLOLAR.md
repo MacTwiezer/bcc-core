@@ -379,7 +379,7 @@ Günlük §14-§16. Commit: `6809264`.
 
 ### 3c.7 Üçüncü tur (aynı gün) — Excel hesaplanan alanlar, PNG/PDF kesilmesi, çalışma alanı kartları
 
-Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25), `67537c6` (§26), `54105a9` (§28), `65e20c6` (§29-§31).
+Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25), `67537c6` (§26), `54105a9` (§28), `65e20c6` (§29-§31), `4479bb9` (§33).
 
 | Dosya | § | Ne değişti |
 |---|---|---|
@@ -401,6 +401,7 @@ Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc
 | `public/assets/confirm-modal.js`, `public/assets/admin.js` | §31 | `bcc_alert`; seçim yokken toplu işlem uyarısı |
 | `scripts/_verify_settings_pages_ui.php` | §29, §31 | K + L bölümleri (148) |
 | `scripts/_verify_admin_assign_team_modal.php` | §30 | **YENİ**, 30 kontrol, gerçek HTTP |
+| `public/admin/index.php`, `public/assets/home.css`, `scripts/_verify_settings_pages_ui.php` | §33 | "Şu an çevrimiçi" çok sütunlu ızgara, yükseklik sınırı, kısaltma (152) |
 
 **Veritabanı:** şema değişmedi. Tarayıcı doğrulamaları için ayrı test
 kullanıcı/ekip/base/tablo kurulup silindi (`scratchpad/realfx.php`,

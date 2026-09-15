@@ -445,6 +445,18 @@
                     opt.selected = true;
                 }
             });
+            input.addEventListener('mousedown', function (e) {
+                if (e.button !== 0 || !e.target || e.target.tagName !== 'OPTION') {
+                    return;
+                }
+                e.preventDefault();
+                var listbox = e.currentTarget;
+                var scrollTop = listbox.scrollTop;
+                e.target.selected = !e.target.selected;
+                listbox.focus();
+                listbox.scrollTop = scrollTop;
+                listbox.dispatchEvent(new Event('change', { bubbles: true }));
+            });
         } else {
             input = document.createElement('input');
             input.type = 'text';

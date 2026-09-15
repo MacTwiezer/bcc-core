@@ -132,3 +132,132 @@
         });
     });
 })();
+
+(function () {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var modal = document.getElementById('tf-edit-modal');
+        if (!modal) {
+            return;
+        }
+
+        var closeUrl = modal.getAttribute('data-close-url');
+        var form = document.getElementById('tf-edit-form');
+        var list = modal.querySelector('[data-tf-choice-list]');
+        var template = modal.querySelector('[data-tf-choice-template]');
+        var addBtn = modal.querySelector('[data-tf-choice-add]');
+        var empty = modal.querySelector('[data-tf-choice-empty]');
+        var choicesBox = modal.querySelector('[data-tf-choices]');
+        var typeSelect = modal.querySelector('[data-tf-edit-type]');
+        var selectTypes = window.BCC_SELECT_FIELD_TYPES || ['single_select', 'multiple_select'];
+        var nextRow = list ? list.querySelectorAll('[data-tf-choice-row]').length : 0;
+
+        document.body.classList.add('tf-modal-open');
+
+        function close() {
+            window.location.href = closeUrl;
+        }
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                close();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                close();
+            }
+        });
+
+        function rowCount() {
+            return list.querySelectorAll('[data-tf-choice-row]').length;
+        }
+
+        function syncEmpty() {
+            if (empty) {
+                empty.hidden = rowCount() > 0;
+            }
+        }
+
+        function addRow(focus) {
+            var holder = document.createElement('div');
+            holder.innerHTML = template.innerHTML.replace(/__ROW__/g, String(nextRow++)).trim();
+            var row = holder.firstElementChild;
+            var radios = row.querySelectorAll('input[type="radio"]');
+            if (radios.length) {
+                radios[rowCount() % radios.length].checked = true;
+            }
+            list.appendChild(row);
+            syncEmpty();
+            if (focus) {
+                row.querySelector('.tf-choice-input').focus();
+            }
+            return row;
+        }
+
+        if (list && template && addBtn) {
+            addBtn.addEventListener('click', function () {
+                addRow(true);
+            });
+
+            list.addEventListener('click', function (e) {
+                var removeBtn = e.target.closest('[data-tf-choice-remove]');
+                if (!removeBtn) {
+                    return;
+                }
+                var row = removeBtn.closest('[data-tf-choice-row]');
+                var next = row.nextElementSibling || row.previousElementSibling;
+                row.parentNode.removeChild(row);
+                syncEmpty();
+                if (next && next.querySelector('.tf-choice-input')) {
+                    next.querySelector('.tf-choice-input').focus();
+                } else {
+                    addBtn.focus();
+                }
+            });
+
+            list.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' || !e.target.classList.contains('tf-choice-input')) {
+                    return;
+                }
+                e.preventDefault();
+                var row = e.target.closest('[data-tf-choice-row]');
+                if (row && row.nextElementSibling) {
+                    row.nextElementSibling.querySelector('.tf-choice-input').focus();
+                } else {
+                    addRow(true);
+                }
+            });
+        }
+
+        if (typeSelect && choicesBox) {
+            typeSelect.addEventListener('change', function () {
+                var type = typeSelect.value;
+                var isSelect = selectTypes.indexOf(type) !== -1;
+                choicesBox.hidden = !isSelect;
+                if (isSelect && list && rowCount() === 0) {
+                    addRow(false);
+                }
+                Array.prototype.forEach.call(modal.querySelectorAll('[data-tf-extra]'), function (box) {
+                    var active = box.getAttribute('data-tf-extra') === type;
+                    box.hidden = !active;
+                    Array.prototype.forEach.call(box.querySelectorAll('input'), function (input) {
+                        input.disabled = !active;
+                    });
+                });
+                var requiredRow = modal.querySelector('[data-tf-required-row]');
+                if (requiredRow) {
+                    requiredRow.hidden = type === 'autonumber';
+                }
+            });
+        }
+
+        var nameInput = form ? form.querySelector('input[name="name"]') : null;
+        if (nameInput) {
+            nameInput.focus();
+            nameInput.select();
+        }
+    });
+})();

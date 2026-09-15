@@ -337,6 +337,63 @@ try {
         field_options_row($oranId) === json_encode(array('decimal_places' => 1), JSON_UNESCAPED_UNICODE),
         'options: ' . field_options_row($oranId));
 
+    // Duzenleme PENCERESI (2026-09-15): secenekler satir satir choices[N] + colors[N] ile geliyor.
+    $resp = http_request('POST', '/table_fields.php', $cookie, array(
+        'csrf_token' => $csrf, 'action' => 'create_field', 'table_id' => $tableId,
+        'name' => 'Durum', 'field_type' => 'single_select', 'options_text' => "Acik\nBeklemede\nKapali",
+    ));
+    $durum = bcc_fetch_one("SELECT id FROM fields WHERE table_id = :t AND name = 'Durum'", array(':t' => $tableId));
+    $durumId = $durum ? (int) $durum['id'] : 0;
+    check('Secim alani olusturuldu (Durum: 3 secenek)', $durumId > 0);
+
+    $resp = http_request('GET', "/table_fields.php?table_id={$tableId}&edit={$durumId}", $cookie);
+    $csrfSel = extract_csrf($resp['body']);
+    check('Kalem -> duzenleme sayfanin altinda kart degil, ekranda PENCERE (home-modal) olarak geliyor',
+        strpos($resp['body'], 'id="tf-edit-modal"') !== false
+        && strpos($resp['body'], 'class="home-modal tf-edit-modal"') !== false
+        && strpos($resp['body'], 'role="dialog"') !== false);
+    check('Pencere mevcut secenekleri ayri satirlar olarak listeliyor (choices[0..2])',
+        preg_match('/name="choices\[0\]"[^>]*value="Acik"/', $resp['body']) === 1
+        && preg_match('/name="choices\[2\]"[^>]*value="Kapali"/', $resp['body']) === 1);
+    check('Secim alaninda secenek kutusu acik; secenek eklenemeyen tipte gizli',
+        preg_match('/data-tf-choices>/', $resp['body']) === 1);
+
+    // "Beklemede" silindi, "Iptal" eklendi, ad degisti; renkler satira bagli -> secenege dogru eslesmeli.
+    http_request('POST', '/table_fields.php', $cookie, array(
+        'csrf_token' => $csrfSel, 'action' => 'update_field', 'table_id' => $tableId,
+        'field_id' => $durumId, 'name' => 'Durumu', 'field_type' => 'single_select',
+        'choices' => array(0 => 'Acik', 2 => 'Kapali', 5 => '  ', 7 => 'Iptal'),
+        'colors' => array(0 => 'green', 2 => 'red', 5 => 'blue', 7 => 'gray'),
+    ));
+    $durumRow = bcc_fetch_one('SELECT name, options FROM fields WHERE id = :id', array(':id' => $durumId));
+    $durumOpts = $durumRow ? json_decode($durumRow['options'], true) : null;
+    check('Pencereden ad degisti + secenek silindi/eklendi (bos satir atlandi)',
+        $durumRow && $durumRow['name'] === 'Durumu'
+        && $durumOpts && $durumOpts['choices'] === array('Acik', 'Kapali', 'Iptal'),
+        $durumRow ? $durumRow['name'] . ' ' . $durumRow['options'] : 'YOK');
+    check('Satir silinince renkler kaymadi: her secenek kendi rengini korudu',
+        $durumOpts && isset($durumOpts['colors'])
+        && $durumOpts['colors'] === array('Acik' => 'green', 'Kapali' => 'red', 'Iptal' => 'gray'),
+        $durumRow ? $durumRow['options'] : 'YOK');
+
+    $resp = http_request('POST', '/table_fields.php', $cookie, array(
+        'csrf_token' => $csrfSel, 'action' => 'update_field', 'table_id' => $tableId,
+        'field_id' => $durumId, 'name' => 'Bos Deneme', 'field_type' => 'single_select',
+        'choices' => array(0 => '', 1 => ' '),
+    ));
+    check('Tum secenekler silinirse kaydedilmez; pencere hata + taslak ile ACIK kalir',
+        strpos($resp['body'], 'id="tf-edit-modal"') !== false
+        && strpos($resp['body'], 'home-modal-error') !== false
+        && preg_match('/name="name"[^>]*value="Bos Deneme"/', $resp['body']) === 1
+        && bcc_fetch_column('SELECT name FROM fields WHERE id = :id', array(':id' => $durumId)) === 'Durumu');
+
+    $resp = http_request('GET', "/table_fields.php?table_id={$tableId}&edit={$fiyatId}", $cookie);
+    check('Secenek eklenemeyen tipte (currency) secenek kutusu gizli, tipe ait ek alanlar acik',
+        preg_match('/data-tf-choices hidden>/', $resp['body']) === 1
+        && preg_match('/data-tf-extra="currency">/', $resp['body']) === 1
+        && preg_match('/data-tf-extra="rating" hidden>/', $resp['body']) === 1
+        && preg_match('/name="max_rating"[^>]*disabled>/', $resp['body']) === 1);
+
     $resp = http_request('GET', "/grid.php?table_id={$tableId}", $cookie);
     $gridHtml = $resp['body'];
 

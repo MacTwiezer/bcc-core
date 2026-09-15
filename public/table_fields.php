@@ -36,6 +36,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fieldType = isset($_POST['field_type']) ? $_POST['field_type'] : '';
         $isRequired = bcc_normalize_is_required($fieldType, isset($_POST['is_required']) ? $_POST['is_required'] : null);
         $optionsText = isset($_POST['options_text']) ? $_POST['options_text'] : '';
+        $colorsPost = isset($_POST['colors']) && is_array($_POST['colors']) ? $_POST['colors'] : null;
+
+        if (isset($_POST['choices']) && is_array($_POST['choices'])) {
+            $choiceLines = array();
+            $colorByChoice = array();
+            foreach ($_POST['choices'] as $rowKey => $choiceText) {
+                $choiceText = trim((string) $choiceText);
+                if ($choiceText === '') {
+                    continue;
+                }
+                $choiceLines[] = $choiceText;
+                if ($colorsPost !== null && isset($colorsPost[$rowKey])) {
+                    $colorByChoice[$choiceText] = (string) $colorsPost[$rowKey];
+                }
+            }
+            $optionsText = implode("\n", $choiceLines);
+            $colorsPost = array();
+            foreach (parse_select_choices($optionsText) as $choiceIndex => $parsedChoice) {
+                if (isset($colorByChoice[$parsedChoice])) {
+                    $colorsPost[$choiceIndex] = $colorByChoice[$parsedChoice];
+                }
+            }
+        }
 
         if ($name === '') {
             $error = 'Alan adı boş olamaz.';
@@ -44,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!isset($fieldTypes[$fieldType])) {
             $error = 'Geçersiz alan tipi.';
         } else {
-            $optionsResult = bcc_build_field_options($fieldType, $optionsText, isset($_POST['colors']) ? $_POST['colors'] : null, $_POST);
+            $optionsResult = bcc_build_field_options($fieldType, $optionsText, $colorsPost, $_POST);
 
             if (!$optionsResult['ok']) {
                 $error = $optionsResult['error'];
@@ -138,6 +161,28 @@ $fields = bcc_fetch_all(
 
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $editField = null;
+$editError = null;
+$editDraft = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_field' && $error !== null) {
+    $editId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
+    $editError = $error;
+    $error = null;
+    $draftRows = array();
+    if (isset($_POST['choices']) && is_array($_POST['choices'])) {
+        foreach ($_POST['choices'] as $rowKey => $choiceText) {
+            $draftRows[] = array(
+                'text' => (string) $choiceText,
+                'color' => (isset($_POST['colors']) && is_array($_POST['colors']) && isset($_POST['colors'][$rowKey])) ? (string) $_POST['colors'][$rowKey] : null,
+            );
+        }
+    }
+    $editDraft = array(
+        'name' => isset($_POST['name']) ? (string) $_POST['name'] : '',
+        'field_type' => isset($_POST['field_type']) ? (string) $_POST['field_type'] : '',
+        'is_required' => isset($_POST['is_required']) ? 1 : 0,
+        'rows' => $draftRows,
+    );
+}
 if ($canEdit && $editId > 0) {
     foreach ($fields as $f) {
         if ((int) $f['id'] === $editId) {
@@ -188,11 +233,12 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 </p>
             <?php else: ?>
                 <div class="settings-table-wrap">
-                    <table class="settings-table">
-                        <thead><tr><th>Alan</th><th>Tip</th><th>Seçenekler</th><th>Zorunlu</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr></thead>
+                    <table class="settings-table tf-fields-table">
+                        <thead><tr><th class="tf-col-name">Alan</th><th class="tf-col-type">Tip</th><th class="tf-col-options">Seçenekler</th><?php if ($canEdit): ?><th class="tf-col-actions">İşlemler</th><?php endif; ?></tr></thead>
                         <tbody>
                         <?php foreach ($fields as $i => $f):
-                            $choices = is_select_field_type($f['field_type']) ? select_choices_from_options($f['options']) : array();
+                            $hasChoiceList = is_select_field_type($f['field_type']);
+                            $choices = $hasChoiceList ? select_choices_from_options($f['options']) : array();
                         ?>
                             <tr>
                                 <td class="sp-primary-name"><?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?></td>
@@ -202,19 +248,15 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                         <?php echo htmlspecialchars($fieldTypes[$f['field_type']], ENT_QUOTES, 'UTF-8'); ?>
                                     </span>
                                 </td>
-                                <td class="<?php echo $choices ? '' : 'sp-muted'; ?>"><?php echo $choices ? htmlspecialchars(implode(', ', $choices), ENT_QUOTES, 'UTF-8') : '—'; ?></td>
-                                <td>
-                                    <?php if ((int) $f['is_required'] === 1): ?>
-                                        <span class="tf-required-yes">
-                                            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                            Evet
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="sp-muted">—</span>
-                                    <?php endif; ?>
-                                </td>
+                                <?php if (!$hasChoiceList): ?>
+                                <td></td>
+                                <?php elseif ($choices): ?>
+                                <td><?php echo htmlspecialchars(implode(', ', $choices), ENT_QUOTES, 'UTF-8'); ?></td>
+                                <?php else: ?>
+                                <td class="sp-muted">—</td>
+                                <?php endif; ?>
                                 <?php if ($canEdit): ?>
-                                <td class="settings-row-actions">
+                                <td class="tf-actions-cell"><div class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/table_fields.php">
                                             <?php echo csrf_field(); ?>
@@ -249,7 +291,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                         </button>
                                     </form>
-                                </td>
+                                </div></td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
@@ -260,84 +302,135 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php if ($canEdit): ?>
-            <?php if ($editField): ?>
-                <div class="settings-card">
-                    <h2>Alanı Düzenle: <?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <form class="settings-form settings-form-stacked" method="post" action="/table_fields.php">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="update_field">
-                        <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
-                        <input type="hidden" name="field_id" value="<?php echo (int) $editField['id']; ?>">
-                        <label class="settings-field">Alan adı
-                            <input type="text" name="name" value="<?php echo htmlspecialchars($editField['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
-                        </label>
-                        <label class="settings-field">Tip
-                            <select name="field_type" required>
-                                <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
-                                    <option value="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $editField['field_type'] === $typeKey ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <label class="settings-field">Seçenekler (yalnızca Tekli/Çoklu seçim için — her satıra bir seçenek)
-                            <textarea name="options_text" rows="4"><?php echo htmlspecialchars(implode("\n", select_choices_from_options($editField['options'])), ENT_QUOTES, 'UTF-8'); ?></textarea>
-                        </label>
-                        <?php
-                        $editFieldOptions = json_decode((string) $editField['options'], true);
-                        $editFieldOptions = is_array($editFieldOptions) ? $editFieldOptions : array();
-                        ?>
-                        <?php if ($editField['field_type'] === 'currency'): ?>
-                            <label class="settings-field">Para birimi sembolü
-                                <input type="text" name="currency_symbol" maxlength="5" value="<?php echo htmlspecialchars(isset($editFieldOptions['currency_symbol']) && $editFieldOptions['currency_symbol'] !== '' ? $editFieldOptions['currency_symbol'] : '₺', ENT_QUOTES, 'UTF-8'); ?>">
+            <?php if ($editField):
+                $efName = $editDraft ? $editDraft['name'] : $editField['name'];
+                $efType = ($editDraft && isset($fieldTypes[$editDraft['field_type']])) ? $editDraft['field_type'] : $editField['field_type'];
+                $efRequired = $editDraft ? (int) $editDraft['is_required'] : (int) $editField['is_required'];
+                $efOptions = json_decode((string) $editField['options'], true);
+                $efOptions = is_array($efOptions) ? $efOptions : array();
+                $efPalette = $GLOBALS['BCC_CHOICE_COLORS'];
+                if ($editDraft) {
+                    $efRows = $editDraft['rows'];
+                } else {
+                    $efChoices = select_choices_from_options($editField['options']);
+                    $efColorMap = bcc_build_choice_color_map($efChoices, select_choice_colors_from_options($editField['options']));
+                    $efRows = array();
+                    foreach ($efChoices as $efChoice) {
+                        $efRows[] = array('text' => $efChoice, 'color' => isset($efColorMap[$efChoice]) ? $efColorMap[$efChoice] : null);
+                    }
+                }
+                $efCloseUrl = '/table_fields.php?table_id=' . (int) $table['id'];
+            ?>
+                <div class="home-modal-backdrop tf-edit-backdrop" id="tf-edit-modal" data-close-url="<?php echo htmlspecialchars($efCloseUrl, ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="home-modal tf-edit-modal" role="dialog" aria-modal="true" aria-labelledby="tf-edit-title">
+                        <div class="home-modal-head">
+                            <h2 id="tf-edit-title">Alanı Düzenle</h2>
+                            <a class="home-modal-close" href="<?php echo htmlspecialchars($efCloseUrl, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Kapat" data-tf-edit-close>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </a>
+                        </div>
+                        <form class="home-modal-form" id="tf-edit-form" method="post" action="/table_fields.php">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="action" value="update_field">
+                            <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
+                            <input type="hidden" name="field_id" value="<?php echo (int) $editField['id']; ?>">
+
+                            <?php if ($editError !== null): ?>
+                                <p class="home-modal-error"><?php echo htmlspecialchars($editError, ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
+
+                            <label class="home-modal-field">
+                                <span class="home-modal-label">Alan adı</span>
+                                <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off" value="<?php echo htmlspecialchars($efName, ENT_QUOTES, 'UTF-8'); ?>">
                             </label>
-                            <label class="settings-field">Ondalık basamak
-                                <input type="number" name="currency_decimal_places" min="0" max="6" value="<?php echo isset($editFieldOptions['decimal_places']) ? (int) $editFieldOptions['decimal_places'] : 2; ?>">
+
+                            <label class="home-modal-field">
+                                <span class="home-modal-label">Tip</span>
+                                <select name="field_type" class="home-modal-input" required data-tf-edit-type>
+                                    <?php foreach ($fieldTypes as $typeKey => $typeLabel): ?>
+                                        <option value="<?php echo htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $efType === $typeKey ? 'selected' : ''; ?>><?php echo htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </label>
-                        <?php elseif ($editField['field_type'] === 'percent'): ?>
-                            <label class="settings-field">Ondalık basamak
-                                <input type="number" name="percent_decimal_places" min="0" max="6" value="<?php echo isset($editFieldOptions['decimal_places']) ? (int) $editFieldOptions['decimal_places'] : 0; ?>">
-                            </label>
-                        <?php elseif ($editField['field_type'] === 'rating'): ?>
-                            <label class="settings-field">Maksimum yıldız
-                                <input type="number" name="max_rating" min="1" max="10" value="<?php echo isset($editFieldOptions['max_rating']) ? (int) $editFieldOptions['max_rating'] : 5; ?>">
-                            </label>
-                        <?php endif; ?>
-                        <?php if (is_select_field_type($editField['field_type'])):
-                            $editChoices = select_choices_from_options($editField['options']);
-                            $editSavedColors = select_choice_colors_from_options($editField['options']);
-                            $editColorMap = bcc_build_choice_color_map($editChoices, $editSavedColors);
-                        ?>
-                            <div class="choice-color-picker">
-                                <p class="settings-hint">Renkler (her seçenek için)</p>
-                                <?php foreach ($editChoices as $ci => $choiceText): ?>
-                                    <div class="choice-color-row">
-                                        <span class="choice-color-choice-name"><?php echo htmlspecialchars($choiceText, ENT_QUOTES, 'UTF-8'); ?></span>
-                                        <?php foreach ($GLOBALS['BCC_CHOICE_COLORS'] as $colorKey => $hex):
-                                            $inputId = 'cc-' . (int) $editField['id'] . '-' . $ci . '-' . $colorKey;
-                                        ?>
-                                            <input
-                                                type="radio"
-                                                id="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>"
-                                                class="choice-color-input"
-                                                name="colors[<?php echo $ci; ?>]"
-                                                value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"
-                                                <?php echo $editColorMap[$choiceText] === $colorKey ? 'checked' : ''; ?>
-                                            >
-                                            <label for="<?php echo htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8'); ?>" class="choice-color-swatch" style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>"></label>
-                                        <?php endforeach; ?>
+
+                            <div class="home-modal-field tf-choices" data-tf-choices<?php echo is_select_field_type($efType) ? '' : ' hidden'; ?>>
+                                <span class="home-modal-label">Seçenekler</span>
+                                <div class="tf-choice-list" data-tf-choice-list>
+                                    <?php foreach ($efRows as $rowIndex => $efRow): ?>
+                                        <div class="tf-choice-row" data-tf-choice-row>
+                                            <input type="text" name="choices[<?php echo (int) $rowIndex; ?>]" class="home-modal-input tf-choice-input" maxlength="150" autocomplete="off" aria-label="Seçenek adı" value="<?php echo htmlspecialchars($efRow['text'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <span class="tf-choice-colors">
+                                                <?php foreach ($efPalette as $colorKey => $hex): ?>
+                                                    <label class="tf-choice-color" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <input type="radio" name="colors[<?php echo (int) $rowIndex; ?>]" value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $efRow['color'] === $colorKey ? 'checked' : ''; ?>>
+                                                        <span style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                                    </label>
+                                                <?php endforeach; ?>
+                                            </span>
+                                            <button type="button" class="tf-choice-remove" aria-label="Seçeneği sil" title="Seçeneği sil" data-tf-choice-remove>
+                                                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <p class="tf-choice-empty" data-tf-choice-empty<?php echo $efRows ? ' hidden' : ''; ?>>Henüz seçenek yok.</p>
+                                <button type="button" class="tf-choice-add" data-tf-choice-add>+ Seçenek ekle</button>
+                                <template data-tf-choice-template>
+                                    <div class="tf-choice-row" data-tf-choice-row>
+                                        <input type="text" name="choices[__ROW__]" class="home-modal-input tf-choice-input" maxlength="150" autocomplete="off" aria-label="Seçenek adı" value="">
+                                        <span class="tf-choice-colors">
+                                            <?php foreach ($efPalette as $colorKey => $hex): ?>
+                                                <label class="tf-choice-color" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="radio" name="colors[__ROW__]" value="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <span style="background:<?php echo htmlspecialchars($hex, ENT_QUOTES, 'UTF-8'); ?>"></span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </span>
+                                        <button type="button" class="tf-choice-remove" aria-label="Seçeneği sil" title="Seçeneği sil" data-tf-choice-remove>
+                                            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
                                     </div>
-                                <?php endforeach; ?>
+                                </template>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($editField['field_type'] !== 'autonumber'): ?>
-                            <label class="settings-field settings-field-checkbox">
-                                <input type="checkbox" name="is_required" value="1" <?php echo ((int) $editField['is_required'] === 1) ? 'checked' : ''; ?>>
-                                Zorunlu alan
+
+                            <?php
+                            $efExtra = function ($postKey, $optionKey, $default) use ($editDraft, $efOptions) {
+                                if ($editDraft && isset($_POST[$postKey]) && is_scalar($_POST[$postKey])) {
+                                    return (string) $_POST[$postKey];
+                                }
+                                return (isset($efOptions[$optionKey]) && $efOptions[$optionKey] !== '') ? (string) $efOptions[$optionKey] : (string) $default;
+                            };
+                            ?>
+                            <div class="tf-edit-pair" data-tf-extra="currency"<?php echo $efType === 'currency' ? '' : ' hidden'; ?>>
+                                <label class="home-modal-field">
+                                    <span class="home-modal-label">Para birimi sembolü</span>
+                                    <input type="text" name="currency_symbol" class="home-modal-input" maxlength="5" value="<?php echo htmlspecialchars($efExtra('currency_symbol', 'currency_symbol', '₺'), ENT_QUOTES, 'UTF-8'); ?>"<?php echo $efType === 'currency' ? '' : ' disabled'; ?>>
+                                </label>
+                                <label class="home-modal-field">
+                                    <span class="home-modal-label">Ondalık basamak</span>
+                                    <input type="number" name="currency_decimal_places" class="home-modal-input" min="0" max="6" value="<?php echo htmlspecialchars($efExtra('currency_decimal_places', 'decimal_places', 2), ENT_QUOTES, 'UTF-8'); ?>"<?php echo $efType === 'currency' ? '' : ' disabled'; ?>>
+                                </label>
+                            </div>
+                            <label class="home-modal-field" data-tf-extra="percent"<?php echo $efType === 'percent' ? '' : ' hidden'; ?>>
+                                <span class="home-modal-label">Ondalık basamak</span>
+                                <input type="number" name="percent_decimal_places" class="home-modal-input" min="0" max="6" value="<?php echo htmlspecialchars($efExtra('percent_decimal_places', 'decimal_places', 0), ENT_QUOTES, 'UTF-8'); ?>"<?php echo $efType === 'percent' ? '' : ' disabled'; ?>>
                             </label>
-                        <?php endif; ?>
-                        <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
-                    </form>
+                            <label class="home-modal-field" data-tf-extra="rating"<?php echo $efType === 'rating' ? '' : ' hidden'; ?>>
+                                <span class="home-modal-label">Maksimum yıldız</span>
+                                <input type="number" name="max_rating" class="home-modal-input" min="1" max="10" value="<?php echo htmlspecialchars($efExtra('max_rating', 'max_rating', 5), ENT_QUOTES, 'UTF-8'); ?>"<?php echo $efType === 'rating' ? '' : ' disabled'; ?>>
+                            </label>
+
+                            <label class="home-modal-field home-modal-check" data-tf-required-row<?php echo $efType === 'autonumber' ? ' hidden' : ''; ?>>
+                                <input type="checkbox" name="is_required" value="1" <?php echo $efRequired === 1 ? 'checked' : ''; ?>>
+                                <span>Zorunlu alan</span>
+                            </label>
+
+                            <div class="home-modal-actions">
+                                <a class="home-modal-btn" href="<?php echo htmlspecialchars($efCloseUrl, ENT_QUOTES, 'UTF-8'); ?>" data-tf-edit-close>Vazgeç</a>
+                                <button type="submit" class="home-modal-btn home-modal-btn-primary">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             <?php endif; ?>
 

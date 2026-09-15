@@ -110,7 +110,7 @@ foreach (array('.sp-icon-btn', '.sp-count', '.sp-primary-name', '.sp-move-group'
     check("B) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
     check("B) '{$shared}' table-fields.css'te TEKRARLANMIYOR", strpos($tfRules, $shared) === false);
 }
-foreach (array('.tf-type-pill', '.tf-required-yes', '.tf-type-search') as $specific) {
+foreach (array('.tf-type-pill', '.tf-col-options', '.tf-type-search') as $specific) {
     check("B) '{$specific}' YALNIZCA sayfaya ozel dosyada",
         strpos($tfRules, $specific) !== false && strpos($spRules, $specific) === false);
 }
@@ -368,6 +368,57 @@ check('M) uzun ad/e-posta kisaltiliyor (ellipsis + min-width: 0)',
     && preg_match('/\.admin-online-info \.admin-user-email \{[^}]*text-overflow: ellipsis;/s', $homeCss) === 1);
 check('M) kisaltilan metnin tamami title ile gorulebiliyor',
     strpos((string) file_get_contents($root . '/public/admin/index.php'), '<div class="admin-user-email" title="<?php echo htmlspecialchars($bccOu[\'email\']') !== false);
+
+$pillRule = preg_match('/\.sp-page \.tf-type-pill \{([^}]*)\}/s', $tfRules, $pm) ? $pm[1] : '';
+check('N) alan tipi etiketinde yumusatilmis cerceve YOK (kenarlik/zemin/kose/dolgu kaldirildi, 2026-09-15)',
+    $pillRule !== ''
+    && strpos($pillRule, 'border') === false
+    && strpos($pillRule, 'background') === false
+    && strpos($pillRule, 'padding') === false,
+    trim(preg_replace('/\s+/', ' ', $pillRule)));
+check('N) etiket blok flex (hucrede alan adiyla ayni dikey hizada; inline-flex 1,3px yukarida kaliyordu)',
+    strpos($pillRule, 'display: flex;') !== false && strpos($pillRule, 'align-items: center;') !== false);
+
+$tfPhp = (string) file_get_contents($root . '/public/table_fields.php');
+check('O) alanlar tablosunda "Zorunlu" sutunu YOK (baslik + hucre, 2026-09-15)',
+    strpos($tfPhp, '<th>Zorunlu</th>') === false && strpos($tfPhp, 'tf-required-yes') === false
+    && strpos($tfRules, 'tf-required-yes') === false);
+check('O) "Zorunlu alan" ayari duzenleme formunda DURUYOR (yalniz tablo sutunu kalkti)',
+    strpos($tfPhp, 'name="is_required"') !== false);
+check('O) Secenekler: secenek eklenebilen tip -> degerler ya da "—"; eklenemeyen tip -> bos hucre',
+    strpos($tfPhp, '$hasChoiceList = is_select_field_type($f[\'field_type\']);') !== false
+    && preg_match('#<\?php if \(!\$hasChoiceList\): \?>\s*<td></td>\s*<\?php elseif \(\$choices\): \?>#', $tfPhp) === 1
+    && strpos($tfPhp, '<td class="sp-muted">—</td>') !== false);
+check('O) sutunlar tablo genisligine dengeli dagiliyor (24/24/36/16)',
+    strpos($tfRules, '.tf-fields-table .tf-col-name { width: 24%; }') !== false
+    && strpos($tfRules, '.tf-fields-table .tf-col-options { width: 36%; }') !== false
+    && strpos($tfRules, '.tf-fields-table .tf-col-actions { width: 16%; }') !== false);
+check('O) islemler HUCRESI flex degil (td display:flex satir cizgisini kaydiriyordu); flex ic kapta',
+    strpos($tfPhp, '<td class="settings-row-actions">') === false
+    && strpos($tfPhp, '<td class="tf-actions-cell"><div class="settings-row-actions">') !== false);
+
+check('P) kalem -> duzenleme sayfanin altinda kart DEGIL, ekranda pencere (2026-09-15)',
+    strpos($tfPhp, 'id="tf-edit-modal"') !== false
+    && strpos($tfPhp, '<div class="home-modal tf-edit-modal" role="dialog" aria-modal="true"') !== false
+    && strpos($tfPhp, '<h2>Alanı Düzenle</h2>') === false);
+check('P) secenekler satir satir: ekle / sil butonu + satir basina renk secimi',
+    strpos($tfPhp, 'data-tf-choice-add') !== false && strpos($tfPhp, 'data-tf-choice-remove') !== false
+    && strpos($tfPhp, 'name="choices[__ROW__]"') !== false && strpos($tfPhp, 'name="colors[__ROW__]"') !== false);
+check('P) sunucu choices[N]/colors[N] satirlarini secenek adina gore eslestiriyor (silinen satir renkleri kaydirmaz)',
+    strpos($tfPhp, "\$colorByChoice[\$choiceText] = (string) \$colorsPost[\$rowKey];") !== false
+    && strpos($tfPhp, 'foreach (parse_select_choices($optionsText) as $choiceIndex => $parsedChoice)') !== false);
+check('P) hata olursa pencere taslakla yeniden acik geliyor (girilen deger kaybolmaz)',
+    strpos($tfPhp, '$editError = $error;') !== false && strpos($tfPhp, '$editDraft') !== false);
+check('P) JS: Esc / arka plan tiklamasi kapatir, Enter yeni secenek satiri acar',
+    strpos($tfJs, "e.key === 'Escape'") !== false && strpos($tfJs, 'e.target === modal') !== false
+    && strpos($tfJs, "e.key !== 'Enter'") !== false && strpos($tfJs, 'addRow(true);') !== false);
+check('P) tip degisince yalniz o tipin ek alanlari gorunur; digerleri disabled (gizli input formu kilitlemez)',
+    strpos($tfJs, "box.getAttribute('data-tf-extra') === type") !== false
+    && strpos($tfJs, 'input.disabled = !active;') !== false
+    && strpos($tfJs, "requiredRow.hidden = type === 'autonumber';") !== false
+    && strpos($tfPhp, 'data-tf-extra="currency"') !== false && strpos($tfPhp, 'data-tf-extra="rating"') !== false);
+check('P) pencere icinde [hidden] gercekten gizliyor (home-modal-check display kurali ezmesin)',
+    strpos($tfRules, '.sp-page .tf-edit-modal [hidden] { display: none; }') !== false);
 
 $passed = count(array_filter($results));
 $total = count($results);

@@ -1,11 +1,7 @@
 .sp-page .tf-type-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.22rem 0.6rem 0.22rem 0.45rem;
-    border-radius: 999px;
-    background: var(--bcc-surface-sunken);
-    border: 1px solid var(--bcc-border);
     color: var(--bcc-text);
     font-size: 0.78rem;
     white-space: nowrap;
@@ -17,14 +13,10 @@
     background-size: 13px 13px;
     margin: 0;
 }
-.sp-page .tf-required-yes {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.28rem;
-    color: var(--bcc-accent-strong);
-    font-size: 0.78rem;
-    font-weight: 600;
-}
+.sp-page .tf-fields-table .tf-col-name { width: 24%; }
+.sp-page .tf-fields-table .tf-col-type { width: 24%; }
+.sp-page .tf-fields-table .tf-col-options { width: 36%; }
+.sp-page .tf-fields-table .tf-col-actions { width: 16%; }
 .sp-page #new-field-form { max-width: none; }
 .sp-page #new-field-details-step { max-width: 460px; }
 
@@ -247,3 +239,93 @@ body.tf-modal-open { overflow: hidden; }
 .sp-page #new-field-details-step button[type="submit"]:hover {
     background: var(--bcc-accent-strong);
 }
+.sp-page .home-modal.tf-edit-modal { max-width: 580px; }
+.sp-page .tf-edit-modal .home-modal-check { font-size: 0.88rem; color: var(--bcc-text); }
+.sp-page .tf-edit-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 0.75rem;
+}
+.sp-page .tf-edit-modal [hidden] { display: none; }
+.sp-page .tf-choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.sp-page .tf-choice-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.55rem;
+}
+.sp-page .tf-choice-input {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+.sp-page .tf-choice-colors {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+}
+.sp-page .tf-choice-color {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+.sp-page .tf-choice-color input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sp-page .tf-choice-color span {
+    display: block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.sp-page .tf-choice-color input:checked + span { border-color: var(--bcc-text); }
+.sp-page .tf-choice-color input:focus-visible + span {
+    outline: 2px solid var(--bcc-accent);
+    outline-offset: 1px;
+}
+.sp-page .tf-choice-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--bcc-text-muted);
+    cursor: pointer;
+}
+.sp-page .tf-choice-remove:hover {
+    background: var(--bcc-danger-soft);
+    border-color: var(--bcc-danger);
+    color: var(--bcc-danger);
+}
+.sp-page .tf-choice-empty {
+    margin: 0 0 0.35rem;
+    font-size: 0.82rem;
+    color: var(--bcc-text-muted);
+}
+.sp-page .tf-choice-empty[hidden] { display: none; }
+.sp-page .tf-choice-add {
+    margin-top: 0.45rem;
+    padding: 0.3rem 0;
+    border: 0;
+    background: none;
+    color: var(--bcc-accent-strong);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.sp-page .tf-choice-add:hover { text-decoration: underline; }

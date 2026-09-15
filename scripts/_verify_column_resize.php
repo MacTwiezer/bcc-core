@@ -501,8 +501,9 @@ try {
         strpos($resizeJs, 'if (!canEdit || !viewId) {') !== false);
     check('G) tam boy seritte ipucu balonu URETILMIYOR (grid-wrap disina tasardi)',
         strpos($resizeJs, "'gs-kbd-tooltip'") === false);
-    check('G) dondurma tutamacinin balonu KORUNDU',
-        strpos($freezeJs, 'gs-kbd-tooltip') !== false);
+    check('G) dondurma tutamacinda da ipucu balonu URETILMIYOR (2026-09-15: basligin ustune acilip grid-wrap tarafindan kirpiliyordu, gorunen yukseklik 0)',
+        strpos($freezeJs, 'gs-kbd-tooltip') === false
+        && strpos($freezeJs, 'data-tooltip-host') === false);
 
     $cleanup();
 } catch (Throwable $e) {

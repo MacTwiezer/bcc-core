@@ -27,12 +27,7 @@
         if (canEdit) {
             handle = document.createElement('div');
             handle.className = 'grid-freeze-handle';
-            handle.setAttribute('data-tooltip-host', '');
             handle.setAttribute('tabindex', '-1');
-            var tip = document.createElement('span');
-            tip.className = 'gs-kbd-tooltip';
-            tip.textContent = 'Dondurulan sütun sayısını ayarlamak için sürükleyin';
-            handle.appendChild(tip);
         }
 
         function applyFreeze() {

@@ -379,7 +379,7 @@ Günlük §14-§16. Commit: `6809264`.
 
 ### 3c.7 Üçüncü tur (aynı gün) — Excel hesaplanan alanlar, PNG/PDF kesilmesi, çalışma alanı kartları
 
-Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25), `67537c6` (§26).
+Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc2` (§21-§22), `6009e41` (§25), `67537c6` (§26), `54105a9` (§28), `65e20c6` (§29-§31).
 
 | Dosya | § | Ne değişti |
 |---|---|---|
@@ -394,6 +394,13 @@ Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc
 | `src/schema.php` | §26 | `bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm)` — arama yalnızca birincil (kalın başlık) alanda |
 | `public/interface.php`, `public/api/interface_records.php`, `public/api/interface_search.php` | §26 | Yeni imzayla çağrı |
 | `scripts/_verify_interface_search_primary_only.php` | §26 | **YENİ**, 14 kontrol, gerçek HTTP |
+| `public/interface.php`, `public/assets/interface.css`, `scripts/_verify_interface_nav_ui.php` | §28 | Daraltılmış kenar çubuğundaki işlevsiz klasör ikonu kaldırıldı |
+| `public/assets/home.css` | §29, §30 | `.admin-bulk-bar .admin-menu-panel` sola hizalı; `.assign-team-*` pencere stilleri |
+| `public/admin/index.php`, `public/admin/assign_team.php` | §30 | Pencere + JS bağlandı; eski sayfa → `?ekibe_ata=1` yönlendirmesi |
+| `public/api/admin_team_member_assign.php`, `src/partials/assign_team_modal.php`, `public/assets/assign-team-modal.js` | §30 | **YENİ** — ekibe ata penceresi ve ucu |
+| `public/assets/confirm-modal.js`, `public/assets/admin.js` | §31 | `bcc_alert`; seçim yokken toplu işlem uyarısı |
+| `scripts/_verify_settings_pages_ui.php` | §29, §31 | K + L bölümleri (148) |
+| `scripts/_verify_admin_assign_team_modal.php` | §30 | **YENİ**, 30 kontrol, gerçek HTTP |
 
 **Veritabanı:** şema değişmedi. Tarayıcı doğrulamaları için ayrı test
 kullanıcı/ekip/base/tablo kurulup silindi (`scratchpad/realfx.php`,

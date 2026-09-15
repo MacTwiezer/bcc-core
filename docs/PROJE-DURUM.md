@@ -762,6 +762,14 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   başlığın yanında altındaki not satırında (ilk `long_text`) da arıyordu;
   artık yalnızca birincil alan. Test: `_verify_interface_search_primary_only.php`
   14/14 (gerçek HTTP; eski kodla 4/14).
+- **Admin paneli (`65e20c6`).** "Kullanıcıyı ekibe ata" ayrı sayfa değil pencere
+  (kullanıcı ve ekip araması, yeni `api/admin_team_member_assign.php` —
+  yalnız platform yöneticisi; eski adres pencereye yönlendiriyor); seçim
+  yokken "İşlemler" ve "Seçilenleri ekipten çıkar" onay yerine "Lütfen seçim
+  yapınız" uyarısı (`bcc_alert`); "İşlemler" menüsü sola hizalı. Test:
+  `_verify_admin_assign_team_modal.php` 30/30, `_verify_settings_pages_ui.php`
+  148/148. Arayüzde daraltılmış kenar çubuğundaki işlevsiz klasör ikonu
+  kaldırıldı (`54105a9`).
 
 **Bu turdan kalan açık maddeler:** §4 öncesi birleşmiş uzun metinler (en az
 kayıt 112250) elle düzeltilmeli; "Kaydı yazdır" görünümünde etiket hizası

@@ -234,7 +234,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
             <?php else: ?>
                 <div class="settings-table-wrap">
                     <table class="settings-table tf-fields-table">
-                        <thead><tr><th class="tf-col-name">Alan</th><th class="tf-col-type">Tip</th><th class="tf-col-options">Seçenekler</th><?php if ($canEdit): ?><th class="tf-col-actions">İşlemler</th><?php endif; ?></tr></thead>
+                        <thead><tr><th class="tf-col-name">Alan</th><th class="tf-col-type">Tip</th><th class="tf-col-options">Seçenekler</th><?php if ($canEdit): ?><th class="tf-col-actions" aria-label="İşlemler"></th><?php endif; ?></tr></thead>
                         <tbody>
                         <?php foreach ($fields as $i => $f):
                             $hasChoiceList = is_select_field_type($f['field_type']);

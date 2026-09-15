@@ -147,6 +147,19 @@ $tables = bcc_fetch_all(
     array('base_id' => $base['id'])
 );
 
+$createError = null;
+if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_table' && $error !== null) {
+    $createError = $error;
+    $error = null;
+}
+$editError = null;
+$editErrorTableId = 0;
+if ($canEdit && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'rename_table' && $error !== null) {
+    $editError = $error;
+    $editErrorTableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
+    $error = null;
+}
+
 $homeActiveNav = 'bases';
 $homePageTitle = bcc_page_title($base['name']);
 $homeIdentityMeta = bcc_page_identity_meta($base['id'], $base['name'], null, isset($base['icon']) ? $base['icon'] : null, isset($base['icon_color']) ? $base['icon_color'] : null);
@@ -170,17 +183,25 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
 
         <div class="settings-card">
-            <h2>Tablolar <span class="sp-count"><?php echo count($tables); ?></span></h2>
+            <div class="sp-card-head">
+                <h2>Tablolar <span class="sp-count"><?php echo count($tables); ?></span></h2>
+                <?php if ($canEdit): ?>
+                    <button type="button" class="settings-btn settings-btn-primary sp-card-head-btn" data-bt-create-open>
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        Tablo Oluştur
+                    </button>
+                <?php endif; ?>
+            </div>
 
             <?php if (empty($tables)): ?>
                 <p class="settings-empty">
                     <strong>Bu base'de henüz tablo yok.</strong>
-                    <span class="sp-muted">Aşağıdaki formdan ilk tablonuzu oluşturun.</span>
+                    <span class="sp-muted"><?php echo $canEdit ? 'Sağ üstteki “Tablo Oluştur” düğmesiyle ilk tablonuzu oluşturun.' : 'Tablo oluşturmak için owner rolü gerekir.'; ?></span>
                 </p>
             <?php else: ?>
                 <div class="settings-table-wrap">
                     <table class="settings-table">
-                        <thead><tr><th>Tablo</th><th>Açıklama</th><?php if ($canEdit): ?><th>İşlemler</th><?php endif; ?></tr></thead>
+                        <thead><tr><th>Tablo</th><th>Açıklama</th><?php if ($canEdit): ?><th class="sp-col-actions" aria-label="İşlemler"></th><?php endif; ?></tr></thead>
                         <tbody>
                         <?php foreach ($tables as $i => $t): ?>
                             <tr>
@@ -192,7 +213,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 </td>
                                 <td class="<?php echo ((string) $t['description'] !== '') ? '' : 'sp-muted'; ?>"><?php echo ((string) $t['description'] !== '') ? htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8') : '—'; ?></td>
                                 <?php if ($canEdit): ?>
-                                <td class="settings-row-actions">
+                                <td class="sp-actions-cell"><div class="settings-row-actions">
                                     <span class="sp-move-group">
                                         <form method="post" action="/base_tables.php">
                                             <?php echo csrf_field(); ?>
@@ -215,7 +236,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                             </button>
                                         </form>
                                     </span>
-                                    <a class="sp-icon-btn" title="Düzenle" aria-label="Tabloyu düzenle" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>">
+                                    <a class="sp-icon-btn" title="Düzenle" aria-label="Tabloyu düzenle" href="/base_tables.php?base_id=<?php echo (int) $base['id']; ?>&edit=<?php echo (int) $t['id']; ?>" data-bt-edit-open data-table-id="<?php echo (int) $t['id']; ?>" data-table-name="<?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?>" data-table-description="<?php echo htmlspecialchars((string) $t['description'], ENT_QUOTES, 'UTF-8'); ?>">
                                         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                                     </a>
                                     <form method="post" action="/base_tables.php" data-confirm="Bu tabloyu ve içindeki tüm alanları silmek istediğinize emin misiniz?" data-confirm-title="Tabloyu sil">
@@ -227,7 +248,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-7 0l.6 9.2a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4L15 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                         </button>
                                     </form>
-                                </td>
+                                </div></td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
@@ -238,7 +259,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
         </div>
 
         <?php if ($canEdit):
-            $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+            $editId = $editErrorTableId > 0 ? $editErrorTableId : (isset($_GET['edit']) ? (int) $_GET['edit'] : 0);
             $editTable = null;
             if ($editId > 0) {
                 foreach ($tables as $t) {
@@ -249,40 +270,92 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                 }
             }
         ?>
-            <?php if ($editTable): ?>
-                <div class="settings-card">
-                    <h2>Tabloyu Düzenle: <?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <form class="settings-form settings-form-stacked" method="post" action="/base_tables.php">
+            <?php
+            $editOpen = $editTable !== null;
+            $editName = $editTable ? (string) $editTable['name'] : '';
+            $editDescription = $editTable ? (string) $editTable['description'] : '';
+            $editTableId = $editTable ? (int) $editTable['id'] : 0;
+            if ($editError !== null) {
+                $editName = isset($_POST['name']) ? (string) $_POST['name'] : $editName;
+                $editDescription = isset($_POST['description']) ? (string) $_POST['description'] : $editDescription;
+            }
+            ?>
+            <div class="home-modal-backdrop" id="bt-edit-modal"<?php echo $editOpen ? '' : ' hidden'; ?>>
+                <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="bt-edit-title">
+                    <div class="home-modal-head">
+                        <h2 id="bt-edit-title">Tabloyu Düzenle</h2>
+                        <button type="button" class="home-modal-close" aria-label="Kapat" data-bt-modal-close>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
+                    <form class="home-modal-form" id="bt-edit-form" method="post" action="/base_tables.php">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="rename_table">
                         <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                        <input type="hidden" name="table_id" value="<?php echo (int) $editTable['id']; ?>">
-                        <label class="settings-field">Tablo adı
-                            <input type="text" name="name" value="<?php echo htmlspecialchars($editTable['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        <input type="hidden" name="table_id" value="<?php echo $editTableId; ?>">
+
+                        <?php if ($editError !== null): ?>
+                            <p class="home-modal-error"><?php echo htmlspecialchars($editError, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <?php endif; ?>
+
+                        <label class="home-modal-field">
+                            <span class="home-modal-label">Tablo adı</span>
+                            <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off" value="<?php echo htmlspecialchars($editName, ENT_QUOTES, 'UTF-8'); ?>">
                         </label>
-                        <label class="settings-field">Açıklama (opsiyonel)
-                            <input type="text" name="description" value="<?php echo htmlspecialchars((string) $editTable['description'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                        <label class="home-modal-field">
+                            <span class="home-modal-label">Açıklama <span class="home-modal-optional">(opsiyonel)</span></span>
+                            <input type="text" name="description" class="home-modal-input" maxlength="500" autocomplete="off" placeholder="Bu tablonun ne tuttuğunu kısaca yazın" value="<?php echo htmlspecialchars($editDescription, ENT_QUOTES, 'UTF-8'); ?>">
                         </label>
-                        <button type="submit" class="settings-btn settings-btn-primary">Kaydet</button>
+
+                        <div class="home-modal-actions">
+                            <button type="button" class="home-modal-btn" data-bt-modal-close>Vazgeç</button>
+                            <button type="submit" class="home-modal-btn home-modal-btn-primary">Kaydet</button>
+                        </div>
                     </form>
                 </div>
-            <?php endif; ?>
-
-            <div class="settings-card">
-                <h2>Yeni Tablo</h2>
-                <form class="settings-form settings-form-stacked" method="post" action="/base_tables.php">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="create_table">
-                    <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
-                    <label class="settings-field">Tablo adı
-                        <input type="text" name="name" placeholder="Örn. Müşteriler" required>
-                    </label>
-                    <label class="settings-field">Açıklama (opsiyonel)
-                        <input type="text" name="description" placeholder="Bu tablonun ne tuttuğunu kısaca yazın">
-                    </label>
-                    <button type="submit" class="settings-btn settings-btn-primary">Tablo Oluştur</button>
-                </form>
             </div>
+
+            <?php
+            $createOpen = ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_table' && $createError !== null);
+            $createName = $createOpen && isset($_POST['name']) ? (string) $_POST['name'] : '';
+            $createDescription = $createOpen && isset($_POST['description']) ? (string) $_POST['description'] : '';
+            ?>
+            <div class="home-modal-backdrop" id="bt-create-modal"<?php echo $createOpen ? '' : ' hidden'; ?>>
+                <div class="home-modal" role="dialog" aria-modal="true" aria-labelledby="bt-create-title">
+                    <div class="home-modal-head">
+                        <h2 id="bt-create-title">Yeni Tablo Oluştur</h2>
+                        <button type="button" class="home-modal-close" aria-label="Kapat" data-bt-modal-close>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
+                    <form class="home-modal-form" id="bt-create-form" method="post" action="/base_tables.php">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="create_table">
+                        <input type="hidden" name="base_id" value="<?php echo (int) $base['id']; ?>">
+
+                        <?php if ($createOpen): ?>
+                            <p class="home-modal-error"><?php echo htmlspecialchars($createError, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <?php endif; ?>
+
+                        <label class="home-modal-field">
+                            <span class="home-modal-label">Tablo adı</span>
+                            <input type="text" name="name" class="home-modal-input" maxlength="150" required autocomplete="off" placeholder="Örn. Müşteriler" value="<?php echo htmlspecialchars($createName, ENT_QUOTES, 'UTF-8'); ?>">
+                        </label>
+
+                        <label class="home-modal-field">
+                            <span class="home-modal-label">Açıklama <span class="home-modal-optional">(opsiyonel)</span></span>
+                            <input type="text" name="description" class="home-modal-input" maxlength="500" autocomplete="off" placeholder="Bu tablonun ne tuttuğunu kısaca yazın" value="<?php echo htmlspecialchars($createDescription, ENT_QUOTES, 'UTF-8'); ?>">
+                        </label>
+
+                        <div class="home-modal-actions">
+                            <button type="button" class="home-modal-btn" data-bt-modal-close>Vazgeç</button>
+                            <button type="submit" class="home-modal-btn home-modal-btn-primary">Oluştur</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <script src="<?php echo bcc_asset_url('base-tables.js'); ?>" defer></script>
         <?php else: ?>
             <p class="settings-hint">Bu ekipte tablo oluşturmak/düzenlemek için owner rolü gerekir.</p>
         <?php endif; ?>

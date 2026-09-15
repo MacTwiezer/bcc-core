@@ -239,7 +239,7 @@ check('editor: alan OLUSMADI',
     (int) bcc_fetch_column('SELECT COUNT(*) FROM fields WHERE table_id = :t', array('t' => $tableId)) === $fieldCountBefore);
 
 $html = render_as($uid['editor@bcc.local'], 'table_fields.php', 'table_id=' . $tableId);
-check('editor: table_fields.php "Islemler" kolonu YOK', strpos($html, '<th>İşlemler</th>') === false);
+check('editor: table_fields.php "Islemler" kolonu YOK', preg_match('#<th[^>]*aria-label="İşlemler"#u', $html) === 0);
 
 $baseRow = bcc_fetch_one("SELECT id FROM bases WHERE team_id = :t AND name = 'Demo CRM' LIMIT 1", array('t' => $teamId));
 if ($baseRow === false || $baseRow === null) {
@@ -247,10 +247,15 @@ if ($baseRow === false || $baseRow === null) {
 ");
 }
 $html = render_as($uid['editor@bcc.local'], 'base_tables.php', 'base_id=' . (int) $baseRow['id']);
-check('editor: base_tables.php tablo olusturma formu YOK', strpos($html, '<th>İşlemler</th>') === false);
+check('editor: base_tables.php tablo olusturma formu YOK', preg_match('#<th[^>]*aria-label="İşlemler"#u', $html) === 0
+    && strpos($html, 'data-bt-create-open') === false && strpos($html, 'value="create_table"') === false);
+$html = render_as($uid['owner@bcc.local'], 'base_tables.php', 'base_id=' . (int) $baseRow['id']);
+check('owner: base_tables.php "Tablo Olustur" dugmesi + pencere formu VAR',
+    strpos($html, 'data-bt-create-open') !== false && strpos($html, 'id="bt-create-modal"') !== false
+    && substr_count($html, 'value="create_table"') === 1);
 
 $html = render_as($uid['owner@bcc.local'], 'table_fields.php', 'table_id=' . $tableId);
-check('owner: table_fields.php "Islemler" kolonu VAR', strpos($html, '<th>İşlemler</th>') !== false);
+check('owner: table_fields.php "Islemler" kolonu VAR', preg_match('#<th[^>]*aria-label="İşlemler"#u', $html) === 1);
 
 $recCountBefore = (int) bcc_fetch_column('SELECT COUNT(*) FROM records WHERE table_id = :t AND deleted_at IS NULL', array('t' => $tableId));
 $r = post_as($uid['editor@bcc.local'], 'api/record_add.php', '', array('table_id' => $tableId));

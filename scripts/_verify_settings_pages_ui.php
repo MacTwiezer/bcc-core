@@ -110,7 +110,7 @@ foreach (array('.sp-icon-btn', '.sp-count', '.sp-primary-name', '.sp-move-group'
     check("B) '{$shared}' ortak dosyada tanimli", strpos($spRules, $shared) !== false);
     check("B) '{$shared}' table-fields.css'te TEKRARLANMIYOR", strpos($tfRules, $shared) === false);
 }
-foreach (array('.tf-type-pill', '.tf-col-options', '.tf-type-search') as $specific) {
+foreach (array('.tf-type-pill', '.tf-col-type', '.tf-type-search') as $specific) {
     check("B) '{$specific}' YALNIZCA sayfaya ozel dosyada",
         strpos($tfRules, $specific) !== false && strpos($spRules, $specific) === false);
 }
@@ -389,10 +389,10 @@ check('O) Secenekler: secenek eklenebilen tip -> degerler ya da "—"; eklenemey
     strpos($tfPhp, '$hasChoiceList = is_select_field_type($f[\'field_type\']);') !== false
     && preg_match('#<\?php if \(!\$hasChoiceList\): \?>\s*<td></td>\s*<\?php elseif \(\$choices\): \?>#', $tfPhp) === 1
     && strpos($tfPhp, '<td class="sp-muted">—</td>') !== false);
-check('O) sutunlar tablo genisligine dengeli dagiliyor (24/24/36/16)',
-    strpos($tfRules, '.tf-fields-table .tf-col-name { width: 24%; }') !== false
-    && strpos($tfRules, '.tf-fields-table .tf-col-options { width: 36%; }') !== false
-    && strpos($tfRules, '.tf-fields-table .tf-col-actions { width: 16%; }') !== false);
+check('O) sutunlar tablo genisligine dagiliyor; islemler sutunu dugmeler kadar (26/26/kalan/1%)',
+    strpos($tfRules, '.tf-fields-table .tf-col-name { width: 26%; }') !== false
+    && strpos($tfRules, '.tf-fields-table .tf-col-type { width: 26%; }') !== false
+    && strpos($tfRules, '.tf-fields-table .tf-col-actions { width: 1%; }') !== false);
 check('O) islemler HUCRESI flex degil (td display:flex satir cizgisini kaydiriyordu); flex ic kapta',
     strpos($tfPhp, '<td class="settings-row-actions">') === false
     && strpos($tfPhp, '<td class="tf-actions-cell"><div class="settings-row-actions">') !== false);
@@ -419,6 +419,56 @@ check('P) tip degisince yalniz o tipin ek alanlari gorunur; digerleri disabled (
     && strpos($tfPhp, 'data-tf-extra="currency"') !== false && strpos($tfPhp, 'data-tf-extra="rating"') !== false);
 check('P) pencere icinde [hidden] gercekten gizliyor (home-modal-check display kurali ezmesin)',
     strpos($tfRules, '.sp-page .tf-edit-modal [hidden] { display: none; }') !== false);
+
+$btJs = (string) file_get_contents($root . '/public/assets/base-tables.js');
+check('Q) base_tables: "Tablo Olustur" dugmesi Tablolar basliginin saginda (2026-09-15)',
+    preg_match('#<div class="sp-card-head">\s*<h2>Tablolar <span class="sp-count">.*?</h2>\s*<\?php if \(\$canEdit\): \?>\s*<button type="button" class="settings-btn settings-btn-primary sp-card-head-btn" data-bt-create-open>#s', $basePage) === 1
+    && strpos($spRules, '.sp-page .sp-card-head {') !== false
+    && preg_match('/\.sp-page \.sp-card-head \{[^}]*justify-content: space-between;/s', $spRules) === 1);
+check('Q) alttaki "Yeni Tablo" karti YOK; olusturma formu yalniz pencerede',
+    strpos($basePage, '<h2>Yeni Tablo</h2>') === false
+    && substr_count($basePage, 'value="create_table"') === 1
+    && strpos($basePage, 'id="bt-create-modal"') !== false
+    && strpos($basePage, '<form class="home-modal-form" id="bt-create-form" method="post" action="/base_tables.php">') !== false);
+check('Q) pencere tablo adi + aciklama istiyor',
+    preg_match('#id="bt-create-form".*name="name".*name="description"#s', $basePage) === 1);
+check('Q) olusturma hatasi pencerede, taslakla (ust flash degil)',
+    strpos($basePage, '$createError = $error;') !== false && strpos($basePage, '$createName') !== false
+    && strpos($basePage, "echo \$createOpen ? '' : ' hidden';") !== false);
+check('Q) bos durum metni artik "asagidaki form"u gostermiyor',
+    strpos($basePage, 'Aşağıdaki formdan') === false);
+check('Q) JS: dugme acar; x / Vazgec / Esc / arka plan kapatir; hata ile gelince acik baslar',
+    strpos($btJs, "querySelectorAll('[data-bt-create-open]')") !== false
+    && strpos($btJs, "querySelectorAll('[data-bt-modal-close]')") !== false
+    && strpos($btJs, "e.key === 'Escape' && openModal") !== false
+    && strpos($btJs, 'e.target === modal') !== false
+    && strpos($btJs, "querySelector('#bt-create-modal:not([hidden]), #bt-edit-modal:not([hidden])')") !== false
+    && strpos($basePage, "bcc_asset_url('base-tables.js')") !== false);
+
+check('Q) kalem -> tablonun altinda kart DEGIL, ekranda "Tabloyu Duzenle" penceresi',
+    strpos($basePage, '<h2>Tabloyu Düzenle:') === false
+    && strpos($basePage, 'id="bt-edit-modal"') !== false
+    && strpos($basePage, '<form class="home-modal-form" id="bt-edit-form" method="post" action="/base_tables.php">') !== false
+    && strpos($basePage, 'data-bt-edit-open data-table-id=') !== false);
+check('Q) kalem sayfayi yenilemeden pencereyi o tablonun ad/aciklamasiyla dolduruyor',
+    strpos($btJs, "querySelectorAll('[data-bt-edit-open]')") !== false
+    && strpos($btJs, "getAttribute('data-table-name')") !== false
+    && strpos($btJs, "getAttribute('data-table-description')") !== false
+    && strpos($btJs, "input[name=\"table_id\"]').value = trigger.getAttribute('data-table-id')") !== false);
+check('Q) duzenleme hatasi pencerede, taslakla; ?edit= kapaninca adresten siliniyor',
+    strpos($basePage, '$editError = $error;') !== false
+    && strpos($basePage, '$editId = $editErrorTableId > 0 ? $editErrorTableId') !== false
+    && strpos($btJs, "params.delete('edit');") !== false);
+
+check('R) "Islemler" basligi yazisiz (dugmelerden kopuk duruyordu, 2026-09-15); ekran okuyucu icin aria-label',
+    strpos($basePage, '<th class="sp-col-actions" aria-label="İşlemler"></th>') !== false
+    && strpos($tfPhp, '<th class="tf-col-actions" aria-label="İşlemler"></th>') !== false
+    && preg_match('#<th[^>]*>\s*İşlemler\s*</th>#u', $basePage . $tfPhp) === 0);
+check('R) base_tables islemler HUCRESI flex degil; flex ic kapta; sutun dugmeler kadar dar',
+    strpos($basePage, '<td class="settings-row-actions">') === false
+    && strpos($basePage, '<td class="sp-actions-cell"><div class="settings-row-actions">') !== false
+    && preg_match('#</form>\s*</div></td>#', $basePage) === 1
+    && preg_match('/\.sp-page \.settings-table \.sp-col-actions,\s*\.sp-page \.settings-table \.sp-actions-cell \{[^}]*width: 1%;/s', $spRules) === 1);
 
 $passed = count(array_filter($results));
 $total = count($results);

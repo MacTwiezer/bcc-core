@@ -13,10 +13,9 @@
     background-size: 13px 13px;
     margin: 0;
 }
-.sp-page .tf-fields-table .tf-col-name { width: 24%; }
-.sp-page .tf-fields-table .tf-col-type { width: 24%; }
-.sp-page .tf-fields-table .tf-col-options { width: 36%; }
-.sp-page .tf-fields-table .tf-col-actions { width: 16%; }
+.sp-page .tf-fields-table .tf-col-name { width: 26%; }
+.sp-page .tf-fields-table .tf-col-type { width: 26%; }
+.sp-page .tf-fields-table .tf-col-actions { width: 1%; }
 .sp-page #new-field-form { max-width: none; }
 .sp-page #new-field-details-step { max-width: 460px; }
 

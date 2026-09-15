@@ -16,10 +16,8 @@ try {
         array('table_id' => $tableId)
     );
     $primaryFieldId = !empty($fields) ? (int) $fields[0]['id'] : null;
-    $summaryField = bcc_interface_summary_field($fields);
-    $summaryFieldId = $summaryField ? (int) $summaryField['id'] : null;
 
-    $records = bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, $query);
+    $records = bcc_interface_fetch_records($tableId, $primaryFieldId, $query);
 } catch (Throwable $e) {
     json_fail(500, 'Veritabanı hatası.');
 }

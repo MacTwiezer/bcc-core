@@ -3565,7 +3565,7 @@ function bcc_build_grouped_tree($records, $groupRules, $usersById = array())
     return $tree;
 }
 
-function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, $searchTerm = null)
+function bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm = null)
 {
     $sql = "SELECT r.id, r.created_at,
                    COALESCE((SELECT MAX(cv2.updated_at) FROM cell_values cv2 WHERE cv2.record_id = r.id), r.created_at) AS last_update
@@ -3574,21 +3574,18 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId,
     $params = array($tableId);
 
     if ($searchTerm !== null && $searchTerm !== '') {
-
-        $fieldIds = array_values(array_filter(array($primaryFieldId, $summaryFieldId)));
-        if (empty($fieldIds)) {
+        if (!$primaryFieldId) {
             return array();
         }
-        $fieldPlaceholders = implode(',', array_fill(0, count($fieldIds), '?'));
 
         $escapedTerm = str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $searchTerm);
         $sql .= " AND EXISTS (
                 SELECT 1 FROM cell_values cv
                 WHERE cv.record_id = r.id
-                  AND cv.field_id IN ($fieldPlaceholders)
+                  AND cv.field_id = ?
                   AND cv.value_text LIKE ? ESCAPE '\\\\'
             )";
-        $params = array_merge($params, $fieldIds, array('%' . $escapedTerm . '%'));
+        $params = array_merge($params, array((int) $primaryFieldId, '%' . $escapedTerm . '%'));
     }
 
     $sql .= ' ORDER BY last_update DESC, r.id DESC';

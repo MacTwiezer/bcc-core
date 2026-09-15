@@ -55,11 +55,10 @@ if ($tableId) {
     );
     $primaryFieldId = !empty($fields) ? (int) $fields[0]['id'] : null;
     $summaryField = bcc_interface_summary_field($fields);
-    $summaryFieldId = $summaryField ? (int) $summaryField['id'] : null;
 
     $usersById = bcc_team_users_by_id($base['team_id']);
 
-    $records = bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, null);
+    $records = bcc_interface_fetch_records($tableId, $primaryFieldId, null);
     $cellsByRecord = bcc_fetch_cells_by_record(array_column($records, 'id'));
     $attachmentsByRecord = bcc_fetch_attachments_by_record(array_column($records, 'id'));
 }

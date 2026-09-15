@@ -32,10 +32,8 @@ try {
 
     if ($query !== '') {
         $primaryFieldId = !empty($fields) ? (int) $fields[0]['id'] : null;
-        $summaryField = bcc_interface_summary_field($fields);
-        $summaryFieldId = $summaryField ? (int) $summaryField['id'] : null;
 
-        $matched = bcc_interface_fetch_records($tableId, $primaryFieldId, $summaryFieldId, $query);
+        $matched = bcc_interface_fetch_records($tableId, $primaryFieldId, $query);
         $allowed = array_flip(array_map('intval', array_column($matched, 'id')));
 
         $records = array_values(array_filter($records, function ($r) use ($allowed) {

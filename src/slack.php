@@ -309,6 +309,11 @@ function bcc_slack_watched_field_ids($tableId)
     return $cache[$tableId];
 }
 
+/* 2026-09-22 — Bu bes bcc_notify_slack_* fonksiyonunun tablo sorgusuna
+   `b.deleted_at IS NULL` eklendi: cop kutusundaki bir base'in tablosu icin
+   Slack bildirimi gonderilmesin. Tek basina yeterli degil, asil kapi
+   bcc_find_field()/bcc_find_record() filtresi (src/schema.php) — bu ikinci
+   savunma hatti. */
 function bcc_notify_slack_new_record($tableId, $recordId, $userFullName = null)
 {
     try {
@@ -316,7 +321,7 @@ function bcc_notify_slack_new_record($tableId, $recordId, $userFullName = null)
             'SELECT t.name AS table_name, b.id AS base_id, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
-             WHERE t.id = :table_id LIMIT 1',
+             WHERE t.id = :table_id AND b.deleted_at IS NULL LIMIT 1',
             array('table_id' => $tableId)
         );
         if (!$tableRow) {
@@ -347,7 +352,7 @@ function bcc_notify_slack_new_table($tableId, $userFullName = null)
             'SELECT t.name AS table_name, b.id AS base_id, b.name AS base_name, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
-             WHERE t.id = :table_id LIMIT 1',
+             WHERE t.id = :table_id AND b.deleted_at IS NULL LIMIT 1',
             array('table_id' => $tableId)
         );
         if (!$row) {
@@ -376,7 +381,7 @@ function bcc_notify_slack_new_field($tableId, $fieldId, $fieldName, $fieldType, 
             'SELECT t.name AS table_name, b.id AS base_id, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
-             WHERE t.id = :table_id LIMIT 1',
+             WHERE t.id = :table_id AND b.deleted_at IS NULL LIMIT 1',
             array('table_id' => $tableId)
         );
         if (!$row) {
@@ -409,7 +414,7 @@ function bcc_notify_slack_cell_change($tableId, $recordId, $fieldType, $fieldNam
             'SELECT t.name AS table_name, b.id AS base_id, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
-             WHERE t.id = :table_id LIMIT 1',
+             WHERE t.id = :table_id AND b.deleted_at IS NULL LIMIT 1',
             array('table_id' => $tableId)
         );
         if (!$row) {
@@ -474,7 +479,7 @@ function bcc_notify_slack_bulk_cell_change($tableId, $fieldNames, $cellCount, $u
             'SELECT t.name AS table_name, b.id AS base_id, b.team_id
              FROM tables_meta t
              INNER JOIN bases b ON b.id = t.base_id
-             WHERE t.id = :table_id LIMIT 1',
+             WHERE t.id = :table_id AND b.deleted_at IS NULL LIMIT 1',
             array('table_id' => $tableId)
         );
         if (!$row) {

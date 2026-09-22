@@ -1019,6 +1019,12 @@ function bcc_team_member_remove_message($result)
     );
 }
 
+/* 2026-09-22 — `b.deleted_at IS NULL` EKLENDI. Oncesinde cop kutusundaki bir
+   base'in alanlari/kayitlari bu iki yardimci uzerinden hala bulunuyordu:
+   grid sayfasi 404 verse de acik kalmis bir sekmeden cell_update, comment_add,
+   note_view_start gibi uclar "ok" donup copteki base'e yaziyordu (olculdu).
+   find_table_or_404 / find_base_or_404 bu filtreyi bastan beri uyguluyordu;
+   kirik olan yalnizca bu iki fonksiyondu. */
 function bcc_find_field($fieldId)
 {
     return bcc_fetch_one(
@@ -1026,7 +1032,7 @@ function bcc_find_field($fieldId)
          FROM fields f
          INNER JOIN tables_meta tm ON tm.id = f.table_id
          INNER JOIN bases b ON b.id = tm.base_id
-         WHERE f.id = :id LIMIT 1',
+         WHERE f.id = :id AND b.deleted_at IS NULL LIMIT 1',
         array('id' => $fieldId)
     );
 }
@@ -1038,7 +1044,7 @@ function bcc_find_record($recordId)
          FROM records r
          INNER JOIN tables_meta tm ON tm.id = r.table_id
          INNER JOIN bases b ON b.id = tm.base_id
-         WHERE r.id = :id LIMIT 1',
+         WHERE r.id = :id AND b.deleted_at IS NULL LIMIT 1',
         array('id' => $recordId)
     );
 }
@@ -3747,11 +3753,100 @@ function bcc_workspace_usage($teamId)
     );
 }
 
+/* Hareket satirlarindan, base'i silinmis (cope atilmis ya da kalici silinmis)
+   olanlari ayiklar. Bilinmeyen/cozulemeyen satir KORUNUR. */
+function bcc_activity_drop_deleted_bases($rows)
+{
+    $baseIds = array();
+    $tableIds = array();
+
+    foreach ($rows as $r) {
+        $d = bcc_audit_details($r['details']);
+
+        if ($r['entity_type'] === 'base' && (int) $r['entity_id'] > 0) {
+            $baseIds[(int) $r['entity_id']] = true;
+        }
+        if (isset($d['base_id'])) {
+            $baseIds[(int) $d['base_id']] = true;
+        }
+        if ($r['entity_type'] === 'table' && (int) $r['entity_id'] > 0) {
+            $tableIds[(int) $r['entity_id']] = true;
+        }
+        if (isset($d['table_id'])) {
+            $tableIds[(int) $d['table_id']] = true;
+        }
+    }
+
+    if (empty($baseIds) && empty($tableIds)) {
+        return $rows;
+    }
+
+    /* Tablo -> base esleme ONCE yapilir: tablodan cozulen base id'leri de
+       "yasiyor mu" sorgusuna girmeli, yoksa yasayan bir base'in tablosuna ait
+       satir yanlislikla elenir. Tablosu artik olmayan satir "bilinmiyor". */
+    $tableBase = array();
+    if (!empty($tableIds)) {
+        $ph = implode(',', array_fill(0, count($tableIds), '?'));
+        foreach (bcc_fetch_all("SELECT id, base_id FROM tables_meta WHERE id IN ($ph)", array_keys($tableIds)) as $row) {
+            $tableBase[(int) $row['id']] = (int) $row['base_id'];
+            $baseIds[(int) $row['base_id']] = true;
+        }
+    }
+
+    /* Yasayan base'ler: satirda gecen ama burada OLMAYAN her base ya copte ya
+       da kalici silinmis demektir. */
+    $aliveBases = array();
+    if (!empty($baseIds)) {
+        $ph = implode(',', array_fill(0, count($baseIds), '?'));
+        foreach (bcc_fetch_all("SELECT id FROM bases WHERE deleted_at IS NULL AND id IN ($ph)", array_keys($baseIds)) as $row) {
+            $aliveBases[(int) $row['id']] = true;
+        }
+    }
+
+    $out = array();
+    foreach ($rows as $r) {
+        $d = bcc_audit_details($r['details']);
+
+        $baseId = null;
+        if ($r['entity_type'] === 'base' && (int) $r['entity_id'] > 0) {
+            $baseId = (int) $r['entity_id'];
+        } elseif (isset($d['base_id'])) {
+            $baseId = (int) $d['base_id'];
+        } elseif ($r['entity_type'] === 'table' && isset($tableBase[(int) $r['entity_id']])) {
+            $baseId = $tableBase[(int) $r['entity_id']];
+        } elseif (isset($d['table_id']) && isset($tableBase[(int) $d['table_id']])) {
+            $baseId = $tableBase[(int) $d['table_id']];
+        }
+
+        if ($baseId !== null && !isset($aliveBases[$baseId])) {
+            continue;
+        }
+
+        $out[] = $r;
+    }
+
+    return $out;
+}
+
+/* 2026-09-22 — Silinen base'in adi "Son Hareketler"de kalmasin (kullanici
+   istegi). audit_log'dan SATIR SILINMIYOR: denetim izi yerinde duruyor,
+   yalnizca akista gosterilmiyor; base cop kutusundan geri yuklenirse satirlar
+   kendiliginden geri gelir.
+
+   Eleme yalnizca base'i KESIN olarak cozulebilen satirlar icin yapilir
+   (entity_type='base', details.base_id, ya da tablo uzerinden base). Cozulemeyen
+   satir korunur — ornegin "tabloyu sildi" kaydinda tablo artik yok ama base
+   yasiyor olabilir, o satir kaybolmamali.
+
+   Eleme LIMIT'ten SONRA yapilsaydi akis 12 yerine 3 satir gosterebilirdi;
+   bu yuzden once daha genis cekilip filtreden sonra kirpiliyor. */
 function bcc_workspace_activity($teamId, $limit = 12)
 {
     $teamId = (int) $teamId;
 
     $limit = max(1, min(50, (int) $limit));
+
+    $fetchLimit = min(200, $limit * 5);
 
     $rows = bcc_fetch_all(
         "SELECT al.id, al.action, al.entity_type, al.entity_id, al.details, al.created_at,
@@ -3762,13 +3857,21 @@ function bcc_workspace_activity($teamId, $limit = 12)
            AND al.action NOT IN ('base.open', 'user.login', 'user.logout')
            AND al.action NOT LIKE '%.export/_%' ESCAPE '/'
          ORDER BY al.id DESC
-         LIMIT " . $limit,
+         LIMIT " . $fetchLimit,
         array('team_id' => $teamId)
     );
 
     if (empty($rows)) {
         return array();
     }
+
+    $rows = bcc_activity_drop_deleted_bases($rows);
+
+    if (empty($rows)) {
+        return array();
+    }
+
+    $rows = array_slice($rows, 0, $limit);
 
     $baseIds = array();
     $tableIds = array();

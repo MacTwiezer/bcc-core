@@ -128,6 +128,53 @@ check('E) goreli zaman uretiliyor', $ilk !== null && $ilk['ago'] !== '—', $ilk
 check('E) bilinmeyen eylemin etiketi ham adi', bcc_audit_action_label('zzz.bilinmeyen') === 'zzz.bilinmeyen',
     bcc_audit_action_label('zzz.bilinmeyen'));
 
+echo "\nF) Silinen base'in satirlari akistan dusuyor (2026-09-22)\n";
+
+/* Iki base: biri kalir, biri cope gider. Cope giden base'in base/tablo/kayit
+   satirlarinin UCU DE akistan dusmeli; kalan base'inkiler ve base'e bagli
+   OLMAYAN satirlar (uye atama gibi) yerinde kalmali. */
+$kalanBase = bcc_create_base($teamId, "ZZ Akis Kalan", "", $userId);
+bcc_execute("INSERT INTO tables_meta (base_id, name, description, position) VALUES (:b, :n, '', 1)",
+    array(":b" => $kalanBase["id"], ":n" => "ZZ Akis Kalan Tablo"));
+$kalanTablo = (int) bcc_last_insert_id();
+log_audit("table.create", "table", $kalanTablo, array("name" => "ZZ Akis Kalan Tablo", "base_id" => (int) $kalanBase["id"]), $teamId);
+
+$gidenBase = bcc_create_base($teamId, "ZZ Akis Giden", "", $userId);
+bcc_execute("INSERT INTO tables_meta (base_id, name, description, position) VALUES (:b, :n, '', 1)",
+    array(":b" => $gidenBase["id"], ":n" => "ZZ Akis Giden Tablo"));
+$gidenTablo = (int) bcc_last_insert_id();
+log_audit("table.create", "table", $gidenTablo, array("name" => "ZZ Akis Giden Tablo", "base_id" => (int) $gidenBase["id"]), $teamId);
+log_audit("record.create", "record", 999999, array("table_id" => $gidenTablo), $teamId);
+
+$hedefler = function ($tid) {
+    $c = array();
+    foreach (bcc_workspace_activity($tid, 50) as $a) {
+        if ($a["target"] !== null) { $c[] = $a["target"]; }
+    }
+    return $c;
+};
+
+$once = $hedefler($teamId);
+check("F) silmeden once giden base akista", in_array("ZZ Akis Giden", $once, true));
+check("F) silmeden once giden tablo akista", in_array("ZZ Akis Giden Tablo", $once, true));
+
+bcc_execute("UPDATE bases SET deleted_at = NOW(), deleted_by = :u WHERE id = :i",
+    array(":u" => $userId, ":i" => $gidenBase["id"]));
+log_audit("base.delete", "base", (int) $gidenBase["id"], array("name" => "ZZ Akis Giden"), $teamId);
+
+$sonra = $hedefler($teamId);
+check("F) copteki base akistan dustu (cope tasidi satiri dahil)", !in_array("ZZ Akis Giden", $sonra, true));
+check("F) copteki base'in TABLO satiri da dustu", !in_array("ZZ Akis Giden Tablo", $sonra, true));
+check("F) KALAN base etkilenmedi", in_array("ZZ Akis Kalan", $sonra, true));
+check("F) KALAN base'in tablosu etkilenmedi", in_array("ZZ Akis Kalan Tablo", $sonra, true));
+check("F) base'e bagli olmayan satirlar duruyor", count($sonra) > 0);
+
+bcc_execute("UPDATE bases SET deleted_at = NULL, deleted_by = NULL WHERE id = :i", array(":i" => $gidenBase["id"]));
+$geri = $hedefler($teamId);
+check("F) geri yuklenince satirlar geri geliyor (audit SILINMIYOR)", in_array("ZZ Akis Giden", $geri, true));
+
+bcc_execute("DELETE FROM bases WHERE id IN (:a, :b)", array(":a" => $kalanBase["id"], ":b" => $gidenBase["id"]));
+
 echo "\n" . str_repeat('-', 56) . "\n";
 echo "GECTI: $gecti   KALDI: $kaldi\n";
 exit($kaldi === 0 ? 0 : 1);

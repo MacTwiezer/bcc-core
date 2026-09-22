@@ -806,7 +806,7 @@ değiştiren muhtemelen boş, ölçülmedi); gridde sütun dondurma tutamacını
 balonu tablo kabının dışına açılıp kırpılıyordu (günlük §23) — kullanıcı kararıyla
 kaldırıldı (§25).
 
-### 2026-09-22 turu — giriş ekranı
+### 2026-09-22 turu — giriş ekranı ve çöp kutusu
 
 - **Kayıtlı olmayan e-postayla giriş** artık "E-posta veya şifre hatalı."
   demiyor: "Bu e-posta ile kayıtlı bir hesap yok." + hata kutusunun içinde
@@ -824,6 +824,33 @@ kaldırıldı (§25).
   `unverified` → "Hesabınız henüz etkinleştirilmemiş… " + "Yeni bağlantı gönder".
   Yönetici tarafından pasife alınmış hesapta jeton NULL olduğu için o yol
   eskisi gibi `inactive`/`invalid` döndürüyor. Günlük §2.
+- **Çöp kutusundan "Kalıcı sil" (base)** — `public/api/base_purge.php` (yeni):
+  yalnızca **çöpteki** bir base, yalnızca o çalışma alanının **owner**'ı
+  tarafından kalıcı silinebiliyor; FK zinciri tabloları/kayıtları/ekleri de
+  götürüyor, ek dosyaları commit'ten SONRA diskten siliniyor
+  (`bcc_attachment_paths_by_base()`), denetim kaydı `base.purge` ad + tablo/kayıt
+  sayısını tutuyor. Arayüz: hesap menüsü → Çöp kutusu → "Kalıcı sil"
+  (`account-menu.js`, `home.css`). Müşteri raporunun ("base silinemiyor")
+  karşılığı bu; base'in kendisini **çöpe taşıma zaten çalışıyordu** (ölçüldü).
+  ⚠️ **Çalışma alanı (teams) silme hâlâ YOK** — kullanıcı kararıyla yazılmadı.
+  Günlük §4.
+- **Çöpteki base'in verisi yazılabiliyordu (veri bütünlüğü düzeltmesi)** —
+  `bcc_find_field()` ve `bcc_find_record()` (`src/schema.php`) `bases`'e JOIN
+  atarken `b.deleted_at IS NULL` koymuyordu; bu yüzden çöpe atılmış bir base'in
+  kayıtlarına `cell_update` / `comment_add` / `note_view_start` gibi uçlardan
+  hâlâ **yazılabiliyordu** (ölçüldü: `{"ok":true}` + değer DB'ye gitti). Filtre
+  iki yardımcıya eklendi (13 çağrı yeri birden kapandı), ayrıca beş
+  `bcc_notify_slack_*` sorgusuna ikinci savunma hattı olarak kondu. Arayüz
+  tarafı zaten temizdi: silinen base 11 sayfada hiç geçmiyor, doğrudan adresler
+  404 veriyor; tek kalan `workspaces.php` → "Son Hareketler" denetim geçmişi.
+  83 regresyon betiği koşturuldu (tek düşen `_verify_login_throttle`, demo
+  hesabı yokluğundan). Günlük §5.
+- **"Son Hareketler" silinen base'i göstermiyor** — `bcc_workspace_activity()`
+  satırları `bcc_activity_drop_deleted_bases()` süzgecinden geçiriyor: çöpe
+  atılmış/kalıcı silinmiş base'e ait base, tablo ve kayıt satırları akışta
+  görünmüyor. `audit_log`'dan **satır silinmiyor** (denetim izi duruyor); base
+  geri yüklenirse satırlar geri geliyor. Base'i çözülemeyen satır korunuyor.
+  `_verify_workspace_activity_filter.php` 29 → **37 kontrol**. Günlük §6.
 
 ---
 

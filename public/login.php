@@ -9,6 +9,9 @@ if (is_logged_in()) {
 
 $error = null;
 $info = null;
+/* Hata kutusunun altinda gosterilecek eylem baglantisi (su an yalnizca
+   "kayitli hesap yok" durumu kullaniyor). */
+$errorLink = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid();
@@ -27,6 +30,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } elseif ($status === 'inactive') {
             $error = 'Hesabınız henüz yönetici tarafından onaylanmadı.';
+        } elseif ($status === 'unregistered') {
+            /* Istek (2026-09-22): kayitli olmayan e-postada kullanici bunu
+               bilsin ve dogrudan kayit ekranina gidebilsin. E-posta adresi
+               kayit formuna tasiniyor ki tekrar yazmasin. */
+            $error = 'Bu e-posta ile kayıtlı bir hesap yok.';
+            $errorLink = array(
+                'href' => '/register.php?email=' . rawurlencode($email),
+                'label' => 'Hesap oluştur',
+            );
+        } elseif ($status === 'unverified') {
+            /* Kayit olmus ama e-postadaki baglantiya hic tiklamamis kisi. Eskiden
+               "sifre hatali" diyordu: kisi var olmayan bir sifreyi hatirlamaya
+               calisiyordu. Baglanti kayit formuna gider, orada ayni e-postayla
+               yeniden gonderim yapilir (120 sn fren register.php'de). */
+            $error = 'Hesabınız henüz etkinleştirilmemiş. E-postanıza gönderilen bağlantıdan şifrenizi oluşturun.';
+            $errorLink = array(
+                'href' => '/register.php?email=' . rawurlencode($email),
+                'label' => 'Yeni bağlantı gönder',
+            );
         } elseif ($status === 'throttled') {
             $kalanDakika = (int) ceil(bcc_login_retry_after($email) / 60);
             $error = 'Çok fazla başarısız giriş denemesi. '
@@ -49,7 +71,12 @@ require __DIR__ . '/../src/partials/auth_shell_top.php';
         <h1 class="login-title">Hoş geldiniz</h1>
 
         <?php if ($error !== null): ?>
-            <p class="login-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
+            <p class="login-error">
+                <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+                <?php if ($errorLink !== null): ?>
+                    <a class="login-error-action" href="<?php echo htmlspecialchars($errorLink['href'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($errorLink['label'], ENT_QUOTES, 'UTF-8'); ?></a>
+                <?php endif; ?>
+            </p>
         <?php endif; ?>
 
         <?php if ($info !== null): ?>

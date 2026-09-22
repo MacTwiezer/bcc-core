@@ -806,6 +806,25 @@ değiştiren muhtemelen boş, ölçülmedi); gridde sütun dondurma tutamacını
 balonu tablo kabının dışına açılıp kırpılıyordu (günlük §23) — kullanıcı kararıyla
 kaldırıldı (§25).
 
+### 2026-09-22 turu — giriş ekranı
+
+- **Kayıtlı olmayan e-postayla giriş** artık "E-posta veya şifre hatalı."
+  demiyor: "Bu e-posta ile kayıtlı bir hesap yok." + hata kutusunun içinde
+  **"Hesap oluştur"** bağlantısı (e-posta kayıt formuna taşınıyor).
+  `attempt_login()` bu durumda `invalid` yerine `unregistered` döndürüyor
+  (`src/auth.php`, `public/login.php`, `public/register.php`,
+  `public/assets/login.css`, `scripts/_verify_login_throttle.php` §C).
+  ⚠️ **Bilerek verilen ödün:** bir e-postanın kayıtlı olup olmadığı artık
+  dışarıdan anlaşılıyor (kullanıcı enumerasyonu) — kullanıcı isteğiyle kabul
+  edildi. Zaman sabitliği (kullanıcı yokken sahte bcrypt doğrulaması) ve giriş
+  deneme freni aynen duruyor. Ayrıntı: günlük `docs/gunluk/2026-09-22.md` §1.
+- **Kayıt olup e-postasını doğrulamamış kişi** artık "E-posta veya şifre
+  hatalı." almıyor (şifresi hiç yoktu: `register.php` kullanılamaz rastgele bir
+  hash yazıyor): `is_active=0` **ve** `email_verify_token` doluysa yeni durum
+  `unverified` → "Hesabınız henüz etkinleştirilmemiş… " + "Yeni bağlantı gönder".
+  Yönetici tarafından pasife alınmış hesapta jeton NULL olduğu için o yol
+  eskisi gibi `inactive`/`invalid` döndürüyor. Günlük §2.
+
 ---
 
 ## 6. Kalan İşler

@@ -99,6 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+/* Giris ekrani "bu e-posta kayitli degil" dedikten sonra buraya adresle
+   birlikte yonlendiriyor; kisi e-postasini ikinci kez yazmasin. Gecersiz ya da
+   asiri uzun deger sessizce yok sayilir. */
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_GET['email'])) {
+    $email = trim($_GET['email']);
+    if (!bcc_is_valid_email($email) || mb_strlen($email, 'UTF-8') > 190) {
+        $email = '';
+    }
+}
 ?>
 <?php
 $authPageTitle = 'Kayıt ol';

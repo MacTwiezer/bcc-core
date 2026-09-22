@@ -574,7 +574,7 @@ function attempt_login($email, $password)
     }
 
     $row = bcc_fetch_one(
-        'SELECT id, password_hash, is_active FROM users WHERE email = :email LIMIT 1',
+        'SELECT id, password_hash, is_active, email_verify_token FROM users WHERE email = :email LIMIT 1',
         array('email' => $email)
     );
 
@@ -584,6 +584,25 @@ function attempt_login($email, $password)
     if (!$row || !$passwordOk) {
 
         bcc_login_record_failure($email);
+
+        /* 2026-09-22 — istek: kayitli olmayan e-postada "hesabiniz yok" densin ve
+           kayit ekranina yonlendirilsin. Bu, bir e-postanin sistemde olup
+           olmadigini sizdirir (kullanici enumerasyonu); bilerek kabul edildi.
+           Zaman sabitligi (yedek bcrypt hash) ve fren AYNEN korunuyor:
+           password_verify yukarida, $row kapisindan ONCE cagriliyor. */
+        if (!$row) {
+            return 'unregistered';
+        }
+
+        /* Kayit olup e-posta dogrulamasini YAPMAMIS kisi: sifresi yok, yerinde
+           kullanilamaz rastgele bir hash duruyor (register.php), dolayisiyla ne
+           yazarsa yazsin buraya duser. "Sifre hatali" demek yaniltici — dogru
+           bilgi "hesabin henuz etkin degil, e-postandaki baglantiyi kullan".
+           Yonetici tarafindan PASIFE ALINMIS hesapta jeton NULL'dur, o yol
+           asagidaki 'inactive' dalinda kalir. */
+        if ((int) $row['is_active'] !== 1 && $row['email_verify_token'] !== null) {
+            return 'unverified';
+        }
 
         return 'invalid';
     }

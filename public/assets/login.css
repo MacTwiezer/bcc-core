@@ -53,6 +53,18 @@
     font-size: 0.9rem;
     margin: 0 0 1.25rem;
 }
+/* "Bu e-posta ile kayitli bir hesap yok" uyarisinin icindeki kayit baglantisi:
+   ayni kirmizi kutunun icinde, ama tiklanabilir oldugu belli olsun. */
+.login-error-action {
+    display: inline-block;
+    margin-left: 0.15rem;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+}
+.login-error-action:hover {
+    text-decoration: none;
+}
 .login-info {
     background: #eaf7ee;
     border: 1px solid #bfe6c9;

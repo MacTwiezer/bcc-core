@@ -61,7 +61,10 @@ check("dogru sifre -> throttled", $out === 'throttled', $out);
 echo "\nC) Kilit HESABA degil (ip+e-posta) CIFTINE ait\n";
 
 $out = attempt_login($YOK, $YANLIS);
-check("farkli e-posta hala deneyebiliyor", $out === 'invalid', $out);
+/* 2026-09-22: kayitsiz e-posta artik 'invalid' degil 'unregistered' donuyor
+   (giris ekrani "hesabiniz yok" diyip kayda yonlendiriyor). Buradaki soru
+   frenin bu cifte kapali OLMAMASI, yani 'throttled' disinda bir sey donmesi. */
+check("farkli e-posta hala deneyebiliyor", $out === 'unregistered', $out);
 
 echo "\nD) Zaman sabitligi kilitten ONCE korunuyor mu (yan kanal)\n";
 

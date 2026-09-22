@@ -1118,6 +1118,29 @@ function bcc_delete_attachment_files_by_table($tableId)
     }
 }
 
+/* Base KALICI silinirken kullanilir. Dosyalar satirlar gittikten SONRA
+   siliniyor (bkz. api/base_purge.php): once yollar toplanir, DELETE commit
+   edilir, sonra unlink. Ters sirada yapilsaydi commit patladiginda satirlar
+   yerinde kalir ama dosyalari ucmus olurdu. */
+function bcc_attachment_paths_by_base($baseId)
+{
+    $rows = bcc_fetch_all(
+        'SELECT a.stored_name
+         FROM attachments a
+         INNER JOIN records r ON r.id = a.record_id
+         INNER JOIN tables_meta tm ON tm.id = r.table_id
+         WHERE tm.base_id = :id',
+        array('id' => $baseId)
+    );
+
+    $paths = array();
+    foreach ($rows as $row) {
+        $paths[] = bcc_attachment_storage_path($row['stored_name']);
+    }
+
+    return $paths;
+}
+
 function bcc_attachment_type_badge($mimeType)
 {
     $map = array(
@@ -3854,6 +3877,7 @@ function bcc_audit_action_label($action)
         'base.create' => 'yeni base oluşturdu',
         'base.delete' => 'base\'i çöpe taşıdı',
         'base.restore' => 'base\'i geri yükledi',
+        'base.purge' => 'base\'i çöp kutusundan kalıcı sildi',
         'base.update' => 'base\'i güncelledi',
         'table.create' => 'yeni tablo oluşturdu',
         'table.update' => 'tabloyu güncelledi',

@@ -449,6 +449,21 @@ button.home-search-result {
     padding: 0.3rem 0.2rem;
 }
 .bcc-trash-restore-btn:hover { text-decoration: underline; }
+/* Cop kutusunda "Geri Yukle"nin yanindaki kalici silme: ayni satirda ama
+   tehlikeli oldugu renginden anlasiliyor (2026-09-22). */
+.bcc-trash-purge-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--bcc-danger);
+    font-weight: 600;
+    font-size: 0.83rem;
+    cursor: pointer;
+    padding: 0.3rem 0.2rem;
+    margin-left: 0.35rem;
+}
+.bcc-trash-purge-btn:hover { text-decoration: underline; }
+.bcc-trash-purge-btn:disabled { opacity: 0.5; cursor: default; }
 .bcc-trash-empty {
     padding: 1.5rem 1rem;
     text-align: center;

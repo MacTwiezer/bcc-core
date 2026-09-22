@@ -155,7 +155,7 @@
             document.dispatchEvent(new CustomEvent('bcc:base-card-inserted', { detail: { card: kart } }));
         }
 
-        function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam) {
+        function renderTrashSection(items, listEl, emptyEl, idAttr, restoreUrl, idParam, purgeUrl) {
             Array.prototype.forEach.call(listEl.querySelectorAll('.bcc-trash-item'), function (el) {
                 el.remove();
             });
@@ -229,6 +229,63 @@
                         });
                     });
                     row.appendChild(restoreBtn);
+
+                    /* Kalici silme yalnizca base listesinde (purgeUrl dolu).
+                       Kayitlarda yok: onlar 7 gun sonra zaten otomatik purge
+                       ediliyor. Dugme "Geri Yukle" ile ayni yetki bayragina
+                       bagli: yalnizca o calisma alaninin owner'i. */
+                    if (purgeUrl) {
+                        var purgeBtn = document.createElement('button');
+                        purgeBtn.type = 'button';
+                        purgeBtn.className = 'bcc-trash-purge-btn';
+                        purgeBtn.textContent = "Kalıcı sil";
+                        purgeBtn.addEventListener('click', function () {
+                            var mesaj = item.name
+                                + " base'i KALICI olarak silinecek: içindeki tüm tablolar, kayıtlar, "
+                                + "ekler ve görünümler de gidecek. Bu işlem geri alınamaz.";
+
+                            var sor = typeof window.bcc_confirm === 'function'
+                                ? window.bcc_confirm({
+                                    title: "Base'i kalıcı sil",
+                                    message: mesaj,
+                                    confirmLabel: "Evet, kalıcı sil",
+                                })
+                                : Promise.resolve(window.confirm(mesaj));
+
+                            sor.then(function (onaylandi) {
+                                if (!onaylandi) {
+                                    return;
+                                }
+
+                                purgeBtn.disabled = true;
+                                restoreBtn.disabled = true;
+
+                                fetch(purgeUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: new URLSearchParams({ csrf_token: CSRF, base_id: item.id }).toString(),
+                                }).then(function (res) {
+                                    return res.json().catch(function () { return { ok: false }; });
+                                }).then(function (data) {
+                                    if (data && data.ok) {
+                                        row.remove();
+                                        if (!listEl.querySelector('.bcc-trash-item')) {
+                                            emptyEl.hidden = false;
+                                        }
+                                    } else {
+                                        purgeBtn.disabled = false;
+                                        restoreBtn.disabled = false;
+                                        window.alert((data && data.error) || "Kalıcı silinemedi.");
+                                    }
+                                }).catch(function () {
+                                    purgeBtn.disabled = false;
+                                    restoreBtn.disabled = false;
+                                    window.alert("Kalıcı silinemedi (bağlantı hatası).");
+                                });
+                            });
+                        });
+                        row.appendChild(purgeBtn);
+                    }
                 }
 
                 listEl.appendChild(row);
@@ -244,7 +301,7 @@
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (data && data.ok) {
-                        renderTrashSection(data.items, trashList, trashEmpty, 'data-trash-base-id', '/api/base_restore.php', 'base_id');
+                        renderTrashSection(data.items, trashList, trashEmpty, 'data-trash-base-id', '/api/base_restore.php', 'base_id', '/api/base_purge.php');
                     }
                 })
                 .catch(function () {});

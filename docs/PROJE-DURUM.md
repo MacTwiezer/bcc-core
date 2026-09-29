@@ -862,6 +862,13 @@ kaldırıldı (§25).
   commit'ten SONRA diskten silinir; kullanıcı hesapları silinmez. Denetim:
   `team.delete` (ad + sayımlar, admin yolunda `via:admin`).
   `scripts/_verify_team_delete.php` **31/31**. Günlük `docs/gunluk/2026-09-29.md`.
+- **Oturum 8 saat boşta kalabiliyor** (müşteri 2. madde: temsilciler sürekli
+  çıkışa düşüyordu). Sebep PHP varsayılanı `gc_maxlifetime` 24 dk + ortak oturum
+  klasörüydü. Oturumlar artık `storage/sessions/`, sınır
+  `BCC_SESSION_IDLE_SECONDS` (`src/bootstrap.php`), `_verify_session_idle.php`
+  13/13. Canlıda `storage/sessions` Apache'ye yazılabilir olmalı
+  (CANLIYA-ALMA §3.4). "Pasif durumu + raporlar" kısmı müşteriden
+  netleştirme bekliyor. Günlük 2026-09-29 §3.
 
 ---
 

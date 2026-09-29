@@ -6,7 +6,24 @@ $bccIsHttps = (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'o
     || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
 
+/* Bosta kalma siniri: temsilci bu sure boyunca hic istek atmazsa oturum duser
+   (2026-09-29, musteri istegi: "surekli logout olup tekrar giris yapmasinlar").
+   PHP varsayilani session.gc_maxlifetime = 1440 sn (24 dk) idi.
+   Oturumlar KENDI klasorumuzde tutulur: ortak sistem klasorunde baska bir
+   uygulamanin (ayni Apache'deki Nexora) ya da Linux'taki sessionclean
+   cron'unun GC'si KENDI 24 dakikasiyla bizim dosyalarimizi da silerdi. */
+define('BCC_SESSION_IDLE_SECONDS', 8 * 3600);
+
 if (session_status() === PHP_SESSION_NONE) {
+    $bccSessionDir = __DIR__ . '/../storage/sessions';
+    if (!is_dir($bccSessionDir)) {
+        @mkdir($bccSessionDir, 0700, true);
+    }
+    if (is_dir($bccSessionDir) && is_writable($bccSessionDir)) {
+        session_save_path($bccSessionDir);
+    }
+    ini_set('session.gc_maxlifetime', (string) BCC_SESSION_IDLE_SECONDS);
+
     session_set_cookie_params(array(
         'lifetime' => 0,
         'path' => '/',
@@ -17,6 +34,19 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax',
     ));
     session_start();
+
+    /* GC olasiliksal calisir; sinirin kesin olmasi icin son istek zamani
+       oturumda tutulur ve asildiysa oturum burada bosaltilir. */
+    if (!empty($_SESSION['user_id'])) {
+        $bccNow = time();
+        if (isset($_SESSION['bcc_last_request'])
+            && $bccNow - (int) $_SESSION['bcc_last_request'] > BCC_SESSION_IDLE_SECONDS) {
+            $_SESSION = array();
+            session_regenerate_id(true);
+        } else {
+            $_SESSION['bcc_last_request'] = $bccNow;
+        }
+    }
 }
 
 if (!headers_sent()) {

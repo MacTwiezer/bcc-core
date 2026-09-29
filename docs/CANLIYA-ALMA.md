@@ -182,7 +182,8 @@ kullanıcılar hesaplarını etkinleştiremez.
 ### 3.4 Dosya izinleri
 
 ```bash
-mkdir -p storage/attachments storage/avatars storage/team_images storage/mail storage/backups
+mkdir -p storage/attachments storage/avatars storage/team_images storage/mail storage/backups storage/sessions
+chmod 700 storage/sessions
 chown -R www-data:www-data storage/       # Apache hangi kullanıcı ile çalışıyorsa
 chmod -R 755 storage/
 ```
@@ -197,6 +198,17 @@ yani storage yedeği (§6) onları da içermeli. **Şema değişikliği yok.**
 `storage/team_images/` çalışma alanı (ekip) resimlerini tutar (2026-09-15), aynı
 desen: dosya adı `t<ekip id>`, ilk yüklemede kendiliğinden açılır, yedeğe dahil
 olmalı. **Şema değişikliği yok.**
+
+`storage/sessions/` oturum dosyalarını tutar (2026-09-29). Uygulama PHP'nin
+ortak oturum klasörünü **kullanmaz**: orada başka bir uygulamanın ya da
+Debian/Ubuntu'daki `sessionclean` cron'unun 24 dakikalık temizliği oturumları
+silip temsilcileri sürekli çıkışa zorluyordu. Boşta kalma sınırı uygulamada
+tanımlı (`src/bootstrap.php` → `BCC_SESSION_IDLE_SECONDS`, 8 saat); `php.ini`'de
+ayar gerekmez. Klasör ilk istekte kendiliğinden açılır, ama **Apache
+kullanıcısı yazamıyorsa** uygulama sessizce ortak klasöre döner ve 24 dakika
+sorunu geri gelir — bu yüzden yukarıdaki `chown` onu da kapsamalı. **Yedeğe
+girmesine gerek yok.** İlk deploy'da açık oturumlar bir kez düşer (eski
+klasördeydiler), herkes bir kez yeniden giriş yapar.
 
 ### 3.5 PHP ayarları
 

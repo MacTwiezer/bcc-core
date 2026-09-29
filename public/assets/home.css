@@ -1980,8 +1980,26 @@ table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
 
 .admin-team-block { margin-bottom: 1.5rem; }
 .admin-team-block:last-child { margin-bottom: 0; }
-.admin-team-header { margin-bottom: 0.5rem; }
+/* Ekip basligi ile "Calisma alanini sil" dugmesi ayni satirda (2026-09-22). */
+.admin-team-header {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
 .admin-team-header h3 { margin: 0; font-size: 0.95rem; }
+.admin-team-delete-form { margin: 0; }
+.admin-team-delete-btn {
+    background: none;
+    border: none;
+    color: var(--bcc-danger);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.2rem 0.1rem;
+}
+.admin-team-delete-btn:hover { text-decoration: underline; }
 
 .admin-empty { color: var(--bcc-text-muted); font-size: 0.85rem; padding: 0.4rem 0 0.8rem; }
 .admin-add-link {

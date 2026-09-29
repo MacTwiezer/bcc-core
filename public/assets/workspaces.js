@@ -118,3 +118,72 @@
         window.location.reload();
     });
 })();
+/* Calisma alanini silme (2026-09-22). Kullanici karari: icerigi ne olursa
+   olsun silinebilsin, yalnizca onay kutusu ciksin. Dugme sunucuda zaten
+   yalnizca owner/platform yoneticisi icin basiliyor; uc nokta ayrica
+   require_role(owner) uyguluyor. */
+(function () {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.querySelector('[data-team-delete]');
+        if (!btn) {
+            return;
+        }
+
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var CSRF = csrfMeta ? csrfMeta.content : '';
+
+        btn.addEventListener('click', function () {
+            var teamId = btn.getAttribute('data-team-delete');
+            var ad = btn.getAttribute('data-team-name') || 'Bu çalışma alanı';
+            var baseSayisi = parseInt(btn.getAttribute('data-base-count') || '0', 10);
+            var uyeSayisi = parseInt(btn.getAttribute('data-member-count') || '0', 10);
+
+            var mesaj = '"' + ad + '" çalışma alanı silinecek.';
+            if (baseSayisi > 0) {
+                mesaj += ' İçindeki ' + baseSayisi + ' base ve onlara bağlı bütün tablolar, '
+                    + 'kayıtlar ve ekler de silinecek.';
+            }
+            if (uyeSayisi > 0) {
+                mesaj += ' ' + uyeSayisi + ' katılımcının bu alandaki üyeliği kalkacak '
+                    + '(kullanıcı hesapları silinmez).';
+            }
+            mesaj += ' Bu işlem geri alınamaz.';
+
+            var sor = typeof window.bcc_confirm === 'function'
+                ? window.bcc_confirm({
+                    title: 'Çalışma alanını sil',
+                    message: mesaj,
+                    confirmLabel: 'Evet, sil',
+                })
+                : Promise.resolve(window.confirm(mesaj));
+
+            sor.then(function (onaylandi) {
+                if (!onaylandi) {
+                    return;
+                }
+
+                btn.disabled = true;
+
+                fetch('/api/team_delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ csrf_token: CSRF, team_id: teamId }).toString(),
+                }).then(function (res) {
+                    return res.json().catch(function () { return { ok: false }; });
+                }).then(function (data) {
+                    if (data && data.ok) {
+                        window.location.href = (data.redirect_url || '/workspaces.php');
+                    } else {
+                        btn.disabled = false;
+                        window.alert((data && data.error) || 'Çalışma alanı silinemedi.');
+                    }
+                }).catch(function () {
+                    btn.disabled = false;
+                    window.alert('Çalışma alanı silinemedi (bağlantı hatası).');
+                });
+            });
+        });
+    });
+})();

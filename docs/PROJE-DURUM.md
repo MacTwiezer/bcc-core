@@ -832,8 +832,8 @@ kaldırıldı (§25).
   sayısını tutuyor. Arayüz: hesap menüsü → Çöp kutusu → "Kalıcı sil"
   (`account-menu.js`, `home.css`). Müşteri raporunun ("base silinemiyor")
   karşılığı bu; base'in kendisini **çöpe taşıma zaten çalışıyordu** (ölçüldü).
-  ⚠️ **Çalışma alanı (teams) silme hâlâ YOK** — kullanıcı kararıyla yazılmadı.
-  Günlük §4.
+  Çalışma alanı (teams) silme o turda yazılmamıştı → aşağıdaki maddede
+  (2026-09-29) tamamlandı. Günlük §4.
 - **Çöpteki base'in verisi yazılabiliyordu (veri bütünlüğü düzeltmesi)** —
   `bcc_find_field()` ve `bcc_find_record()` (`src/schema.php`) `bases`'e JOIN
   atarken `b.deleted_at IS NULL` koymuyordu; bu yüzden çöpe atılmış bir base'in
@@ -851,6 +851,17 @@ kaldırıldı (§25).
   görünmüyor. `audit_log`'dan **satır silinmiyor** (denetim izi duruyor); base
   geri yüklenirse satırlar geri geliyor. Base'i çözülemeyen satır korunuyor.
   `_verify_workspace_activity_filter.php` 29 → **37 kontrol**. Günlük §6.
+- **Çalışma alanı silme** (müşteri e-postası 1. madde, "aaa") — iki yol:
+  `workspaces.php` → "Çalışma alanını sil" (yalnızca o alanın **owner**'ı;
+  platform yöneticisi her alanda owner) → `public/api/team_delete.php` (yeni),
+  ve `/admin/` → her ekip bloğunda "Çalışma alanını sil" (`action=delete_team`).
+  İçeriği ne olursa olsun **kalıcı** siler (kullanıcı kararı; çöp kutusu yok),
+  onay kutusu base/katılımcı sayısını söylüyor. `DELETE FROM teams` FK zinciriyle
+  base/tablo/kayıt/ek/üyelik/Slack ayarlarını götürür; `audit_log` ve
+  `record_view_log` satırları kalır (team_id → NULL). Ek dosyaları ve ekip resmi
+  commit'ten SONRA diskten silinir; kullanıcı hesapları silinmez. Denetim:
+  `team.delete` (ad + sayımlar, admin yolunda `via:admin`).
+  `scripts/_verify_team_delete.php` **31/31**. Günlük `docs/gunluk/2026-09-29.md`.
 
 ---
 

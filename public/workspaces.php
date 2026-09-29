@@ -240,6 +240,16 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                     Base oluştur
                                 </button>
                                 <?php endif; ?>
+                                <?php if ($canManageMembers): ?>
+                                <button type="button" class="wsx-btn wsx-btn--danger"
+                                        data-team-delete="<?php echo (int) $selectedTeamId; ?>"
+                                        data-team-name="<?php echo htmlspecialchars($selectedTeamName, ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-base-count="<?php echo isset($baseCounts[$selectedTeamId]) ? (int) $baseCounts[$selectedTeamId] : 0; ?>"
+                                        data-member-count="<?php echo count($collaborators); ?>">
+                                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8.5 6V4.5h3V6M6 6l.7 9.5a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9L14 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    Çalışma alanını sil
+                                </button>
+                                <?php endif; ?>
                                 <?php if (!$canManageMembers && !$canCreateBase): ?>
                                     <span class="wsx-role-note">
                                         Rolünüz: <strong><?php echo htmlspecialchars($GLOBALS['BCC_ROLE_LABELS'][$selectedRole], ENT_QUOTES, 'UTF-8'); ?></strong>

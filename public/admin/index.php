@@ -20,7 +20,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return $id > 0;
     })));
 
-    if (empty($userIds)) {
+    /* Calisma alanini silme kullanici SECIMI istemiyor, bu yuzden asagidaki
+       "en az bir kullanici secin" kapisinin ONUNDE duruyor (2026-09-22).
+       Islem geri alinamaz: teams satiri silinince bases -> tables -> records
+       zinciri FK ile gider, audit_log/record_view_log'un team_id'si NULL'a
+       duser (gecmis kalir), kullanici HESAPLARI silinmez. */
+    if ($action === 'delete_team') {
+        $teamId = isset($_POST['team_id']) ? (int) $_POST['team_id'] : 0;
+        $team = $teamId > 0
+            ? bcc_fetch_one('SELECT id, name FROM teams WHERE id = :id LIMIT 1', array('id' => $teamId))
+            : false;
+
+        if (!$team) {
+            $error = 'Geçersiz çalışma alanı.';
+        } else {
+            $baseCount = (int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE team_id = :t', array('t' => $teamId));
+            $memberCount = (int) bcc_fetch_column('SELECT COUNT(*) FROM team_members WHERE team_id = :t', array('t' => $teamId));
+
+            $attachmentPaths = array();
+            foreach (bcc_fetch_all(
+                'SELECT a.stored_name
+                 FROM attachments a
+                 INNER JOIN records r ON r.id = a.record_id
+                 INNER JOIN tables_meta tm ON tm.id = r.table_id
+                 INNER JOIN bases b ON b.id = tm.base_id
+                 WHERE b.team_id = :t',
+                array('t' => $teamId)
+            ) as $row) {
+                $attachmentPaths[] = bcc_attachment_storage_path($row['stored_name']);
+            }
+
+            $imagePath = bcc_team_image_path($teamId);
+
+            try {
+                bcc_begin_transaction();
+                /* Denetim kaydi silmeden ONCE: FK ON DELETE SET NULL sayesinde
+                   satir kalir, yalnizca team_id NULL olur. */
+                log_audit('team.delete', 'team', $teamId, array(
+                    'name' => $team['name'],
+                    'bases' => $baseCount,
+                    'members' => $memberCount,
+                    'via' => 'admin',
+                ), $teamId);
+                bcc_execute('DELETE FROM teams WHERE id = :id', array('id' => $teamId));
+                bcc_commit();
+
+                foreach ($attachmentPaths as $path) {
+                    if (is_file($path)) { @unlink($path); }
+                }
+                if (is_file($imagePath)) { @unlink($imagePath); }
+
+                $success = '"' . $team['name'] . '" çalışma alanı silindi'
+                    . ($baseCount > 0 ? ' (' . $baseCount . ' base ile birlikte)' : '') . '.';
+            } catch (Throwable $e) {
+                bcc_rollback();
+                $error = 'Çalışma alanı silinemedi (veritabanı hatası).';
+            }
+        }
+    } elseif (empty($userIds)) {
         $error = 'En az bir kullanıcı seçin.';
     } elseif ($action === 'grant_admin' || $action === 'revoke_admin') {
         $applyIds = $userIds;
@@ -259,6 +316,30 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
             <div class="admin-team-block">
                 <div class="admin-team-header">
                     <h3><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                    <?php
+                    /* 2026-09-22: calisma alanini silme. Onay kutusu
+                       confirm-modal.js'in form[data-confirm] kancasindan gelir;
+                       ayni kanca ekipten cikarma formlarinda da kullaniliyor. */
+                    $teamBaseCount = (int) bcc_fetch_column('SELECT COUNT(*) FROM bases WHERE team_id = :t', array('t' => $teamId));
+                    $teamMemberCount = isset($membersByTeam[$teamId]) ? count($membersByTeam[$teamId]) : 0;
+                    $teamDeleteMessage = '"' . $t['name'] . '" çalışma alanı silinecek.'
+                        . ($teamBaseCount > 0
+                            ? ' İçindeki ' . $teamBaseCount . ' base ve onlara bağlı bütün tablolar, kayıtlar ve ekler de silinecek.'
+                            : '')
+                        . ($teamMemberCount > 0
+                            ? ' ' . $teamMemberCount . ' katılımcının bu alandaki üyeliği kalkacak (kullanıcı hesapları silinmez).'
+                            : '')
+                        . ' Bu işlem geri alınamaz.';
+                    ?>
+                    <form method="post" action="/admin/index.php" class="admin-team-delete-form"
+                          data-confirm="<?php echo htmlspecialchars($teamDeleteMessage, ENT_QUOTES, 'UTF-8'); ?>"
+                          data-confirm-title="Çalışma alanını sil"
+                          data-confirm-label="Evet, sil">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="delete_team">
+                        <input type="hidden" name="team_id" value="<?php echo $teamId; ?>">
+                        <button type="submit" class="admin-team-delete-btn">Çalışma alanını sil</button>
+                    </form>
                 </div>
                 <?php if (!empty($membersByTeam[$teamId])): ?>
                     <form id="<?php echo $bulkFormId; ?>" method="post" action="/admin/index.php"

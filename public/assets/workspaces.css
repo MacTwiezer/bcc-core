@@ -876,3 +876,19 @@
 }
 .sp-page .wsx-team-image-status[hidden] { display: none; }
 .sp-page .wsx-team-image-status.is-error { color: var(--bcc-danger); }
+/* Calisma alanini silme dugmesi: ayni satirda ama tehlikeli oldugu
+   renginden anlasiliyor (2026-09-22). .sp-page oneki SART: yoksa
+   `.sp-page .wsx-btn` daha ozgul oldugu icin renk hic uygulanmiyordu.
+   Kenar rengi sabit degil, koyu temada da okunsun diye danger'dan turuyor. */
+.sp-page .wsx-btn--danger {
+    color: var(--bcc-danger);
+    border-color: color-mix(in srgb, var(--bcc-danger) 45%, transparent);
+}
+.sp-page .wsx-btn--danger:hover {
+    background: var(--bcc-danger-soft);
+    border-color: var(--bcc-danger);
+}
+.sp-page .wsx-btn--danger:disabled {
+    opacity: 0.55;
+    cursor: default;
+}

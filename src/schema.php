@@ -4027,6 +4027,7 @@ function bcc_audit_action_label($action)
         'team_member.role_change' => 'katılımcı rolünü değiştirdi',
         'team_member.remove' => 'katılımcıyı çıkardı',
         'team.create' => 'yeni çalışma alanı oluşturdu',
+        'team.delete' => 'çalışma alanını sildi',
         'attachment.upload' => 'dosya ekledi',
         'attachment.delete' => 'dosya ekini sildi',
         'slack.notify_sent' => 'Slack bildirimi gönderdi',

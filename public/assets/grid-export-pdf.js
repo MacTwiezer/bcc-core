@@ -71,13 +71,34 @@
             return new Blob(chunks, { type: 'application/pdf' });
         }
 
-        function dataUrlToBytes(dataUrl) {
-            var comma = dataUrl.indexOf(',');
-            var b64 = dataUrl.slice(comma + 1);
-            var bin = atob(b64);
-            var out = new Uint8Array(bin.length);
-            for (var i = 0; i < bin.length; i++) { out[i] = bin.charCodeAt(i); }
-            return out;
+        /* 2026-09-16: donma duzeltmesi. Onceki yol canvas.toDataURL('image/jpeg')
+           ile SENKRON kodluyor, sonra ~15 MB'lik base64 metnini atob ile cozup
+           BAYT BAYT (11 milyon tur) kopyaliyordu — PNG'nin donmasinin ustune
+           PDF'e ozel iki blok daha. toBlob + arrayBuffer ikisi de asenkron ve
+           kopyalama tarayicinin icinde kaliyor. */
+        function canvasToJpegBytes(canvas) {
+            return new Promise(function (resolve, reject) {
+                if (!canvas.toBlob) {
+                    reject(new Error('toBlob yok'));
+                    return;
+                }
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        reject(new Error('JPEG kodlanamadı'));
+                        return;
+                    }
+                    if (blob.arrayBuffer) {
+                        blob.arrayBuffer().then(function (buf) {
+                            resolve(new Uint8Array(buf));
+                        }, reject);
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function () { resolve(new Uint8Array(reader.result)); };
+                    reader.onerror = function () { reject(new Error('JPEG okunamadı')); };
+                    reader.readAsArrayBuffer(blob);
+                }, 'image/jpeg', 0.92);
+            });
         }
 
         item.addEventListener('click', function () {
@@ -104,15 +125,13 @@
                     return;
                 }
 
-                var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                if (dataUrl.indexOf('data:image/jpeg') !== 0) {
+                return canvasToJpegBytes(canvas).then(function (jpegBytes) {
+                    api.download(buildPdf(jpegBytes, canvas.width, canvas.height), '.pdf');
+                    api.busy(item, false);
+                }, function () {
                     api.busy(item, false);
                     window.alert('PDF oluşturulamadı (JPEG kodlanamadı).');
-                    return;
-                }
-
-                api.download(buildPdf(dataUrlToBytes(dataUrl), canvas.width, canvas.height), '.pdf');
-                api.busy(item, false);
+                });
             }).catch(function () {
                 api.busy(item, false);
                 window.alert('PDF oluşturulamadı.');

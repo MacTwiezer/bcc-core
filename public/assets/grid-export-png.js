@@ -12,6 +12,20 @@
         var HEIGHT_WARN_THRESHOLD = 12000;
         var MAX_CANVAS_EDGE = 16000;
 
+        /* 2026-09-16: donma duzeltmesi. Esikler satir sayisina bakiyordu
+           (scale = rowCount > 200 ? 1 : 2), ama isi belirleyen satir degil
+           PIKSEL ALANI: 150 satir x 12 alan = ~2200x5000 CSS pikseli, scale 2
+           ile 44 milyon pikselik canvas (~176 MB) demek. 12 alanli 150 satirlik
+           gercek tabloda sekme "Sayfa Yanit Vermiyor"a dustu. Artik hem olcek
+           hem uyari alandan hesaplaniyor. */
+        var MAX_CANVAS_AREA = 25000000;
+        var AREA_WARN_THRESHOLD = 8000000;
+
+        /* MAX_CANVAS_AREA yalnizca OLCEK secer (2 mi 1 mi). Tarayicinin gercek
+           siniri cok daha yukarida; oraya kadar yavas ama CALISAN bir disa
+           aktarmayi reddetmek yanlis olurdu. Sert sinir ayri tutuluyor. */
+        var HARD_MAX_AREA = 80000000;
+
         var loadPromise = null;
 
         function loadHtml2Canvas() {
@@ -61,6 +75,59 @@
             setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
         }
 
+        /* 2026-09-16, donmanin ASIL sebebi. Uzun metin hucreleri ekranda tek
+           satira kirpilir (ellipsis) ama html2canvas hucrenin metnini TAMAMEN
+           olcer: her kelime icin Range.getBoundingClientRect(). 150 satirlik
+           gercek tabloda iki uzun metin sutunu ~300 bin karakter ediyor ve
+           olcum bitmiyor — sekme "Sayfa Yanit Vermiyor"a dusuyor. Olculdu:
+           ayni tablo, ayni olcek — kisaltmasiz >100 sn (tarayici oldu),
+           kisaltmayla 3,7 sn. Cizilen goruntu birebir ayni, cunku kesilen kisim
+           zaten kirpilip gorunmeyen kisim.
+
+           Butce: sutun genisligi / 4 (en dar yazi tipinde bile 4 px'ten ince
+           karakter yok) x gorunur satir sayisi, ustune 40 karakter pay. */
+        function kisaltGizliMetin(clonedDoc, clonedTable, colWidths, rowHeight) {
+            if (!clonedDoc.createTreeWalker) {
+                return;
+            }
+
+            var satirSayisi = Math.max(1, Math.round(rowHeight / 16));
+
+            Array.prototype.forEach.call(clonedTable.querySelectorAll('tbody tr > td'), function (cell) {
+                var metin = cell.textContent || '';
+                if (metin.length < 400) {
+                    return;
+                }
+
+                var sutunGenisligi = colWidths[cell.cellIndex] || 180;
+                var butce = Math.ceil(sutunGenisligi / 4) * satirSayisi + 40;
+                if (metin.length <= butce) {
+                    return;
+                }
+
+                /* 4 = NodeFilter.SHOW_TEXT. Sabiti dogrudan yazmak klon
+                   penceresinin NodeFilter'ina bagimli olmamak icin. */
+                var yurutec = clonedDoc.createTreeWalker(cell, 4, null, false);
+                var dugumler = [];
+                while (yurutec.nextNode()) {
+                    dugumler.push(yurutec.currentNode);
+                }
+
+                var kalan = butce;
+                for (var di = 0; di < dugumler.length; di++) {
+                    var dugum = dugumler[di];
+                    if (kalan <= 0) {
+                        dugum.nodeValue = '';
+                    } else if (dugum.nodeValue.length > kalan) {
+                        dugum.nodeValue = dugum.nodeValue.slice(0, kalan) + '…';
+                        kalan = 0;
+                    } else {
+                        kalan -= dugum.nodeValue.length;
+                    }
+                }
+            });
+        }
+
         function captureCanvas(label) {
             var table = document.querySelector('table.grid');
             if (!table) {
@@ -85,7 +152,22 @@
             for (var ci = 0; ci < colWidths.length; ci++) { width += colWidths[ci]; }
             var height = Math.ceil(table.scrollHeight - (addRow ? addRow.offsetHeight : 0));
 
-            var devamSozu = (rowCount > ROW_WARN_THRESHOLD || height > HEIGHT_WARN_THRESHOLD)
+            var firstRow = table.querySelector('tbody tr[data-record-id]');
+            var rowHeight = (firstRow && firstRow.offsetHeight) ? firstRow.offsetHeight : 32;
+
+            /* Olcek 1'de bile tarayicinin canvas sinirini asiyorsa cizime hic
+               baslama: html2canvas once 1800 hucreyi kopya pencerede yeniden
+               yerlestirir, dakikalarca ana is parcacigini kilitler ve sonunda
+               bos canvas doner. Kullaniciya daha en basta soylemek dogru. */
+            if (Math.max(width, height) > MAX_CANVAS_EDGE || width * height > HARD_MAX_AREA) {
+                window.alert('Bu görünüm bir görüntüye sığmayacak kadar büyük, '
+                    + label + ' oluşturulamıyor. Excel indirmeyi deneyin.');
+                return Promise.resolve(null);
+            }
+
+            var devamSozu = (rowCount > ROW_WARN_THRESHOLD
+                || height > HEIGHT_WARN_THRESHOLD
+                || width * height > AREA_WARN_THRESHOLD)
                 ? window.bcc_confirm({
                     title: label + ' oluştur',
                     message: 'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?',
@@ -99,10 +181,16 @@
                     return null;
                 }
 
-                var scale = rowCount > 200 ? 1 : 2;
+                /* Keskinlik icin scale 2 istenir; alan ya da kenar tavanini
+                   asiyorsa 1'e dusulur. Eski kod burada
+                   Math.floor(MAX_CANVAS_EDGE / longestEdge) hesapliyordu —
+                   kenar 16000'i gectiginde bu 0 veriyor, Math.max(1, 0) ile
+                   yine 1'de kaliyordu: yani tavan aslinda hic korumuyordu. */
+                var scale = 2;
                 var longestEdge = Math.max(width, height);
-                if (longestEdge * scale > MAX_CANVAS_EDGE) {
-                    scale = Math.max(1, Math.floor(MAX_CANVAS_EDGE / longestEdge));
+                if (longestEdge * scale > MAX_CANVAS_EDGE
+                    || width * height * scale * scale > MAX_CANVAS_AREA) {
+                    scale = 1;
                 }
 
                 return loadHtml2Canvas().then(function (html2canvas) {
@@ -139,6 +227,8 @@
                                 th.style.width = colWidths[wi] + 'px';
                                 wi++;
                             });
+
+                            kisaltGizliMetin(clonedDoc, clonedTable, colWidths, rowHeight);
                         },
                     });
                 });

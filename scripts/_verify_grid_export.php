@@ -256,6 +256,53 @@ try {
     check('B) grid-export-png.js yukseklik esigi de var (scrollHeight)',
         strpos($pngJs, 'HEIGHT_WARN_THRESHOLD') !== false && strpos($pngJs, 'table.scrollHeight') !== false);
 
+    /* 2026-09-16 donma duzeltmesi: 150 satir x 12 alanlik gercek tabloda
+       (3003x~6000 CSS pikseli) sekme "Sayfa Yanit Vermiyor"a dustu. Isi
+       belirleyen satir sayisi degil PIKSEL ALANI: scale 2 ile 72 milyon
+       piksellik (~290 MB) canvas cikiyordu. Asagidaki kontroller o kararin
+       geri gelmemesi icin. Yorumlar ELENEREK aranir — gerekce iki dosyada
+       yorum olarak duruyor ve eski kodu ("rowCount > 200", "toDataURL")
+       kelimesi kelimesine aniyor. */
+    $pngKod = preg_replace('#^\s*//.*$#m', '', preg_replace('#/\*.*?\*/#s', '', $pngJs));
+    $pdfKod = preg_replace('#^\s*//.*$#m', '', preg_replace('#/\*.*?\*/#s', '',
+        (string) file_get_contents($assetsDir . '/grid-export-pdf.js')));
+
+    check('B) PNG olcegi ARTIK satir sayisina bakmiyor (eski: rowCount > 200 ? 1 : 2)',
+        preg_match('/rowCount\s*>\s*200/', $pngKod) !== 1);
+    check('B) PNG olcegi alan ve kenar tavanindan hesaplaniyor',
+        strpos($pngKod, 'MAX_CANVAS_AREA') !== false
+        && preg_match('/width \* height \* scale \* scale > MAX_CANVAS_AREA/', $pngKod) === 1);
+    check('B) PNG uyarisi alan esigini de gozetiyor (18 Mpx gorunum uyari almiyordu)',
+        strpos($pngKod, 'AREA_WARN_THRESHOLD') !== false
+        && preg_match('/width \* height > AREA_WARN_THRESHOLD/', $pngKod) === 1);
+    check('B) sert sinir olcek tavanindan AYRI (yavas ama calisan disa aktarma reddedilmemeli)',
+        strpos($pngKod, 'HARD_MAX_AREA') !== false
+        && preg_match('/width \* height > HARD_MAX_AREA/', $pngKod) === 1
+        && preg_match('/width \* height > MAX_CANVAS_AREA(?! \* )/', $pngKod) !== 1);
+    check('B) eski MAX_CANVAS_EDGE hesabi (Math.floor -> 0 -> koruma yok) kaldirildi',
+        strpos($pngKod, 'Math.floor(MAX_CANVAS_EDGE / longestEdge)') === false);
+
+    /* Donmanin ASIL sebebi: html2canvas kirpilmis hucrenin metnini TAMAMEN
+       olcuyor (kelime basina Range.getBoundingClientRect). 150 satir x iki
+       uzun metin sutunu = ~300 bin karakter; olculdu: kisaltmasiz >100 sn
+       (tarayici oldu), kisaltmayla 3,7 sn. Ayni tablo, ayni olcek. */
+    check('B) klonda GORUNMEYEN uzun metin kisaltiliyor (donma duzeltmesinin ozu)',
+        strpos($pngKod, 'function kisaltGizliMetin(') !== false
+        && preg_match('/kisaltGizliMetin\(clonedDoc, clonedTable, colWidths, rowHeight\)/', $pngKod) === 1);
+    check('B) kisaltma butcesi sutun genisligi VE gorunur satir sayisindan',
+        preg_match('/colWidths\[cell\.cellIndex\]/', $pngKod) === 1
+        && preg_match('/Math\.ceil\(sutunGenisligi \/ 4\) \* satirSayisi/', $pngKod) === 1
+        && preg_match('/Math\.round\(rowHeight \/ 16\)/', $pngKod) === 1);
+    check('B) kisa hucrelere DOKUNULMUYOR (kisaltma yalnizca uzun metinde)',
+        preg_match('/metin\.length < 400/', $pngKod) === 1
+        && preg_match('/metin\.length <= butce/', $pngKod) === 1);
+
+    check('B) PDF JPEG kodlamasi ASENKRON (senkron toDataURL + atob bayt dongusu kaldirildi)',
+        strpos($pdfKod, 'toDataURL') === false
+        && strpos($pdfKod, 'atob(') === false
+        && strpos($pdfKod, 'canvas.toBlob(') !== false
+        && strpos($pdfKod, 'arrayBuffer') !== false);
+
     check('B) grid-export-png.js onay metni Turkce ve bicim adini DEGISKEN aliyor',
         strpos($pngJs, "'Bu görünüm büyük, ' + label + ' yavaş/okunmayabilir. Excel önerilir. Devam edilsin mi?'") !== false);
 

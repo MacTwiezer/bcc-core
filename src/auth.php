@@ -625,6 +625,15 @@ function attempt_login($email, $password)
 
 function logout_user()
 {
+    /* Cikis yapan temsilci nabzin kesilmesini beklemeden hemen cevrimdisi
+       gorunsun (2026-10-05). */
+    if (!empty($_SESSION['user_id'])) {
+        bcc_execute(
+            'UPDATE users SET last_seen_at = NULL WHERE id = :id',
+            array('id' => $_SESSION['user_id'])
+        );
+    }
+
     $_SESSION = array();
 
     if (ini_get('session.use_cookies')) {
@@ -643,26 +652,57 @@ function logout_user()
     session_destroy();
 }
 
-define('BCC_PRESENCE_TOUCH_INTERVAL', 60);
+/* Temsilci durumu (2026-10-05, musteri istegi: "logout olmadan Pasif").
+   Iki damga, uc durum:
+     last_seen_at     -> oturum acik (her istek + presence.js nabzi tazeler)
+     last_activity_at -> temsilci gercekten bir sey yapti (sayfa acti, tikladi,
+                         yazdi; arka plan yoklamalari SAYILMAZ)
+     Aktif      : nabiz var, son BCC_PRESENCE_PASSIVE_MINUTES icinde islem var
+     Pasif      : nabiz var, islem yok
+     Cevrimdisi : nabiz BCC_PRESENCE_WINDOW_MINUTES'tir yok (cikis yapti,
+                  tarayiciyi/bilgisayari kapatti)
+   Nabiz 60 sn'de bir atar; tazeleme araligi ondan KISA olmali, yoksa her
+   ikinci nabiz atlanir. */
+define('BCC_PRESENCE_TOUCH_INTERVAL', 45);
 
-define('BCC_PRESENCE_WINDOW_MINUTES', 5);
+define('BCC_PRESENCE_WINDOW_MINUTES', 3);
 
-function bcc_touch_user_activity() {
+define('BCC_PRESENCE_PASSIVE_MINUTES', 30);
+
+$GLOBALS['BCC_PRESENCE_LABELS'] = array(
+    'active' => 'Aktif',
+    'passive' => 'Pasif',
+    'offline' => 'Çevrimdışı',
+);
+
+function bcc_touch_user_activity($isInteraction = true) {
     if (empty($_SESSION['user_id'])) {
         return;
     }
 
     $now = time();
-    $last = isset($_SESSION['bcc_activity_touched_at']) ? (int) $_SESSION['bcc_activity_touched_at'] : 0;
+    $sets = array();
 
-    if ($now - $last < BCC_PRESENCE_TOUCH_INTERVAL) {
+    $seen = isset($_SESSION['bcc_seen_touched_at']) ? (int) $_SESSION['bcc_seen_touched_at'] : 0;
+    if ($now - $seen >= BCC_PRESENCE_TOUCH_INTERVAL) {
+        $_SESSION['bcc_seen_touched_at'] = $now;
+        $sets[] = 'last_seen_at = NOW()';
+    }
+
+    if ($isInteraction) {
+        $last = isset($_SESSION['bcc_activity_touched_at']) ? (int) $_SESSION['bcc_activity_touched_at'] : 0;
+        if ($now - $last >= BCC_PRESENCE_TOUCH_INTERVAL) {
+            $_SESSION['bcc_activity_touched_at'] = $now;
+            $sets[] = 'last_activity_at = NOW()';
+        }
+    }
+
+    if (!$sets) {
         return;
     }
 
-    $_SESSION['bcc_activity_touched_at'] = $now;
-
     bcc_execute(
-        'UPDATE users SET last_activity_at = NOW() WHERE id = :id',
+        'UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id',
         array('id' => $_SESSION['user_id'])
     );
 }
@@ -670,29 +710,57 @@ function bcc_touch_user_activity() {
 function bcc_online_where_sql()
 {
     return 'is_active = 1
-            AND last_activity_at IS NOT NULL
-            AND last_activity_at >= (NOW() - INTERVAL :mins MINUTE)';
+            AND last_seen_at IS NOT NULL
+            AND last_seen_at >= (NOW() - INTERVAL ' . (int) BCC_PRESENCE_WINDOW_MINUTES . ' MINUTE)';
+}
+
+/* 'active' / 'passive' / 'offline' ureten SQL ifadesi — durumun TEK tanimi. */
+function bcc_presence_case_sql()
+{
+    return 'CASE
+                WHEN NOT (' . bcc_online_where_sql() . ') THEN \'offline\'
+                WHEN last_activity_at >= (NOW() - INTERVAL ' . (int) BCC_PRESENCE_PASSIVE_MINUTES . ' MINUTE) THEN \'active\'
+                ELSE \'passive\'
+            END';
+}
+
+function bcc_presence_label($presence)
+{
+    return isset($GLOBALS['BCC_PRESENCE_LABELS'][$presence])
+        ? $GLOBALS['BCC_PRESENCE_LABELS'][$presence]
+        : $GLOBALS['BCC_PRESENCE_LABELS']['offline'];
+}
+
+function bcc_presence_counts() {
+    static $counts = null;
+
+    if ($counts === null) {
+        $counts = array('active' => 0, 'passive' => 0);
+        $rows = bcc_fetch_all(
+            'SELECT ' . bcc_presence_case_sql() . ' AS presence, COUNT(*) AS n
+               FROM users
+              WHERE ' . bcc_online_where_sql() . '
+              GROUP BY presence'
+        );
+        foreach ($rows as $row) {
+            $counts[$row['presence']] = (int) $row['n'];
+        }
+    }
+    return $counts;
 }
 
 function bcc_online_user_count() {
-    static $count = null;
+    $counts = bcc_presence_counts();
 
-    if ($count === null) {
-        $count = (int) bcc_fetch_column(
-            'SELECT COUNT(*) FROM users WHERE ' . bcc_online_where_sql(),
-            array('mins' => BCC_PRESENCE_WINDOW_MINUTES)
-        );
-    }
-    return $count;
+    return $counts['active'] + $counts['passive'];
 }
 
 function bcc_online_users()
 {
     return bcc_fetch_all(
-        'SELECT id, full_name, email, last_activity_at
+        'SELECT id, full_name, email, last_activity_at, ' . bcc_presence_case_sql() . ' AS presence
          FROM users
          WHERE ' . bcc_online_where_sql() . '
-         ORDER BY last_activity_at DESC',
-        array('mins' => BCC_PRESENCE_WINDOW_MINUTES)
+         ORDER BY presence, last_activity_at DESC'
     );
 }

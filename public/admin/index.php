@@ -173,7 +173,7 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
             <?php if (!$bccOnlineUsers): ?>
                 <?php
                       ?>
-                <p class="admin-muted">Son <?php echo (int) BCC_PRESENCE_WINDOW_MINUTES; ?> dakika içinde etkin olan kullanıcı yok.</p>
+                <p class="admin-muted">Şu an oturumu açık kullanıcı yok.</p>
             <?php else: ?>
                 <ul class="admin-online-list">
                     <?php foreach ($bccOnlineUsers as $bccOu): ?>
@@ -186,7 +186,11 @@ require __DIR__ . '/../../src/partials/home_shell_top.php';
                             <?php
 
                                   ?>
-                            <span class="admin-online-when"><?php echo htmlspecialchars(bcc_time_ago($bccOu['last_activity_at']), ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="admin-online-state">
+                                <span class="admin-pill <?php echo $bccOu['presence'] === 'active' ? 'admin-pill-green' : 'admin-pill-amber'; ?>"
+                                      title="<?php echo $bccOu['presence'] === 'active' ? 'Son ' . (int) BCC_PRESENCE_PASSIVE_MINUTES . ' dakika içinde işlem yaptı' : 'Oturumu açık, ' . (int) BCC_PRESENCE_PASSIVE_MINUTES . ' dakikadır işlem yapmadı'; ?>"><?php echo htmlspecialchars(bcc_presence_label($bccOu['presence']), ENT_QUOTES, 'UTF-8'); ?></span>
+                                <span class="admin-online-when" title="Son işlem"><?php echo htmlspecialchars(bcc_time_ago($bccOu['last_activity_at']), ENT_QUOTES, 'UTF-8'); ?></span>
+                            </span>
                         </li>
                     <?php endforeach; ?>
                 </ul>

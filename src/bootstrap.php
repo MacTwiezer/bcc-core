@@ -96,4 +96,6 @@ function bcc_json_for_script($value)
 
 header('Content-Type: text/html; charset=utf-8');
 
-bcc_touch_user_activity();
+/* Arka plan yoklamalari (slack_flush, note_view_ping, presence_ping) oturumu
+   canli tutar ama temsilcinin "islem yaptigi" anlamina gelmez. */
+bcc_touch_user_activity(!defined('BCC_BACKGROUND_REQUEST'));

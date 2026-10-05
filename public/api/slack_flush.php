@@ -17,6 +17,8 @@
  * yalnizca yetki kontrolu yapip onu cagirir.
  */
 
+define('BCC_BACKGROUND_REQUEST', true);
+
 require __DIR__ . '/../../src/api_bootstrap.php';
 
 api_require_post();

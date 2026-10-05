@@ -68,13 +68,18 @@ if (!isset($starredBases) || !is_array($starredBases)) {
     <div class="home-topbar-right">
         <?php
 
-        $bccOnlineCount = bcc_online_user_count();
+        $bccPresence = bcc_presence_counts();
         ?>
         <span class="home-online-badge"
-              title="Son <?php echo (int) BCC_PRESENCE_WINDOW_MINUTES; ?> dakika içinde etkin olan kullanıcı sayısı">
+              title="Aktif: son <?php echo (int) BCC_PRESENCE_PASSIVE_MINUTES; ?> dakika içinde işlem yapan · Pasif: oturumu açık ama işlem yapmayan">
                         <span class="home-online-dot" aria-hidden="true"></span>
-            <span class="home-online-count"><?php echo (int) $bccOnlineCount; ?></span>
-            <span class="home-online-label">çevrimiçi</span>
+            <span class="home-online-count"><?php echo (int) $bccPresence['active']; ?></span>
+            <span class="home-online-label">aktif</span>
+            <?php if ($bccPresence['passive'] > 0): ?>
+            <span class="home-online-dot home-online-dot--passive" aria-hidden="true"></span>
+            <span class="home-online-count"><?php echo (int) $bccPresence['passive']; ?></span>
+            <span class="home-online-label">pasif</span>
+            <?php endif; ?>
         </span>
 
         <?php

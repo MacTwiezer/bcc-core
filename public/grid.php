@@ -1749,6 +1749,7 @@ $gridUser = current_user();
 </div>
 <?php endif; ?>
 <script src="<?php echo bcc_asset_url('account-menu.js'); ?>" defer></script>
+<script src="<?php echo bcc_asset_url('presence.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-table-tabs.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-view-manage.js'); ?>" defer></script>
 <script src="<?php echo bcc_asset_url('grid-cell-select.js'); ?>" defer></script>

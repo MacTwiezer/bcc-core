@@ -1977,6 +1977,7 @@ table.admin-table tbody tr:hover td { background: var(--bcc-surface-sunken); }
 .admin-pill-blue   { background: var(--bcc-accent-soft); color: var(--bcc-accent-strong); }
 .admin-pill-green  { background: #e6f4ea; color: #1a7f37; }
 .admin-pill-gray   { background: #eceef1; color: #5f6368; }
+.admin-pill-amber  { background: #fef3d6; color: #8a5a00; }
 
 .admin-team-block { margin-bottom: 1.5rem; }
 .admin-team-block:last-child { margin-bottom: 0; }
@@ -2638,6 +2639,11 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     background: #34a853;
     box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.16);
 }
+.home-online-dot--passive {
+    margin-left: 0.4rem;
+    background: #f2a900;
+    box-shadow: 0 0 0 3px rgba(242, 169, 0, 0.18);
+}
 .home-online-count {
     font-weight: 700;
     color: var(--bcc-text);
@@ -2715,9 +2721,16 @@ details.admin-menu > .admin-bulk-trigger::-webkit-details-marker { display: none
     white-space: nowrap;
 }
 
-.admin-online-when {
+.admin-online-state {
     flex: none;
     margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+}
+.admin-online-when {
+    flex: none;
     font-size: 0.75rem;
     color: var(--bcc-text-muted);
     white-space: nowrap;

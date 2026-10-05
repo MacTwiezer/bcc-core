@@ -114,6 +114,20 @@ SELECT COUNT(*) AS damgasiz FROM records WHERE slack_notified_at IS NULL;
 -- 0 dönmeli
 ```
 
+#### 3.2.2 ZORUNLU yükseltme — `users.last_seen_at` (2026-10-05)
+
+Temsilci durumu (Aktif / Pasif / Çevrimdışı) yeni bir kolon getirdi. Kodu
+deploy etmeden ÖNCE:
+
+```sql
+ALTER TABLE users ADD COLUMN last_seen_at DATETIME NULL AFTER last_activity_at,
+                  ADD KEY idx_users_last_seen (last_seen_at);
+```
+
+**Atlanırsa** girişli her istek `Unknown column 'last_seen_at'` ile **500
+döner** (kolon her istekte tazeleniyor) — uygulama tamamen açılmaz. Veri
+doldurmak gerekmez: kolon NULL başlar, herkes ilk isteğinde görünür olur.
+
 ### 3.3 Yapılandırma dosyalarını oluştur
 
 Bu dosyalar git'e **girmez** (`.gitignore`), her sunucuda elle oluşturulur:

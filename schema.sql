@@ -44,9 +44,14 @@ CREATE TABLE IF NOT EXISTS users (
     password_reset_token         VARCHAR(64) NULL,
     password_reset_expires_at    DATETIME NULL,
     last_seen_notifications_at  DATETIME NULL,
-    -- Son etkinlik damgası (çevrimiçi göstergesi, bkz. migrations/017).
-    -- src/auth.php:bcc_touch_user_activity() en fazla 60 saniyede bir tazeler.
+    -- Temsilci durumu (Aktif / Pasif / Çevrimdışı), tanım src/auth.php'de:
+    --   last_activity_at -> temsilcinin son GERÇEK işlemi (sayfa, tıklama, tuş)
+    --   last_seen_at     -> oturumun son nabzı (presence.js, dakikada bir);
+    --                       çıkışta NULL'a döner. 2026-10-05'te eklendi:
+    --   ALTER TABLE users ADD COLUMN last_seen_at DATETIME NULL AFTER last_activity_at,
+    --                     ADD KEY idx_users_last_seen (last_seen_at);
     last_activity_at            DATETIME NULL,
+    last_seen_at                DATETIME NULL,
     created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
@@ -54,7 +59,8 @@ CREATE TABLE IF NOT EXISTS users (
     -- reset-password.php token'ı e-postayla DEĞİL token'ın kendisiyle arıyor;
     -- index olmadan bu, users tablosunun tamamını tarardı (migrations/016).
     KEY idx_users_password_reset_token (password_reset_token),
-    KEY idx_users_last_activity (last_activity_at)
+    KEY idx_users_last_activity (last_activity_at),
+    KEY idx_users_last_seen (last_seen_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

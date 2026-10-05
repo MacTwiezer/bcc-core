@@ -870,6 +870,33 @@ kaldırıldı (§25).
   (CANLIYA-ALMA §3.4). "Pasif durumu + raporlar" kısmı müşteriden
   netleştirme bekliyor. Günlük 2026-09-29 §3.
 
+### 2026-10-05 turu — müşteri e-postası 2. ve 3. madde
+
+- **Temsilci durumu: Aktif / Pasif / Çevrimdışı** (müşteri 2. madde, kalan
+  yarı). Bekleyen temsilci artık çıkışa düşmüyor: `presence.js` dakikada bir
+  `api/presence_ping.php`'ye nabız atıyor, sekme açık kaldıkça oturum yaşıyor.
+  30 dk fare/klavye yoksa **Pasif** (otomatik, anlık; geçmiş tutulmuyor),
+  dokununca tekrar Aktif; çıkışta hemen, tarayıcı kapanınca 3 dk içinde
+  Çevrimdışı. İki damga: `users.last_seen_at` (nabız, **yeni kolon — DDL**,
+  CANLIYA-ALMA §3.2.2) + `last_activity_at` (gerçek işlem; arka plan uçları
+  `BCC_BACKGROUND_REQUEST` ile sayılmıyor). Durumun TEK tanımı
+  `bcc_presence_case_sql()` (`src/auth.php`). Görünüm: admin çevrimiçi kartı
+  (rozet), üst bar ("N aktif · N pasif"), kullanıcı Excel'i (Durum, Son işlem).
+  ⚠️ `users.is_active = 0` da arayüzde hâlâ "Pasif" diye geçiyor — farklı kavram
+  (hesap kapalı). `_verify_presence.php` **54/54**. Günlük 2026-10-05 §1.
+- **Arayüz araması rakamla başlığın dışında da arıyor** (müşteri 3. madde).
+  Arama 15 Eylül'den beri yalnızca başlıktaydı; müşterinin aradığı numaralar
+  notların içinde. Sorguda rakam varsa metin + sayı alanları da aranıyor
+  (`bcc_interface_digit_search_ids()`, HTML etiketi içindeki rakam sayılmıyor);
+  harf araması yalnızca başlıkta kalmaya devam ediyor.
+  `_verify_interface_search_digits.php` **31/31**,
+  `_verify_interface_search_primary_only.php` 14/14. Günlük 2026-10-05 §2.
+- **Slack toplu bildirimi hücre içeriğini de yazıyor** (müşteri isteği). Özet
+  satırı `Sütun → satır 2` yerine `Sütun → değer (satır 2)`; değer kısaltılıyor
+  (tek hücre 200, çok satırlı sütunda 60 karakter). ⚠️ Bu, eski "değerler
+  yazılmasın, kısa olsun" kararını bilerek geri alıyor.
+  `_verify_slack_batch.php` **106/106**. Günlük 2026-10-05 §3.
+
 ---
 
 ## 6. Kalan İşler

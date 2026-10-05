@@ -536,20 +536,39 @@ try {
     $ozetMetni = json_encode($ekler[0]['blocks'], JSON_UNESCAPED_UNICODE);
 
     t('P7) ozette toplam degisiklik sayisi var', true, strpos($ozetMetni, '3 değişiklik') !== false);
-    /* Ozetin ASIL icerigi: sutun adi -> satir numaralari. Basliksiz, cunku
-       kullanici "aciklama az olsun, satirlarla sutunlar yazsin" dedi. */
-    t('P8) ozette SUTUN -> SATIR NO listesi var',
-        true, strpos($ozetMetni, 'Marka') !== false && strpos($ozetMetni, 'satır') !== false);
-    t('P9) ayni sutunun birden fazla satiri birlikte yaziliyor',
-        true, strpos($ozetMetni, 'satır 3, 7') !== false);
-    t('P10) yalnizca bir satirda degisen sutun kendi numarasini yaziyor',
-        true, strpos($ozetMetni, 'satır 7') !== false);
+    /* Ozetin ASIL icerigi: sutun adi -> hucrenin DEGERI + satir numarasi.
+       2026-10-05'e kadar yalnizca satir numarasi yaziliyordu; musteri
+       "icerik de yazsin" dedi. */
+    t('P8) ozette SUTUN -> DEGER (satir no) listesi var',
+        true, strpos($ozetMetni, '*Marka*  →  PUMA  _(satır 3)_') !== false);
+    t('P9) ayni sutunun birden fazla satiri degerleriyle birlikte yaziliyor',
+        true, strpos($ozetMetni, 'PUMA  _(satır 3)_  ·  NIKE  _(satır 7)_') !== false);
+    t('P10) yalnizca bir satirda degisen sutun degerini ve numarasini yaziyor',
+        true, strpos($ozetMetni, '*Notlar*  →  bir not  _(satır 7)_') !== false);
     /* Aciklama satirlari BILEREK yok: mesaj kisa kalsin. Geri sizarsa bu
        test uyarir. */
     t('P11) ozette aciklama cumlesi YOK (kisa kalsin)',
         false, strpos($ozetMetni, 'varsayılan sıralamasına göre') !== false);
-    t('P11a) hucre DEGERLERI mesajda yazilmiyor (yalnizca sutun + satir)',
-        false, strpos(json_encode($ekler, JSON_UNESCAPED_UNICODE), 'NIKE') !== false);
+    t('P11a) hucre DEGERLERI ozette yaziliyor, renkli bolumlerde tekrarlanmiyor',
+        true, strpos($ozetMetni, 'NIKE') !== false
+            && strpos(json_encode(array_slice($ekler, 1), JSON_UNESCAPED_UNICODE), 'NIKE') === false);
+
+    $uzun = str_repeat('uzun deger ', 40);
+    $mUzun = bcc_slack_build_batch_message('Tablo', array('Ali'), array(
+        'yeni' => array(
+            array('no' => 1, 'baslik' => 'A', 'ciftler' => array(array('ad' => 'Not', 'deger' => $uzun), array('ad' => 'Tek', 'deger' => $uzun))),
+            array('no' => 0, 'baslik' => 'B', 'ciftler' => array(array('ad' => 'Not', 'deger' => 'numarasiz'))),
+        ), 'guncel' => array(), 'silinen' => array(),
+    ), 'https://ornek/x');
+    $uzunMetin = $mUzun['opts']['attachments'][0]['blocks'][1]['text']['text'];
+    $uzunSatirlar = explode("
+", $uzunMetin);
+    t('P11b) cok satirli sutunda deger ' . BCC_SLACK_BATCH_MAX_MULTI_VALUE_CHARS . ' karaktere iniyor',
+        true, mb_strlen($uzunSatirlar[0], 'UTF-8') < 130 && strpos($uzunSatirlar[0], '…') !== false);
+    t('P11c) tek satirli sutunda deger ' . BCC_SLACK_BATCH_MAX_VALUE_CHARS . ' karaktere kadar',
+        true, mb_strlen($uzunSatirlar[1], 'UTF-8') > 150 && mb_strlen($uzunSatirlar[1], 'UTF-8') < 240);
+    t('P11d) satir numarasi bilinmeyen kayit degeriyle, numarasiz ve sonda',
+        true, substr($uzunSatirlar[0], -strlen('  ·  numarasiz')) === '  ·  numarasiz');
     /* Silinenler yalnizca KIRMIZI bolumde — ozette tekrarlanmiyor. */
     $kirmiziMetin = json_encode($ekler[count($ekler) - 1]['blocks'], JSON_UNESCAPED_UNICODE);
     t('P12) silinenler kirmizi bolumde adiyla geciyor',

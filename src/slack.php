@@ -556,6 +556,8 @@ define('BCC_SLACK_BATCH_TIME_BUDGET', 6.0);
    degil "neyin degistigini" gostermek icin var; ayrinti icin mesajin sonundaki
    link zaten kayda goturuyor. */
 define('BCC_SLACK_BATCH_MAX_VALUE_CHARS', 200);
+/* Ayni sutunda birden fazla satir listelenirken hucre basina sinir. */
+define('BCC_SLACK_BATCH_MAX_MULTI_VALUE_CHARS', 60);
 define('BCC_SLACK_BATCH_MAX_TITLE_CHARS', 120);
 
 function bcc_slack_shorten_value($markup, $limit)
@@ -828,10 +830,12 @@ function bcc_slack_build_batch_message($tableName, $kimler, $gruplar, $link)
         )),
     );
 
-    /* Sutun -> satir numaralari. Mesajin ASIL icerigi bu: hangi sutunda hangi
-       satirlar degisti. Hucre DEGERLERI bilerek yazilmiyor — kullanici
-       "aciklama az olsun, satirlarla sutunlar yazsin" dedi; ayrinti icin
-       mesajin altindaki baglanti zaten tabloyu aciyor. */
+    /* Sutun -> o sutunda degisen hucrelerin GUNCEL degeri + satir numarasi.
+       Onceden yalnizca satir numarasi yaziliyordu ("Seller ID -> satir 2");
+       musteri icerigin de yazmasini istedi (2026-10-05). Mesaj kisa kalsin
+       diye deger tek satirda ve sinirli: tek hucrede
+       BCC_SLACK_BATCH_MAX_VALUE_CHARS, ayni sutunda birden fazla satir varsa
+       hucre basina BCC_SLACK_BATCH_MAX_MULTI_VALUE_CHARS. */
     $sutunlar = array();
     foreach (array('yeni', 'guncel') as $tur) {
         foreach ($gruplar[$tur] as $kayit) {
@@ -840,29 +844,37 @@ function bcc_slack_build_batch_message($tableName, $kimler, $gruplar, $link)
                 if (!isset($sutunlar[$ad])) {
                     $sutunlar[$ad] = array();
                 }
-                if ($kayit['no'] > 0) {
-                    $sutunlar[$ad][] = $kayit['no'];
-                }
+                $sutunlar[$ad][] = array('no' => (int) $kayit['no'], 'deger' => (string) $cift['deger']);
             }
         }
     }
 
     if (!empty($sutunlar)) {
         $satirlar = array();
-        foreach ($sutunlar as $ad => $nolar) {
-            $nolar = array_values(array_unique($nolar));
-            sort($nolar);
+        foreach ($sutunlar as $ad => $hucreler) {
+            /* Satir numarasina gore; numarasi bilinmeyenler (0) sonda. */
+            usort($hucreler, function ($a, $b) {
+                if (($a['no'] > 0) !== ($b['no'] > 0)) {
+                    return $a['no'] > 0 ? -1 : 1;
+                }
+                return $a['no'] - $b['no'];
+            });
 
-            $fazla = count($nolar) - BCC_SLACK_BATCH_MAX_ROWNOS;
+            $fazla = count($hucreler) - BCC_SLACK_BATCH_MAX_ROWNOS;
             if ($fazla > 0) {
-                $nolar = array_slice($nolar, 0, BCC_SLACK_BATCH_MAX_ROWNOS);
+                $hucreler = array_slice($hucreler, 0, BCC_SLACK_BATCH_MAX_ROWNOS);
             }
 
-            $etiket = empty($nolar)
-                ? '—'
-                : ('satır ' . implode(', ', $nolar) . ($fazla > 0 ? ' +' . $fazla : ''));
+            $limit = count($hucreler) > 1 ? BCC_SLACK_BATCH_MAX_MULTI_VALUE_CHARS : BCC_SLACK_BATCH_MAX_VALUE_CHARS;
 
-            $satirlar[] = '*' . bcc_slack_escape($ad) . '*  →  ' . $etiket;
+            $parcalar = array();
+            foreach ($hucreler as $hucre) {
+                $parcalar[] = bcc_slack_shorten_value($hucre['deger'], $limit)
+                    . ($hucre['no'] > 0 ? '  _(satır ' . $hucre['no'] . ')_' : '');
+            }
+
+            $satirlar[] = '*' . bcc_slack_escape($ad) . '*  →  ' . implode('  ·  ', $parcalar)
+                . ($fazla > 0 ? '  _+' . $fazla . ' satır_' : '');
         }
 
         /* Slack bir section blogunda en fazla 3000 karakter tasiyor; asilirsa

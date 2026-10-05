@@ -3609,18 +3609,85 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm = nu
         }
 
         $escapedTerm = str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $searchTerm);
-        $sql .= " AND EXISTS (
+        $titleSql = "EXISTS (
                 SELECT 1 FROM cell_values cv
                 WHERE cv.record_id = r.id
                   AND cv.field_id = ?
                   AND cv.value_text LIKE ? ESCAPE '\\\\'
             )";
         $params = array_merge($params, array((int) $primaryFieldId, '%' . $escapedTerm . '%'));
+
+        $otherIds = bcc_interface_digit_search_ids($tableId, $searchTerm, '%' . $escapedTerm . '%');
+        if ($otherIds) {
+            /* Kimlikler veritabanindan gelen tamsayilar; yer tutucu yerine
+               dogrudan yaziliyor ki buyuk tabloda mysqli'nin 65.535 parametre
+               sinirina takilmasin. */
+            $sql .= ' AND (' . $titleSql . ' OR r.id IN (' . implode(',', array_map('intval', $otherIds)) . '))';
+        } else {
+            $sql .= ' AND ' . $titleSql;
+        }
     }
 
     $sql .= ' ORDER BY last_update DESC, r.id DESC';
 
     return bcc_fetch_all($sql, $params);
+}
+
+/* Rakam iceren aramalar (musteri no, siparis no, "SPC1145921") basligin
+   DISINDAKI alanlarda da aranir — 2026-10-05, musteri istegi. Harf aramasi
+   bilerek yalnizca baslikta kalir (2026-09-15 karari: "ALKAN" yazinca notunda
+   Alkan gecen baska firmalar gelmesin).
+   Zengin metin HTML olarak saklandigi icin LIKE yalnizca on elemedir: rakam
+   etiketin/niteligin icinde degil GORUNEN metinde geciyorsa eslesme sayilir. */
+function bcc_interface_digit_search_ids($tableId, $searchTerm, $likeTerm)
+{
+    if (preg_match_all('/\d+/', (string) $searchTerm, $m) < 1) {
+        return array();
+    }
+    $digitRuns = $m[0];
+
+    $textTypes = array();
+    foreach ($GLOBALS['BCC_FIELD_VALUE_COLUMN'] as $type => $column) {
+        if ($column === 'value_text') {
+            $textTypes[] = "'" . $type . "'";
+        }
+    }
+    $numberTypes = "'number','currency','percent','rating','autonumber'";
+
+    $rows = bcc_fetch_all(
+        "SELECT cv.record_id, f.field_type, cv.value_text
+           FROM cell_values cv
+           INNER JOIN fields f ON f.id = cv.field_id
+           INNER JOIN records r ON r.id = cv.record_id
+          WHERE f.table_id = ? AND r.deleted_at IS NULL
+            AND (
+                (f.field_type IN (" . implode(',', $textTypes) . ") AND cv.value_text LIKE ? ESCAPE '\\\\')
+                OR (f.field_type IN (" . $numberTypes . ")
+                    AND TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM CAST(cv.value_number AS CHAR))) LIKE ? ESCAPE '\\\\')
+            )",
+        array((int) $tableId, $likeTerm, $likeTerm)
+    );
+
+    $ids = array();
+    foreach ($rows as $row) {
+        $rid = (int) $row['record_id'];
+        if (isset($ids[$rid])) {
+            continue;
+        }
+
+        if ($row['field_type'] === 'long_text') {
+            $visible = html_entity_decode(strip_tags((string) $row['value_text']), ENT_QUOTES, 'UTF-8');
+            foreach ($digitRuns as $run) {
+                if (strpos($visible, $run) === false) {
+                    continue 2;
+                }
+            }
+        }
+
+        $ids[$rid] = $rid;
+    }
+
+    return array_values($ids);
 }
 
 function bcc_format_bytes($bytes)

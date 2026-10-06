@@ -79,12 +79,13 @@ $cleanup = function () use ($teamId, $ownerId, $EMAIL, $COOKIE, &$baseId) {
 };
 register_shutdown_function($cleanup);
 
-/* Arayuz aramasi: harf aramasi basligin yaninda KISA alanlarda da arar
-   (tekli/coklu secim, tek satir metin, e-posta...) — 2026-10-06, musteri:
-   "anahtar kelimeleri aramaya calistigimizda cikmamaktadir" (Kategori alani).
-   Notlar (uzun metin) harf aramasinda HALA aranmaz — o yari
-   _verify_interface_search_primary_only.php'de; rakam aramasi
-   _verify_interface_search_digits.php'de. */
+/* Arayuz aramasi: harf aramasi basligin yaninda TUM metin alanlarinda arar
+   (uzun metin/not, tekli/coklu secim, tek satir metin, e-posta...) —
+   2026-10-06, musteri: "anahtar kelimeleri aramaya calistigimizda
+   cikmamaktadir" (Kategori alani, canlida uzun metin). 2026-09-15'teki
+   "yalnizca baslik" karari bilerek geri alindi; onu sinayan
+   _verify_interface_search_primary_only.php kaldirildi. Uzun metinde yalnizca
+   GORUNEN metin eslesir. Rakam aramasi _verify_interface_search_digits.php'de. */
 
 $baseId = (int) bcc_create_base($teamId, 'IfKelime Base ' . $SON, '', $ownerId)['id'];
 bcc_execute("INSERT INTO tables_meta (base_id, name, position) VALUES (:b,'Tablo',0)", array('b' => $baseId));
@@ -112,7 +113,10 @@ foreach (array(
     'alkan' => array('ALKAN AKSESUAR', '<p>Asistans konusu görüşüldü.</p>', 'Güzellik ve Sağlık', array('Yaşam', 'Ev/Bahçe'), 'Vestel', null),
     'kral' => array('KRALSPORT', '<p>Yaşam notu.</p>', 'Asistans Hizmetleri', null, null, null),
     'tiens' => array('TİENS', '<p>Vestel ile ilgisi yok.</p>', null, array('Asistans Hizmetleri'), 'Arçelik', 'destek@ornek-firma.com'),
-    'kumtel' => array('KUMTEL', null, null, null, null, null),
+    /* Musterinin Kategori alani gibi: satir satir anahtar kelime, & varlik olarak. */
+    'kumtel' => array('KUMTEL', "<p class=\"vurgu\" style=\"margin-left:4px\">Tekne &amp; Yat Ekipmanları
+Oda Kokusu
+DİKİŞ Makinesi</p>", null, null, null, null),
 ) as $k => $v) {
     bcc_execute('INSERT INTO records (table_id, position, slack_notified_at) VALUES (:t, :p, NOW())', array('t' => $tableId, 'p' => count($K)));
     $rid = (int) bcc_last_insert_id();
@@ -163,24 +167,36 @@ foreach (array('interface_records.php', 'interface_search.php') as $uc) {
     echo "\n$uc\n";
     check("$uc: 'Asistans Hizmetleri' -> tekli + coklu secimde bulunuyor; notunda 'Asistans' gecen ALKAN gelmiyor",
         $ara($uc, 'Asistans Hizmetleri') === $bekle('kral', 'tiens'), json_encode($ara($uc, 'Asistans Hizmetleri')));
-    check("$uc: 'asistans' (kucuk harf) -> tekli + coklu secimde bulunuyor",
-        $ara($uc, 'asistans') === $bekle('kral', 'tiens'), json_encode($ara($uc, 'asistans')));
+    check("$uc: 'asistans' (kucuk harf) -> tekli + coklu secim + not",
+        $ara($uc, 'asistans') === $bekle('alkan', 'kral', 'tiens'), json_encode($ara($uc, 'asistans')));
     check("$uc: 'Hizmet' (parca) -> bulunuyor",
         $ara($uc, 'Hizmet') === $bekle('kral', 'tiens'), json_encode($ara($uc, 'Hizmet')));
     check("$uc: 'Güzellik' (tekli secim) -> bulunuyor",
         $ara($uc, 'Güzellik') === $bekle('alkan'), json_encode($ara($uc, 'Güzellik')));
-    check("$uc: 'Yaşam' (coklu secim) -> bulunuyor; notunda 'Yaşam' gecen KRALSPORT gelmiyor",
-        $ara($uc, 'Yaşam') === $bekle('alkan'), json_encode($ara($uc, 'Yaşam')));
+    check("$uc: 'Yaşam' -> coklu secim (ALKAN) + not (KRALSPORT)",
+        $ara($uc, 'Yaşam') === $bekle('alkan', 'kral'), json_encode($ara($uc, 'Yaşam')));
     check("$uc: 'Ev/Bahçe' (coklu secim, egik cizgi) -> bulunuyor",
         $ara($uc, 'Ev/Bahçe') === $bekle('alkan'), json_encode($ara($uc, 'Ev/Bahçe')));
-    check("$uc: 'Vestel' (tek satir metin) -> bulunuyor; notunda 'Vestel' gecen TİENS gelmiyor",
-        $ara($uc, 'Vestel') === $bekle('alkan'), json_encode($ara($uc, 'Vestel')));
+    check("$uc: 'Vestel' -> tek satir metin (ALKAN) + not (TİENS)",
+        $ara($uc, 'Vestel') === $bekle('alkan', 'tiens'), json_encode($ara($uc, 'Vestel')));
     check("$uc: 'ornek-firma' (e-posta alani) -> bulunuyor",
         $ara($uc, 'ornek-firma') === $bekle('tiens'), json_encode($ara($uc, 'ornek-firma')));
     check("$uc: 'KUMTEL' (baslik) -> baslik eslesmesi calisiyor",
         $ara($uc, 'KUMTEL') === $bekle('kumtel'), json_encode($ara($uc, 'KUMTEL')));
-    check("$uc: 'konusu' (yalnizca notta) -> sonuc yok",
-        $ara($uc, 'konusu') === array(), json_encode($ara($uc, 'konusu')));
+    check("$uc: 'konusu' (yalnizca notta) -> bulunuyor",
+        $ara($uc, 'konusu') === $bekle('alkan'), json_encode($ara($uc, 'konusu')));
+    check("$uc: 'Oda Kokusu' (uzun metinde bir satir) -> bulunuyor",
+        $ara($uc, 'Oda Kokusu') === $bekle('kumtel'), json_encode($ara($uc, 'Oda Kokusu')));
+    check("$uc: 'oda kok' (kucuk harf, parca) -> bulunuyor",
+        $ara($uc, 'oda kok') === $bekle('kumtel'), json_encode($ara($uc, 'oda kok')));
+    check("$uc: 'Tekne & Yat' (& varlik olarak sakli) -> bulunuyor",
+        $ara($uc, 'Tekne & Yat') === $bekle('kumtel'), json_encode($ara($uc, 'Tekne & Yat')));
+    check("$uc: 'dikiş' (metinde DİKİŞ) -> bulunuyor",
+        $ara($uc, 'dikiş') === $bekle('kumtel'), json_encode($ara($uc, 'dikiş')));
+    check("$uc: 'vurgu' (yalnizca HTML niteliginde) -> sonuc yok",
+        $ara($uc, 'vurgu') === array(), json_encode($ara($uc, 'vurgu')));
+    check("$uc: 'amp' (yalnizca &amp; varliginin icinde) -> sonuc yok",
+        $ara($uc, 'amp') === array(), json_encode($ara($uc, 'amp')));
     check("$uc: 'Elektronik' (hicbir yerde yok) -> sonuc yok",
         $ara($uc, 'Elektronik') === array(), json_encode($ara($uc, 'Elektronik')));
     check("$uc: 'A%s' -> % joker degil, sonuc yok",

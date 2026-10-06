@@ -3633,36 +3633,41 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm = nu
     return bcc_fetch_all($sql, $params);
 }
 
-/* Arama basligin DISINDAKI alanlarda da yapilir:
-   - Kisa alanlar (tekli/coklu secim, tek satir metin, baglanti, e-posta,
-     telefon, saat) HER aramada — 2026-10-06, musteri istegi: "Kategori"
-     gibi anahtar kelimeler bulunamiyordu.
-   - Sayi alanlari ve uzun metin (not) YALNIZCA sorguda rakam varsa —
-     2026-10-05. Harf aramasi notlarda bilerek yapilmaz (2026-09-15 karari:
-     "ALKAN" yazinca notunda Alkan gecen baska firmalar gelmesin).
-   Zengin metin HTML olarak saklandigi icin LIKE yalnizca on elemedir: rakam
-   etiketin/niteligin icinde degil GORUNEN metinde geciyorsa eslesme sayilir. */
+/* Arama basligin DISINDAKI alanlarda da yapilir — 2026-10-06, musteri istegi:
+   anahtar kelimeler ("Kategori" alani, uzun metin) bulunamiyordu. Metin
+   tutan tum alanlar (uzun metin/not dahil) ve coklu secim her aramada;
+   sayi alanlari yalnizca sorguda rakam varsa (2026-10-05).
+   Bu, 2026-09-15'teki "harf aramasi yalnizca baslikta" kararini BILEREK geri
+   alir: "ALKAN" yazinca notunda Alkan gecen baska firmalar da gelir.
+   Zengin metin HTML olarak saklandigi icin LIKE yalnizca on elemedir: aranan
+   ifade etiketin/niteligin icinde degil GORUNEN metinde geciyorsa eslesme
+   sayilir ("style", "52px", "amp" eslesmez). */
 function bcc_interface_other_field_search_ids($tableId, $searchTerm, $likeTerm)
 {
-    $hasDigits = preg_match_all('/\d+/', (string) $searchTerm, $m) > 0;
-    $digitRuns = $hasDigits ? $m[0] : array();
+    $hasDigits = preg_match('/\d/', (string) $searchTerm) === 1;
 
-    $textTypes = array();
+    $shortTypes = array();
     foreach ($GLOBALS['BCC_FIELD_VALUE_COLUMN'] as $type => $column) {
-        if ($column === 'value_text' && ($hasDigits || $type !== 'long_text')) {
-            $textTypes[] = "'" . $type . "'";
+        if ($column === 'value_text' && $type !== 'long_text') {
+            $shortTypes[] = "'" . $type . "'";
         }
     }
+
+    /* Uzun metinde & < > " ' varlik olarak saklanir (bcc_sanitize_rich_text);
+       "Tekne & Yat" aramasi ham metinde "Tekne &amp; Yat" olarak aranmali. */
+    $encodedTerm = htmlspecialchars((string) $searchTerm, ENT_QUOTES, 'UTF-8');
+    $encodedLike = '%' . str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $encodedTerm) . '%';
 
     /* Coklu secim JSON dizisi olarak saklanir; kolon ikili (bin) karsilastirir,
        baslik aramasiyla ayni olsun diye buyuk/kucuk harf duyarsiz karsilastirma
        acikca isteniyor. json_encode "/" karakterini "\/" yazar. */
     $conditions = array(
-        "(f.field_type IN (" . implode(',', $textTypes) . ") AND cv.value_text LIKE ? ESCAPE '\\\\')",
+        "(f.field_type IN (" . implode(',', $shortTypes) . ") AND cv.value_text LIKE ? ESCAPE '\\\\')",
+        "(f.field_type = 'long_text' AND (cv.value_text LIKE ? ESCAPE '\\\\' OR cv.value_text LIKE ? ESCAPE '\\\\'))",
         "(f.field_type = 'multiple_select'
             AND REPLACE(CONVERT(cv.value_json USING utf8mb4), '\\\\/', '/') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\')",
     );
-    $params = array((int) $tableId, $likeTerm, $likeTerm);
+    $params = array((int) $tableId, $likeTerm, $likeTerm, $encodedLike, $likeTerm);
 
     if ($hasDigits) {
         $conditions[] = "(f.field_type IN ('number','currency','percent','rating','autonumber')
@@ -3680,6 +3685,8 @@ function bcc_interface_other_field_search_ids($tableId, $searchTerm, $likeTerm)
         $params
     );
 
+    $needle = bcc_interface_search_fold($searchTerm);
+
     $ids = array();
     foreach ($rows as $row) {
         $rid = (int) $row['record_id'];
@@ -3689,10 +3696,8 @@ function bcc_interface_other_field_search_ids($tableId, $searchTerm, $likeTerm)
 
         if ($row['field_type'] === 'long_text') {
             $visible = html_entity_decode(strip_tags((string) $row['value_text']), ENT_QUOTES, 'UTF-8');
-            foreach ($digitRuns as $run) {
-                if (strpos($visible, $run) === false) {
-                    continue 2;
-                }
+            if ($needle === '' || strpos(bcc_interface_search_fold($visible), $needle) === false) {
+                continue;
             }
         }
 
@@ -3700,6 +3705,21 @@ function bcc_interface_other_field_search_ids($tableId, $searchTerm, $likeTerm)
     }
 
     return array_values($ids);
+}
+
+/* Gorunen metin denetimi PHP'de yapildigi icin veritabaninin karsilastirmasina
+   (utf8mb4_unicode_ci: buyuk/kucuk harf ve Turkce aksan duyarsiz, I/ı/İ/i ayni)
+   yaklastirilir. Tam esdegeri degil: Turkce disi aksanli harflerde PHP tarafi
+   daha kati kalir (eslesme kacabilir, yanlis eslesme uretmez). */
+function bcc_interface_search_fold($text)
+{
+    $text = mb_strtolower((string) $text, 'UTF-8');
+
+    return strtr($text, array(
+        "\xCC\x87" => '',
+        'ı' => 'i', 'ç' => 'c', 'ş' => 's', 'ğ' => 'g', 'ö' => 'o', 'ü' => 'u',
+        'â' => 'a', 'î' => 'i', 'û' => 'u',
+    ));
 }
 
 function bcc_format_bytes($bytes)

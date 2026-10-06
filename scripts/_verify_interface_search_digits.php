@@ -81,8 +81,8 @@ register_shutdown_function($cleanup);
 
 /* Arayuz aramasi: rakam iceren sorgu basligin disindaki alanlarda da arar
    (2026-10-05, musteri: "search alaninda sayi ile arama yapilamiyor").
-   Harf aramasi yalnizca baslikta kalir — o yari
-   _verify_interface_search_primary_only.php'de. */
+   Harf aramasi 2026-10-06'dan beri notlarda da ariyor — o yari
+   _verify_interface_search_keywords.php'de. */
 
 $baseId = (int) bcc_create_base($teamId, 'IfSayi Base ' . $SON, '', $ownerId)['id'];
 bcc_execute("INSERT INTO tables_meta (base_id, name, position) VALUES (:b,'Tablo',0)", array('b' => $baseId));
@@ -179,10 +179,10 @@ foreach (array('interface_records.php', 'interface_search.php') as $uc) {
         $ara($uc, '777452') === array(), json_encode($ara($uc, '777452')));
     check("$uc: '99887' (hicbir yerde yok) -> sonuc yok",
         $ara($uc, '99887') === array(), json_encode($ara($uc, '99887')));
-    check("$uc: 'Alkan' (harf) -> yalnizca baslik; notunda gecen KRALSPORT gelmiyor",
-        $ara($uc, 'Alkan') === $bekle('alkan'), json_encode($ara($uc, 'Alkan')));
-    check("$uc: 'ZEYNEP' (harf, yalnizca notta) -> sonuc yok",
-        $ara($uc, 'ZEYNEP') === array(), json_encode($ara($uc, 'ZEYNEP')));
+    check("$uc: 'Alkan' (harf) -> baslik (ALKAN) + not (KRALSPORT)",
+        $ara($uc, 'Alkan') === $bekle('alkan', 'kral'), json_encode($ara($uc, 'Alkan')));
+    check("$uc: 'ZEYNEP' (harf, yalnizca notta) -> bulunuyor",
+        $ara($uc, 'ZEYNEP') === $bekle('alkan'), json_encode($ara($uc, 'ZEYNEP')));
     check("$uc: '5%' -> % joker degil, sonuc yok",
         $ara($uc, '5%') === array(), json_encode($ara($uc, '5%')));
 }

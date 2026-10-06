@@ -393,7 +393,7 @@ Günlük §18-§22. Commit'ler: `70cbd2b` (§18), `fa1d35a` (§19-§20), `119ffc
 | `scripts/_verify_column_resize.php` | §25 | "Dondurma balonu KORUNDU" kontrolü "balon üretilmiyor"a (104) |
 | `src/schema.php` | §26 | `bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm)` — arama yalnızca birincil (kalın başlık) alanda |
 | `public/interface.php`, `public/api/interface_records.php`, `public/api/interface_search.php` | §26 | Yeni imzayla çağrı |
-| `scripts/_verify_interface_search_primary_only.php` | §26 | **YENİ**, 14 kontrol, gerçek HTTP |
+| `scripts/_verify_interface_search_primary_only.php` | §26 | **YENİ**, 14 kontrol, gerçek HTTP — 2026-10-06'da kaldırıldı (kural geri alındı) |
 | `public/interface.php`, `public/assets/interface.css`, `scripts/_verify_interface_nav_ui.php` | §28 | Daraltılmış kenar çubuğundaki işlevsiz klasör ikonu kaldırıldı |
 | `public/assets/home.css` | §29, §30 | `.admin-bulk-bar .admin-menu-panel` sola hizalı; `.assign-team-*` pencere stilleri |
 | `public/admin/index.php`, `public/admin/assign_team.php` | §30 | Pencere + JS bağlandı; eski sayfa → `?ekibe_ata=1` yönlendirmesi |

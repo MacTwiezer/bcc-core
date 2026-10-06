@@ -762,6 +762,8 @@ Ayrıntı: `docs/gunluk/2026-09-15.md`; envanter:
   başlığın yanında altındaki not satırında (ilk `long_text`) da arıyordu;
   artık yalnızca birincil alan. Test: `_verify_interface_search_primary_only.php`
   14/14 (gerçek HTTP; eski kodla 4/14).
+  ⚠️ **2026-10-06'da geri alındı** (müşteri isteği, aşağıda): arama yine tüm
+  metin alanlarında; betik kaldırıldı.
 - **Admin paneli (`65e20c6`).** "Kullanıcıyı ekibe ata" ayrı sayfa değil pencere
   (kullanıcı ve ekip araması, yeni `api/admin_team_member_assign.php` —
   yalnız platform yöneticisi; eski adres pencereye yönlendiriyor); seçim
@@ -890,13 +892,19 @@ kaldırıldı (§25).
   (HTML etiketi içindeki rakam sayılmıyor).
   `_verify_interface_search_digits.php` **31/31**,
   `_verify_interface_search_primary_only.php` 14/14. Günlük 2026-10-05 §2.
-- **Arayüz araması harfle kısa alanlarda da arıyor** (müşteri: "anahtar
-  kelimeler çıkmıyor" — Kategori alanı). Harf araması başlığa ek olarak tekli/
-  çoklu seçim, tek satır metin, bağlantı, e-posta, telefon, saat alanlarında;
-  **notlarda (uzun metin) hâlâ aranmıyor** (15 Eylül kararının gerekçesi
-  korunuyor). Tek fonksiyon: `bcc_interface_other_field_search_ids()`
-  (eski `bcc_interface_digit_search_ids()` yerine).
-  `_verify_interface_search_keywords.php` **27/27** (eski kodla 10/27).
+- **Arayüz araması tüm metin alanlarında arıyor** (müşteri: "anahtar
+  kelimeler çıkmıyor" — Kategori alanı, **uzun metin**). Harf araması başlığa
+  ek olarak uzun metin (not), tekli/çoklu seçim, tek satır metin, bağlantı,
+  e-posta, telefon, saat alanlarında; sayı alanları yalnızca sorguda rakam
+  varsa. ⚠️ 15 Eylül'deki "yalnızca başlık" kararını **bilerek geri alıyor**
+  (kullanıcı onayı 2026-10-06): "ALKAN" yazınca notunda Alkan geçen kayıtlar
+  da gelir. Uzun metinde yalnızca **görünen** metin eşleşir (etiket/nitelik/
+  varlık adı değil; `bcc_interface_search_fold()` ile büyük-küçük harf ve
+  Türkçe aksan duyarsız). Tek fonksiyon:
+  `bcc_interface_other_field_search_ids()`.
+  `_verify_interface_search_keywords.php` **39/39**,
+  `_verify_interface_search_digits.php` 31/31;
+  `_verify_interface_search_primary_only.php` **kaldırıldı**.
   Günlük 2026-10-06 §1.
 - **Slack toplu bildirimi hücre içeriğini de yazıyor** (müşteri isteği). Özet
   satırı `Sütun → satır 2` yerine `Sütun → değer (satır 2)`; değer kısaltılıyor

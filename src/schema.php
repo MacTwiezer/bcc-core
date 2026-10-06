@@ -3617,7 +3617,7 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm = nu
             )";
         $params = array_merge($params, array((int) $primaryFieldId, '%' . $escapedTerm . '%'));
 
-        $otherIds = bcc_interface_digit_search_ids($tableId, $searchTerm, '%' . $escapedTerm . '%');
+        $otherIds = bcc_interface_other_field_search_ids($tableId, $searchTerm, '%' . $escapedTerm . '%');
         if ($otherIds) {
             /* Kimlikler veritabanindan gelen tamsayilar; yer tutucu yerine
                dogrudan yaziliyor ki buyuk tabloda mysqli'nin 65.535 parametre
@@ -3633,26 +3633,42 @@ function bcc_interface_fetch_records($tableId, $primaryFieldId, $searchTerm = nu
     return bcc_fetch_all($sql, $params);
 }
 
-/* Rakam iceren aramalar (musteri no, siparis no, "SPC1145921") basligin
-   DISINDAKI alanlarda da aranir — 2026-10-05, musteri istegi. Harf aramasi
-   bilerek yalnizca baslikta kalir (2026-09-15 karari: "ALKAN" yazinca notunda
-   Alkan gecen baska firmalar gelmesin).
+/* Arama basligin DISINDAKI alanlarda da yapilir:
+   - Kisa alanlar (tekli/coklu secim, tek satir metin, baglanti, e-posta,
+     telefon, saat) HER aramada — 2026-10-06, musteri istegi: "Kategori"
+     gibi anahtar kelimeler bulunamiyordu.
+   - Sayi alanlari ve uzun metin (not) YALNIZCA sorguda rakam varsa —
+     2026-10-05. Harf aramasi notlarda bilerek yapilmaz (2026-09-15 karari:
+     "ALKAN" yazinca notunda Alkan gecen baska firmalar gelmesin).
    Zengin metin HTML olarak saklandigi icin LIKE yalnizca on elemedir: rakam
    etiketin/niteligin icinde degil GORUNEN metinde geciyorsa eslesme sayilir. */
-function bcc_interface_digit_search_ids($tableId, $searchTerm, $likeTerm)
+function bcc_interface_other_field_search_ids($tableId, $searchTerm, $likeTerm)
 {
-    if (preg_match_all('/\d+/', (string) $searchTerm, $m) < 1) {
-        return array();
-    }
-    $digitRuns = $m[0];
+    $hasDigits = preg_match_all('/\d+/', (string) $searchTerm, $m) > 0;
+    $digitRuns = $hasDigits ? $m[0] : array();
 
     $textTypes = array();
     foreach ($GLOBALS['BCC_FIELD_VALUE_COLUMN'] as $type => $column) {
-        if ($column === 'value_text') {
+        if ($column === 'value_text' && ($hasDigits || $type !== 'long_text')) {
             $textTypes[] = "'" . $type . "'";
         }
     }
-    $numberTypes = "'number','currency','percent','rating','autonumber'";
+
+    /* Coklu secim JSON dizisi olarak saklanir; kolon ikili (bin) karsilastirir,
+       baslik aramasiyla ayni olsun diye buyuk/kucuk harf duyarsiz karsilastirma
+       acikca isteniyor. json_encode "/" karakterini "\/" yazar. */
+    $conditions = array(
+        "(f.field_type IN (" . implode(',', $textTypes) . ") AND cv.value_text LIKE ? ESCAPE '\\\\')",
+        "(f.field_type = 'multiple_select'
+            AND REPLACE(CONVERT(cv.value_json USING utf8mb4), '\\\\/', '/') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\')",
+    );
+    $params = array((int) $tableId, $likeTerm, $likeTerm);
+
+    if ($hasDigits) {
+        $conditions[] = "(f.field_type IN ('number','currency','percent','rating','autonumber')
+            AND TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM CAST(cv.value_number AS CHAR))) LIKE ? ESCAPE '\\\\')";
+        $params[] = $likeTerm;
+    }
 
     $rows = bcc_fetch_all(
         "SELECT cv.record_id, f.field_type, cv.value_text
@@ -3660,12 +3676,8 @@ function bcc_interface_digit_search_ids($tableId, $searchTerm, $likeTerm)
            INNER JOIN fields f ON f.id = cv.field_id
            INNER JOIN records r ON r.id = cv.record_id
           WHERE f.table_id = ? AND r.deleted_at IS NULL
-            AND (
-                (f.field_type IN (" . implode(',', $textTypes) . ") AND cv.value_text LIKE ? ESCAPE '\\\\')
-                OR (f.field_type IN (" . $numberTypes . ")
-                    AND TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM CAST(cv.value_number AS CHAR))) LIKE ? ESCAPE '\\\\')
-            )",
-        array((int) $tableId, $likeTerm, $likeTerm)
+            AND (" . implode(' OR ', $conditions) . ")",
+        $params
     );
 
     $ids = array();

@@ -887,10 +887,17 @@ kaldırıldı (§25).
 - **Arayüz araması rakamla başlığın dışında da arıyor** (müşteri 3. madde).
   Arama 15 Eylül'den beri yalnızca başlıktaydı; müşterinin aradığı numaralar
   notların içinde. Sorguda rakam varsa metin + sayı alanları da aranıyor
-  (`bcc_interface_digit_search_ids()`, HTML etiketi içindeki rakam sayılmıyor);
-  harf araması yalnızca başlıkta kalmaya devam ediyor.
+  (HTML etiketi içindeki rakam sayılmıyor).
   `_verify_interface_search_digits.php` **31/31**,
   `_verify_interface_search_primary_only.php` 14/14. Günlük 2026-10-05 §2.
+- **Arayüz araması harfle kısa alanlarda da arıyor** (müşteri: "anahtar
+  kelimeler çıkmıyor" — Kategori alanı). Harf araması başlığa ek olarak tekli/
+  çoklu seçim, tek satır metin, bağlantı, e-posta, telefon, saat alanlarında;
+  **notlarda (uzun metin) hâlâ aranmıyor** (15 Eylül kararının gerekçesi
+  korunuyor). Tek fonksiyon: `bcc_interface_other_field_search_ids()`
+  (eski `bcc_interface_digit_search_ids()` yerine).
+  `_verify_interface_search_keywords.php` **27/27** (eski kodla 10/27).
+  Günlük 2026-10-06 §1.
 - **Slack toplu bildirimi hücre içeriğini de yazıyor** (müşteri isteği). Özet
   satırı `Sütun → satır 2` yerine `Sütun → değer (satır 2)`; değer kısaltılıyor
   (tek hücre 200, çok satırlı sütunda 60 karakter). ⚠️ Bu, eski "değerler

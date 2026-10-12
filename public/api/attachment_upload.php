@@ -19,7 +19,9 @@ $ALLOWED = array(
     'pptx' => array('mimes' => array('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'), 'canonical' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'),
 );
 
-const BCC_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+/* 2026-10-12: 20 MB -> 40 MB (Excel ice aktarma siniriyla ayni). php.ini'deki
+   upload_max_filesize (45M, CANLIYA-ALMA 3.5) bunun USTUNDE kalmali. */
+const BCC_ATTACHMENT_MAX_BYTES = 40 * 1024 * 1024;
 
 $fieldId = isset($_POST['field_id']) ? (int) $_POST['field_id'] : 0;
 $recordId = isset($_POST['record_id']) ? (int) $_POST['record_id'] : 0;
@@ -56,7 +58,7 @@ if ($upload['error'] !== UPLOAD_ERR_OK) {
 }
 
 if ($upload['size'] <= 0 || $upload['size'] > BCC_ATTACHMENT_MAX_BYTES) {
-    json_fail(422, 'Dosya boyutu 20MB\'ı aşamaz.');
+    json_fail(422, 'Dosya boyutu ' . (int) (BCC_ATTACHMENT_MAX_BYTES / 1048576) . ' MB\'ı aşamaz.');
 }
 
 $originalName = trim((string) $upload['name']);

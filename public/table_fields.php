@@ -358,7 +358,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <div class="tf-choice-list" data-tf-choice-list>
                                     <?php foreach ($efRows as $rowIndex => $efRow): ?>
                                         <div class="tf-choice-row" data-tf-choice-row>
-                                            <input type="text" name="choices[<?php echo (int) $rowIndex; ?>]" class="home-modal-input tf-choice-input" maxlength="150" autocomplete="off" aria-label="Seçenek adı" value="<?php echo htmlspecialchars($efRow['text'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <input type="text" name="choices[<?php echo (int) $rowIndex; ?>]" class="home-modal-input tf-choice-input" maxlength="255" autocomplete="off" aria-label="Seçenek adı" value="<?php echo htmlspecialchars($efRow['text'], ENT_QUOTES, 'UTF-8'); ?>">
                                             <span class="tf-choice-colors">
                                                 <?php foreach ($efPalette as $colorKey => $hex): ?>
                                                     <label class="tf-choice-color" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>">
@@ -377,7 +377,7 @@ require __DIR__ . '/../src/partials/home_shell_top.php';
                                 <button type="button" class="tf-choice-add" data-tf-choice-add>+ Seçenek ekle</button>
                                 <template data-tf-choice-template>
                                     <div class="tf-choice-row" data-tf-choice-row>
-                                        <input type="text" name="choices[__ROW__]" class="home-modal-input tf-choice-input" maxlength="150" autocomplete="off" aria-label="Seçenek adı" value="">
+                                        <input type="text" name="choices[__ROW__]" class="home-modal-input tf-choice-input" maxlength="255" autocomplete="off" aria-label="Seçenek adı" value="">
                                         <span class="tf-choice-colors">
                                             <?php foreach ($efPalette as $colorKey => $hex): ?>
                                                 <label class="tf-choice-color" title="<?php echo htmlspecialchars($colorKey, ENT_QUOTES, 'UTF-8'); ?>">

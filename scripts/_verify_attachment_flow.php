@@ -140,6 +140,46 @@ check('DB mime kanonik (image/png)', $row && $row['mime_type'] === 'image/png', 
 check('stored_name rastgele (32 hex + .png)', $row && preg_match('/^[0-9a-f]{32}\.png$/', $row['stored_name']) === 1, $row ? $row['stored_name'] : 'yok');
 check('dosya diskte', $row && is_file(bcc_attachment_storage_path($row['stored_name'])));
 
+echo "\nB2) Boyut siniri 40 MB (2026-10-12: 20 MB'tan yukseltildi)\n";
+
+/* Gercek PDF basligi + dolgu: finfo application/pdf gorur. Buyuk dosyalar
+   hemen silinir (satir + disk), temizlige birakilmaz. */
+$buyukPath = sys_get_temp_dir() . '/bcc_test_' . $SON . '_buyuk.pdf';
+$pdfYaz = function ($bayt) use ($buyukPath) {
+    $h = fopen($buyukPath, 'wb');
+    fwrite($h, "%PDF-1.4\n");
+    $blok = str_repeat('0', 1048576);
+    for ($yazilan = 9; $yazilan + 1048576 <= $bayt; $yazilan += 1048576) {
+        fwrite($h, $blok);
+    }
+    fwrite($h, str_repeat('0', $bayt - $yazilan));
+    fclose($h);
+    clearstatcache();
+};
+
+$pdfYaz(25 * 1048576);
+$r = istek($BASE . '/api/attachment_upload.php', array('csrf_token' => $tok, 'field_id' => $fieldId, 'record_id' => $recordId), cf($buyukPath, 'application/pdf'));
+check('25 MB PDF (eski sinirin ustu) KABUL edildi', $r['code'] === 200, $r['code'] . ' ' . substr($r['body'], 0, 90));
+$jb = json_decode($r['body'], true);
+$buyukId = ($jb && isset($jb['file']['id'])) ? (int) $jb['file']['id'] : 0;
+$buyukRow = $buyukId > 0 ? bcc_fetch_one('SELECT stored_name, file_size FROM attachments WHERE id = :i', array('i' => $buyukId)) : false;
+check('25 MB dosya diskte TAM (bayt sayisi ayni)',
+    $buyukRow && (int) $buyukRow['file_size'] === 25 * 1048576
+    && filesize(bcc_attachment_storage_path($buyukRow['stored_name'])) === 25 * 1048576,
+    $buyukRow ? $buyukRow['file_size'] : 'yok');
+if ($buyukRow) {
+    @unlink(bcc_attachment_storage_path($buyukRow['stored_name']));
+    bcc_execute('DELETE FROM attachments WHERE id = :i', array('i' => $buyukId));
+}
+
+$pdfYaz(41 * 1048576);
+$r = istek($BASE . '/api/attachment_upload.php', array('csrf_token' => $tok, 'field_id' => $fieldId, 'record_id' => $recordId), cf($buyukPath, 'application/pdf'));
+check('41 MB PDF REDDEDILDI (422)', $r['code'] === 422, $r['code'] . ' ' . substr($r['body'], 0, 90));
+check('ret mesaji siniri soyluyor (40 MB)', strpos($r['body'], '40 MB') !== false, substr($r['body'], 0, 120));
+check('reddedilen dosya icin satir OLUSMADI',
+    (int) bcc_fetch_column("SELECT COUNT(*) FROM attachments WHERE record_id = :r AND mime_type = 'application/pdf'", array('r' => $recordId)) === 0);
+@unlink($buyukPath);
+
 echo "\nC) Indirme\n";
 
 $r = istek($BASE . '/api/attachment_download.php?id=' . $attId);

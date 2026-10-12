@@ -1906,6 +1906,20 @@ function bcc_rich_text_grid_html($html)
     return $out === null ? (string) $html : $out;
 }
 
+/* value_number DECIMAL(20,6): tam kisim en fazla 14 hane. Daha buyugunu MySQL
+   (sql_mode'da STRICT yok) hata vermeden 99999999999999.999999'a KIRPIYORDU —
+   kullanici "kaydedildi" goruyor, baska bir sayi saklaniyordu. Metin
+   sinirlariyla ayni ilke: sessiz bozma yerine ret. Kolonu buyutmek cozum
+   degil: deger float olarak tasiniyor, ~15 anlamli haneden sonrasi zaten
+   guvenilmez. */
+define('BCC_NUMBER_MAX_ABS', 1e14);
+define('BCC_NUMBER_TOO_LARGE_ERROR', 'Sayı çok büyük (tam kısım en fazla 14 hane olabilir).');
+
+function bcc_number_fits_column($number)
+{
+    return is_finite($number) && abs($number) < BCC_NUMBER_MAX_ABS;
+}
+
 function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = array())
 {
     $columnMap = $GLOBALS['BCC_FIELD_VALUE_COLUMN'];
@@ -1928,8 +1942,12 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
         case 'email':
             $text = trim((string) $rawValue);
 
-            if (strlen($text) > 65535) {
-                return array('ok' => false, 'error' => 'Değer çok uzun (bu alan en fazla 65.535 bayt saklayabilir).');
+            /* 2026-10-12: sinir uzun metinle AYNI (musteri: karakter siniri
+               yalnizca uzun metinde degil, butun metin turlerinde kalksin).
+               Eski 65.535, kolonun TEXT oldugu gunden kalmaydi; value_text
+               2026-10-08'den beri MEDIUMTEXT. */
+            if (strlen($text) > BCC_RICH_TEXT_MAX_BYTES) {
+                return array('ok' => false, 'error' => 'Değer çok uzun (bu alan en fazla ' . number_format(BCC_RICH_TEXT_MAX_BYTES, 0, ',', '.') . ' bayt saklayabilir).');
             }
 
             return array('ok' => true, 'column' => $column, 'value' => $text === '' ? null : $text);
@@ -1953,6 +1971,9 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
             if (!is_numeric($raw)) {
                 return array('ok' => false, 'error' => 'Geçersiz sayı.');
             }
+            if (!bcc_number_fits_column((float) $raw)) {
+                return array('ok' => false, 'error' => BCC_NUMBER_TOO_LARGE_ERROR);
+            }
 
             return array('ok' => true, 'column' => $column, 'value' => (float) $raw);
 
@@ -1964,6 +1985,9 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
             }
             if (!is_numeric($raw)) {
                 return array('ok' => false, 'error' => 'Geçersiz sayı.');
+            }
+            if (!bcc_number_fits_column(((float) $raw) / 100)) {
+                return array('ok' => false, 'error' => BCC_NUMBER_TOO_LARGE_ERROR);
             }
 
             return array('ok' => true, 'column' => $column, 'value' => ((float) $raw) / 100);

@@ -14,6 +14,8 @@ bcc_test_purge_own_audit();
 define('PROBE_MAIL', 'celltext.owner@bcc-test.local');
 define('PROBE_TEAM', 'ZZ Hucre Metin Siniri');
 define('TEXT_MAX', 65535);
+/* 2026-10-12: tek satir metin / url / e-posta / telefon siniri uzun metinle ayni. */
+define('KISA_MAX', BCC_RICH_TEXT_MAX_BYTES);
 
 $gecti = 0;
 $kaldi = 0;
@@ -86,14 +88,42 @@ check('C) turkce karakterler korunuyor', $turkce === '<b>' . "\xC5\x9F\xC4\x9F\x
 echo "\nD) Metin tipleri: sinir asilinca REDDEDILIYOR (sessizce kesilmiyor)\n";
 
 foreach (array('single_line_text', 'url', 'email', 'phone') as $tip) {
-    $r = normalize_cell_value($tip, null, str_repeat('a', TEXT_MAX + 10));
-    check('D) ' . $tip . ' sinir ustunu reddediyor', $r['ok'] === false, json_encode($r));
+    $r = normalize_cell_value($tip, null, str_repeat('a', KISA_MAX + 10));
+    check('D) ' . $tip . ' sinir ustunu reddediyor', $r['ok'] === false, substr(json_encode($r), 0, 200));
 
-    $r2 = normalize_cell_value($tip, null, str_repeat('a', TEXT_MAX));
-    check('D) ' . $tip . ' TAM sinirdaki degeri KABUL ediyor', $r2['ok'] === true);
+    $r2 = normalize_cell_value($tip, null, str_repeat('a', KISA_MAX));
+    check('D) ' . $tip . ' TAM sinirdaki degeri KABUL ediyor', $r2['ok'] === true && strlen((string) $r2['value']) === KISA_MAX);
+
+    $r3 = normalize_cell_value($tip, null, str_repeat('a', TEXT_MAX + 10));
+    check('D) ' . $tip . ' ESKI siniri (65.535) asan degeri artik KABUL ediyor',
+        $r3['ok'] === true && strlen((string) $r3['value']) === TEXT_MAX + 10);
 }
 $r = normalize_cell_value('single_line_text', null, str_repeat("\xF0\x9F\x98\x80", 20000));
-check('D) cok baytli (80.000 bayt) deger de reddediliyor', $r['ok'] === false);
+check('D) cok baytli (80.000 bayt) deger KABUL ediliyor, bozulmadan',
+    $r['ok'] === true && $r['value'] === str_repeat("\xF0\x9F\x98\x80", 20000));
+$r = normalize_cell_value('single_line_text', null, str_repeat("\xF0\x9F\x98\x80", 250000));
+check('D) cok baytli sinir ustu (1.000.000 bayt) deger reddediliyor (bayt sayiliyor, karakter degil)', $r['ok'] === false);
+
+echo "\nH) Sayi tipleri: kolona sigmayan sayi REDDEDILIYOR (sessizce kirpilmiyor)\n";
+
+foreach (array('number', 'currency') as $tip) {
+    $r = normalize_cell_value($tip, null, '99999999999999');
+    check('H) ' . $tip . ' 14 haneli sayiyi KABUL ediyor', $r['ok'] === true && $r['value'] === 99999999999999.0);
+    $r = normalize_cell_value($tip, null, '-99999999999999.5');
+    check('H) ' . $tip . ' negatif 14 haneli sayiyi KABUL ediyor', $r['ok'] === true);
+    $r = normalize_cell_value($tip, null, '100000000000000');
+    check('H) ' . $tip . ' 15 haneli sayiyi reddediyor', $r['ok'] === false && strpos($r['error'], '14 hane') !== false, json_encode($r));
+    $r = normalize_cell_value($tip, null, '-123456789012345678901234');
+    check('H) ' . $tip . ' cok buyuk negatif sayiyi reddediyor', $r['ok'] === false);
+    $r = normalize_cell_value($tip, null, '1e999');
+    check('H) ' . $tip . ' sonsuza tasan degeri reddediyor', $r['ok'] === false);
+    $r = normalize_cell_value($tip, null, '1234.5');
+    check('H) ' . $tip . ' siradan sayi degismedi', $r['ok'] === true && $r['value'] === 1234.5);
+}
+$r = normalize_cell_value('percent', null, '50');
+check('H) percent siradan deger degismedi (50 -> 0.5)', $r['ok'] === true && $r['value'] === 0.5);
+$r = normalize_cell_value('percent', null, '10000000000000000');
+check('H) percent kolona sigmayan degeri reddediyor', $r['ok'] === false);
 
 echo "\nF) Buyuk liste: 7.000 / 10.000 satir KAYIPSIZ ve hizli\n";
 
@@ -311,12 +341,27 @@ check('E) toplu yapistirmanin 3 hucresi de TAM (600.000 bayt)',
 
 $x = istek($BASE . '/api/cell_update.php', http_build_query(array(
     'csrf_token' => $csrf, 'field_id' => $baslikFieldId, 'record_id' => $recordId,
-    'value' => str_repeat('a', TEXT_MAX + 100),
+    'value' => str_repeat('a', KISA_MAX + 100),
 )));
 check('E) asiri uzun tek satir metin 422 ile REDDEDILDI', $x['code'] === 422, 'HTTP ' . $x['code']);
 $kalan = bcc_fetch_column('SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f',
     array(':r' => $recordId, ':f' => $baslikFieldId));
 check('E) reddedilen deger DB ye hic yazilmadi', $kalan === false || $kalan === null, var_export($kalan, true));
+
+$uzunBaslik = str_repeat('Tek satir metin 0123456789 ', 20000) . 'kuyruk';
+$x = istek($BASE . '/api/cell_update.php', http_build_query(array(
+    'csrf_token' => $csrf, 'field_id' => $baslikFieldId, 'record_id' => $recordId,
+    'value' => $uzunBaslik,
+)));
+check('E) tek satir metin: ' . strlen($uzunBaslik) . ' baytlik deger (eski sinirin 8 kati) KAYDEDILDI', $x['code'] === 200,
+    'HTTP ' . $x['code'] . ' ' . substr($x['body'], 0, 160));
+$saklananBaslik = bcc_fetch_column('SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f',
+    array(':r' => $recordId, ':f' => $baslikFieldId));
+check('E) tek satir metin veritabanindan BIREBIR geri okunuyor', $saklananBaslik === $uzunBaslik,
+    strlen((string) $saklananBaslik) . ' bayt');
+$g2 = istek($BASE . '/grid.php?table_id=' . $tableId);
+check('E) grid sayfasi o uzun tek satir hucreyle ACILIYOR', $g2['code'] === 200 && strpos($g2['body'], 'kuyruk') !== false,
+    'HTTP ' . $g2['code'] . ', ' . strlen($g2['body']) . ' bayt');
 
 echo "\n" . str_repeat('-', 56) . "\n";
 echo "GECTI: $gecti   KALDI: $kaldi\n";

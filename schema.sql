@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS cell_values (
     id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
     record_id     INT UNSIGNED NOT NULL,
     field_id      INT UNSIGNED NOT NULL,
-    value_text    TEXT DEFAULT NULL,
+    value_text    MEDIUMTEXT DEFAULT NULL,
     value_number  DECIMAL(20,6) DEFAULT NULL,
     value_date    DATETIME DEFAULT NULL,
     value_json    JSON DEFAULT NULL,

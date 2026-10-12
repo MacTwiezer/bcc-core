@@ -14,9 +14,17 @@ function bcc_xlsx_col_letter($index)
     return $letter;
 }
 
+/* Excel bir hucrede en fazla 32.767 karakter kabul eder; fazlasi dosyayi
+   "onarilmasi gereken" hale getirir. Uzun metin artik bundan uzun olabilir. */
+define('BCC_XLSX_MAX_CELL_CHARS', 32767);
+
 function bcc_xlsx_escape($text)
 {
     $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string) $text);
+
+    if (strlen($text) > BCC_XLSX_MAX_CELL_CHARS && mb_strlen($text, 'UTF-8') > BCC_XLSX_MAX_CELL_CHARS) {
+        $text = mb_substr($text, 0, BCC_XLSX_MAX_CELL_CHARS - 1, 'UTF-8') . '…';
+    }
 
     return htmlspecialchars($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }

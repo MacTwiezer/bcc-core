@@ -31,7 +31,10 @@ $kolon = null;
 foreach (bcc_fetch_all('SHOW COLUMNS FROM cell_values') as $c) {
     if ($c['Field'] === 'value_text') { $kolon = strtolower($c['Type']); }
 }
-check('A) value_text hala TEXT (65.535 bayt)', $kolon === 'text', (string) $kolon);
+check('A) value_text MEDIUMTEXT (uzun metin 65.535 bayti asabiliyor)', $kolon === 'mediumtext', (string) $kolon);
+$paket = (int) bcc_fetch_column('SELECT @@GLOBAL.max_allowed_packet');
+check('A) uzun metin siniri sunucunun max_allowed_packet degerinin ALTINDA',
+    BCC_RICH_TEXT_MAX_BYTES + 4096 < $paket, BCC_RICH_TEXT_MAX_BYTES . ' bayt / paket ' . $paket);
 $mode = (string) bcc_fetch_column('SELECT @@SESSION.sql_mode');
 check('A) STRICT kapali -> tasma HATA VERMEZ, sessizce keser (bu yuzden kod korumali)',
     stripos($mode, 'STRICT') === false, $mode);
@@ -39,15 +42,21 @@ check('A) STRICT kapali -> tasma HATA VERMEZ, sessizce keser (bu yuzden kod koru
 echo "\nB) Zengin metin: hicbir sekil kolonu tasiramiyor\n";
 
 $sekiller = array(
-    'duz ascii'      => str_repeat('a', 20000),
-    'turkce'         => str_repeat("\xC5\x9F", 20000),
-    'emoji'          => str_repeat("\xF0\x9F\x98\x80", 20000),
-    'ham ampersand'  => str_repeat('&', 20000),
-    'emoji+baglanti' => str_repeat("\xF0\x9F\x98\x80", 16380) . '<a href="https://ornek.example/adres">tikla</a>kuyruk',
+    'duz ascii'      => str_repeat('a', 1200000),
+    'turkce'         => str_repeat("\xC5\x9F", 600000),
+    'emoji'          => str_repeat("\xF0\x9F\x98\x80", 300000),
+    'ham ampersand'  => str_repeat('&', 300000),
+    'emoji+baglanti' => str_repeat("\xF0\x9F\x98\x80", 224990) . '<a href="https://ornek.example/adres">tikla</a>kuyruk',
+    'ham girdi siniri ustu' => str_repeat('a ', 2100000),
 );
 foreach ($sekiller as $ad => $girdi) {
-    $c = (string) bcc_sanitize_rich_text($girdi);
-    check('B) "' . $ad . '" ciktisi kolona SIGIYOR', strlen($c) <= TEXT_MAX, strlen($c) . ' bayt');
+    $kirpildi = null;
+    $c = (string) bcc_sanitize_rich_text($girdi, $kirpildi);
+    check('B) "' . $ad . '" ciktisi sinira SIGIYOR', strlen($c) <= BCC_RICH_TEXT_MAX_BYTES, strlen($c) . ' bayt');
+    check('B) "' . $ad . '" kirpildigi BILDIRILIYOR', $kirpildi === true);
+    $r = normalize_cell_value('long_text', null, $girdi);
+    check('B) "' . $ad . '" hucreye yazilirken REDDEDILIYOR (sessizce kesilmiyor)',
+        $r['ok'] === false && strpos($r['error'], '900.000') !== false, json_encode($r, JSON_UNESCAPED_UNICODE));
     check('B) "' . $ad . '" ciktisi gecerli UTF-8', mb_check_encoding($c, 'UTF-8'));
     check('B) "' . $ad . '" ciktisinda kapanmamis <a> YOK',
         substr_count($c, '<a ') === substr_count($c, '</a>'),
@@ -85,6 +94,74 @@ foreach (array('single_line_text', 'url', 'email', 'phone') as $tip) {
 }
 $r = normalize_cell_value('single_line_text', null, str_repeat("\xF0\x9F\x98\x80", 20000));
 check('D) cok baytli (80.000 bayt) deger de reddediliyor', $r['ok'] === false);
+
+echo "\nF) Buyuk liste: 7.000 / 10.000 satir KAYIPSIZ ve hizli\n";
+
+function liste_satirlari($n)
+{
+    $satirlar = array();
+    for ($i = 1; $i <= $n; $i++) {
+        $satirlar[] = "\xC5\x9Ei\xC5\x9Fli Ma\xC4\x9Fazas\xC4\xB1 - \xC3\xBCr\xC3\xBCn kodu 123456 & a\xC3\xA7\xC4\xB1klama sat\xC4\xB1r\xC4\xB1 " . $i;
+    }
+    return $satirlar;
+}
+
+function kacir($metin)
+{
+    return htmlspecialchars($metin, ENT_QUOTES, 'UTF-8');
+}
+
+foreach (array(7000, 10000) as $adet) {
+    $kacirilmis = array_map('kacir', liste_satirlari($adet));
+    $beklenen = implode('<br>', $kacirilmis);
+
+    foreach (array(
+        '<br>'  => implode('<br>', $kacirilmis),
+        '<div>' => '<div>' . implode('</div><div>', $kacirilmis) . '</div>',
+        '<p>'   => '<p>' . implode('</p><p>', $kacirilmis) . '</p>',
+    ) as $bicim => $girdi) {
+        $t = microtime(true);
+        $r = normalize_cell_value('long_text', null, $girdi);
+        $sure = microtime(true) - $t;
+        check("F) $adet satir ($bicim) KABUL ediliyor", $r['ok'] === true, $r['ok'] ? '' : $r['error']);
+        check("F) $adet satir ($bicim) birebir saklaniyor (" . strlen($beklenen) . ' bayt, ilk ve son satir dahil)',
+            $r['ok'] && $r['value'] === $beklenen);
+        check("F) $adet satir ($bicim) 2 saniyenin altinda", $sure < 2.0, round($sure, 2) . ' sn');
+    }
+}
+
+$r = normalize_cell_value('long_text', null, str_repeat('a', 20001));
+check('F) eski sinirin (20.000 karakter) hemen ustu artik TAM saklaniyor', $r['ok'] && strlen((string) $r['value']) === 20001);
+$r = normalize_cell_value('long_text', null, str_repeat("\xC5\x9F", 40000));
+check('F) eski bayt sinirinin (60.000) ustu artik TAM saklaniyor', $r['ok'] && strlen((string) $r['value']) === 80000);
+$r = normalize_cell_value('long_text', null, str_repeat('a', BCC_RICH_TEXT_MAX_BYTES));
+check('F) TAM sinirdaki deger KABUL ediliyor', $r['ok'] === true && strlen((string) $r['value']) === BCC_RICH_TEXT_MAX_BYTES);
+$r = normalize_cell_value('long_text', null, str_repeat('a', BCC_RICH_TEXT_MAX_BYTES + 1));
+check('F) sinirin 1 bayt ustu REDDEDILIYOR', $r['ok'] === false);
+
+$eskiIfade = '#<br>(?:\s*</(?:strong|b|em|i|a|span)>)*\s*$#';
+$parcalar = array('<br>', '</b>', '</strong>', '</em>', '</i>', '</a>', '</span>', ' ', "\n", "\t", "\r", "\x0B", "\x0C", 'x', '<', '>', '/', 'br', '</div>', '<b>', '</u>', "\xC5\x9F", '');
+mt_srand(20261008);
+$fark = 0;
+$ornek = '';
+for ($i = 0; $i < 20000; $i++) {
+    $m = '';
+    $uz = mt_rand(0, 7);
+    for ($j = 0; $j < $uz; $j++) { $m .= $parcalar[mt_rand(0, count($parcalar) - 1)]; }
+    if (bcc_rich_text_ends_with_break($m) !== (bool) preg_match($eskiIfade, $m)) { $fark++; $ornek = $m; }
+}
+check('F) satir sonu denetimi eski duzenli ifadeyle AYNI sonucu veriyor (20.000 rastgele kuyruk)',
+    $fark === 0, $fark . ' fark, ornek: ' . json_encode($ornek));
+
+echo "\nG) Excel disa aktarimi: hucre 32.767 karakteri asmiyor\n";
+
+require_once __DIR__ . '/../src/xlsx_writer.php';
+$x = bcc_xlsx_escape(str_repeat("\xC5\x9F", 50000));
+check('G) 50.000 karakterlik hucre 32.767 karaktere iniyor', mb_strlen($x, 'UTF-8') === 32767, (string) mb_strlen($x, 'UTF-8'));
+check('G) kisaltilan hucre uc nokta ile bitiyor ve gecerli UTF-8', substr($x, -3) === "\xE2\x80\xA6" && mb_check_encoding($x, 'UTF-8'));
+$x = bcc_xlsx_escape(str_repeat("\xC5\x9F", 32767));
+check('G) TAM sinirdaki hucreye DOKUNULMUYOR', $x === str_repeat("\xC5\x9F", 32767));
+check('G) kisa hucreye DOKUNULMUYOR', bcc_xlsx_escape('Merhaba & <d>') === 'Merhaba &amp; &lt;d&gt;');
 
 echo "\nE) CANLI: DB'ye yazilan ile geri okunan BIREBIR ayni\n";
 
@@ -171,6 +248,66 @@ check('E) saklanan deger gecerli UTF-8', mb_check_encoding($saklanan, 'UTF-8'));
 check('E) saklanan degerde kapanmamis <a> YOK',
     substr_count($saklanan, '<a ') === substr_count($saklanan, '</a>'),
     substr($saklanan, -40));
+
+check('E) eski kolonu tasiran deger (65.615 bayt) artik KISALTILMADAN saklaniyor',
+    substr($saklanan, -6) === 'kuyruk' && strlen($saklanan) > TEXT_MAX, strlen($saklanan) . ' bayt');
+
+$liste = '<div>' . implode('</div><div>', array_map('kacir', liste_satirlari(10000))) . '</div>';
+$t = microtime(true);
+$x = istek($BASE . '/api/cell_update.php', http_build_query(array(
+    'csrf_token' => $csrf, 'field_id' => $notFieldId, 'record_id' => $recordId, 'value' => $liste,
+)));
+$sure = microtime(true) - $t;
+check('E) 10.000 satirlik liste HTTP ile kaydedildi', $x['code'] === 200, 'HTTP ' . $x['code'] . ' ' . substr($x['body'], 0, 160));
+check('E) kayit 5 saniyenin altinda', $sure < 5.0, round($sure, 2) . ' sn');
+$saklanan = (string) bcc_fetch_column(
+    'SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f',
+    array(':r' => $recordId, ':f' => $notFieldId)
+);
+$r = normalize_cell_value('long_text', null, $liste);
+check('E) DB deki liste BIREBIR ayni (' . strlen($saklanan) . ' bayt, 10.000 satir)',
+    $saklanan === $r['value'] && substr_count($saklanan, '<br>') === 9999,
+    'DB ' . strlen($saklanan) . ' / beklenen ' . strlen((string) $r['value']));
+check('E) listenin SON satiri yerinde', substr($saklanan, -6) === ' 10000', substr($saklanan, -30));
+
+$t = microtime(true);
+$g = istek($BASE . '/grid.php?table_id=' . $tableId);
+$sure = microtime(true) - $t;
+check('E) grid sayfasi bu hucreyle ACILIYOR', $g['code'] === 200 && strpos($g['body'], ' 10000') !== false,
+    'HTTP ' . $g['code'] . ', ' . strlen($g['body']) . ' bayt');
+check('E) grid sayfasi 5 saniyenin altinda', $sure < 5.0, round($sure, 2) . ' sn');
+echo '       (grid sayfasi ' . round(strlen($g['body']) / 1048576, 2) . " MB)\n";
+
+$x = istek($BASE . '/api/cell_update.php', http_build_query(array(
+    'csrf_token' => $csrf, 'field_id' => $notFieldId, 'record_id' => $recordId,
+    'value' => str_repeat('a', BCC_RICH_TEXT_MAX_BYTES + 100),
+)));
+check('E) sinir ustu uzun metin 422 ile REDDEDILDI', $x['code'] === 422, 'HTTP ' . $x['code'] . ' ' . substr($x['body'], 0, 160));
+check('E) ret mesaji siniri soyluyor', strpos($x['body'], '900.000') !== false, substr($x['body'], 0, 200));
+$sonra = (string) bcc_fetch_column(
+    'SELECT value_text FROM cell_values WHERE record_id = :r AND field_id = :f',
+    array(':r' => $recordId, ':f' => $notFieldId)
+);
+check('E) reddedilen deger eski icerigi BOZMADI', $sonra === $saklanan);
+
+$bx = istek($BASE . '/api/cells_bulk_update.php', http_build_query(array(
+    'csrf_token' => $csrf, 'table_id' => $tableId,
+    'payload' => json_encode(array('updates' => array(), 'creates' => array(
+        array(array('f' => $notFieldId, 'v' => str_repeat('b', 600000))),
+        array(array('f' => $notFieldId, 'v' => str_repeat('c', 600000))),
+        array(array('f' => $notFieldId, 'v' => str_repeat('d', 600000))),
+    ))),
+)));
+check('E) toplu yapistirma: 3 x 600.000 baytlik hucre (tek pakete sigmaz) KAYDEDILDI', $bx['code'] === 200,
+    'HTTP ' . $bx['code'] . ' ' . substr($bx['body'], 0, 160));
+$boylar = bcc_fetch_all(
+    'SELECT LENGTH(cv.value_text) AS b FROM cell_values cv JOIN records r ON r.id = cv.record_id
+     WHERE r.table_id = :t AND cv.field_id = :f AND r.id <> :r',
+    array(':t' => $tableId, ':f' => $notFieldId, ':r' => $recordId)
+);
+check('E) toplu yapistirmanin 3 hucresi de TAM (600.000 bayt)',
+    count($boylar) === 3 && (int) $boylar[0]['b'] === 600000 && (int) $boylar[1]['b'] === 600000 && (int) $boylar[2]['b'] === 600000,
+    json_encode($boylar));
 
 $x = istek($BASE . '/api/cell_update.php', http_build_query(array(
     'csrf_token' => $csrf, 'field_id' => $baslikFieldId, 'record_id' => $recordId,

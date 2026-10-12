@@ -1731,23 +1731,34 @@ function bcc_external_link_icon_svg()
         . '</svg>';
 }
 
-define('BCC_RICH_TEXT_MAX_CHARS', 20000);
-define('BCC_RICH_TEXT_MAX_BYTES', 60000);
+/* 2026-10-08: Uzun metin siniri 20.000 karakter / 60.000 bayttan buraya
+   cikarildi (musteri istegi: 7-10 bin satirlik liste tek hucreye girebilsin).
+   Kolon artik MEDIUMTEXT (16 MB), yani kolon degil PAKET siniri belirleyici:
+   deger tek bir sorgu paketinde gidip geliyor ve MySQL/MariaDB'nin en kucuk
+   varsayilan max_allowed_packet'i 1 MB (XAMPP'ta da oyle). 900.000 bayt o
+   sinirin altinda kalir; daha fazlasi icin once sunucuda max_allowed_packet
+   yukseltilmeli. MAX_CHARS yalnizca HAM girdi icin bir ust sinir (yapistirilan
+   HTML temizlenince kuculur). */
+define('BCC_RICH_TEXT_MAX_CHARS', 4000000);
+define('BCC_RICH_TEXT_MAX_BYTES', 900000);
 
-function bcc_sanitize_rich_text($html)
+function bcc_sanitize_rich_text($html, &$truncated = null)
 {
+    $truncated = false;
     $html = trim((string) $html);
     if ($html === '') {
         return null;
     }
     if (mb_strlen($html, 'UTF-8') > BCC_RICH_TEXT_MAX_CHARS) {
         $html = mb_substr($html, 0, BCC_RICH_TEXT_MAX_CHARS, 'UTF-8');
+        $truncated = true;
     }
 
     $output = bcc_sanitize_rich_text_pass($html);
 
     $tur = 0;
     while ($output !== null && strlen($output) > BCC_RICH_TEXT_MAX_BYTES && $tur < 8) {
+        $truncated = true;
         $karakter = mb_strlen($html, 'UTF-8');
         if ($karakter <= 1) {
             break;
@@ -1794,9 +1805,15 @@ function bcc_sanitize_rich_text_children($node, $allowedTags)
     $blockTags = array('div', 'p', 'li', 'ul', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre');
 
     $out = '';
+    $hasContent = false;
     foreach (iterator_to_array($node->childNodes) as $child) {
         if ($child->nodeType === XML_ELEMENT_NODE && in_array(strtolower($child->nodeName), $blockTags, true)) {
-            if (trim($out) !== '' && !bcc_rich_text_ends_with_break($out)) {
+            /* $out yalnizca buyur: bir kez dolu goruldukten sonra her blokta
+               bastan trim() etmek binlerce satirda karesel zamana cikiyordu. */
+            if (!$hasContent && trim($out) !== '') {
+                $hasContent = true;
+            }
+            if ($hasContent && !bcc_rich_text_ends_with_break($out)) {
                 $out .= '<br>';
             }
             $inner = bcc_rich_text_strip_trailing_break(bcc_sanitize_rich_text_children($child, $allowedTags));
@@ -1811,7 +1828,22 @@ function bcc_sanitize_rich_text_children($node, $allowedTags)
 
 function bcc_rich_text_ends_with_break($html)
 {
-    return (bool) preg_match('#<br>(?:\s*</(?:strong|b|em|i|a|span)>)*\s*$#', $html);
+    /* '#<br>(?:\s*</(?:strong|b|em|i|a|span)>)*\s*$#' ile ayni sonuc, ama
+       yalnizca kuyruga bakar: o ifade her cagrida metnin tamamini tariyordu
+       ve 10 bin <div> satirli bir yapistirmada saniyeler suruyordu. */
+    $i = strlen($html);
+    while (true) {
+        while ($i > 0 && strpos(" \t\n\r\f\v", $html[$i - 1]) !== false) {
+            $i--;
+        }
+        $from = max(0, $i - 9);
+        if (!preg_match('#</(?:strong|b|em|i|a|span)>$#', substr($html, $from, $i - $from), $m)) {
+            break;
+        }
+        $i -= strlen($m[0]);
+    }
+
+    return $i >= 4 && substr($html, $i - 4, 4) === '<br>';
 }
 
 function bcc_rich_text_strip_trailing_break($html)
@@ -1903,7 +1935,13 @@ function normalize_cell_value($fieldType, $optionsJson, $rawValue, $usersById = 
             return array('ok' => true, 'column' => $column, 'value' => $text === '' ? null : $text);
 
         case 'long_text':
-            return array('ok' => true, 'column' => $column, 'value' => bcc_sanitize_rich_text($rawValue));
+            $richText = bcc_sanitize_rich_text($rawValue, $richTextTruncated);
+
+            if ($richTextTruncated) {
+                return array('ok' => false, 'error' => 'Metin çok uzun (bu alan en fazla ' . number_format(BCC_RICH_TEXT_MAX_BYTES, 0, ',', '.') . ' bayt saklayabilir). Metni birden fazla kayda bölün.');
+            }
+
+            return array('ok' => true, 'column' => $column, 'value' => $richText);
 
         case 'number':
         case 'currency':

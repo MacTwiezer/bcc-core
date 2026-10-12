@@ -12,6 +12,7 @@ const BCC_PASTE_MAX_COLS = 500;
 const BCC_PASTE_MAX_CELLS = 100000;
 
 const BCC_PASTE_CHUNK = 200;
+const BCC_PASTE_CHUNK_BYTES = 900000;
 
 $tableId = isset($_POST['table_id']) ? (int) $_POST['table_id'] : 0;
 $rawPayload = isset($_POST['payload']) ? (string) $_POST['payload'] : '';
@@ -249,11 +250,21 @@ try {
     $written = 0;
     foreach ($byColumn as $column => $cells) {
         $buffer = array();
+        $bufferBytes = 0;
         foreach ($cells as $cell) {
+            /* Bir toplu INSERT tek pakette gider: buyuk metin hucreleri ayni
+               pakette birikip max_allowed_packet'i (en az 1 MB) asmasin. */
+            $cellBytes = is_string($cell['value']) ? strlen($cell['value']) : 0;
+            if (!empty($buffer) && $bufferBytes + $cellBytes > BCC_PASTE_CHUNK_BYTES) {
+                bcc_paste_flush($column, $buffer);
+                $bufferBytes = 0;
+            }
             $buffer[] = $cell;
+            $bufferBytes += $cellBytes;
             $written++;
             if (count($buffer) >= BCC_PASTE_CHUNK) {
                 bcc_paste_flush($column, $buffer);
+                $bufferBytes = 0;
             }
         }
         bcc_paste_flush($column, $buffer);

@@ -931,6 +931,24 @@ kaldırıldı (§25).
   759 KB'lık tek hücre sayfayı 2,4 MB yapıyor.
   `_verify_cell_text_limits.php` 43 → **98/98**. Günlük 2026-10-08 §1.
 
+### 2026-10-12 turu — Slack kanalı yalnızca bağlandığı tablo
+
+- **Takım-geneli "yedek kanal" kaldırıldı** (müşteri: "kanala hangi tablo
+  bağlandıysa yalnızca onun değişiklikleri gitsin"). Kök neden:
+  `bcc_find_slack_webhook()` kendi webhook'u olmayan her tabloyu
+  `slack_webhooks.table_id IS NULL` satırına düşürüyordu; aynı base'in diğer
+  sekmeleri ve ekibin diğer base'leri tek kanala akıyordu. Artık yalnızca
+  `table_id = :table_id` (ve o tablonun koşullu kuralları) çözülür.
+  ⚠️ **Davranış değişti:** eski `table_id IS NULL` satırları kendi başına
+  **hiçbir tablo için tetiklenmez**. Slack ayarları sayfasında "Eski
+  takım-geneli webhook" kartında listelenir; Owner **"Bu tabloya bağla"** ile
+  bir tabloya atar ya da siler (`action=bind_team_webhook`, denetim
+  `slack.webhook_bind`). Yeni takım-geneli webhook oluşturulamaz.
+  ⚠️ **Yan etki:** "yeni tablo oluşturuldu" bildirimi artık pratikte gitmez —
+  yeni tablonun bağlı webhook'u olamaz (çağrılar duruyor, zararsız).
+  **DDL yok.** Canlıda deploy öncesi kontrol: CANLIYA-ALMA §3.2.4.
+  Test: `_verify_slack_table_scope.php` **52/52** (yeni). Günlük 2026-10-12 §1.
+
 ---
 
 ## 6. Kalan İşler

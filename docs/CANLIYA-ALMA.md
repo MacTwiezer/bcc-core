@@ -158,6 +158,31 @@ yükseltmek isterseniz önce `max_allowed_packet` büyütülür, sonra
 `src/schema.php`'deki `BCC_RICH_TEXT_MAX_BYTES` ve
 `public/api/cells_bulk_update.php`'deki `BCC_PASTE_CHUNK_BYTES`.
 
+#### 3.2.4 Kontrol — takım-geneli Slack webhook'ları (2026-10-12)
+
+DDL yok, ama **davranış değişiyor**: takım-geneli "yedek kanal" kaldırıldı.
+Bir Slack kanalına artık yalnızca bağlandığı tablonun bildirimi gider;
+`table_id` boş olan eski webhook'lar deploy'dan sonra **hiçbir tablo için
+tetiklenmez**. Deploy'dan ÖNCE hangileri etkileniyor bakın:
+
+```sql
+SELECT sw.id, t.name AS ekip, sw.channel_name, sw.is_active
+FROM slack_webhooks sw JOIN teams t ON t.id = sw.team_id
+WHERE sw.table_id IS NULL;
+```
+
+Liste boşsa yapılacak bir şey yok. Doluysa her satır için, kanalın hangi
+tabloyu izlemesi gerektiğini ekip sahibine sorun; sonra iki yoldan biri:
+
+- **Arayüzden (önerilen):** deploy'dan sonra Owner ilgili tabloda "Alanları
+  yönet → Slack bildirimleri → Eski takım-geneli webhook → **Bu tabloya
+  bağla**".
+- **SQL ile:** `UPDATE slack_webhooks SET table_id = <tablo_id> WHERE id = <webhook_id>;`
+  (tablo o webhook'un ekibine ait olmalı).
+
+**Atlanırsa** hata olmaz, ama o kanala bağlama yapılana kadar **hiç bildirim
+gitmez** ve arada biriken değişiklikler sonradan da gönderilmez.
+
 ### 3.3 Yapılandırma dosyalarını oluştur
 
 Bu dosyalar git'e **girmez** (`.gitignore`), her sunucuda elle oluşturulur:

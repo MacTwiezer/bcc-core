@@ -948,6 +948,19 @@ kaldırıldı (§25).
   yeni tablonun bağlı webhook'u olamaz (çağrılar duruyor, zararsız).
   **DDL yok.** Canlıda deploy öncesi kontrol: CANLIYA-ALMA §3.2.4.
   Test: `_verify_slack_table_scope.php` **52/52** (yeni). Günlük 2026-10-12 §1.
+- **Karakter sınırı bütün metin türlerinde 900.000 bayt** (müşteri: sınır
+  yalnızca uzun metinde değil, tüm türlerde kalksın). Tek satır metin, URL,
+  e-posta ve telefon 65.535 bayttan (`TEXT` kolonundan kalma)
+  `BCC_RICH_TEXT_MAX_BYTES`'a çıktı; aşınca yine 422. Diğer türler serbest
+  metin değil, sınır kavramı yok. DDL yok (§3.2.3 yeterli).
+  `_verify_cell_text_limits.php` 98 → **106/106**. Günlük 2026-10-12 §4.
+- **Sayı / para / yüzde: kolona sığmayan sayı artık reddediliyor.**
+  `value_number DECIMAL(20,6)` tam kısımda 14 hane alıyor; fazlasını MySQL
+  sessizce `99999999999999.999999`'a kırpıyordu. ⚠️ **Davranış değişti:** 422
+  ("Sayı çok büyük"). Sınır bilerek kaldırılmadı (float hassasiyeti ~15
+  hane). 20 alan tipinin sınır taraması günlükte; seçenek adı (150) ve dosya
+  eki (20 MB) sınırlarına dokunulmadı.
+  `_verify_cell_text_limits.php` → **120/120**. Günlük 2026-10-12 §5.
 
 ---
 

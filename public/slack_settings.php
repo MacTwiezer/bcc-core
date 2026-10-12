@@ -23,7 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'save_webhook') {
-        $scope = (isset($_POST['scope']) && $_POST['scope'] === 'team') ? 'team' : 'table';
+        /* Takim-geneli webhook 2026-10-12'de kaldirildi (bkz. bcc_find_slack_webhook):
+           yenisi olusturulamaz, eskisi duzenlenemez — yalnizca bir tabloya
+           baglanabilir (bind_team_webhook) ya da silinebilir. */
+        $scope = 'table';
         $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
         $webhookUrlRaw = isset($_POST['webhook_url']) ? trim($_POST['webhook_url']) : '';
         $channelNameRaw = isset($_POST['channel_name']) ? trim($_POST['channel_name']) : '';
@@ -31,17 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $existing = null;
         if ($webhookIdRaw > 0) {
-            $existing = ($scope === 'team')
-                ? bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE id = :id AND team_id = :team_id AND table_id IS NULL LIMIT 1', array('id' => $webhookIdRaw, 'team_id' => $table['team_id']))
-                : bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE id = :id AND table_id = :table_id LIMIT 1', array('id' => $webhookIdRaw, 'table_id' => $table['id']));
+            $existing = bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE id = :id AND table_id = :table_id LIMIT 1', array('id' => $webhookIdRaw, 'table_id' => $table['id']));
             $existing = $existing !== false ? $existing : null;
 
             if (!$existing) {
-                bcc_error_page('Webhook bulunamadı', 'Bu webhook bu tabloya ya da ekibe ait değil.', 404);
+                bcc_error_page('Webhook bulunamadı', 'Bu webhook bu tabloya ait değil.', 404);
             }
-        } elseif ($scope === 'team') {
-            $existing = bcc_fetch_one('SELECT id, webhook_url FROM slack_webhooks WHERE team_id = :team_id AND table_id IS NULL LIMIT 1', array('team_id' => $table['team_id']));
-            $existing = $existing !== false ? $existing : null;
         }
 
         if ($webhookUrlRaw === '' && !$existing) {
@@ -67,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'INSERT INTO slack_webhooks (team_id, table_id, webhook_url, channel_name, is_active) VALUES (:team_id, :table_id, :url, :channel, :active)',
                     array(
                         'team_id' => $table['team_id'],
-                        'table_id' => $scope === 'team' ? null : $table['id'],
+                        'table_id' => $table['id'],
                         'url' => $webhookUrlRaw,
                         'channel' => $channelName,
                         'active' => $isActive,
@@ -76,6 +74,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 log_audit('slack.webhook_create', 'table', $table['id'], array('scope' => $scope, 'channel_name' => $channelName), $table['team_id']);
                 $success = 'Webhook kaydedildi.';
             }
+        }
+    } elseif ($action === 'bind_team_webhook') {
+        $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
+
+        $webhook = bcc_fetch_one('SELECT id FROM slack_webhooks WHERE id = :id AND team_id = :team_id AND table_id IS NULL LIMIT 1', array('id' => $webhookIdRaw, 'team_id' => $table['team_id']));
+
+        if (!$webhook) {
+            bcc_error_page('Webhook bulunamadı', 'Bu webhook bu ekibe ait değil ya da zaten bir tabloya bağlı.', 404);
+        }
+
+        /* Baska bir tablonun kurali bu webhook'u hedefliyorsa baglama: o tablonun
+           kayitlari, artik "bu tabloya ozel" gorunen bir kanala dusmeye devam ederdi. */
+        $otherRuleCount = (int) bcc_fetch_column('SELECT COUNT(*) AS c FROM slack_routing_rules WHERE webhook_id = :id AND table_id <> :table_id', array('id' => $webhookIdRaw, 'table_id' => $table['id']));
+
+        if ($otherRuleCount > 0) {
+            $error = 'Bu webhook başka tablolardaki ' . $otherRuleCount . ' yönlendirme kuralında kullanılıyor. Önce o kuralları silin.';
+        } else {
+            bcc_execute('UPDATE slack_webhooks SET table_id = :table_id WHERE id = :id', array('table_id' => $table['id'], 'id' => $webhookIdRaw));
+            log_audit('slack.webhook_bind', 'table', $table['id'], array('webhook_id' => $webhookIdRaw), $table['team_id']);
+            $success = 'Webhook bu tabloya bağlandı.';
         }
     } elseif ($action === 'test_webhook') {
         $webhookIdRaw = isset($_POST['webhook_id']) ? (int) $_POST['webhook_id'] : 0;
@@ -227,14 +245,14 @@ $tableWebhooks = bcc_fetch_all(
     array('table_id' => $table['id'])
 );
 
-$teamWebhookRows = bcc_fetch_all(
+/* Eski takim-geneli webhook'lar (table_id IS NULL): artik kendi basina
+   tetiklenmiyor, yalnizca "bu tabloya bagla / sil" icin listeleniyor. */
+$legacyTeamWebhooks = bcc_fetch_all(
     'SELECT id, channel_name, is_active, webhook_url FROM slack_webhooks
      WHERE team_id = :team_id AND table_id IS NULL
      ORDER BY id ASC',
     array('team_id' => $table['team_id'])
 );
-$teamWebhook = !empty($teamWebhookRows) ? $teamWebhookRows[0] : null;
-$extraTeamWebhooks = array_slice($teamWebhookRows, 1);
 
 $editWebhookId = isset($_GET['edit_webhook']) ? (int) $_GET['edit_webhook'] : 0;
 $editWebhook = null;
@@ -246,9 +264,6 @@ foreach ($tableWebhooks as $w) {
 }
 
 $availableWebhooksForRules = $tableWebhooks;
-if ($teamWebhook) {
-    $availableWebhooksForRules[] = $teamWebhook;
-}
 
 $fields = bcc_fetch_all('SELECT id, name, field_type, options FROM fields WHERE table_id = :table_id ORDER BY position, id', array('table_id' => $table['id']));
 $singleSelectFields = array();
@@ -288,27 +303,23 @@ function bcc_slack_status_pill($isActive)
     ?><span class="sp-status <?php echo $on ? 'sp-status-on' : ''; ?>"><?php echo $on ? 'aktif' : 'pasif'; ?></span><?php
 }
 
-function bcc_render_slack_team_row($w, $table, $canEdit, $isExtra = false)
+function bcc_render_slack_team_row($w, $table, $canEdit)
 {
     $hasChannel = ((string) $w['channel_name'] !== '');
     ?>
-    <div class="sl-readonly-row<?php echo $isExtra ? ' sl-row-extra' : ''; ?>">
+    <div class="sl-readonly-row">
         <span class="sl-channel <?php echo $hasChannel ? '' : 'sl-channel-empty'; ?>"><?php echo htmlspecialchars($hasChannel ? (string) $w['channel_name'] : 'kanal adı belirtilmemiş', ENT_QUOTES, 'UTF-8'); ?></span>
         <span class="sp-code"><?php echo htmlspecialchars(bcc_slack_masked_url($w), ENT_QUOTES, 'UTF-8'); ?></span>
         <?php bcc_slack_status_pill($w['is_active']); ?>
         <?php if ($canEdit): ?>
             <span class="sl-row-actions">
-                <?php if (!$isExtra): ?>
                 <form method="post" action="/slack_settings.php">
                     <?php echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="test_webhook">
+                    <input type="hidden" name="action" value="bind_team_webhook">
                     <input type="hidden" name="table_id" value="<?php echo (int) $table['id']; ?>">
                     <input type="hidden" name="webhook_id" value="<?php echo (int) $w['id']; ?>">
-                    <button type="submit" class="sp-icon-btn" title="Test mesajı gönder" aria-label="Takım webhook'una test mesajı gönder">
-                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M17 3L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3l-5.5 14-3-6-6-3L17 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                    </button>
+                    <button type="submit" class="settings-btn" data-bind-webhook="<?php echo (int) $w['id']; ?>">Bu tabloya bağla</button>
                 </form>
-                <?php endif; ?>
                 <form method="post" action="/slack_settings.php" data-confirm="Bu webhook&#039;u silmek istediğinize emin misiniz?" data-confirm-title="Webhook&#039;u sil">
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="delete_webhook">
@@ -385,7 +396,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
         </div>
         <div class="home-main-header">
             <h1><?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?> — Slack bildirimleri</h1>
-            <p class="settings-hint">Bu tabloya yeni kayıt eklendiğinde hangi Slack kanalına bildirim gideceğini yönetin.</p>
+            <p class="settings-hint">Bu tablodaki değişikliklerin hangi Slack kanalına gideceğini yönetin. Bir kanala yalnızca <strong>bağlandığı tablonun</strong> bildirimleri gider; diğer tablolar ayrı ayarlanır.</p>
         </div>
 
         <?php require __DIR__ . '/../src/partials/flash.php'; ?>
@@ -468,54 +479,24 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
             <?php endif; ?>
         </div>
 
-        <div class="settings-card">
-            <h2>Takım-geneli webhook</h2>
-            <div class="sp-note">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="6.5" r="0.9" fill="currentColor"/></svg>
-                <span>Yedek kanal: bu takımın <strong>tüm</strong> tablolarında (bu tablo dahil), tablo-özel bir webhook veya kural eşleşmemişse tetiklenir.</span>
+        <?php if (!empty($legacyTeamWebhooks)): ?>
+        <div class="settings-card" id="legacy-team-webhooks">
+            <h2>Eski takım-geneli webhook <span class="sp-count"><?php echo count($legacyTeamWebhooks); ?></span></h2>
+            <div class="sp-note sp-note--warn">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
+                <span><strong>Takım-geneli yedek kanal kaldırıldı.</strong> Bildirimler artık yalnızca <strong>tabloya bağlı</strong> webhook'a gider; aşağıdaki webhook kendi başına <strong>hiçbir tablo için tetiklenmez</strong> (yalnızca onu hedefleyen bir koşullu kural varsa kullanılır). Bildirimlerin bu kanala <strong>&ldquo;<?php echo htmlspecialchars($table['name'], ENT_QUOTES, 'UTF-8'); ?>&rdquo;</strong> tablosundan gitmesini istiyorsanız <em>Bu tabloya bağla</em>'ya basın; istemiyorsanız silin.</span>
             </div>
-
-            <?php if ($teamWebhook): ?>
-                <h3 class="sl-subhead sl-subhead--tight">Bağlı kanal</h3>
-                <?php bcc_render_slack_team_row($teamWebhook, $table, $canEdit); ?>
-            <?php else: ?>
-                <p class="settings-empty">
-                    <strong>Yedek kanal ayarlanmamış.</strong>
-                    <span class="sp-muted">Tablo-özel bir webhook ya da kural eşleşmezse hiçbir bildirim gitmez.</span>
-                </p>
-            <?php endif; ?>
-
-            <?php if ($canEdit && !empty($extraTeamWebhooks)): ?>
-                <div class="sp-note sp-note--warn">
-                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5l7 12.5H3l7-12.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor"/></svg>
-                    <span><strong>Bu ekipte fazladan <?php echo count($extraTeamWebhooks); ?> takım-geneli webhook var.</strong> Takım-geneli webhook <em>tek</em> olmalıdır. Fazlalıklardan biri <strong>aktifse</strong> bildirimleriniz yukarıda görünen kanala değil ona gidiyor olabilir. Kullanmadıklarınızı silin.</span>
-                </div>
-                <div class="sl-extra-list">
-                    <?php foreach ($extraTeamWebhooks as $ew): ?>
-                        <?php bcc_render_slack_team_row($ew, $table, $canEdit, true); ?>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($canEdit): ?>
-                <h3 class="sl-subhead">
-                    <?php if ($teamWebhook): ?>
-                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                        Yedek kanalı düzenle
-                    <?php else: ?>
-                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                        Yedek kanal ekle
-                    <?php endif; ?>
-                </h3>
-                <?php bcc_render_slack_webhook_form('team', $teamWebhook, $table, $teamWebhook ? 'Kaydet' : 'Ekle'); ?>
-            <?php endif; ?>
+            <?php foreach ($legacyTeamWebhooks as $lw): ?>
+                <?php bcc_render_slack_team_row($lw, $table, $canEdit); ?>
+            <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
         <div class="settings-card">
             <h2>Koşullu yönlendirme kuralları <span class="sp-count"><?php echo count($routingRules); ?></span></h2>
             <div class="sp-note">
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h5l3 5 4 0M4 15h5l1.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 3l2.5 2-2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span>Bir <strong>tekli seçim</strong> alanının değerine göre farklı bir webhook'a yönlendirir — ör. &ldquo;Marka&rdquo; alanı &ldquo;Trendyol&rdquo; ise Trendyol kanalına. Sıradaki <strong>ilk eşleşen</strong> kural kazanır; hiçbiri eşleşmezse yukarıdaki tablo-özel / takım-geneli webhook kullanılır.</span>
+                <span>Bir <strong>tekli seçim</strong> alanının değerine göre farklı bir webhook'a yönlendirir — ör. &ldquo;Marka&rdquo; alanı &ldquo;Trendyol&rdquo; ise Trendyol kanalına. Sıradaki <strong>ilk eşleşen</strong> kural kazanır; hiçbiri eşleşmezse yukarıdaki tablo-özel webhook kullanılır.</span>
             </div>
 
             <?php if (empty($singleSelectFields)): ?>
@@ -666,7 +647,7 @@ function bcc_render_slack_webhook_form($scope, $webhook, $table, $submitLabel)
             <h2>Hücre değişikliği bildirimi <span class="sp-count"><?php echo count($watchedFieldIds); ?></span></h2>
             <div class="sp-note">
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.2 3.8l3 3L7.5 15.5l-3.7.7.7-3.7 8.7-8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                <span>Yukarıdaki üç olay (<strong>yeni kayıt</strong>, <strong>yeni tablo</strong>, <strong>yeni alan</strong>) her zaman açıktır. Bu kart <strong>dördüncü</strong> olayı yönetir: <em>var olan</em> bir kaydın hücresi değiştiğinde de bildirim gitsin mi. Yalnızca burada işaretlediğiniz alanlar tetikler — <strong>hiçbiri işaretli değilse özellik kapalıdır</strong>.</span>
+                <span>Bu tabloya webhook bağlıysa iki olay (<strong>yeni kayıt</strong>, <strong>yeni alan</strong>) her zaman açıktır. Bu kart <strong>üçüncü</strong> olayı yönetir: <em>var olan</em> bir kaydın hücresi değiştiğinde de bildirim gitsin mi. Yalnızca burada işaretlediğiniz alanlar tetikler — <strong>hiçbiri işaretli değilse özellik kapalıdır</strong>.</span>
             </div>
 
             <?php if (empty($watchableFields)): ?>

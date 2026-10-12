@@ -4169,6 +4169,7 @@ function bcc_audit_action_label($action)
         'attachment.delete' => 'dosya ekini sildi',
         'slack.notify_sent' => 'Slack bildirimi gönderdi',
         'slack.notify_failed' => 'Slack bildirimi başarısız oldu',
+        'slack.webhook_bind' => 'Slack entegrasyonunu tabloya bağladı',
         'slack.webhook_create' => 'Slack entegrasyonu ekledi',
         'slack.webhook_delete' => 'Slack entegrasyonunu kaldırdı',
         'slack.webhook_update' => 'Slack entegrasyonunu güncelledi',

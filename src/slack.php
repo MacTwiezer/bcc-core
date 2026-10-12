@@ -30,12 +30,18 @@ function bcc_find_slack_webhook($tableId, $teamId, $recordId = null)
         }
     }
 
+    /* Takim-geneli yedek kanal (table_id IS NULL) 2026-10-12'de kaldirildi:
+       kendi webhook'u olmayan butun tablolarin bildirimi tek kanala dusuyordu
+       (musteri istegi: kanala yalnizca BAGLANDIGI tablonun degisiklikleri
+       gitsin). Eski table_id IS NULL satirlari artik kendi basina tetiklenmez;
+       yalnizca yukaridaki gibi bir tablonun KURALI acikca hedef gosterirse
+       kullanilir. $teamId imza uyumu icin duruyor. */
     $row = bcc_fetch_one(
         'SELECT id, webhook_url, channel_name, table_id FROM slack_webhooks
-         WHERE is_active = 1 AND (table_id = :table_id OR (table_id IS NULL AND team_id = :team_id))
-         ORDER BY (table_id IS NULL) ASC, id ASC
+         WHERE is_active = 1 AND table_id = :table_id
+         ORDER BY id ASC
          LIMIT 1',
-        array('table_id' => $tableId, 'team_id' => $teamId)
+        array('table_id' => $tableId)
     );
 
     return $row !== false ? $row : null;

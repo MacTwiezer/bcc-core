@@ -240,11 +240,13 @@ check('webhook YOKKEN slack audit satiri OLUSMADI',
 
 bcc_execute(
     'INSERT INTO slack_webhooks (team_id, table_id, webhook_url, channel_name, is_active)
-     VALUES (:t, NULL, :u, :c, 1)',
-    array('t' => $teamId, 'u' => UNREACHABLE, 'c' => '#bcc-otomatik-test')
+     VALUES (:t, :tb, :u, :c, 1)',
+    array('t' => $teamId, 'tb' => $tableId, 'u' => UNREACHABLE, 'c' => '#bcc-otomatik-test')
 );
 $tempWebhookId = (int) bcc_last_insert_id();
-check('gecici (ekip-geneli) webhook olusturuldu', $tempWebhookId > 0);
+/* 2026-10-12: ekip-geneli yedek kanal kaldirildi, webhook tabloya bagli
+   olmali. Ayrintili kapsam testi: _verify_slack_table_scope.php. */
+check('gecici (tabloya bagli) webhook olusturuldu', $tempWebhookId > 0);
 
 $auditBeforeEvents = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 
@@ -270,8 +272,8 @@ $newTable = bcc_fetch_one("SELECT id FROM tables_meta WHERE base_id = :b AND nam
 if (!no_row($newTable)) {
     $createdTableIds[] = (int) $newTable['id'];
 }
-check('TABLO olusturma Slack bildirimini TETIKLEDI (entity_type=table)',
-    !no_row($newTable) && slack_audit_since($auditBeforeTable, 'slack.notify_failed', 'table', (int) $newTable['id']) === 1);
+check('TABLO olusturma Slack bildirimini TETIKLEMEDI (yeni tablonun kendi webhook\'u yok)',
+    !no_row($newTable) && slack_audit_since($auditBeforeTable, 'slack.notify_failed', 'table', (int) $newTable['id']) === 0);
 
 $auditBeforeRecord = (int) bcc_fetch_column('SELECT COALESCE(MAX(id), 0) FROM audit_log');
 $r = post_as($ownerId, 'api/record_add.php', '', array('table_id' => $tableId));

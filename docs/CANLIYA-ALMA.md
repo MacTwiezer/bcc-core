@@ -299,7 +299,7 @@ düşük olursa uygulama sınırına ulaşılamadan PHP dosyayı reddeder:
 
 | İşlem | Uygulama sınırı | Tanımlandığı yer |
 |---|---|---|
-| Dosya eki yükleme | 20 MB | `attachment_upload.php` → `BCC_ATTACHMENT_MAX_BYTES` |
+| Dosya eki yükleme | 40 MB | `attachment_upload.php` → `BCC_ATTACHMENT_MAX_BYTES` |
 | Excel içe aktarma | 40 MB / 5.000 satır | `table_import_xlsx.php` → `BCC_XLSX_IMPORT_MAX_*` |
 
 `post_max_size` daima `upload_max_filesize`'dan büyük olmalı: gövde dosyanın

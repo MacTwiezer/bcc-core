@@ -961,6 +961,11 @@ kaldırıldı (§25).
   hane). 20 alan tipinin sınır taraması günlükte; seçenek adı (150) ve dosya
   eki (20 MB) sınırlarına dokunulmadı.
   `_verify_cell_text_limits.php` → **120/120**. Günlük 2026-10-12 §5.
+- **Dosya eki 20 MB → 40 MB, seçenek adı 150 → 255.**
+  `BCC_ATTACHMENT_MAX_BYTES` (`attachment_upload.php`); `php.ini` değerleri
+  (CANLIYA-ALMA §3.5) değişmedi, zaten üstünde. Seçenek adı 255'te duruyor:
+  `slack_routing_rules.value VARCHAR(255)`.
+  `_verify_attachment_flow.php` 16 → **21/21**. Günlük 2026-10-12 §6.
 
 ---
 

@@ -128,6 +128,36 @@ ALTER TABLE users ADD COLUMN last_seen_at DATETIME NULL AFTER last_activity_at,
 döner** (kolon her istekte tazeleniyor) — uygulama tamamen açılmaz. Veri
 doldurmak gerekmez: kolon NULL başlar, herkes ilk isteğinde görünür olur.
 
+#### 3.2.3 ZORUNLU yükseltme — `cell_values.value_text` MEDIUMTEXT (2026-10-08)
+
+Uzun metin sınırı 20.000 karakterden 900.000 bayta çıktı; kolon `TEXT`
+(65.535 bayt) kalırsa bu sığmaz. Kodu deploy etmeden ÖNCE, **yedek aldıktan
+sonra**:
+
+```sql
+ALTER TABLE cell_values MODIFY value_text MEDIUMTEXT DEFAULT NULL;
+```
+
+Tablo yeniden yazılır (kayıt sayısına göre saniyeler–dakikalar; o sırada
+hücre kaydı bekler) — sakin bir saatte çalıştırın. Veri kaybı yok: `TEXT` →
+`MEDIUMTEXT` yalnızca büyütür.
+
+**Atlanırsa** uygulama açılır ama 65.535 baytı aşan uzun metin **sessizce
+kesilir** (`sql_mode`'da STRICT yok): kullanıcı "kaydedildi" görür, listenin
+sonu kaybolur.
+
+Aynı anda sunucunun paket sınırını da kontrol edin:
+
+```sql
+SHOW VARIABLES LIKE 'max_allowed_packet';
+-- en az 1048576 (1 MB) olmalı; MySQL/MariaDB varsayılanı bunun altına inmez
+```
+
+900.000 bayt bu 1 MB'ın altında kalacak şekilde seçildi. Sınırı daha da
+yükseltmek isterseniz önce `max_allowed_packet` büyütülür, sonra
+`src/schema.php`'deki `BCC_RICH_TEXT_MAX_BYTES` ve
+`public/api/cells_bulk_update.php`'deki `BCC_PASTE_CHUNK_BYTES`.
+
 ### 3.3 Yapılandırma dosyalarını oluştur
 
 Bu dosyalar git'e **girmez** (`.gitignore`), her sunucuda elle oluşturulur:

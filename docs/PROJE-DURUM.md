@@ -912,6 +912,25 @@ kaldırıldı (§25).
   yazılmasın, kısa olsun" kararını bilerek geri alıyor.
   `_verify_slack_batch.php` **106/106**. Günlük 2026-10-05 §3.
 
+### 2026-10-08 turu — uzun metin sınırı
+
+- **Uzun metin 20.000 karakter → 900.000 bayt** (müşteri: "karakter
+  sınırlaması kaldırılsın; 7 bin satırlık liste eklenecek"). Ölçülen örnekte
+  10.000 satır (satır başı ~50 karakter) 759.000 bayt, tamamı sığıyor.
+  `cell_values.value_text` **TEXT → MEDIUMTEXT (DDL, CANLIYA-ALMA §3.2.3)**.
+  ⚠️ **Tam sınırsız DEĞİL, bilerek:** değer tek sorgu paketinde gidip geliyor
+  ve `max_allowed_packet` varsayılanı 1 MB; 900.000 bayt sunucu ayarına
+  dokunmadan çalışan üst sınır (`BCC_RICH_TEXT_MAX_BYTES`, `src/schema.php`).
+  ⚠️ **Davranış değişti:** sınırı aşan uzun metin artık sessizce kesilmiyor,
+  **422 ile reddediliyor** (diğer metin tipleriyle aynı emsal, `be5d92d`).
+  Yan düzeltmeler: sanitize edicinin blok satırlarda karesel zamanı
+  (10.000 `<div>` satır 3,2 sn → 0,06 sn), toplu yapıştırmanın bayta göre
+  bölünmesi (`BCC_PASTE_CHUNK_BYTES`), Excel dışa aktarımında hücrenin 32.767
+  karakterde kesilmesi (`BCC_XLSX_MAX_CELL_CHARS`; Excel'in kendi sınırı).
+  Bilinen sınır: uzun metin grid HTML'ine hücre başına iki kez yazılıyor —
+  759 KB'lık tek hücre sayfayı 2,4 MB yapıyor.
+  `_verify_cell_text_limits.php` 43 → **98/98**. Günlük 2026-10-08 §1.
+
 ---
 
 ## 6. Kalan İşler
